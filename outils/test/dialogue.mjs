@@ -52,6 +52,14 @@ const monter = (o = {}) => pg.evaluate(async ({ o, SEANCE }) => {
       choix: [{ v: 'mardi', juste: true, lib: 'Mardi, vers 9 h. Excuse-moi.' },
         { v: 'toujours', lib: 'Je ne trouve toujours pas.', reaction: 'Prends ton temps, je patiente.' }] });
   }
+  // LE FACE À FACE (lot 3 du chantier « quai en deux séances », 17/10/2026) : même dialogue, `face: true`, sans leurres, un autre
+  // libellé de menu et un autre contact (« poste 214 » et « Appelle… » sont des mots de téléphone DÉCLARÉS par la séance d'essai :
+  // une séance en face à face ne les écrit pas). `sansSituation` : l'écran dit alors sa phrase par défaut.
+  if (o.face) {
+    T.face = true; delete T.leurres; T.libelle = 'Au quai';
+    T.dialogues[0].contact = { nom: 'Marc — chauffeur', detail: 'camion du Havre' };
+    if (o.sansSituation) delete T.situation; else T.situation = 'Accueille le chauffeur sur le quai.';
+  }
   // L'ÉVALUATION : une phrase neutre après le piège (elle ne dit rien de la réponse).
   if (o.copie) r('refs').choix.find((c) => c.v === 'inverse').neutre = 'D’accord, je note.';
   const U = S.univers({ telephone: T, copie: !!o.copie });
@@ -70,6 +78,8 @@ const monter = (o = {}) => pg.evaluate(async ({ o, SEANCE }) => {
       // La boucle n'est atteinte que par une maladresse : seul le contrôle « toute branche finit » la voit.
       boucle: () => { r('rappel-jour').choix[0].vers = 'rappel-jour'; },
       versInconnu: () => { r('jour').choix.find((c) => c.v === 'sais-pas').vers = 'nulle-part'; },
+      faceLeurres: () => { T.face = true; },                    // les leurres de l'essai restent déclarés
+      faceType: () => { T.face = 'oui'; delete T.leurres; },
       geste: () => { U.questions = { id: SEANCE, personnes: {}, etapes: [], liste: [{ id: 'q', type: 'fil', de: 'nadia', reflexion: true,
         quand: apresGeste('dialogue:quai:refz'), enonce: 'E ?', choix: [{ v: 'a', lib: 'A' }, { v: 'b', lib: 'B' }], retour: 'R.' }] }; },
     };
@@ -551,6 +561,187 @@ await v('Téléphone (lot 3) : copie rendue — rien ne s’écrit plus, l’app
   vrai(/Bonne journée, Lea !/.test(await fil()), 'le journal ne se relit pas');
   vrai(/De la place pour quoi/.test(await fil()) === false, 'une réaction s’affiche au journal d’une évaluation');
   egal(JSON.stringify(await base()), avant, 'la base a changé après la remise');
+});
+
+/* ================================================================ LE FACE À FACE (`face: true`, 17/10/2026, ENT-8.7) */
+// Les mots du moteur qui diraient « téléphone » : on les cherche dans tout ce que la vue écrit SAUF ce que déclare la séance
+// (bulles, textes des réponses), attributs `aria-label` / `title` compris.
+const MOTS_TEL = /appel|appeler|raccroch|num[ée]ro|📞|t[ée]l[ée]phon|communication|contact/i;
+// (la regexp passe par une chaîne : `pg.evaluate` ne transporte pas un objet RegExp)
+const MOTS = MOTS_TEL.source;
+const motsDeTelOk = () => pg.evaluate(({ Z, MOTS }) => {
+  const copie = document.querySelector(`${Z} .dlg`).cloneNode(true);
+  copie.querySelectorAll('.dlg-bulle, .dlg-choix-txt').forEach((x) => x.remove());
+  const attrs = [...copie.querySelectorAll('[aria-label],[title]')].map((x) => `${x.getAttribute('aria-label') || ''} ${x.getAttribute('title') || ''}`).join(' ');
+  return `${copie.textContent} ${attrs}`.match(new RegExp(MOTS, 'gi')) || [];
+}, { Z, MOTS });
+const texte = (sel) => pg.$eval(`${Z} ${sel}`, (e) => e.textContent.trim().replace(/\s+/g, ' '));
+
+await v('Face à face : les mots de l’écran sont « Aller le voir », « Terminer », « En face à face », « Terminé à … », « Personnes » ; aucun mot de téléphone (ni 📞) nulle part, à aucun moment', async () => {
+  await monter({ face: true, sansSituation: true });
+  egal(await pg.$eval(`${Z} .ent-nav[data-vue="telephone"]`, (b) => b.firstElementChild.textContent), 'Au quai', 'libellé du menu');
+  await aller('telephone');
+  egal(await texte('.dlg-h'), 'Personnes', 'titre de la liste');
+  egal(await texte('.dlg-repos'), 'Choisis qui aller voir.', 'situation par défaut');
+  egal(await texte('[data-dlg-appeler="quai"]'), 'Aller le voir', 'bouton avant l’entretien');
+  egal(await motsDeTelOk(), [], 'mot de téléphone avant l’entretien');
+  await appeler();
+  egal(await texte('.dlg-contact .dlg-etat'), 'En face à face', 'état dans la liste');
+  egal(await texte('.dlg-statut'), 'En face à face', 'statut en haut de l’entretien');
+  egal(await pg.getAttribute(`${Z} .dlg-appel`, 'aria-label'), 'Entretien : Marc — chauffeur', 'aria-label');
+  egal(await motsDeTelOk(), [], 'mot de téléphone pendant l’entretien');
+  for (const r of ORDRE) await dire(JUSTES[r]);
+  egal(await texte('[data-dlg-raccrocher]'), 'Terminer', 'bouton de fin');
+  egal(await motsDeTelOk(), [], 'mot de téléphone au bouton de fin');
+  await raccrocher();
+  vrai(/^Terminé à \d\d:\d\d$/.test(await texte('.dlg-statut')), `statut de fin : ${await texte('.dlg-statut')}`);
+  egal(await texte('.dlg-contact .dlg-etat'), 'Terminé', 'état dans la liste après l’entretien');
+  egal(await texte('[data-dlg-journal="quai"]'), 'Relire', 'bouton pour relire');
+  egal(await pg.getAttribute(`${Z} .dlg-appel`, 'aria-label'), 'Entretien : Marc — chauffeur', 'aria-label après l’entretien');
+  egal(await motsDeTelOk(), [], 'mot de téléphone après l’entretien');
+  // La phrase de la séance, quand elle en déclare une, passe avant la phrase par défaut.
+  await monter({ face: true });
+  await aller('telephone');
+  egal(await texte('.dlg-repos'), 'Accueille le chauffeur sur le quai.', 'situation déclarée');
+});
+
+await v('Face à face : tout le reste marche pareil — réaction, réplique reposée, `premiereReponse`, `dialogueFini`, gestes, note, « Corriger » → « Revenir le voir » ouvre un nouvel entretien', async () => {
+  // Le même parcours (une erreur à « refs », puis tout juste), avec et sans `face` : mêmes pas, mêmes reprises, mêmes gestes, même note.
+  const jouer = async (o) => {
+    await monter({ ...o, correction: true });
+    await aller('telephone');
+    await appeler();
+    await dire('presente');
+    await dire('inverse');
+    const f1 = await fil();
+    const reposee = (await choixAffiches()).sort();
+    await dire('juste');
+    for (const r of ORDRE.slice(2)) await dire(JUSTES[r]);
+    const fermeAvant = await present('.ent-nav-ferme[data-vue-fermee="stock"]');
+    await raccrocher();
+    const A = (await appelsQuai())[0], n = await note();
+    return {
+      reaction: /Je ne le trouve pas/.test(f1), reposee, fermeAvant, fermeApres: await present('.ent-nav-ferme[data-vue-fermee="stock"]'),
+      pas: A.pas.map((p) => `${p.r}:${p.v}`), reprises: A.reprises, fin: !!A.fin, ordres: A.ordres,
+      gestes: Object.keys((await base()).gestes[SEANCE]).sort(), score: n.score, detail: [n.detail['appel-quai'], n.detail['numero-quai']],
+      journal: n.detail.dialogues,
+      premiere: await pg.evaluate(async ({ A }) => { const { premiereReponse } = await import('/core/types/dialogue.js'); return premiereReponse(A, 'refs'); }, { A }),
+      bonjour: /Bonne journée, Lea !/.test(await fil()),
+    };
+  };
+  const face = await jouer({ face: true });
+  const tel = await jouer({});
+  egal(face, tel, 'le parcours en face à face ne joue pas comme le téléphone');
+  // …et ce parcours est bien celui qu'on croit (valeurs écrites à la main).
+  egal([face.reaction, face.reposee, face.fermeAvant, face.fermeApres], [true, ['bientot', 'inverse', 'juste', 'produit'], true, false], 'réaction, réplique reposée, Stock');
+  egal([face.pas.length, face.reprises, face.fin, face.premiere, face.bonjour], [7, 1, true, 'inverse', true], 'appel rangé');
+  egal([face.score, face.detail], [10, ['ok', 'ko']], 'note');
+  egal(face.gestes, ['dialogue:quai:accueil', 'dialogue:quai:appeler', 'dialogue:quai:cloture', 'dialogue:quai:confirme', 'dialogue:quai:fin', 'dialogue:quai:jour',
+    'dialogue:quai:refs', 'dialogue:quai:vehicule'], 'gestes');
+  // « Corriger » → « Revenir le voir » → un nouvel entretien (le premier reste rangé).
+  await monter({ face: true, correction: true });
+  await aller('telephone');
+  await appelComplet({ refs: ['inverse'] });
+  await aller('accueil');
+  await pg.click(`${Z} [data-fin-corriger]`);
+  await pause();
+  vrai(await present('.ent-nav.on[data-vue="telephone"]'), '« Corriger » n’ouvre pas l’écran');
+  egal(await texte('[data-dlg-appeler="quai"]'), 'Revenir le voir', 'le bouton du rappel');
+  egal(await motsDeTelOk(), [], 'mot de téléphone au rappel');
+  await pg.click(`${Z} [data-dlg-appeler="quai"]`);
+  await pause();
+  egal((await appelsQuai()).length, 2, 'le rappel n’ouvre pas un nouvel entretien');
+  egal(await texte('.dlg-statut'), 'En face à face', 'le nouvel entretien n’est pas en cours');
+  for (const r of ORDRE) await dire(JUSTES[r]);
+  await raccrocher();
+  egal([(await note()).detail['numero-quai'], (await appelsQuai())[1].reprises], ['ok', 0], 'le jalon ne lit pas le nouvel entretien');
+});
+
+await v('Face à face : sans `face`, les mots du téléphone sont toujours là (menu, titre, boutons, états, statuts, aria-label) — ce qui RESTE', async () => {
+  await monter({ correction: true });
+  egal(await pg.$eval(`${Z} .ent-nav[data-vue="telephone"]`, (b) => b.firstElementChild.textContent), 'Téléphone', 'libellé du menu');
+  await aller('telephone');
+  egal(await texte('.dlg-h'), 'Contacts', 'titre de la liste');
+  egal(await texte('[data-dlg-appeler="quai"]'), '📞 Appeler', 'bouton avant l’appel');
+  await appeler();
+  egal(await texte('.dlg-contact .dlg-etat'), 'Appel en cours', 'état dans la liste');
+  egal(await texte('.dlg-statut'), 'En communication', 'statut en haut de l’appel');
+  egal(await pg.getAttribute(`${Z} .dlg-appel`, 'aria-label'), 'Appel : Quai de réception', 'aria-label');
+  for (const r of ORDRE) await dire(JUSTES[r]);
+  egal(await texte('[data-dlg-raccrocher]'), 'Raccrocher', 'bouton de fin');
+  await raccrocher();
+  vrai(/^Appel terminé à \d\d:\d\d$/.test(await texte('.dlg-statut')), `statut de fin : ${await texte('.dlg-statut')}`);
+  egal(await texte('.dlg-contact .dlg-etat'), 'Appel terminé', 'état dans la liste après l’appel');
+  egal(await texte('[data-dlg-journal="quai"]'), 'Relire l’appel', 'bouton pour relire');
+  // Le rappel (correction après un premier bilan faux).
+  await monter({ correction: true });
+  await aller('telephone');
+  await appelComplet({ refs: ['inverse'] });
+  await aller('accueil');
+  await pg.click(`${Z} [data-fin-corriger]`);
+  await pause();
+  egal(await texte('[data-dlg-appeler="quai"]'), '📞 Rappeler', 'le bouton du rappel');
+  // Le contact sans dialogue garde sa messagerie vocale et son « Raccrocher ».
+  await monter();
+  await aller('telephone');
+  await appeler('thomas');
+  vrai(/Messagerie vocale/.test(await texte('.dlg-statut')) && /Raccrocher/.test(await texte('[data-dlg-raccrocher-leurre]')), 'la messagerie vocale a changé');
+});
+
+await v('Face à face : la table des textes, en direct — phrase par défaut, liste vide, « Reprendre », « Revenir le voir » / « 📞 Rappeler », avec et sans `face`', async () => {
+  const R = await pg.evaluate(async () => {
+    const { creerTelephone } = await import('/core/types/dialogue.js');
+    const S = await import('/contenus/dialogue-essai.js');
+    const D0 = S.TELEPHONE.dialogues[0];
+    const autre = (id, nom, plus = {}) => ({ ...D0, id, contact: { nom }, ...plus });
+    const api = (o = {}) => ({ estProf: false, db: {}, seance: 'x', graine: 'g', prenom: 'Lea', sauver() {}, signal() {}, delai: 0, ...o });
+    const lire = (face, { etat = {}, dialogues, ouvrir, apiO } = {}) => {
+      const T = creerTelephone({ dialogues: dialogues || [autre('quai', 'Quai'), autre('autre', 'Zoé')], ...(face ? { face: true } : {}) }, { personnes: S.EQUIPE });
+      if (ouvrir) T.ouvrir(ouvrir);
+      const z = document.createElement('div');
+      z.innerHTML = T.html(etat, api(apiO));
+      return { face: T.face, titre: z.querySelector('.dlg-h').textContent, repos: (z.querySelector('.dlg-repos') || {}).textContent || null,
+        vide: (z.querySelector('.dlg-gauche > p.note') || {}).textContent || null,
+        boutons: [...z.querySelectorAll('[data-dlg-appeler], [data-dlg-journal]')].map((b) => `${b.dataset.dlgAppeler || b.dataset.dlgJournal}=${b.textContent.trim()}`) };
+    };
+    const enCours = { quai: { appels: [{ debut: 1, ordres: {}, textes: {}, pas: [], reprises: 0 }] } };
+    const fini = { quai: { appels: [{ debut: 1, fin: 2, ordres: {}, textes: {}, pas: [], reprises: 0 }] } };
+    const rien = [autre('quai', 'Quai', { quand: () => false }), autre('autre', 'Zoé', { quand: () => false })];
+    return [false, true].map((face) => ({
+      repos: lire(face), vide: lire(face, { dialogues: rien }),
+      reprendre: lire(face, { etat: enCours, ouvrir: 'autre' }).boutons,
+      rappeler: lire(face, { etat: fini, apiO: { rappel: () => true } }).boutons,
+      relire: lire(face, { etat: fini }).boutons,
+    }));
+  });
+  const [tel, face] = R;
+  egal([tel.repos.face, face.repos.face], [false, true], 'la vue ne dit pas son mode');
+  egal([tel.repos.titre, tel.repos.repos, tel.vide.vide, tel.repos.boutons], ['Contacts', 'Choisis un numéro à appeler.', 'Aucun numéro à appeler pour l’instant.', ['quai=📞 Appeler', 'autre=📞 Appeler']], 'téléphone');
+  egal([face.repos.titre, face.repos.repos, face.vide.vide, face.repos.boutons], ['Personnes', 'Choisis qui aller voir.', 'Personne à voir pour l’instant.', ['quai=Aller le voir', 'autre=Aller le voir']], 'face à face');
+  egal([tel.reprendre, tel.rappeler, tel.relire], [['quai=Reprendre l’appel'], ['quai=📞 Rappeler', 'autre=📞 Appeler'], ['quai=Relire l’appel', 'autre=📞 Appeler']], 'téléphone : reprendre, rappeler, relire');
+  egal([face.reprendre, face.rappeler, face.relire], [['quai=Reprendre'], ['quai=Revenir le voir', 'autre=Aller le voir'], ['quai=Relire', 'autre=Aller le voir']], 'face à face : reprendre, rappeler, relire');
+});
+
+await v('Face à face : `face` avec des leurres (messagerie vocale) est refusé à la compilation, avec un message lisible ; `face` n’est pas un booléen aussi', async () => {
+  const R = await pg.evaluate(async () => {
+    const { creerTelephone } = await import('/core/types/dialogue.js');
+    const S = await import('/contenus/dialogue-essai.js');
+    const essayer = (T) => { try { creerTelephone(T, { personnes: S.EQUIPE }); return 'accepté'; } catch (e) { return e.message; } };
+    return {
+      leurres: essayer({ ...S.TELEPHONE, face: true }),
+      vides: essayer({ ...S.TELEPHONE, leurres: [], face: true }),
+      sansFace: essayer({ ...S.TELEPHONE }),
+      faceFaux: essayer({ ...S.TELEPHONE, face: false }),
+      texte: essayer({ ...S.TELEPHONE, face: 'oui', leurres: [] }),
+    };
+  });
+  vrai(/^telephone : face à face : pas de leurres \(messagerie vocale\)$/.test(R.leurres), `face + leurres : ${R.leurres}`);
+  egal([R.vides, R.sansFace, R.faceFaux], ['accepté', 'accepté', 'accepté'], 'face + liste vide, leurres sans face, face: false');
+  vrai(/`face` vaut true ou false/.test(R.texte), `face: 'oui' : ${R.texte}`);
+  // Par la séance (le moteur remonte le même message à l'ouverture).
+  vrai(/face à face : pas de leurres \(messagerie vocale\)/.test(await monter({ faute: 'faceLeurres' })), 'le moteur n’a pas refusé');
+  vrai(/`face` vaut true ou false/.test(await monter({ faute: 'faceType' })), 'le moteur n’a pas refusé un `face` qui n’est pas un booléen');
+  egal(await monter({ face: true }), 'ok', 'la déclaration en face à face est refusée');
 });
 
 await v('Téléphone : aucune erreur de page pendant le bloc', async () => {

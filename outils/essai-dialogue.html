@@ -32,6 +32,7 @@
 <body>
 <form class="essai-reglages" id="reglages">
   <b>Page d'essai</b> — l'appel est gardé au rechargement ; un changement de réglage repart de zéro :
+  <label>Cas <select name="cas"><option value="telephone">téléphone (ENT-7.2)</option><option value="face">face à face (ENT-8.7)</option></select></label>
   <label>Mode <select name="mode"><option value="guidage">guidage</option><option value="evaluation">évaluation</option></select></label>
   <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant</option></select></label>
   <label>Prénom <input type="text" name="prenom" value="Léa"></label>
@@ -41,7 +42,7 @@
   <button type="button" id="zero">Repartir de zéro</button>
 </form>
 <pre id="essaiNote" class="essai-note" hidden></pre>
-<div class="essai-bandeau"><b>Decathlon</b><span>Entrepôt de Rouvignies · service transport amont · Téléphone</span></div>
+<div class="essai-bandeau" id="bandeau"><b>Decathlon</b><span>Entrepôt de Rouvignies · service transport amont · Téléphone</span></div>
 <div id="hote"></div>
 <script type="module">
 import { creerTelephone, appelRetenu, appelEnCours, reprises, premiereReponse, leurresAppeles } from './core/types/dialogue.js';
@@ -95,6 +96,44 @@ const TELEPHONE = {
   }],
 };
 
+// ── Le cas « face à face » (lot 3 du chantier « quai en deux séances », 17/10/2026, ENT-8.7 §4 étape 2) ─────────────
+// Même vue, `face: true` : un stagiaire accueille un chauffeur sur le quai. Plus un mot de téléphone à l'écran (« Aller le voir »,
+// « Terminer », « Revenir le voir », « Personnes »), pas de messagerie vocale (`leurres` refusés). Le reste est identique.
+// Chauffeur, camion et numéros CONSTRUITS pour l'essai. Mêmes ids de répliques que ci-dessus (le bouton « Ce que lit la note »).
+const PERSONNES_FACE = { marc: { nom: 'Marc Delaunay', role: 'chauffeur', appel: 'Marc' } };
+const FACE = {
+  libelle: 'Au quai',                        // pas de `situation` : l'écran dit « Choisis qui aller voir. »
+  face: true,
+  dialogues: [{
+    id: 'quai', de: 'marc',
+    contact: { nom: 'Marc — chauffeur', detail: 'camion du Havre' },
+    repliques: [
+      { id: 'accueil', dit: 'Bonjour, je suis Marc, chauffeur. Je viens livrer sur votre quai.',
+        choix: [
+          { v: 'presente', juste: true, lib: 'Bonjour Marc, je suis {prenom}, stagiaire à la réception. Je vous accueille et je prends votre bon de livraison.' },
+          { v: 'camion', lib: 'Vous pouvez vous garer là-bas.', reaction: 'D’accord, mais à qui je m’adresse ? Et je dois attendre ici ?' },
+          { v: 'place', lib: 'Vous avez rendez-vous ?', reaction: 'Oui, c’est écrit sur mon bon. Vous voulez que je vous le donne ?' },
+        ] },
+      { id: 'refs', dit: 'Voilà mon bon de livraison. Je vous mets où ?',
+        choix: [
+          { v: 'juste', juste: true, lib: 'Merci. Je regarde le bon, puis je vous indique le quai libre.' },
+          { v: 'inverse', lib: 'Là où vous voulez, ça ira.', reaction: 'Ah non, il me faut un quai précis : je ne vais pas décharger n’importe où.' },
+          { v: 'collection', lib: 'Attendez, je ne sais pas.', reaction: 'Je ne peux pas rester en travers : demandez à quelqu’un.' },
+        ] },
+      { id: 'arrivee', dit: 'Je dois signer quelque chose avant de repartir ?',
+        choix: [
+          { v: 'lundi', juste: true, lib: 'Oui, le bon de livraison, une fois le déchargement fini et la marchandise contrôlée.' },
+          { v: 'bateau', lib: 'Non, vous pouvez partir.', reaction: 'Sans signature ? Mon employeur ne sera pas d’accord.' },
+        ] },
+      { id: 'cloture', dit: 'Très bien. Merci pour l’accueil.',
+        choix: [
+          { v: 'merci', juste: true, lib: 'Merci à vous, bon déchargement !' },
+          { v: 'salut', lib: 'Ouais, c’est bon.', reaction: '… Bon. À tout à l’heure alors.' },
+        ] },
+    ],
+  }],
+};
+
 // ── La page ───────────────────────────────────────────────────────────────────────────────────────────────────
 const form = document.getElementById('reglages');
 const boite = document.getElementById('essaiNote');
@@ -117,7 +156,10 @@ function monter(garderBase) {
   boite.hidden = true;
   etat = garderBase && avant && avant.etat ? avant.etat : {};
   gestes = garderBase && avant && avant.gestes ? avant.gestes : [];
-  vue = creerTelephone(TELEPHONE, { personnes: PERSONNES });
+  const face = R.cas === 'face';
+  document.getElementById('bandeau').innerHTML = face ? '<b>Entrepôt de Rouvignies</b><span>Réception · face à face avec le chauffeur</span>'
+    : '<b>Decathlon</b><span>Entrepôt de Rouvignies · service transport amont · Téléphone</span>';
+  vue = creerTelephone(face ? FACE : TELEPHONE, { personnes: face ? PERSONNES_FACE : PERSONNES });
   const api = {
     estProf: R.role === 'prof', graine: 'eleve-temoin', prenom: R.prenom || 'Léa', db,
     evaluation: R.mode === 'evaluation', figee: false,

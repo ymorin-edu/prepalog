@@ -1138,6 +1138,47 @@ fermetures: { planning: { ouvertSi: dialogueFini('quai'), message: 'Appelle d’
 - **Embranchements** : `vers: '<réplique>'` sur un choix. Un choix juste part vers sa réplique ; un choix maladroit qui porte `vers`
   fait aussi avancer (« Ce n'est pas de notre faute » → « le client s'énerve »), compte une reprise, et sa `reaction` est facultative.
   La bonne réponse de la réplique d'avant doit souvent sauter la branche (`vers` vers la réplique qui suit la branche).
+- **Face à face** (`telephone: { face: true }`, 17/10/2026, lot 3 du chantier « quai en deux séances », ENT-8.7) : le même dialogue se
+  joue **sans un mot de téléphone**. **Ce qui change, et seulement cela** : les textes du moteur à l'écran, rangés dans une seule table
+  (`LIBELLES` en tête de `core/types/dialogue.js`, un jeu « telephone », un jeu « face »).
+
+  | Téléphone (par défaut) | Face à face |
+  |---|---|
+  | « 📞 Appeler » | « Aller le voir » |
+  | « Raccrocher » | « Terminer » |
+  | « 📞 Rappeler » (après « Corriger ») | « Revenir le voir » |
+  | « Reprendre l'appel » | « Reprendre » |
+  | « Relire l'appel » | « Relire » |
+  | état d'un contact « Appel en cours » / « Appel terminé » | « En face à face » / « Terminé » |
+  | statut en haut « En communication » / « Appel terminé à 10:42 » | « En face à face » / « Terminé à 10:42 » |
+  | liste vide « Aucun numéro à appeler pour l'instant. » | « Personne à voir pour l'instant. » |
+  | phrase par défaut (sans `situation`) « Choisis un numéro à appeler. » | « Choisis qui aller voir. » |
+  | titre de la liste « Contacts » | « Personnes » |
+  | `aria-label` « Appel : <contact> » | « Entretien : <contact> » |
+
+  **Ce qui ne change pas** : l'état (`db.dialogues`, `appels`), les jalons (`jalonDialogue`, `premiereReponse`, `reprises`), `ecran:
+  'dialogue:<id>'`, le déclencheur `dialogueFini`, **les noms des gestes** (`dialogue:<id>:appeler`, `dialogue:<id>:<réplique>`,
+  `dialogue:<id>:fin`, gardés pour ne rien casser), le mélange des choix, les réactions, `accepte`, `vers`, `{prenom}`, le guidage et
+  l'évaluation, le rappel de la correction. Sans `face` (ou `face: false`), **rien ne change** (Decathlon ENT-7.2 à 7.4).
+  **Refusé à l'ouverture** : `face: true` avec des `leurres` non vides (« face à face : pas de leurres (messagerie vocale) » : une
+  messagerie vocale et « Ça sonne… » n'ont pas de sens en face à face ; `leurres: []` passe) ; `face` qui n'est pas un booléen.
+  **Pas de pictogramme de téléphone** nulle part : l'entrée du menu n'en porte pas (elle affiche seulement `telephone.libelle`, à régler :
+  `libelle: 'Au quai'`). **Ce que la séance écrit elle-même** (`libelle`, `situation`, `contact.nom` et `detail`, bulles, réponses) n'est pas
+  traité : n'y mettre ni « poste », ni « numéro », ni « appeler ». Le Repérage de l'enseignant (colonne « Appels », « N appels · reprises »)
+  garde ses mots d'aujourd'hui (voir `core/prof.js`, hors de cette vue). Exemple (ENT-8.7, le chauffeur arrive au quai) :
+
+  ```js
+  telephone: {
+    face: true,
+    libelle: 'Au quai',                                   // entrée du menu (défaut « Téléphone »)
+    situation: 'Un chauffeur attend à l’accueil du quai : va l’accueillir.',   // facultatif ; défaut « Choisis qui aller voir. »
+    dialogues: [{ id: 'chauffeur', de: 'marc',
+      contact: { nom: 'Marc — chauffeur', detail: 'camion du Havre' },
+      repliques: [ /* mêmes répliques, choix, réactions que pour un appel */ ] }],
+  },
+  ```
+  Le bouton de la liste dit « Aller le voir » ; l'élève répond, puis « Terminer ». Page d'essai : `outils/essai-dialogue.html`, réglage
+  « Cas : face à face ». Tests : bloc `dialogue` (cas « Face à face : … »).
 
 ## Nouveau courriel et fiche enregistrée — `core/types/courriel.js`, `core/types/fiche.js` (14/10/2026)
 

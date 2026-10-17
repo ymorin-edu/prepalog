@@ -13,6 +13,9 @@
 //     libelle: 'Téléphone',                 // entrée du menu (défaut)
 //     quand: (db) => booléen,               // facultatif : l'entrée n'apparaît qu'une fois vrai
 //     situation: 'Appelle le quai…',        // ce que montre l'écran avant tout appel
+//     face: true,                           // facultatif : le dialogue se joue EN FACE À FACE (17/10/2026, ENT-8.7) : « Aller le voir »,
+//                                           //   « Terminer », « Revenir le voir », « Personnes »… plus aucun mot de téléphone à l'écran
+//                                           //   (table `LIBELLES`) ; refuse les `leurres` ; tout le reste (état, gestes, jalons) ne change pas
 //     dialogues: [{
 //       id: 'quai',                         // clé de l'état, JAMAIS modifiée
 //       de: 'mehdi',                        // une personne de la séance ({ nom, role, appel? })
@@ -68,6 +71,22 @@ import { hasard } from '../tirage.js';
 const ID_OK = /^[a-z0-9][a-z0-9-]*$/;
 const DELAI = 700;                      // ms avant la réponse de l'interlocuteur : un effet d'affichage, rien ne s'y compte
 
+// LES TEXTES DU MOTEUR À L'ÉCRAN, en deux jeux : au téléphone (par défaut) et en face à face (`face: true`, 17/10/2026, ENT-8.7 :
+// un stagiaire accueille un chauffeur sur le quai). Une seule table : rien d'autre dans la vue ne dit « appel » à l'élève.
+// (Les contacts sans dialogue — messagerie vocale, « Ça sonne… » — n'existent qu'au téléphone : `face` les refuse.)
+const LIBELLES = {
+  telephone: {
+    titre: 'Contacts', aucun: 'Aucun numéro à appeler pour l’instant.', situation: 'Choisis un numéro à appeler.',
+    appeler: '📞 Appeler', rappeler: '📞 Rappeler', reprendre: 'Reprendre l’appel', relire: 'Relire l’appel', terminer: 'Raccrocher',
+    etatEnCours: 'Appel en cours', etatFini: 'Appel terminé', statutEnCours: 'En communication', statutFini: 'Appel terminé', aria: 'Appel',
+  },
+  face: {
+    titre: 'Personnes', aucun: 'Personne à voir pour l’instant.', situation: 'Choisis qui aller voir.',
+    appeler: 'Aller le voir', rappeler: 'Revenir le voir', reprendre: 'Reprendre', relire: 'Relire', terminer: 'Terminer',
+    etatEnCours: 'En face à face', etatFini: 'Terminé', statutEnCours: 'En face à face', statutFini: 'Terminé', aria: 'Entretien',
+  },
+};
+
 const nomDe = (p) => (p && (p.appel || String(p.nom || '').split(' ')[0])) || '';
 const avecPrenom = (t, prenom) => String(t == null ? '' : t).replace(/\{prenom\}/g, prenom || '');
 
@@ -77,6 +96,8 @@ export function compilerTelephone(T, personnes = {}, { evaluation = false } = {}
   const err = (m) => { throw new Error(`telephone : ${m}`); };
   if (!T || typeof T !== 'object') err('le bloc est vide');
   if (T.quand != null && typeof T.quand !== 'function') err('`quand` est une fonction (db) => booléen');
+  if (T.face != null && typeof T.face !== 'boolean') err('`face` vaut true ou false (le dialogue se joue en face à face, sans mot de téléphone)');
+  if (T.face === true && Array.isArray(T.leurres) && T.leurres.length) err('face à face : pas de leurres (messagerie vocale)');
   if (!Array.isArray(T.dialogues) || !T.dialogues.length) err('il faut au moins un dialogue dans `dialogues`');
   const ids = new Set();
   const dialogues = T.dialogues.map((d, k) => {
@@ -156,7 +177,7 @@ export function compilerTelephone(T, personnes = {}, { evaluation = false } = {}
     if (l.quand != null && typeof l.quand !== 'function') err(`${ici} : \`quand\` est une fonction (db) => booléen`);
     return { ...l };
   });
-  return { libelle: T.libelle || 'Téléphone', quand: T.quand || null, situation: T.situation || '', dialogues, leurres };
+  return { libelle: T.libelle || 'Téléphone', quand: T.quand || null, situation: T.situation || '', dialogues, leurres, face: T.face === true };
 }
 
 // L'indice de la réplique qui suit, après le choix `c` à la réplique `i` (au-delà du dernier : l'appel est fini).
@@ -255,6 +276,7 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
   const M = compilerTelephone(T, personnes, { evaluation });
   const parId = new Map(M.dialogues.map((D) => [D.id, D]));
   const leurreDe = new Map(M.leurres.map((l) => [l.id, l]));
+  const TX = LIBELLES[M.face ? 'face' : 'telephone'];       // les textes du moteur à l'écran
   const signaux = M.dialogues.flatMap((D) => [`dialogue:${D.id}:appeler`, ...D.repliques.map((r) => `dialogue:${D.id}:${r.id}`), `dialogue:${D.id}:fin`])
     .concat(M.leurres.map((l) => `dialogue:${l.id}:appeler`));
   const etatNeuf = () => ({});
@@ -298,7 +320,7 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
   // Les contacts dans l'ordre alphabétique, comme un répertoire : le bon numéro n'est pas toujours le premier.
   function htmlContacts(E, api) {
     const L = [...visibles(api), ...leurresVisibles(api)].sort((a, b) => nomContact(a).localeCompare(nomContact(b), 'fr'));
-    if (!L.length) return '<p class="note">Aucun numéro à appeler pour l’instant.</p>';
+    if (!L.length) return `<p class="note">${ech(TX.aucun)}</p>`;
     const occupe = M.dialogues.find((x) => appelEnCours(E[x.id]));
     return `<ul class="dlg-contacts">${L.map((D) => {
       if (leurreDe.has(D.id)) {
@@ -308,15 +330,15 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
           ${api.figee || occupe ? '' : `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">📞 Appeler</button>`}</li>`;
       }
       const eD = E[D.id], enCours = appelEnCours(eD), fait = appelRetenu(eD);
-      const etat = enCours ? 'Appel en cours' : fait ? 'Appel terminé' : '';
+      const etat = enCours ? TX.etatEnCours : fait ? TX.etatFini : '';
       let bouton;
       // Copie rendue (évaluation) : on relit ce qui a été dit, on n'appelle plus. `data-libre` : le verrou de la copie le laisse passer.
-      const relire = `<button type="button" class="dlg-btn lien" data-dlg-journal="${ech(D.id)}" data-libre>Relire l’appel</button>`;
+      const relire = `<button type="button" class="dlg-btn lien" data-dlg-journal="${ech(D.id)}" data-libre>${ech(TX.relire)}</button>`;
       if (api.figee) bouton = (enCours || fait) && ui.sel !== D.id ? relire : '';
       else if ((enCours && ui.sel === D.id) || (occupe && occupe !== D)) bouton = '';
-      else if (enCours) bouton = `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">Reprendre l’appel</button>`;
-      else if (!fait) bouton = `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">📞 Appeler</button>`;
-      else if (!api.figee && !estEval(D, api) && (api.estProf || (api.rappel && api.rappel(D.id)))) bouton = `<button type="button" class="dlg-btn" data-dlg-appeler="${ech(D.id)}">📞 Rappeler</button>`;
+      else if (enCours) bouton = `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">${ech(TX.reprendre)}</button>`;
+      else if (!fait) bouton = `<button type="button" class="dlg-btn plein" data-dlg-appeler="${ech(D.id)}">${ech(TX.appeler)}</button>`;
+      else if (!api.figee && !estEval(D, api) && (api.estProf || (api.rappel && api.rappel(D.id)))) bouton = `<button type="button" class="dlg-btn" data-dlg-appeler="${ech(D.id)}">${ech(TX.rappeler)}</button>`;
       else bouton = relire;
       return `<li class="dlg-contact${ui.sel === D.id ? ' choisi' : ''}">
         <span class="dlg-initiale" aria-hidden="true">${ech(nomDe(D.personne).slice(0, 1).toUpperCase())}</span>
@@ -345,7 +367,7 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
     let bas = '';
     if (enCours && !api.figee) {
       if (ui.attente) bas = '<div class="dlg-reponses"><p class="dlg-titre-rep">Ta réponse</p></div>';
-      else if (X.fini) bas = '<div class="dlg-reponses"><button type="button" class="dlg-btn plein dlg-raccrocher" data-dlg-raccrocher>Raccrocher</button></div>';
+      else if (X.fini) bas = `<div class="dlg-reponses"><button type="button" class="dlg-btn plein dlg-raccrocher" data-dlg-raccrocher>${ech(TX.terminer)}</button></div>`;
       else {
         const r = X.replique;
         const ordre = (enCours.ordres && enCours.ordres[r.id]) || r.choix.map((c) => c.v);
@@ -357,8 +379,8 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
         }).join('')}</div>`;
       }
     }
-    const statut = enCours ? 'En communication' : `Appel terminé${appel && appel.fin ? ` à ${heure(appel.fin)}` : ''}`;
-    return `<section class="dlg-appel" aria-label="${ech(`Appel : ${D.contact.nom}`)}">
+    const statut = enCours ? TX.statutEnCours : `${TX.statutFini}${appel && appel.fin ? ` à ${heure(appel.fin)}` : ''}`;
+    return `<section class="dlg-appel" aria-label="${ech(`${TX.aria} : ${D.contact.nom}`)}">
       <header class="dlg-tete"><span class="dlg-initiale grande" aria-hidden="true">${ech(lui.slice(0, 1).toUpperCase())}</span>
         <span class="dlg-qui"><b>${ech(P.nom || lui)}</b><span>${ech([P.role, D.contact.nom].filter(Boolean).join(' · '))}</span></span>
         <span class="dlg-statut${enCours ? ' en-cours' : ''}">${statut}</span></header>
@@ -377,9 +399,9 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
     const D = ui.sel && parId.get(ui.sel);
     const droite = ui.sel && leurreDe.has(ui.sel) ? htmlLeurre(leurreDe.get(ui.sel))
       : D && (appelEnCours(E[D.id]) || appelRetenu(E[D.id])) ? htmlAppel(D, E, api)
-      : `<div class="dlg-repos"><p>${ech(M.situation || 'Choisis un numéro à appeler.')}</p></div>`;
+      : `<div class="dlg-repos"><p>${ech(M.situation || TX.situation)}</p></div>`;
     return `<div class="dlg" data-dlg>
-      <aside class="dlg-gauche"><h2 class="dlg-h">Contacts</h2>${htmlContacts(E, api)}</aside>
+      <aside class="dlg-gauche"><h2 class="dlg-h">${ech(TX.titre)}</h2>${htmlContacts(E, api)}</aside>
       <div class="dlg-droite">${droite}</div></div>`;
   }
 
@@ -483,7 +505,7 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
     if (fil) fil.scrollTop = fil.scrollHeight;
   }
 
-  return { id: 'telephone', nav: { libelle: M.libelle }, quand: M.quand, situation: M.situation, dialogues: M.dialogues, leurres: M.leurres,
+  return { id: 'telephone', nav: { libelle: M.libelle }, quand: M.quand, situation: M.situation, dialogues: M.dialogues, leurres: M.leurres, face: M.face,
     signaux, etatNeuf, html, brancher,
     // Pour la page d'essai et l'enseignant : oublier la copie jouée par l'enseignant, rouvrir l'écran au repos.
     oublier() { ui.prof = null; ui.sel = null; ui.attente = false; ui.vide = false; ui.jeton++; },
