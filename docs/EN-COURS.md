@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Lot 4 appliqué aux séances ENT-8.7, 8.8, 8.9 (contenus par niveau) | `contenus/action-ent87*.js`, `contenus/action-ent88*.js`, `contenus/action-ent89*.js`, `activites/action-decharger.js`, `activites/action-controler.js`, `activites/action-palette-lucas.js`, `outils/test/action-87.mjs`, `outils/test/action-88.mjs`, `outils/test/action-89.mjs`, briefs ENT-8.7 à 8.9, `docs/decisions.md` | 17/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
