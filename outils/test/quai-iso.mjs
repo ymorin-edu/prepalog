@@ -2844,6 +2844,118 @@ await v('Dépose : un quai sans `depose` ne change pas — pas de phase, pas de 
   await p.close();
 });
 
+/* ================================================= note pondérée et `rendCopie: false` du quai (17/10/2026, trouvé en construisant ENT-8.10) */
+// Cas ajoutés (aucun cas existant touché). Le quai d'essai d'ENT-6.4, joué en ÉVALUATION (copie) dans un moteur dont `rendreCopie` est
+// enregistré (`window.__cq.remis`). `o.rendCopie` : l'option du quai ; `o.poids` : deux jalons pondérés hors quai (12 + 8 = 20) à la place
+// de ceux du quai, `db.hors1` posé (le jalon de 12 est juste, celui de 8 ne l'est pas : valeur écrite à la main, 12 / 20).
+const monterCopieQuai = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-quai-inspection.js');
+  document.querySelector('#qiScene')?.remove();
+  const hote = document.createElement('div'); hote.id = 'qiScene'; document.body.prepend(hote);
+  const Q = E.quaiEssai({});
+  if (o.rendCopie !== undefined) Q.rendCopie = o.rendCopie;
+  const U = E.universQuai(Q, { copie: true });
+  const db = {};
+  if (o.poids) {
+    U.etapes = [
+      { id: 'hors1', titre: 'Hors quai A', poids: 12, verifier: (d) => ({ status: d.hors1 ? 'ok' : 'attente' }) },
+      { id: 'hors2', titre: 'Hors quai B', poids: 8, verifier: (d) => ({ status: d.hors2 ? 'ok' : 'attente' }) },
+    ];
+    db.hors1 = true;
+  }
+  const moteur = creerEntreprise(U);
+  window.__cq = { db, moteur, remis: null };
+  window.__qs = { db, Q, enregistres: [] };
+  const meta = { id: 'essai-inspection', code: 'ESSAI', titre: 'Essai de la copie', portee: 'eleve', immersif: true, temps: 'evaluation', copie: true, bareme: 20 };
+  moteur.rendre(hote, {
+    meta, profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+    rendreCopie: async (res) => { window.__cq.remis = res; return { rendu: Date.now() }; },
+  });
+  document.querySelector('#qiScene .ent-nav[data-vue="quai"]').click();
+}, o);
+async function pageCopieQuai(o = {}) {
+  const p = await ctxS.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
+  await p.goto(BASE);
+  await p.waitForSelector('#btnProf', { timeout: 8000 });
+  await monterCopieQuai(p, o);
+  await p.waitForSelector(`${HOTE} [data-q-inspection], ${HOTE} [data-q="passer1"]`);
+  if (await p.$(`${HOTE} [data-q="passer1"]`)) await p.click(`${HOTE} [data-q="passer1"]`);
+  await p.waitForSelector(`${HOTE} [data-q-inspection]`);
+  return p;
+}
+// Du quai ① au bouton de clôture (l'inaction sur la sécurité : la note du quai n'est pas ce qu'on regarde ici).
+async function jusqueClore(p) {
+  await decharger(p);
+  await p.click(`${HOTE} [data-q="decharger"]`);
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await p.fill(`${HOTE} #qCompte`, '8'); await p.press(`${HOTE} #qCompte`, 'Enter');
+  await p.click(`${HOTE} #qDec-accepter`);
+  await p.click(`${HOTE} [data-q="valider"]`);
+  await p.click(`${HOTE} [data-q="vers4"]`); await p.click(`${HOTE} [data-q="vers4"]`);
+  await p.click(`${HOTE} [data-q="ecrire"]`);
+  await p.click(`${HOTE} [data-q="signer"]`);
+  await p.waitForSelector(`${HOTE} [data-q="clore"]:not([disabled])`);
+}
+
+await v('Séance à jalons pondérés avec un quai, en copie : la note reste celle des jalons (12 / 20), pas celle du quai ; le détail du quai reste rangé', async () => {
+  const p = await pageCopieQuai({ poids: true });
+  const n = await p.evaluate(() => window.__cq.moteur.noter(window.__cq.db));
+  egal([n.score, n.max], [12, 20], 'jalon de 12 juste, jalon de 8 faux : 12 / 20');
+  vrai(n.detail.quai && typeof n.detail.quai.reception === 'number', 'le détail du quai (réception, jalons, rapidité) reste rangé pour l’enseignant');
+  await p.close();
+  // Sans poids, la note de la séance est toujours celle du quai (rien ne change).
+  const q = await pageCopieQuai();
+  const m = await q.evaluate(() => window.__cq.moteur.noter(window.__cq.db));
+  egal(m.max, 17, 'sans poids, la note de la séance est celle du quai : 15 de réception + 2 de rapidité (quai sans froid, valeurs par défaut)');
+  vrai(m.detail.quai && typeof m.detail.quai.reception === 'number', 'sans poids : le détail du quai est là aussi');
+  await q.close();
+});
+
+await v('Quai en copie, `rendCopie: false` : « Clore la réception », deux clics, la clôture ne rend PAS la copie ; sans l’option, « Clore la réception et rendre ma copie » rend la copie', async () => {
+  const p = await pageCopieQuai({ rendCopie: false });
+  await jusqueClore(p);
+  const lib = (s) => p.$eval(`${HOTE} [data-q="clore"]`, (n) => n.textContent.trim());
+  egal(await lib(), 'Clore la réception', 'libellé avec l’option');
+  await p.click(`${HOTE} [data-q="clore"]`);
+  egal(await lib(), 'Clore définitivement ? Cliquez pour confirmer', 'premier clic : la confirmation en deux clics reste');
+  vrai(!(await p.evaluate(() => window.__qs.db.quais[window.__qs.Q.id].fini)), 'rien de figé au premier clic');
+  await p.click(`${HOTE} [data-q="clore"]`);
+  await p.waitForSelector(`${HOTE} [data-q-bilan]`);
+  egal(await p.evaluate(() => window.__qs.db.quais[window.__qs.Q.id].fini), true, 'le quai est clos');
+  await p.waitForTimeout(400);
+  egal(await p.evaluate(() => window.__cq.remis), null, 'rendreCopie n’a pas été appelé');
+  egal(await p.locator('[data-copie-etat="rendue"]').count(), 0, 'le bandeau ne dit pas « Copie rendue »');
+  egal(await p.locator('[data-copie-rendre]').count(), 1, 'la copie se rend encore par le bandeau (un autre écran)');
+  await p.close();
+  // Sans `rendCopie` : comme avant.
+  const q = await pageCopieQuai();
+  await jusqueClore(q);
+  egal(await q.$eval(`${HOTE} [data-q="clore"]`, (n) => n.textContent.trim()), 'Clore la réception et rendre ma copie', 'libellé sans l’option');
+  await q.click(`${HOTE} [data-q="clore"]`);
+  egal(await q.$eval(`${HOTE} [data-q="clore"]`, (n) => n.textContent.trim()), 'Rendre définitivement ? Cliquez pour confirmer', 'confirmation sans l’option');
+  await q.click(`${HOTE} [data-q="clore"]`);
+  await q.waitForFunction(() => window.__cq.remis !== null);
+  egal(await q.evaluate(() => window.__cq.remis.max), 17, 'la copie rendue porte la note du quai (sur 17)');
+  await q.waitForSelector('[data-copie-etat="rendue"]');
+  await q.close();
+});
+
+await v('Quai : `rendCopie` ne prend que false — absent ou false acceptés, true et « oui » refusés avec un message en clair', async () => {
+  egal(quaiMod.verifierQuai(QBON()), [], 'absent');
+  egal(quaiMod.verifierQuai(QBON({ Q: (Q) => { Q.rendCopie = false; } })), [], 'false');
+  for (const mal of [true, 'oui']) {
+    const E = quaiMod.verifierQuai(QBON({ Q: (Q) => { Q.rendCopie = mal; } }));
+    vrai(E.length === 1 && /rendCopie/.test(E[0]) && /false/.test(E[0]), `rendCopie = ${mal} : ${E.join(' | ')}`);
+  }
+});
+
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {
   const hors = await pe.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => !n.startsWith(location.origin)));
   egal(hors, [], 'ressources hors du site');

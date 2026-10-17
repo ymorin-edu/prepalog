@@ -468,7 +468,8 @@ export function creerEntreprise(U) {
     // Le planning en évaluation : jalons réussis / jalons × 20, détail jalon par jalon (brief §7).
     // Séance à jalons pondérés (décision de Tristan, 14/10/2026, bug trouvé en construisant ENT-7.2) : la note reste celle
     // des jalons et des questions, la note du planning (`note` déclaré, ou implicite en `copie`) ne la remplace jamais ;
-    // son détail reste rangé pour l'enseignant. Même règle pour l'entrepôt.
+    // son détail reste rangé pour l'enseignant. Même règle pour l'entrepôt et pour le quai (17/10/2026, trouvé en construisant
+    // ENT-8.10 : en copie, le quai a toujours une note, qui remplaçait celle des jalons pondérés et des questions d'ouverture).
     if (VPL && VPL.note) {
       const n = VPL.note(db);
       detail.planning = n.detail;
@@ -494,7 +495,7 @@ export function creerEntreprise(U) {
         Object.assign(detail.quai, { reception: Math.round(n.reception * 100) / 100, jalons: n.pts, sur: n.nJalons,
           horsFroid: n.ptsFroid, reelPts: n.ptsReel, rapidite: Math.round(n.vitesse * 100) / 100,
           complet: n.complet, justes: n.justes, palettes: n.nPalettes });
-        return { score: n.score, max: n.max, detail };
+        if (!AVEC_POIDS) return { score: n.score, max: n.max, detail };
       }
     }
     return { score: arrondi(ok), max: arrondi(MAX_POIDS), detail };

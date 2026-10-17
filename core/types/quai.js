@@ -107,6 +107,11 @@
 // au bilan (il n'apparaît qu'après la signature) ; le bilan dit à la place que le BL ne se corrige plus. Pour une
 // séance notée au premier bilan : refaire le quai après la signature ne doit pas changer ce bilan.
 //
+// `rendCopie: false` (17/10/2026, trouvé en construisant ENT-8.10, à l'image du Planning) : en évaluation (`copie`), la clôture
+// ne rend pas la copie ; le bouton s'appelle « Clore la réception » (deux clics, comme en copie) et d'autres écrans de la séance
+// peuvent suivre le quai (un compte rendu après la signature) : la copie se rend plus tard, par un autre écran. Seule valeur
+// acceptée : false. Sans cette option, rien ne change.
+//
 // RENDU 2D ISO (06/10/2026, brief `docs/briefs/ENT-1.1-spartoo-quai.md` §7.8, maquette validée par Tristan :
 // `docs/briefs/spartoo/maquette-quai-spartoo-iso.html`). `rendu: 'iso'` remplace les photos et la palette 3D
 // par le kit iso (`core/iso.js`) : ① la façade, le camion porteur qui recule à la porte, le chauffeur et sa
@@ -826,6 +831,7 @@ export function verifierQuai(Q) {
   const E = [];
   verifierPalettes(Q, E);
   if (Q && typeof Q === 'object') { verifierUnite(Q, E); verifierDeuxSeances(Q, E); verifierDepose(Q, E); }
+  if (Q && typeof Q === 'object' && Q.rendCopie !== undefined && Q.rendCopie !== false) E.push(`rendCopie : ne prend que la valeur false (reçu « ${Q.rendCopie} »)`);
   const S = Q && Q.securite;
   if (!S || typeof S !== 'object') return E;
   const scene = S.mode === 'scene';
@@ -3060,7 +3066,7 @@ export function creerQuai(Q, opts = {}) {
     const ouvert = unDecharge(e, R);
     let clore;
     if (EVAL && !prof) {
-      clore = `<button class="btn btn-p${ui.arme ? ' quai-arme' : ''}" data-q="clore" ${!ouvert || e.fini || !toutFini(e) || api.copieRendue() ? 'disabled' : ''}>${ui.arme ? 'Rendre définitivement ? Cliquez pour confirmer' : 'Clore la réception et rendre ma copie'}</button>
+      clore = `<button class="btn btn-p${ui.arme ? ' quai-arme' : ''}" data-q="clore" ${!ouvert || e.fini || !toutFini(e) || api.copieRendue() ? 'disabled' : ''}>${ui.arme ? (Q.rendCopie === false ? 'Clore définitivement ? Cliquez pour confirmer' : 'Rendre définitivement ? Cliquez pour confirmer') : (Q.rendCopie === false ? 'Clore la réception' : 'Clore la réception et rendre ma copie')}</button>
         ${ui.arme ? '<button class="btn" data-q="desarmer">Annuler</button>' : ''}`;
     } else {
       clore = `<button class="btn btn-p" data-q="clore" ${!ouvert || e.fini || !toutFini(e) ? 'disabled' : ''}>Clore la réception</button>`;
@@ -3980,7 +3986,7 @@ export function creerQuai(Q, opts = {}) {
         sig('cloturer');
         if (EVAL && !api.estProf) {
           if (!secondClic(ui, 'arme')) { api.redessiner(); return; }
-          e.fini = true; api.sauver(); api.redessiner(); api.rendreCopie(); return;
+          e.fini = true; api.sauver(); api.redessiner(); if (Q.rendCopie !== false) api.rendreCopie(); return;
         }
         e.fini = true; api.sauver(); api.redessiner();
       }));
