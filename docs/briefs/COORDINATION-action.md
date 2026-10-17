@@ -245,3 +245,104 @@ Séquence : moteur d'abord (ENT-8.5 s'appuie sur la vue), puis ENT-8.5. Décisio
 ### 7.1 Journal du chantier 3
 
 - 16/10 soir : cadrage (commité), moteur Localiser en copie (9479b84, 19 cas), ENT-8.5 (b61e97c, 17 cas), puis ENT-8.6 : arrêt du sous-agent (l'envoi du planning rend la copie en évaluation) ; **décision du chef : option A**, option `rendCopie: false` du Planning (bd82d9d, un cas ajouté, aucun existant réécrit), puis ENT-8.6 (4989443, 16 cas). Suite complète en parallèle : verte (1632 cas) une fois la ligne d'EN-COURS effacée. **Rien n'a été vu à l'écran par Tristan.** Laissé ouvert : demandes au moteur (site de l'élève dans une question d'ouverture et dans le nom de la personne ; barre « Étape suivante » en évaluation ; sous-titre et bouton de fiche selon la base) ; `k-entrepot` et `k-img-semi` gardées (proches d'une ligne de « Qui est qui ? ») ; `k-img-palette` désactivée ; tâche `t-rdv` d'ENT-8.6 reprise d'ENT-8.4 ; citations de la convention de PFMP non relues ; commentaire périmé `core/types/entreprise.js` l.244 (« la vue refuse aussi une évaluation ») ; Villefranche = magasin relevé dans OSM, non rapproché de l'offre France Travail ; `fb-6.3`, `fb-6.8` et Decathlon vérifiés seulement par la suite complète.
+
+## 8. Chantier 4 (17/10/2026) : les quatre séances de la réception, ENT-8.7 → ENT-8.10 — décisions du chef de chantier
+
+**Délégation** : Tristan, 17/10/2026, « suite construction, tu prends les décisions ». Le moteur « quai en deux séances » (E-5, lots 1 à 3 :
+`arret`, `commence`, `document`, `face: true`, dépose dirigée `depose`) est **livré** (commits 2d0259e, 0c96f44, 25fc3ed, f543815, 132a2d2 ;
+feuille `docs/briefs/MOTEUR-depose-dirigee.md`, fiche `activites/FICHE-SEANCE.md` § quai iso). Mêmes règles qu'au §1 : **aucun sous-agent ne
+commite ni ne pousse** ; le chef commite par nom à chaque compte rendu, pousse quand l'arbre est propre et la suite verte. Squelettes `pret: false`
+des quatre séances, lignes du registre, d'`ATTENDU_CAP` et du cas « au registre » du bloc `action` posés par le chef **avant** le départ ;
+`CAMION_HAVRE` posé dans `contenus/action.js` (ENT-8.8 n'attend donc rien d'ENT-8.7).
+
+### 8.1 Organisation
+
+| Chantier | Modèle | Port | Fichiers (et personne d'autre) |
+|---|---|---|---|
+| **ENT-8.7** (guidage C1.3) | Opus | 8117 | `contenus/action-ent87.js` (+ `action-ent87-donnees.js` si besoin), `contenus/questions/ENT-8.7.js`, `contenus/corriges/ENT-8.7.js`, `activites/action-decharger.js` (remplace le squelette), `contenus/action.js` (**ajouts seulement** : `DOC_DROIT_QUAI`, `protocoleSecurite`), `outils/test/action-87.mjs`, lignes dans `outils/test.mjs` (`BLOCS` + groupe 1) et `outils/test/tirage-niveaux.mjs` |
+| **ENT-8.8** (guidage C1.4) | Opus | 8118 | `contenus/action-ent88.js` (+ `-donnees`), `contenus/questions/ENT-8.8.js`, `contenus/corriges/ENT-8.8.js`, `activites/action-controler.js`, `outils/test/action-88.mjs`, lignes dans `outils/test.mjs` (groupe 2) et `tirage-niveaux.mjs` ; **n'écrit pas** dans `contenus/action.js` |
+| **ENT-8.9** (entraînement, erreur induite) | Opus | 8119 | `contenus/action-ent89.js` (+ `-donnees`), `contenus/questions/ENT-8.9.js`, `contenus/corriges/ENT-8.9.js`, `activites/action-palette-lucas.js`, `outils/test/action-89.mjs`, lignes dans `outils/test.mjs` (groupe 3) et `tirage-niveaux.mjs` ; **n'écrit pas** dans `contenus/action.js` |
+| **ENT-8.10** (évaluation C1.3 + C1.4) | Opus | 8120 | `contenus/action-ent810.js` (+ `-donnees`), `contenus/questions/ENT-8.10.js`, `contenus/corriges/ENT-8.10.js`, `activites/action-evaluation-reception.js`, `outils/test/action-810.mjs`, lignes dans `outils/test.mjs` (groupe 4) et `tirage-niveaux.mjs` ; lit `contenus/action-eval-sites.js` (module des sites d'ENT-8.5 / 8.6) sans l'écrire ; **n'écrit pas** dans `contenus/action.js` |
+
+**Deux phases** : ENT-8.7 et ENT-8.8 en parallèle (phase 1) ; ENT-8.9 et ENT-8.10 en parallèle (phase 2), une fois 8.7 et 8.8 commitées :
+8.9 et 8.10 reprennent le gabarit du protocole (`protocoleSecurite`), les textes de loi (`DOC_DROIT_QUAI`), la façon de déclarer le quai complet
+et le dialogue de 8.7, la façon de tirer les anomalies de 8.8. `outils/test.mjs` et `tirage-niveaux.mjs` : **ajout de ligne** à l'outil Edit,
+après relecture du fichier juste avant. Un processus s'arrête par PID, jamais par nom. Tout texte sur Action, Geodis, GXO, Kuehne+Nagel ou un
+texte de loi est marqué VÉRIFIÉ (source) ou CONSTRUIT dans le code et au compte rendu.
+
+### 8.2 Décisions valables pour les quatre séances
+
+1. **La dépose dirigée suit les choix de Tristan à l'écran (17/10, `decisions.md`), pas les §4 / §6.4 des briefs** : **variante A**, 6 cases **R1 à R6
+   sur une ligne** de part et d'autre du passage, **4 justes (R1 à R4, peintes au sol)**, **1 case sur l'allée piétonne** et **1 devant le quai 3**,
+   **non peintes** (elles ne s'éclairent que pendant le choix), case piège grisée gardée jusqu'à la fin, Kevin attend à la sortie du camion. Les
+   briefs disent encore « 2 + 2 pièges, 2 rangées de 3 » : c'est **périmé**. Déclaration : `depose: { passage?, grise?, cases: [{ id, sol?, legende?,
+   nom?, reaction?, juste?, peinte? }] }` (fiche § quai iso, feuille `MOTEUR-depose-dirigee.md`) ; poids « dépose au premier choix » **0,625 × 4**.
+2. **Un `id` de quai par séance** (`db.quais[<id>]` n'est pas cloisonné par séance) : `action-quai2-decharger` (8.7), `action-quai2-controler` (8.8),
+   `action-quai5-labastide` (8.9), `action-quai-evaluation` (8.10).
+3. **Pièces partagées dans `contenus/action.js`**, écrites par **ENT-8.7 seule** (ajouts à la fin du fichier) : `DOC_DROIT_QUAI` (document « Le
+   droit » : R4515-4, R4515-6, R4515-8 **recopiés mot pour mot sur Légifrance**, identifiants LEGIARTI et date de consultation en commentaire
+   et en pied) ; **`protocoleSecurite(spec)`** : fonction pure qui fabrique le document « Protocole de sécurité » (une page, rubriques 1 à 5 de
+   R4515-6 + produits, pictogrammes en traits, lisible en noir et blanc, pied « Document pédagogique — reconstitution, non contractuel… ») à
+   partir d'une spec (site, exploitant, quai, transporteur, consignes par rubrique, responsable, vitesse…). La spec du quai 2 d'Ensuès vit
+   dans `action-ent87.js` ; 8.9 (Labastide, quai 5) et 8.10 (Onnaing ou Belleville) écrivent la leur. 8.8 n'a pas besoin du protocole.
+   `CAMION_HAVRE` (posé) : 8.7 et 8.8 l'importent, 8.9 et 8.10 ont leur propre camion dans leur fichier.
+4. **Niveaux d'élève** : le quai et le dialogue ne lisent pas `db.aisance` (état des lieux du 17/10, ENT-8.7 §7.4) et **on ne lance pas le lot 4**
+   (un seul chantier moteur à la fois ; les séances d'abord). Donc : **Accompagné = contenu standard** partout (8.7 : 3 choix par réplique, consigne
+   du quai neutre ; 8.8 : pas de rappel « Fais le tour ») ; **Confirmé** : seulement ce que le tirage sait faire (8.7 : 4e situation et 2e anomalie en
+   `bonus: true` ; 8.8 : aides de comptage **allumées pour tous**, le brief voulait les éteindre chez le confirmé : impossible sans le lot 4). Chaque
+   compte rendu le dit en une ligne ; le lot 4 sera proposé à Tristan après l'essai à l'écran.
+5. **Textes construits par Cowork** (protocole, dialogues, réponses de Samia / Romain, situations, retours, phrases) : écrits **tels quels**, liste à
+   relire à l'écran dans le compte rendu. Un texte qui contredit le moteur ou une décision ci-dessus est adapté au minimum et signalé.
+6. **Textes de loi** : recopiés depuis Légifrance par le constructeur (WebFetch), jamais de mémoire ; si Légifrance ne répond pas, le texte du brief
+   est écrit **marqué « non relu »** et le compte rendu le dit en premier. L133-1 (8.9) et L133-3 (8.8) : même règle.
+7. **Les poids des briefs sont validés par Tristan** (8.7 le 16/10 à 18 h 54 ; 8.8 le 16/10 à 19 h 20 ; 8.9 et 8.10 : décisions de Cowork sur délégation,
+   §11 de chaque brief) : repris tels quels, somme 20 vérifiée par un cas.
+8. **Questions au fil** sur un geste du quai (`scene:<id>:signaler`, `quai:<id>:dechargement`, `quai:<id>:cloturer`) : supposé bon (le panneau est
+   accroché à la séance, ENT-6.4 en pose sur `scene:…:decharger`) : **un cas de test le prouve** dans chaque bloc.
+9. **Photo du chariot dans la fiche du protocole** (8.7) : impossible dans une ligne → **second document à gauche** (onglet), `contenus/images/action/chariot-elevateur.jpg`.
+10. **Blocs de tests** : `action-87` (groupe 1), `action-88` (groupe 2), `action-89` (groupe 3), `action-810` (groupe 4) ; un cas « rien fait = 0/20 »,
+    un cas « parcours juste = 20/20 », un sabotage éprouvé par bloc (dit au compte rendu) ; écran 1366 × 768 sans défilement.
+11. **Compte rendu du brief** rempli par le constructeur (fichiers, écarts, décisions, tests, « reste ouvert »), statut « livré » ; le chef ajoute
+    la ligne de `decisions.md` et l'état dans `chantiers.md`. Livraison en `pret: true, ouverture: 'prof'`.
+
+### 8.3 ENT-8.7 — tranché
+
+- `precedente: 'action-avant-noel'` ; `niveauxPrevus: ['confirme']` seulement (l'Accompagné n'a rien de spécifique : décision 4) ; `questions: 'ENT-8.7'`.
+- Quai : `rendu: 'iso'`, `froid: false`, un camion, `securite.mode: 'scene'` avec les 5 objets (états tirés par `quai: (graine) => …` comme ENT-4.4,
+  `etapesQuaiTire`), `dechargement: { par: 'cariste', nom: 'Kevin' }`, `arret: { etape: 'dechargement', texte: 'Les 4 palettes sont en zone de
+  réception. Le contrôle, c’est la prochaine fois.' }`, `depose` variante A, `recommencer: false`. Pas de `commence`.
+- Dialogue « Au quai » : `telephone` avec `face: true`, contact `{ nom: 'Marc', detail: 'chauffeur, camion du Havre' }`, 5 répliques du §6.2, 3 choix
+  chacune ; jalons `jalonDialogue`.
+- Question P : geste **`quai:action-quai2-decharger:dechargement`** (nom retenu au lot 1, le brief dit encore « decharge »).
+- Le chauffeur n'a pas de local dessiné : après `cabine` signalée il descend et attend près de l'accueil ; la narration dit « au local chauffeurs » ;
+  accepté (état des lieux du 17/10).
+
+### 8.4 ENT-8.8 — tranché
+
+- `precedente: 'action-decharger'` ; `niveauxPrevus: ['confirme']` déclaré **seulement si** un jalon bonus existe sans changer le socle, sinon aucun
+  (décision 4 : aides allumées pour tous) ; `questions: 'ENT-8.8'`.
+- Quai : `commence: 'controle'`, `document: 'Bon de livraison — lettre de voiture'` (option du lot 1), `quai: (graine) => …` avec les anomalies tirées
+  (2 problèmes : `ecrase-face` + `ecrase-cache` ou `manquant` ; 1 piège `couche-normale` ; 1 conforme ; `verifier` du §6 bis), `recommencer: false`,
+  chauffeur Marc au vous ; `produit` **non joué** (gardé pour plus tard, §11 n° 4). Le mail du compte rendu est semé **à la signature du BL** (déclencheur
+  d'ENT-6.4), phrases calculées sur le tirage.
+- Quantités abîmées / manquantes : **2 fixes** (valeur de départ du brief) ; pas de tirage 1 à 3 (une variable de moins à relire).
+
+### 8.5 ENT-8.9 et ENT-8.10 — cadre (détail tranché au lancement de la phase 2, dans ce même §)
+
+- 8.9 : site Labastide (GXO), tuteur Romain, Lucas, Inès, chauffeur **Jan** (phrases courtes, aucune nationalité), quai complet (inspection → dépose → contrôle
+  → réserves) sans `arret` ni `commence`, erreur induite de Lucas, L133-1 relu sur Légifrance.
+- 8.10 : `copie: true`, `noter`, « Avant de commencer » noté, même site qu'ENT-8.5 / 8.6 par `siteDe(identifiant)` (`contenus/action-eval-sites.js`), quai
+  complet, mode évaluation de la dépose (premier clic pose sans réaction), pas de `parcours`.
+
+### 8.6 Alertes à dire à Tristan à la livraison
+
+- **7** : `outils/test.mjs` (blocs `action-87` à `action-810`), `outils/test/socle.mjs` (lignes `ATTENDU_CAP`), `outils/test/action.mjs` (cas « au
+  registre » recalé), `tirage-niveaux.mjs` (banques figées).
+- **8** : quatre activités ajoutées (ENT-8.7 à ENT-8.10 ; `ENT-8.10` se range après `ENT-8.9`).
+- **9** : entreprise réelle (Action, Geodis, GXO, Kuehne+Nagel) : rien de nouveau vérifié par Claude Code ; textes de loi relus sur Légifrance.
+- **13** : `depose`, `arret`, `commence`, `face` n'agissent que si le contenu les déclare.
+- Rien ne change dans Firebase.
+
+### 8.7 Journal du chantier 4
+
+- 17/10 après-midi : docs du lot 2 et briefs 8.9 / 8.10 commités (feaad2e) ; squelettes, `CAMION_HAVRE`, ce §8, inscription dans `EN-COURS.md`.

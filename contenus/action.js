@@ -336,3 +336,20 @@ export const DOC_ACTION = { id: 'action', titre: 'Action et Geodis en bref', cou
     <div class="ac-l"><span class="ac-n">6</span><p>Geodis appartient au groupe SNCF. Action appartient surtout à un fonds d’investissement.</p></div>
     ${PIED(PIED_RECONSTITUTION)}
   </article>` };
+
+// ─────────────────────────────────────────── le camion du Havre (ENT-8.7 §6.3) : pièce FIXE partagée par ENT-8.7 (déchargement) et ENT-8.8 (contrôle)
+// Mardi 9 novembre, quai 2, 7 h : 4 palettes filmées, une sorte de produit par palette, refaites au hub d’import du Havre (Gonfreville-l’Orcher).
+// CONSTRUIT : désignations génériques (aucune marque), références au format « ACT- » + 5 chiffres, quantités inventées ; le transporteur est le nom
+// construit déjà écrit sur la lettre de voiture d’ENT-8.2 (gardé pour la cohérence, ENT-8.7 §11 n° 1) ; le chauffeur Marc est construit.
+// Posé par le chef de chantier le 17/10/2026 (COORDINATION-action.md §8) ; ENT-8.7 n’en montre que l’aspect, ENT-8.8 y place ses anomalies tirées.
+export const CAMION_HAVRE = {
+  transporteur: 'Transports Seine-Provence',
+  chauffeur: 'Marc',
+  provenance: 'Hub d’import Action, Gonfreville-l’Orcher (port du Havre)',
+  palettes: [
+    { id: 'P1', ref: 'ACT-40117', designation: 'Bougies parfumées, lot de 3', couches: 5, parCouche: 8, cartons: 40 },
+    { id: 'P2', ref: 'ACT-22840', designation: 'Assiettes plates en grès, lot de 6', couches: 4, parCouche: 6, cartons: 24 },
+    { id: 'P3', ref: 'ACT-31506', designation: 'Boîtes de rangement plastique', couches: 4, parCouche: 5, cartons: 20 },
+    { id: 'P4', ref: 'ACT-27093', designation: 'Torchons de cuisine, lot de 3', couches: 6, parCouche: 8, cartons: 48 },
+  ],
+};

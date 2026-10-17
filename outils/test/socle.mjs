@@ -439,6 +439,7 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
     'ENT-5.8': 'CAP-C3.5', 'ENT-6.10': 'CAP-C3.7',
     'ENT-8.1': 'CAP-C1.1', 'ENT-8.2': 'CAP-C1.2', 'ENT-8.3': 'CAP-C1.1', 'ENT-8.4': 'CAP-C1.2',
     'ENT-8.5': 'CAP-C1.1', 'ENT-8.6': 'CAP-C1.2',
+    'ENT-8.7': 'CAP-C1.3', 'ENT-8.8': 'CAP-C1.4', 'ENT-8.9': 'CAP-C1.3,CAP-C1.4', 'ENT-8.10': 'CAP-C1.3,CAP-C1.4',
   };
   const metas = await page.evaluate(async () => {
     const { chargerActivites } = await import('/activites/index.js');
