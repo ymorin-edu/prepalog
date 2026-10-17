@@ -616,7 +616,7 @@ faut remplir la rangée proche du mur avant celle du fond ; les places d'arrivé
 journal et les pastilles suivent l'ordre de sortie. Légende « {nom} sort la palette P4 au chariot (1 sur 4) » (sans `nom`
 dans `dechargement` : « Le cariste »). Le chauffeur du camion reste debout près de l'accueil. Durée : 32 s pour quatre
 palettes (« Passer l'animation » existe) ; en mouvement réduit, l'état final tout de suite. Sans `par: 'cariste'` : le
-chauffeur au transpalette, comme Spartoo (inchangé). Joué et testé avec cinq palettes de fûts (lot 1 du chantier « quai en deux séances », 17/10/2026, cas « cinq palettes » du bloc `quai-iso`) ; au-delà, le plan n'a pas été éprouvé.
+chauffeur au transpalette, comme Spartoo (inchangé). Joué et testé avec cinq palettes de fûts (lot 1 du chantier « quai en deux séances », 17/10/2026, cas « cinq palettes » du bloc `quai-iso`) ; au-delà, le plan n'a pas été éprouvé. Avec `depose` (voir « La dépose dirigée par l'élève »), ce déroulé est remplacé à l'étape ② : le cariste attend l'élève à la sortie du camion.
 
 #### Un quai en deux séances : `arret`, `commence`, `document` (lot 1 du chantier « quai en deux séances », 17/10/2026)
 
@@ -659,6 +659,130 @@ quai: { id: 'action-controler', rendu: 'iso', froid: false, dechargement: { par:
   commence: 'controle', document: 'Bon de livraison — lettre de voiture', recommencer: false,
   camions: [ /* CAMION_HAVRE, le même */ ] },
 ```
+
+#### La dépose dirigée par l'élève : `depose` (lot 2 du chantier E-5, 17/10/2026, étape A)
+
+Cadrage et décisions : `docs/briefs/MOTEUR-depose-dirigee.md` (§2), brief `docs/briefs/ENT-8.7-action-decharger.md` §7.2. Code : section « la dépose
+dirigée par l'élève » de `core/types/quai.js` (`verifierDepose`, `normaliserCases`, `choisirCase`, `jalonsDepose`, `geometrieDepose`). **Option
+facultative : sans `depose`, rien ne change** (le dessin, les gestes, les jalons et la liste `signaux` des autres quais sont ceux d'avant).
+Avec `depose`, le cariste ne dépose plus seul : à l'étape ②, il **attend à la sortie du camion** avec chaque palette et c'est l'**élève qui
+clique la case** où il la pose. Page d'essai où l'on clique tout (guidage, évaluation, cartons ou fûts, mouvement réduit simulé, avec ou sans
+`arret`, tableau de ce que la vue sait) : `outils/essai-quai-inspection.html#depose` (partie 4). Tests : bloc `quai-iso` (étape C du chantier, en cours
+d'écriture quand cette fiche a été rédigée : à compléter avec les noms de cas).
+
+**La déclaration.** `depose: { passage?, grise?, cases: [{ id, sol?, legende?, nom?, reaction?, juste?, peinte? }] }`. Les cases sont sur **une
+ligne** devant le mur, de part et d'autre du passage de la porte ; l'ordre de `cases` est l'ordre de gauche à droite à l'écran.
+
+| Clé | Valeur | Défaut | Refusé si |
+|---|---|---|---|
+| `cases` | liste de cases, **8 au plus** | — | absente, vide ou pas une liste ; plus de 8 (« plan non éprouvé au-delà ») ; moins de cases **justes** que de palettes du camion (« il faut au moins une case juste par palette » : une case occupée ne se propose plus, pas de gerbage à la réception) |
+| `passage` | nombre de cases **à gauche** de la porte (entier de 0 au nombre de cases) | la moitié, arrondie vers le bas | pas un entier, négatif ou plus grand que le nombre de cases |
+| `grise` | `'garde'` : une case piège essayée reste grisée **jusqu'à la fin**, pour toutes les palettes ; `'palette'` : grisée pour la palette en cours seulement | `'garde'` | autre valeur |
+| autre clé de `depose` (la maquette avait `consigne`) | — | — | **toute clé inconnue** est refusée, `consigne` comprise |
+
+| Clé d'une case | Valeur | Défaut | Refusé si |
+|---|---|---|---|
+| `id` | texte court, écrit dans le DOM (`data-c`), le journal (« P4 posée en **R2** ») et les jalons : **neutre**, ne dit pas le verdict | — | vide, ou en double |
+| `sol` | `'pieton'` (l'allée piétonne) ou `'autre-quai'` (devant le quai voisin) : **un piège**. Absent = une case de la zone de réception | absent | autre valeur |
+| `legende` | « Quai 3 » : le nom de la porte voisine et de sa zone | — | **obligatoire** avec `sol: 'autre-quai'` ; vide |
+| `juste` | `true` / `false` | **déduit de `sol`** : sans `sol` vrai, avec `sol` faux | pas un booléen ; `juste: true` avec un `sol` (incohérent : la case se dessine comme un piège) ; `juste: false` **sans `sol`** et sans `reaction` |
+| `nom` | ce que lit le clavier / le lecteur d'écran (`aria-label`) : **un nom de lieu, jamais le verdict** | « Case R1 » ; « Case *id*, allée piétonne » (`pieton`) ; « Case *id*, devant le *légende en minuscule* » (`autre-quai`) | vide |
+| `reaction` | ce que dit le cariste (bulle) quand l'élève choisit cette case en guidage | `sol: 'pieton'` : « Là, c’est l’allée piétonne : je ne pose pas ici. » ; `sol: 'autre-quai'` : « Ça, c’est la zone du *quai 3*. » ; sinon vide | vide ; absente sur une case `juste: false` sans `sol` |
+| `peinte` | `false` : ni contour ni nom au sol, la case ne s'éclaire que **pendant le choix** (variante retenue pour les pièges) | `true` | pas un booléen ; **`peinte: false` sans `sol`** (une case juste est toujours peinte) |
+| autre clé de case | — | — | clé inconnue |
+
+**Avec quoi `depose` se combine** (`verifierQuai`, erreur en clair, la séance ne s'ouvre pas). Il **exige** `rendu: 'iso'`, `dechargement: { par:
+'cariste' }`, **pas de froid** (`froid` absent ou `false`, comme tout le rendu iso) et **un seul camion** ; il refuse `mode: 'controle'` (quai déjà
+réceptionné : pas de déchargement). Une case `autre-quai` ne peut pas **toucher le passage** (les cases `passage - 1` et `passage` : la porte du quai
+voisin tomberait sur elle). Les palettes comptées pour les « cases justes » sont celles du premier camion. **Compatible** avec `securite` (l'inspection
+se joue avant, ENT-8.7), avec `arret: 'dechargement'` (ENT-8.7) et avec `commence: 'controle'` (ENT-8.8 peut montrer le même quai, voir plus bas).
+`heurtsPose` (chariot ou charge qui traverse une autre palette) n'est **pas** dans `verifierQuai` : un test unitaire vérifie que la variante A
+n'a aucun heurt (contrôlé le 17/10/2026 en appelant `heurtsPose` sur les 6 cases de la variante A : aucun).
+
+**L'exemple complet : la variante A retenue par Tristan le 17/10/2026** (6 cases : l'allée piétonne, R1 à R4, devant le quai 3 ; pièges non
+peints ; `passage: 3` : trois cases à gauche de la porte, trois à droite).
+
+```js
+// ENT-8.7 — décharger : l'élève dirige le cariste, le quai s'arrête à la dernière palette posée
+quai: { id: 'action-decharger', rendu: 'iso', froid: false, dechargement: { par: 'cariste', nom: 'Kevin' },
+  securite: { mode: 'scene', /* … */ },
+  depose: { passage: 3, cases: [
+    { id: 'allee-1', sol: 'pieton', peinte: false, nom: 'Allée piétonne' },
+    { id: 'R1' }, { id: 'R2' }, { id: 'R3' }, { id: 'R4' },
+    { id: 'quai3-1', sol: 'autre-quai', legende: 'Quai 3', peinte: false, nom: 'Devant le quai 3' } ] },
+  arret: { etape: 'dechargement', texte: 'Les 4 palettes sont en zone de réception. Le contrôle, c’est la prochaine fois.' },
+  camions: [ /* quatre palettes ou plus, mais jamais plus que de cases justes (ici 4) */ ] }
+```
+
+Les cases complétées par défaut : `allee-1` (piège, réaction « Là, c’est l’allée piétonne… »), `R1` à `R4` (justes, « Case R1 »…), `quai3-1`
+(piège, réaction « Ça, c’est la zone du quai 3. »). Le sol de la zone de réception est élargi aux cases, son nom est posé à la première case
+juste ; l'allée piétonne est une bande hachurée avec sa porte piétonne dans le mur ; la porte fermée du quai voisin porte sa légende. Le chauffeur
+du camion n'est **pas** dessiné à ② (un personnage près d'un piège attirerait l'œil) : à ④ il est debout à droite de la dernière case.
+
+**Ce que voit l'élève.** À ②, après « Décharger » : la porte s'ouvre et Kevin attend à la sortie du camion, palette sur les fourches ; la
+légende dit « Kevin attend avec la palette P4 (*nom*, 1 sur 4). Où la pose-t-il ? », la bulle de Kevin dit « Dis-moi où je pose chaque palette. Pas de
+gerbage à la réception. » (guidage **et** copie, avant la première palette seulement) et **les cases libres s'éclairent** : un clic, ou Tab puis
+Entrée / Espace. Les palettes sortent dans l'ordre **inverse** du chargement (P4, P3, P2, P1). ③ reste fermée (bouton du stepper grisé) tant que la
+dernière palette n'est pas posée. **Guidage** : une case piège fait réagir Kevin (sa `reaction` en bulle), la case **se grise** (hachures, plus
+cliquable, plus au clavier) jusqu'à la fin et l'élève rechoisit ; une case juste est posée. **Évaluation** (`copie`) : le **premier clic pose**, même
+sur un piège, sans bulle de réaction ni case grisée (la palette reste là où l'élève l'a mise, y compris à ④). Une case où une palette est posée
+disparaît de la couche cliquable. Après un clic ou une pose, le focus (conservé au clavier par le mécanisme habituel) passe à la case proposée
+suivante, sinon à la première. Une région `aria-live="polite"` écrit ce que dit Kevin (la bulle dessinée est cachée aux lecteurs
+d'écran).
+
+- **Le DOM ne dit jamais le verdict.** Une case proposée est `<g class="quai-case" data-q="depose" data-c="<id>" role="button" tabindex="0"
+  aria-label="<nom>">` : l'`id` et le `nom` sont tout ce qu'elle dit, **jamais** « juste » ni « piège ». Une case grisée (`.quai-case-grisee`,
+  `data-case-grisee`) est `aria-hidden`, sans rôle ni tabindex ; une case occupée est absente. D'où : choisir des `id` neutres (`R1`, pas `ok-1`),
+  un `nom` qui décrit le lieu.
+- **Le journal.** Chaque pose écrit une ligne « 07:32 — P4 posée en R2 (+1 min) » (l'`id` de la case, et `dechargement.parPalette` minutes, 1 par
+  défaut). **Un refus n'est pas journalisé** (le journal se lit à ③ : un refus n'est pas une faute à afficher). L'ouverture de la porte écrit
+  « porte du quai ouverte, début du déchargement » (`dechargement.ouverture`, 0,5 minute par défaut).
+- **Après le dernier dépôt.** Kevin revient à vide au point d'attente, fourches baissées ; les palettes sont dans leurs cases (celles de l'état) ; ③
+  s'ouvre (« Compter la palette → »), ou, avec `arret`, le bandeau de fin. Le compteur dit « Palettes en *nom de la zone, en minuscule* : 3 / 4 » (`zone.nom`).
+- **Page rechargée** : la vue se recalcule de la base (palettes posées dans leurs cases, Kevin à la sortie du camion avec la palette en attente,
+  tout de suite en phase de choix) ; le rattrapage habituel de « tout est déchargé » ne s'applique pas sous `depose` : l'état de la dépose fait foi.
+- **Animation (étape B du chantier, à relire quand elle sera livrée).** La feuille de coordination décide une animation **par geste** (Kevin
+  cherche la palette, la pose dans la case choisie puis cherche la suivante), une pause « choix » après chaque geste, « Passer l'animation »
+  qui va jusqu'à la pause suivante, et, en mouvement réduit, les états finaux. **À la date de cette fiche (étape A), il n'y a pas
+  d'animation** : un clic juste saute directement à l'état final de la pose, et les boutons « Passer l'animation » et « Revoir le déchargement »
+  sont cachés sous `depose` (ils n'ont rien à passer ni à revoir).
+
+**L'état rangé.** `db.quais[<id>].depose = { <palette>: { premier, essais, pose } }`, ex. `{ P4: { premier: 'allee-1', essais: ['allee-1',
+'R1'], pose: 'R1' }, P3: { premier: 'R2', essais: ['R2'], pose: 'R2' } }` : `premier` = la case du **premier** clic (c'est elle que lisent les
+jalons), `essais` = toutes les cases cliquées dans l'ordre, `pose` = la case où la palette est posée (`null` tant qu'elle attend). Une palette
+sans clic **n'a pas d'entrée** ; les cases grisées et occupées se **recalculent** de cet état, rien d'autre n'est rangé (ni la phase, ni la
+position du chariot). Une base ancienne est complétée sans rien effacer (`depose` créé vide, une entrée mal formée remise en forme). Comme
+tout l'état du quai, il vit sous `db.quais[<id du quai>]` et **n'est pas cloisonné par séance** : deux séances ne déclarent pas le même `id` de quai.
+
+**Les gestes** (`signaux`, pour les questions au fil et les messages déclenchés). `quai:<id>:depose` est publié **une fois, à la première palette
+posée** (quand exactement une palette est posée ; pas aux refus), et **n'existe que si le quai déclare `depose`** (même sous `commence`, où il
+n'est jamais publié). `quai:<id>:dechargement` (lot 1, avec `arret`) part quand la **dernière** palette est posée, par le même mécanisme qu'avant
+(`dechargeFini` rangé : une fois, même page rechargée). Un « Recommencer la réception » vide l'état de la dépose : le geste `depose` repartirait à
+la première pose suivante (non essayé).
+
+```js
+// Dans les `declencheurs` de la séance : un message dès que l'élève a posé sa première palette, un autre quand le quai est fini
+{ id: 'kevin-1ere-palette', quand: apresGeste('quai:action-decharger:depose'), semer: (prenom, db) => ({ mails: [ /* … */ ] }) },
+{ id: 'kevin-fin', quand: apresGeste('quai:action-decharger:dechargement'), semer: /* … */ },   // ou : quand: quaiDecharge('action-decharger')
+// Une question au fil (§4 bis du brief), par exemple « pourquoi pas de gerbage à la réception ? », posée une fois la première palette posée :
+//   quand: apresGeste('quai:action-decharger:depose')
+```
+
+**Les jalons** (`jalonsQuai`, groupés par `etapesQuai`). Un par palette du camion : `depose-P1`, `depose-P2`… (dans l'ordre du **contenu**, pas de sortie),
+libellé neutre « Dépose de la palette P4 ». `ok` = **tout est posé ET le premier clic de cette palette était juste** : tant que la dernière
+palette n'est pas posée, ils sont tous faux (rien posé = tous faux : le jalon ne récompense pas l'inaction), et ils existent dès une base vide
+(`jalonsQuai({}, Q)`, `ok: false`). Le `lib` ne dit pas la bonne case ; `attendu` la dit, lu au bilan : « une case de la zone de réception (R1,
+R2, R3, R4) » ; `fait` dit « premier choix : *nom de la case* » (suivi de « (posée ensuite en R2) » si l'élève a rechoisi) ou « pas posée ».
+Ils comptent dans le total du quai. Ils sont **absents** sous `commence` (la dépose n'y est pas jouée). `etapesQuai` leur donne
+`groupe: 'Diriger le déchargement'` : **une seule ligne** au bandeau de fin (jamais « P3 ✗ » : la case nommée fausse donnerait la réponse). Le
+barème de la séance (`ponderer`, `contenus/ponderation.js`) doit **nommer chacun de ces ids** (sinon la séance refuse de se charger) ; si une
+entrée du barème donne un bloc (`[poids, 'Bloc']`), ce bloc **remplace** le groupe ; avec `[poids]` seul, le groupe `Diriger le déchargement`
+est gardé (lu dans `ponderer` : `{ ...e, groupe du barème s'il y en a un, poids }`).
+
+**Sous `commence: 'controle'` avec `depose`** (ENT-8.8) : la dépose n'est pas jouée, la vue s'ouvre à ③. Les palettes sont **dessinées dans les
+cases justes**, dans l'ordre du contenu (P1 dans la première case juste, P2 dans la suivante…), et le sol, l'allée et le quai voisin sont dessinés
+comme à ②. Aucun jalon `depose-*`, aucune couche de cases, aucun geste. De même à ④ : les palettes sont dans leurs cases **réelles** (celles
+de l'état), les éventuelles autres dans les cases justes libres.
 
 #### Plusieurs palettes sur le quai iso
 
@@ -1850,7 +1974,7 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   |---|---|
   | fiche `<id>` | `fiche:<id>:<bloc>` (choisir, cocher, remettre en ordre ; une saisie à la sortie de la case), `fiche:<id>:<bloc>:<ligne>` (classer une ligne d'un tableau oui / non), `fiche:<id>:envoyer` |
   | planning `<id>` | `planning:<id>:poser` (poser, déplacer, retirer une carte), `planning:<id>:envoyer` |
-  | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` ; si le quai déclare `arret: 'dechargement'` (17/10/2026), en plus `quai:<id>:dechargement` (la dernière palette est posée, **une fois**, quel que soit le chemin) ; en inspection sur la scène (`securite.mode: 'scene'`, D-4) en plus `scene:<id>:signaler` (chaque envoi de marques), `scene:<id>:decharger` (le figeage « C'est bon », pas l'arrêt par le collègue) |
+  | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` ; si le quai déclare `arret: 'dechargement'` (17/10/2026), en plus `quai:<id>:dechargement` (la dernière palette est posée, **une fois**, quel que soit le chemin) ; s'il déclare `depose` (17/10/2026, « La dépose dirigée par l'élève »), en plus `quai:<id>:depose` (la première palette posée par l'élève, **une fois**) ; en inspection sur la scène (`securite.mode: 'scene'`, D-4) en plus `scene:<id>:signaler` (chaque envoi de marques), `scene:<id>:decharger` (le figeage « C'est bon », pas l'arrêt par le collègue) |
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
   | téléphone, dialogue `<id>` | `dialogue:<id>:appeler` (le premier appel), `dialogue:<id>:<réplique>` (la première réponse à cette réplique, juste ou non, au premier appel), `dialogue:<id>:fin` (raccroché un appel fini) ; contact sans dialogue `<id>` : `dialogue:<id>:appeler` (chaque appel) |
@@ -1978,7 +2102,7 @@ sur 2 » est calculé). Après toute modification : `node outils/test.mjs questi
 - Une réception semée peut porter `annoncee: true` (visible, non saisissable), `colisVisibles: false` (pas de tableau des colis),
   `colisLibelle` (colonne « Colis » de la liste) et `consigneQuai` (l'encadré qui remplace le tableau).
 - Quai : `rendu: 'iso'` (quai sans froid, un camion ; voir l'en-tête de `core/types/quai.js` et « Le quai iso » plus haut : inspection sur
-  la scène, palettes de fûts, plusieurs palettes, cariste), et sur le camion `commande`, `lot`, `expedie` (date ou jours par rapport à
+  la scène, palettes de fûts, plusieurs palettes, cariste, `arret` / `commence` / `document`, dépose dirigée `depose`), et sur le camion `commande`, `lot`, `expedie` (date ou jours par rapport à
   aujourd'hui) pour l'en-tête du BL ; `parCarton` sur les `refs` (la colonne s'intitule « Par » suivi de l'unité du quai).
 - Fiche : un bloc `choix` peut porter `colonne: true` (réponses longues l'une sous l'autre). Tout envoi définitif (fiche, phrases,
   planning, bon de réception) passe par une confirmation dans la page : un test qui clique « Envoyer » doit ensuite cliquer
