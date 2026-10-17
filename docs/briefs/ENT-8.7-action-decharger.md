@@ -340,6 +340,31 @@ Tests dans le bloc `quai` (ou le bloc où vit la vue) ; **ENT-1.1, 4.x, 5.4, 6.4
 - **Image dans une ligne de fiche** (le chariot à côté de « qui décharge ») ; sinon, l'image en second document à gauche.
 - Questions au fil sur un geste `scene:…:signaler` dont l'écran est le quai (le panneau des questions s'ouvre-t-il par-dessus la scène sans la casser ?).
 
+#### État des lieux fait le 17/10/2026 (Claude Code, lignes de `core/types/quai.js` et `core/types/dialogue.js` au 17/10)
+
+- **Scène + cariste** : ENT-6.4 déclare déjà `securite.mode: 'scene'` et `dechargement.par: 'cariste'` ensemble ; le moteur est le même qu'ici
+  (cariste animé, silhouette sans visage), seule la narration de 6.4 dit « tu conduis ». Rien à construire. ⚠ Le brief se trompe en disant que
+  l'élève de 6.4 décharge lui-même.
+- **Chauffeur après `cabine`** : il descend et reste debout près de la porte « Accueil chauffeurs » jusqu'à la signature du BL (`quai.js:1429`,
+  `parti = k.signe`). Aucun local n'est dessiné ; à la fin du déchargement il est encore visible sur le quai. Accepté tel quel (il est « à l'accueil »).
+- **Tirage** : `securite` ne peut pas être une fonction (ignorée en silence, `quai.js:247, 489-490`) ; il faut `quai: (graine) => …` comme ENT-4.4
+  (`contenus/picard-ent44.js:187-197`, `etapesQuaiTire`), qui marche en guidage.
+- **Accompagné** : ni le dialogue (choix compilés une fois sans la base, `dialogue.js:101`) ni le quai (aides figées à la création, aucune lecture
+  de `db.aisance`) ne connaissent le niveau → **contenu standard** en 8.7 ; un lot 4 facultatif (aides et consigne du quai `(db) => …`, ≈ 1 h 30)
+  rendrait l'Accompagné de 8.7 et le Confirmé sans aides de 8.8 possibles. `selon: (db) => ({ dit, libs })` adapte seulement les textes.
+- **Image dans une ligne de fiche** : impossible (libellés échappés, `liste` = menu déroulant) → **photo du chariot en second document à gauche**
+  (onglet), ce qui existe (`core/types/documents.js:37-41`, loupe comprise).
+- **Titre du document de l'étape ④** : en dur (`quai.js:2509`, « Bon de livraison n° … — exemplaire du destinataire ») → option `document`
+  ajoutée au lot 1.
+- **Questions au fil sur `scene:…:signaler`** : le panneau est accroché à la séance, pas à la vue (`entreprise.js:1688`) ; ENT-6.4 pose déjà des
+  questions sur `scene:…:decharger` et `quai:…:valider`. Jamais essayé sur « signaler » : supposé bon, le test le prouvera.
+- **Noms changés** (collision avec l'existant) : `depart: 'controle'` → **`commence: 'controle'`** (`Q.debut` est déjà l'heure de début du
+  quai et `R.depart` l'heure de départ) ; geste `quai:<id>:decharge` → **`quai:<id>:dechargement`** (trop proche de `quai:<id>:decharger`, le
+  clic du début). Le déclencheur garde le nom `quaiDecharge('<id>')`.
+- **Durée revue** : lot 1 ≈ 3 h, lot 2 ≈ 7 h (rien n'existe : ni case, ni pause de l'animation précalculée, places en 2 colonnes, plan éprouvé
+  jusqu'à 4 palettes seulement ; `placesIso` `quai.js:1321-1325`), lot 3 ≈ 1 h 30 (une douzaine de textes en dur, `dialogue.js:276-380`).
+  **Décision de Tristan (17/10/2026)** : on garde la dépose dirigée ; ordre : lot 1, lot 3, puis maquette du lot 2.
+
 ### 7 bis. Séance déjà jouée par des élèves ?
 
 Non : séance nouvelle. Le moteur (§7) ne change rien aux séances qui ne déclarent pas `arret`, `depart`, `depose`, `face`.

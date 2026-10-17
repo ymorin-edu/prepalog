@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Moteur « quai en deux séances » (ENT-8.7 §7, lots 1 à 3) — chef de chantier Fable, sous-agents Sonnet | `core/types/quai.js`, `core/types/dialogue.js`, `core/declencheurs.js`, `activites/FICHE-SEANCE.md`, `outils/test/quai-iso.mjs`, `outils/test/dialogue.mjs`, `outils/essai-quai*.html`, `outils/essai-dialogue.html`, `docs/briefs/ENT-8.7-*.md`, `docs/decisions.md` | 17/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
