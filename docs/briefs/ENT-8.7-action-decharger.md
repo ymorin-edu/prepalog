@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md puis docs/briefs/ENT-8.7-action-decharger.md et docs/briefs/ENT-8.8-action-controler.md en entier. Commence par l'état des lieux du §7.4 et dis-moi ce qui contredit le brief. Puis le chantier moteur du §7 (lots 1 à 3, un seul chantier moteur à la fois : attends que le chantier ENT-8.5 soit effacé de EN-COURS), puis ENT-8.7, puis ENT-8.8. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré
 **Date du brief** : 16/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage du 16/10/2026, 18 h 23 → 18 h 54 (fiche du projet `claude/prepalog-action-cadrage-8.7.md`,
 11 décisions de Tristan), puis brief écrit le 16/10 à 19 h 02 sur délégation de Tristan (« écris le brief de 8.7 et 8.8, tu prends les
@@ -437,9 +437,46 @@ Bloc **`action-87`** (fichier `outils/test/action-87.mjs`, ligne dans `BLOCS` et
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+*(Claude Code, sous-agent constructeur, 17/10/2026 ; décisions du chef : `COORDINATION-action.md` §8.)*
+
+- **Fichiers créés / modifiés** : créés `contenus/action-ent87-donnees.js` (consignes du protocole, banque `situations`, contrôle, anomalie tirée,
+  quai, dialogue), `contenus/action-ent87.js` (documents, fiche, « Au quai », messages, jalons, options), `contenus/questions/ENT-8.7.js`,
+  `contenus/corriges/ENT-8.7.js`, `outils/test/action-87.mjs` (17 cas) ; modifiés `activites/action-decharger.js` (le squelette remplacé, livré
+  `pret: true, ouverture: 'prof'`), `contenus/action.js` (**ajouts seulement, à la fin** : `DROIT_CONSULTE`, `DOC_DROIT_QUAI`, `PIED_PROTOCOLE`,
+  `planCour`, `protocoleSecurite(spec, { entete })`, `STYLE_PROTOCOLE` ; forme de la spec documentée en commentaire, pour ENT-8.9 et 8.10),
+  `outils/test.mjs` (une ligne dans `BLOCS`, une dans `GROUPES` groupe 1), `outils/test/tirage-niveaux.mjs` (banque `situations` dans `BANQUES_FIGEES`).
+- **Textes de loi** : R4515-4 (LEGIARTI000018529684), R4515-6 (LEGIARTI000020398165), R4515-8 (LEGIARTI000018529676) **recopiés sur Légifrance le
+  17/10/2026** (WebFetch, fiche de chaque article ; typographie du site : ’ et “ ”). Écarts avec le §2 : virgule après « déchargement » dans R4515-4 ;
+  2° de R4515-6 = « Le lieu de livraison ou de prise en charge, … accompagnées d'un plan et des consignes de circulation » ; R4515-8 a un 2e alinéa
+  (opérations non répétitives → protocole spécifique), écrit aussi.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** :
-- **Reste ouvert** :
+  1. **Bonus du confirmé « 2e anomalie » non construit** : le quai tiré est une fonction de la seule graine (`quai: (graine) => …`, `entreprise.js`
+     l.195-200) ; elle ne reçoit pas le niveau de l'élève. Le confirmé a seulement la 4e situation (`bonus-situation`). Rendre possible = lot moteur
+     (le quai recevant `db.aisance`), à proposer avec le lot 4.
+  2. **L'anomalie n'est pas dans le tirage rangé** (`db.tirages`) mais tirée de la graine (`anomalieDe`, comme ENT-4.4) : même raison ; ⚠ ne pas
+     changer `ANOMALIES_SOCLE` pendant qu'une classe joue la séance. Les situations, elles, sont un tirage mémorisé ordinaire.
+  3. **Fiche en boutons radio (`choix`, `colonne`) et non en listes déroulantes** : une consigne fait jusqu'à 140 signes, la liste la coupait une fois
+     choisie (vu à l'écran). La fiche défile dans sa colonne (`defile`) ; le protocole tient en entier à gauche à 1366 × 768 (cas de test).
+  4. **Protocole mis en page en grille** (1 · 3 + 5 / 2 sur toute la largeur avec le plan / 4 · produits) et signatures en une ligne d'en-tête
+     (« Signé par Geodis (le responsable du site) et Transports Seine-Provence (la gérante) » : des fonctions, aucun nom) ; consignes du §6.1
+     découpées en une phrase par ligne (mêmes mots), « poste 500 » pour le numéro d'urgence (valeur construite).
+  5. `zone-reception` (Avant de commencer) : la photo de palettes au sol d'ENT-8.2 au lieu du plan `PLAN_RECEPTION` (c'est une vue, pas une image).
+  6. Question M : « (Regarde le document « Le droit », à gauche.) » ajouté à l'énoncé. Situation de l'écran « Au quai » : le message de Samia (§4),
+     pas la phrase du §6.2. `finFige` tel que demandé (« Le quai se joue une fois… ») : il s'affiche aussi quand une question est fausse.
+  7. Pire cas : 1,25 / 20 et non 0 : les deux pièges de la dépose, une fois essayés, sont grisés pour toutes les palettes (`grise: 'garde'`) : les
+     deux dernières palettes ne peuvent qu'être posées juste au premier choix.
+- **Décisions prises en route** : jalons du quai écrits dans le contenu (`etapesQuaiTire` ne rend jamais « faux ») : « à faire » tant que
+  l'inspection n'est pas figée / la dernière palette pas posée ; `securite-danger` lit le point en défaut du quai DE L'ÉLÈVE. Les « autres
+  consignes » de chaque situation sont posées par Claude Code (table `applique` + contrôle au chargement : une seule consigne qui s'applique par
+  ligne). Marc est ajouté à `equipe` (vouvoiement). « Au quai » et le quai sont grisés au menu tant que l'étape d'avant n'est pas faite.
+  Accompagné = contenu standard (décision 4). Dessins de la cale et des feux : SVG en traits, documents de la séance (aucune image nouvelle).
+- **Tests** : bloc `action-87`, **17 cas verts** ; `tirage-niveaux` et `action` verts (63 cas avec le bloc) ; `questions` et `socle` verts.
+  Sabotages éprouvés puis remis : bonus du confirmé en « facile » → le cas des 300 graines tombe ; « aucun faux » rendu vrai à vide → 4 cas tombent
+  dont l'inaction (1 au lieu de 0) ; poids d'« engin » à 1,5 → la séance ne se charge plus, 10 cas tombent dont la somme. Le panneau des questions
+  s'ouvre bien sur les gestes du quai (N sur `scene:…:signaler`, P sur `quai:…:dechargement`) : prouvé par deux cas. Bloc `dependances` : 4 échecs
+  qui viennent des squelettes 8.9 / 8.10 et d'`EN-COURS.md` (pas de cette séance).
+- **Commits** : aucun (le chef de chantier commite).
+- **Reste ouvert** : textes à relire à l'écran (protocole §6.1 découpé, dialogue §6.2, réponses de Samia, situations et leurs « autres consignes »,
+  retours et aides d'« Avant de commencer » écrits par Claude Code, lexique, accueil, réplique du chauffeur au quai « Je vous laisse les documents du
+  camion. ») ; le plan de la cour est petit (≈ 180 px) : à juger au vidéoprojecteur ; à 1366 × 768 la scène du quai commence sous la ligne de
+  flottaison (mise en page du moteur, comme ENT-6.4) ; l'inspection ne se joue pas au clavier (moteur) ; trame de Cowork.

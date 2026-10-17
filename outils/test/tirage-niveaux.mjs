@@ -585,6 +585,10 @@ const BANQUES_FIGEES = {
     documents: ['commande', 'livraison', 'transport'],
     quai: ['encombre', 'transpalette', 'bl', 'pret'],
   },
+  // ENT-8.7 Action (17/10/2026) : les situations de la fiche « Le protocole du quai 2 ».
+  'contenus/action-ent87-donnees.js': {
+    situations: ['s-pieton', 's-aider', 's-vitesse', 's-partir', 's-blesse', 's-gilet', 's-responsable', 's-aerosols'],
+  },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {
   const fs = await import('node:fs');

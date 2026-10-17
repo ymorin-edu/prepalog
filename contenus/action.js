@@ -353,3 +353,153 @@ export const CAMION_HAVRE = {
     { id: 'P4', ref: 'ACT-27093', designation: 'Torchons de cuisine, lot de 3', couches: 6, parCouche: 8, cartons: 48 },
   ],
 };
+
+// ─────────────────────────────────────────── « Le droit » du quai (ENT-8.7, puis ENT-8.9 et ENT-8.10) : le protocole de sécurité
+// Textes RECOPIÉS sur Légifrance le 17/10/2026 par Claude Code (WebFetch, fiche de chaque article), mot pour mot ; seule la typographie est
+// celle du site (apostrophe courbe ’, guillemets intérieurs “ ” au lieu des guillemets droits de Légifrance).
+//   R4515-4 : LEGIARTI000018529684, version en vigueur depuis le 01/05/2008 (création, décret n° 2008-244 du 7 mars 2008).
+//   R4515-6 : LEGIARTI000020398165, version en vigueur depuis le 16/03/2009 (modifié par le décret n° 2009-289 du 13 mars 2009, art. 4).
+//   R4515-8 : LEGIARTI000018529676, version en vigueur depuis le 01/05/2008 (création, décret n° 2008-244 du 7 mars 2008).
+// Le brief (ENT-8.7 §2) citait une version d'un autre site (code.travail.gouv.fr) : la virgule après « déchargement » dans R4515-4 et la
+// fin du 2° de R4515-6 (« ou de prise en charge », « accompagnées d'un plan ») sont ici celles de Légifrance.
+export const DROIT_CONSULTE = '17/10/2026';
+export const DOC_DROIT_QUAI = { id: 'droit-quai', titre: 'Le droit : le protocole de sécurité', court: 'Le droit',
+  html: `<article class="ac-doc" aria-label="Le droit : le protocole de sécurité">
+    <p class="ac-t">Le droit : le protocole de sécurité</p>
+    <p class="ac-st">Trois articles du Code du travail</p>
+    <p class="ac-art"><b>Code du travail, article R4515-4</b></p>
+    <p class="ac-loi">« Les opérations de chargement ou de déchargement, font l’objet d’un document écrit, dit “protocole de sécurité”, remplaçant le plan de prévention. »</p>
+    <p class="ac-art"><b>Code du travail, article R4515-6</b></p>
+    <div class="ac-loi"><p>« Pour l’entreprise d’accueil, le protocole de sécurité comprend, notamment, les informations suivantes :</p>
+      <p>1° Les consignes de sécurité, particulièrement celles qui concernent l’opération de chargement ou de déchargement ;</p>
+      <p>2° Le lieu de livraison ou de prise en charge, les modalités d’accès et de stationnement aux postes de chargement ou de déchargement accompagnées d’un plan et des consignes de circulation ;</p>
+      <p>3° Les matériels et engins spécifiques utilisés pour le chargement ou le déchargement ;</p>
+      <p>4° Les moyens de secours en cas d’accident ou d’incident ;</p>
+      <p>5° L’identité du responsable désigné par l’entreprise d’accueil, auquel l’employeur délègue, le cas échéant, ses attributions. »</p></div>
+    <p class="ac-art"><b>Code du travail, article R4515-8</b></p>
+    <div class="ac-loi"><p>« Le protocole de sécurité est établi dans le cadre d’un échange entre les employeurs intéressés, préalablement à la réalisation de l’opération.</p>
+      <p>Chacune des opérations ne revêtant pas le caractère répétitif défini à l’article R. 4515-3 donne lieu à un protocole de sécurité spécifique. »</p></div>
+    ${PIED(`Textes réels, recopiés de Légifrance (consulté le ${DROIT_CONSULTE}).`)}
+  </article>` };
+
+// ─────────────────────────────────────────── le gabarit « Protocole de sécurité » (ENT-8.7 ; repris par ENT-8.9 Labastide et ENT-8.10)
+// `protocoleSecurite(spec, { entete })` rend le HTML d'UN document reconstitué d'une page, rangé comme les rubriques 1° à 5° de l'article
+// R4515-6 du Code du travail, plus une ligne « Produits ». Fonction PURE (aucun effet de bord, aucune lecture de la base) ; lisible en noir et
+// blanc (encre sur papier, pictogrammes en traits, allée piétonne en hachures). Le contenu des rubriques est CONSTRUIT par la séance.
+// Forme de la spec (tout est du texte simple, échappé ici ; aucun HTML attendu) :
+//   {
+//     titre?:       'Protocole de sécurité — opérations de chargement et de déchargement'   (défaut)
+//     exploitant:   'Geodis'                                    // l'entreprise d'accueil
+//     site:         'centre de distribution Action, Ensuès-la-Redonne'
+//     quai:         2                                           // le numéro du quai du protocole
+//     quais:        4                                           // le nombre de quais dessinés sur le plan de la cour
+//     transporteur: 'Transports Seine-Provence'
+//     provenance:   'livraisons répétitives du hub d’import du Havre'
+//     etabli:       'Établi avant la première livraison, entre Geodis et le transporteur.'   // R4515-8
+//     vitesse:      10                                          // km/h, écrit sur le panneau du plan
+//     consignes: {
+//       securite: [{ id, texte }],   // 1° consignes de sécurité
+//       acces:    [{ id, texte }],   // 2° accès, stationnement, circulation (le plan de la cour est dessiné au-dessus)
+//       engins:   [{ id, texte }],   // 3° matériels et engins
+//       secours:  [{ id, texte }],   // 4° moyens de secours
+//       responsable: { id, texte },  // 5° responsable désigné (prénom et fonction : jamais un vrai salarié)
+//       produits: [{ id, texte }],   // la ligne « Produits »
+//     },
+//     signatures:   [{ pour: 'Geodis', qui: 'le responsable du site' }, …],   // « Signé par Geodis (le responsable du site) et … » : fonctions ou noms CONSTRUITS
+//     pied?:        texte du pied (défaut : la mention du brief, ci-dessous)
+//   }
+// Chaque consigne est écrite dans un `<li data-consigne="<id>">` : une fiche qui propose « que dit le protocole ? » reprend ces textes mot pour
+// mot (les tests le vérifient). `entete: true` rend le même document SANS les consignes (titre, en-tête, intitulés des rubriques : pour « Avant de
+// commencer »). Styles : `STYLE_PROTOCOLE`, à ajouter aux `documentsStyle` de la séance.
+export const PIED_PROTOCOLE = 'Document pédagogique — reconstitution, non contractuel. Contenu d’après le Code du travail, art. R4515-6 ; consignes et valeurs construites.';
+const TRAIT = 'fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"';
+const PICTOS = {
+  securite: '<path d="M8 4 L12 6 L16 4 L20 7 L18 11 L18 21 L6 21 L6 11 L4 7 Z"/><path d="M6 14 H18 M6 17 H18"/>',
+  acces: '<path d="M12 3 L21 12 L12 21 L3 12 Z"/><path d="M9 13 V10 H15 M13 8 L15 10 L13 12"/>',
+  engins: '<path d="M3 18 V11 H12 V18 M4 11 V6 H10 L12 11"/><path d="M16 4 V19 M16 19 H22"/><circle cx="6" cy="19" r="2"/><circle cx="12" cy="19" r="2"/>',
+  secours: '<rect x="3" y="3" width="18" height="18" rx="3"/><path d="M12 7 V17 M7 12 H17"/>',
+  responsable: '<circle cx="12" cy="7" r="4"/><path d="M4 21 C4 15 8 13 12 13 C16 13 20 15 20 21"/>',
+  produits: '<path d="M12 3 C15 8 18 10 18 14 A6 6 0 0 1 6 14 C6 11 8 9 9 7 C10 9 11 10 12 10 C12 8 11 6 12 3 Z"/>',
+};
+const picto = (k) => `<svg class="pr-picto" viewBox="0 0 24 24" width="22" height="22" aria-hidden="true" ${TRAIT}>${PICTOS[k]}</svg>`;
+// Le plan de la cour (2° : « accompagnées d'un plan et des consignes de circulation ») : un dessin simple, CONSTRUIT, le même gabarit pour tous
+// les sites (bâtiment et ses quais, allée piétonne hachurée, local chauffeurs, poste de garde, entrée, point de rassemblement, sens de circulation).
+export function planCour({ quais = 4, quai = 1, vitesse = 10 } = {}) {
+  const n = Math.max(1, Math.min(8, quais | 0)), x0 = 66, larg = 172, pas = larg / n;
+  const t = (x, y, txt, o = '') => `<text x="${x}" y="${y}" stroke="none" fill="currentColor" ${o}>${txt}</text>`;
+  const portes = Array.from({ length: n }, (_, i) => {
+    const x = x0 + i * pas + pas * 0.18, w = pas * 0.64, ici = i + 1 === quai;
+    return `<rect x="${x.toFixed(1)}" y="30" width="${w.toFixed(1)}" height="10" ${ici ? 'stroke-width="2.8"' : ''}/>`
+      + t((x + w / 2).toFixed(1), 53, `Q${i + 1}`, `text-anchor="middle" font-size="11" ${ici ? 'font-weight="800"' : ''}`);
+  }).join('');
+  return `<svg class="pr-plan" viewBox="0 0 240 150" role="img" aria-label="Plan de la cour : le bâtiment de la réception et ses ${n} quais, le local chauffeurs, l’allée piétonne, le sens de circulation, la vitesse, l’entrée, le poste de garde, le point de rassemblement" ${TRAIT.replace('stroke-width="2"', 'stroke-width="1.4"')}>
+    <defs><pattern id="prHach" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><path d="M0 0 V6" stroke="currentColor" stroke-width="1.4"/></pattern></defs>
+    <rect x="${x0}" y="2" width="${larg}" height="38"/>
+    ${t(x0 + larg / 2, 20, 'Réception', 'text-anchor="middle" font-size="12" font-weight="700"')}
+    ${portes}
+    <rect x="2" y="2" width="60" height="32"/>
+    ${t(32, 15, 'Local', 'text-anchor="middle" font-size="10.5"')}${t(32, 28, 'chauffeurs', 'text-anchor="middle" font-size="10"')}
+    <rect x="18" y="34" width="12" height="104" fill="url(#prHach)"/>
+    ${t(40, 88, 'allée piétonne', 'font-size="10.5" transform="rotate(-90 40 88)" text-anchor="middle" dy="4"')}
+    ${t(123, 67, 'circulation', 'text-anchor="middle" font-size="10.5"')}
+    <path d="M56 74 H188 M180 69 L188 74 L180 79"/>
+    <path d="M188 90 H56 M64 85 L56 90 L64 95"/>
+    <circle cx="215" cy="80" r="14"/>${t(215, 85, String(vitesse | 0), 'text-anchor="middle" font-size="13" font-weight="800"')}
+    ${t(215, 106, 'km/h', 'text-anchor="middle" font-size="10"')}
+    <path d="M2 146 H50 M108 146 H170"/>
+    ${t(79, 144, 'entrée', 'text-anchor="middle" font-size="11"')}
+    <rect x="112" y="114" width="56" height="26"/>${t(140, 125, 'poste', 'text-anchor="middle" font-size="10"')}${t(140, 136, 'de garde', 'text-anchor="middle" font-size="10"')}
+    <circle cx="205" cy="128" r="7"/><path d="M205 121 V135 M198 128 H212"/>
+    ${t(205, 147, 'rassemblement', 'text-anchor="middle" font-size="9"')}
+  </svg>`;
+}
+export function protocoleSecurite(S, { entete = false } = {}) {
+  const C = S.consignes || {};
+  const liste = (L) => (entete ? '' : `<ul class="pr-l">${(L || []).map((c) => `<li data-consigne="${ech(c.id)}">${ech(c.texte)}</li>`).join('')}</ul>`);
+  const rub = (k, n, titre, corps, cls = '') => `<section class="pr-r${cls}" data-rubrique="${k}">
+      <p class="pr-rt">${picto(k)}<span>${n ? `${n}. ` : ''}${ech(titre)}</span></p>${corps}</section>`;
+  const resp = C.responsable ? [C.responsable] : [];
+  // Pour tenir sur un écran : la rubrique 2 sur toute la largeur (le plan à gauche, ses consignes à droite) ; au-dessus, 1 à gauche, 3 et 5 à
+  // droite ; en dessous, 4 et les produits. Chaque rubrique garde son numéro (R4515-6).
+  const acces = entete ? '' : `<div class="pr-2">${planCour({ quais: S.quais, quai: S.quai, vitesse: S.vitesse })}${liste(C.acces)}</div>`;
+  return `<article class="ac-doc pr-doc" aria-label="${ech(S.titre || 'Protocole de sécurité')}">
+    <p class="pr-t">${ech(S.titre || 'Protocole de sécurité — opérations de chargement et de déchargement')}</p>
+    <p class="pr-st"><b>${ech(S.exploitant)}</b>, ${ech(S.site)} — <b>quai ${ech(S.quai)}</b> · transporteur : <b>${ech(S.transporteur)}</b> · ${ech(S.provenance)}</p>
+    <p class="pr-st">${ech(S.etabli || '')} Signé par ${(S.signatures || []).map((x) => `${ech(x.pour)} (${ech(x.qui)})`).join(' et ')}.</p>
+    <div class="pr-g">
+      ${rub('securite', 1, 'Consignes de sécurité', liste(C.securite))}
+      <div>
+        ${rub('engins', 3, 'Matériels et engins', liste(C.engins))}
+        ${rub('responsable', 5, 'Responsable désigné', liste(resp))}
+      </div>
+      ${rub('acces', 2, 'Accès, stationnement et circulation', acces, ' pr-large')}
+      ${rub('secours', 4, 'Moyens de secours', liste(C.secours))}
+      ${rub('produits', 0, 'Produits', liste(C.produits))}
+    </div>
+    ${PIED(ech(S.pied || PIED_PROTOCOLE))}
+  </article>`;
+}
+// Mise en page du protocole et de « Le droit » (règles imbriquées sous `.ent-doc` par le moteur). Encre et papier seulement.
+export const STYLE_PROTOCOLE = `
+&:has(.pr-doc){width:100%}
+.pr-doc{padding:6px 12px 0; color:#2b2824}
+.pr-doc .ac-pied{margin:4px -12px 0; padding:3px 12px}
+.pr-t{margin:0 0 1px; font-size:.95rem; font-weight:900; line-height:1.2}
+.pr-st{margin:0 0 1px; font-size:.72rem; line-height:1.22; color:#3d3a33}
+.pr-g{display:grid; grid-template-columns:1fr 1fr; gap:2px 14px; margin-top:4px}
+.pr-large{grid-column:1 / -1}
+.pr-2{display:grid; grid-template-columns:minmax(0, 178px) 1fr; gap:4px 12px; align-items:start}
+.pr-r{margin:0 0 2px; border-top:1.5px solid #2b2824; padding-top:1px}
+.pr-g > div > .pr-r + .pr-r{margin-top:2px}
+.pr-rt{display:flex; gap:6px; align-items:center; margin:0 0 1px; font-weight:800; font-size:.8rem}
+.pr-picto{flex:0 0 20px; width:20px; height:20px}
+.pr-l{margin:0; padding-left:15px; font-size:.74rem; line-height:1.24}
+.pr-l li{margin:0 0 1px}
+.pr-plan{display:block; width:100%; height:auto; margin:2px 0 2px; color:#2b2824}
+.pr-sig{display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:3px; font-size:.7rem; line-height:1.25}
+.pr-sig p{margin:0; border-top:1px dashed #555047; padding-top:3px}
+.pr-sig span{font-weight:700}
+.ac-art{margin:10px 0 2px}
+.ac-loi{margin:2px 0 6px; padding:4px 10px; border-left:3px solid #555047; font-style:italic}
+.ac-loi p{margin:0 0 4px}
+`;
