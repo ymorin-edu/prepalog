@@ -692,7 +692,7 @@ ligne** devant le mur, de part et d'autre du passage de la porte ; l'ordre de `c
 | autre clé de case | — | — | clé inconnue |
 
 **Avec quoi `depose` se combine** (`verifierQuai`, erreur en clair, la séance ne s'ouvre pas). Il **exige** `rendu: 'iso'`, `dechargement: { par:
-'cariste' }`, **pas de froid** (`froid` absent ou `false`, comme tout le rendu iso) et **un seul camion** ; il refuse `mode: 'controle'` (quai déjà
+'cariste' }`, **`froid: false` écrit** (absent = froid, refusé comme pour tout le rendu iso) et **un seul camion** ; il refuse `mode: 'controle'` (quai déjà
 réceptionné : pas de déchargement). Une case `autre-quai` ne peut pas **toucher le passage** (les cases `passage - 1` et `passage` : la porte du quai
 voisin tomberait sur elle). Les palettes comptées pour les « cases justes » sont celles du premier camion. **Compatible** avec `securite` (l'inspection
 se joue avant, ENT-8.7), avec `arret: 'dechargement'` (ENT-8.7) et avec `commence: 'controle'` (ENT-8.8 peut montrer le même quai, voir plus bas).
@@ -741,11 +741,15 @@ d'écran).
   s'ouvre (« Compter la palette → »), ou, avec `arret`, le bandeau de fin. Le compteur dit « Palettes en *nom de la zone, en minuscule* : 3 / 4 » (`zone.nom`).
 - **Page rechargée** : la vue se recalcule de la base (palettes posées dans leurs cases, Kevin à la sortie du camion avec la palette en attente,
   tout de suite en phase de choix) ; le rattrapage habituel de « tout est déchargé » ne s'applique pas sous `depose` : l'état de la dépose fait foi.
-- **Animation (étape B du chantier, à relire quand elle sera livrée).** La feuille de coordination décide une animation **par geste** (Kevin
-  cherche la palette, la pose dans la case choisie puis cherche la suivante), une pause « choix » après chaque geste, « Passer l'animation »
-  qui va jusqu'à la pause suivante, et, en mouvement réduit, les états finaux. **À la date de cette fiche (étape A), il n'y a pas
-  d'animation** : un clic juste saute directement à l'état final de la pose, et les boutons « Passer l'animation » et « Revoir le déchargement »
-  sont cachés sous `depose` (ils n'ont rien à passer ni à revoir).
+- **Animation par geste** (pas de plan précalculé comme pour le quai sans `depose`). La porte se lève (sauf si l'inspection l'a déjà
+  ouverte), Kevin entre chercher la palette, ressort et attend (pause « choix ») ; après le clic, il la pose dans la case choisie puis
+  cherche la suivante, et ainsi de suite. Pendant un geste : aucune case cliquable, pas de bulle, clavier sans effet ; le conteneur de la
+  scène porte `data-q-phase="attente|geste|choix|fin"` et, pendant un geste, `data-q-geste="porte|chercher|poser"`. « Passer l'animation »
+  (`data-q="passer"`) va **jusqu'à la pause suivante**, pas plus loin ; « Revoir le déchargement » n'existe pas sous `depose`. La base est
+  écrite **au clic** (pose, journal, minutes) : une page rechargée en plein geste ou en pause revient en pause, palettes posées dans leurs
+  cases (`[data-iso-posee][data-iso-case]`) et la palette en attente sur les fourches, rien ne se rejoue. En mouvement réduit
+  (`prefers-reduced-motion`), aucune animation : les états finaux, avec la même base à l'arrivée. L'heure affichée rattrape la base quand la
+  chose arrive à l'écran ; la pause n'est pas comptée dans le temps du quai.
 
 **L'état rangé.** `db.quais[<id>].depose = { <palette>: { premier, essais, pose } }`, ex. `{ P4: { premier: 'allee-1', essais: ['allee-1',
 'R1'], pose: 'R1' }, P3: { premier: 'R2', essais: ['R2'], pose: 'R2' } }` : `premier` = la case du **premier** clic (c'est elle que lisent les

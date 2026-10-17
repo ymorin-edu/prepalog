@@ -1922,9 +1922,12 @@ export function creerQuai(Q, opts = {}) {
   }
   // L'image d'un instant (une pause, ou un instant d'une animation à l'étape B) : la remorque et sa file, les palettes posées, le chariot.
   // `o.parti` (④, BL signé) : le chauffeur et les palettes refusées sont repartis, la porte est refermée.
+  // Pendant un geste (étape B), `vis` porte aussi `ouv` (la porte qui se lève), `minute` (l'heure montrée : celle de la base moins ce
+  // qui n'est pas encore arrivé à l'écran) et `leg` (ce que fait le cariste) ; absents à une pause.
   function imageDepose(vis, e, o = {}) {
+    if (vis.minute != null) e = Object.assign({}, e, { minute: vis.minute });
     const k = K(e, 0), P = PAL[0], N = P.length, Pp = (id) => P.find((p) => p.id === id);
-    const ouv = o.parti || !k.decharge ? 0 : 1;
+    const ouv = o.parti || !k.decharge ? 0 : vis.ouv != null ? vis.ouv : 1;
     const et = SCENE ? etatsScene(SEC, e.securite) : null;
     const lp = et && et.lampe ? lampeQuai(I2, et.lampe) : { cone: '', tete: '' };
     const pas = P.every(estFut) ? 1.05 : GD.PAS_CAMION;
@@ -1954,7 +1957,8 @@ export function creerQuai(Q, opts = {}) {
     s += murDepose(ouv, e) + niveleur(I2, 'dehors', et ? et.niveleur : 'pose') + lp.tete + trier(dehors);
     if (o.toutes && !o.parti) s += personne(I2, CHAUFFEUR_DEP[0], CHAUFFEUR_DEP[1]);
     let leg;
-    if (!k.decharge) leg = `${hhmm(e.minute)} — Le camion est à quai, porte fermée.`;
+    if (vis.leg) leg = vis.leg;
+    else if (!k.decharge) leg = `${hhmm(e.minute)} — Le camion est à quai, porte fermée.`;
     else if (portee) leg = `${hhmm(e.minute)} — ${texteAttente(portee.id)}`;
     else leg = legFinIso(N, e);
     return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${vis.posees[p.id] ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
@@ -2099,7 +2103,9 @@ export function creerQuai(Q, opts = {}) {
   }
   function scene2(e) {
     const ci = ca(e), k = K(e, ci), N = PAL[ci].length, cm = R.camions[ci];
-    const fini = k.evts > N, attente = !k.decharge;
+    // (Dépose dirigée : pendant le dernier geste, la dernière palette est déjà posée dans la base mais pas encore à l'écran : ② n'est
+    // pas finie tant que le cariste n'est pas revenu. `ui.animDep` est toujours null sans `depose`.)
+    const fini = k.evts > N && !ui.animDep, attente = !k.decharge;
     const im = DEPOSE ? imageIso(0, e, attente) : image(fini ? fin(N) : 0, e, attente);
     const [cx, cy, cw, chh] = PH.cadre;
     const pw = PORTE.x1 - PORTE.x0, ph = PORTE.y1 - PORTE.y0;
@@ -2110,7 +2116,7 @@ export function creerQuai(Q, opts = {}) {
       <div><div class="quai-compteur2">${DEPOSE ? `Palettes en ${ech(zoneMin)}` : 'Palettes sur le quai'} : <b data-q-nb>${im.nb} / ${N}</b><span class="quai-pastilles2" data-q-past>${im.pastilles}</span></div>
         <div class="note">${M ? `Camion ${ech(cm.nom)}, ${fictif(cm.transporteur, cm.fictif)} · ` : ''}Durée du déchargement : <b>${formule(ci)}</b> de temps du quai</div></div>
       <div class="quai-ligne">
-        <button class="btn" data-q="passer" ${fini || attente || DEPOSE ? 'hidden' : ''}>⏩ Passer l'animation</button>
+        <button class="btn" data-q="passer" ${fini || attente || (DEPOSE && !ui.animDep) ? 'hidden' : ''}>⏩ Passer l'animation</button>
         <button class="btn" data-q="revoir" data-libre ${fini && !DEPOSE ? '' : 'hidden'}>↺ Revoir le déchargement</button>
         ${ARRET ? '' : `<button class="btn btn-p" data-q="vers3" data-libre ${fini ? '' : 'disabled'}>${ISO ? 'Compter la palette' : 'Contrôler les palettes'} →</button>`}
       </div>
@@ -2121,8 +2127,12 @@ export function creerQuai(Q, opts = {}) {
     // cases et la bulle du cariste se posent par-dessus ; la région `aria-live` reçoit ce que dit le cariste (la bulle SVG n'est pas lue).
     if (DEPOSE) {
       const vis = ui.visDep || visDe(e), [vx, vy, vw, vh] = cadreDep(), texte = texteBulleDep(e);
-      const choix = JOUEE && !fini && !attente && !e.fini && !ui.animDep;
-      return `<div class="quai-scene2 quai-iso quai-depose">
+      // La consigne reste affichée pendant un geste (sinon la barre sautait à chaque pause).
+      const choix = JOUEE && !fini && !attente && !e.fini;
+      // `data-q-phase` : 'attente' (porte fermée), 'geste' (le cariste roule : aucune case), 'choix' (pause : les cases se proposent),
+      // 'fin' (tout posé) ; pendant un geste, `data-q-geste` dit lequel ('porte', 'chercher', 'poser'), mis à jour par la boucle.
+      const phase = !JOUEE ? 'fin' : attente ? 'attente' : ui.animDep ? 'geste' : !(k.evts >= 1) ? 'attente' : deposeEnCours(e) && !e.fini ? 'choix' : 'fin';
+      return `<div class="quai-scene2 quai-iso quai-depose" data-q-phase="${phase}"${ui.animDep ? ` data-q-geste="${ui.animDep.quoi || ''}"` : ''}>
         <svg data-q-scene2 viewBox="${vx} ${vy} ${vw} ${vh}" role="group" aria-label="${ech(R.lieu.nom)} vu de l’intérieur : le camion à quai, ${ech(minuscule(quiSort))} au chariot, la ${ech(zoneMin)} et ses cases">
           ${defsIso()}<g data-g="iso" aria-hidden="true">${im.iso}</g><g data-g="cases">${coucheCases(e)}</g><g data-g="bulle" aria-hidden="true">${texte ? bulleDep(vis.pos, texte) : ''}</g>
         </svg>
@@ -3194,7 +3204,7 @@ export function creerQuai(Q, opts = {}) {
   }
   function aller(e, n, api) {
     if ((ARRET && n > 2) || (COMMENCE && n < 3)) return;   // une étape absente (arret / commence) ne s'atteint pas
-    if (n > 2 && deposeEnCours(e)) return;                  // dépose dirigée : ③ attend que la dernière palette soit posée
+    if (n > 2 && (deposeEnCours(e) || ui.animDep)) return;  // dépose dirigée : ③ attend que la dernière palette soit posée (et montrée)
     if (n >= SEUIL_SECU && !secuFaite(e)) return;
     if (n > 1 && !unDecharge(e, R)) return;
     if (ui.anim) ui.anim.finir();
@@ -3222,15 +3232,112 @@ export function creerQuai(Q, opts = {}) {
     const k = K(e, 0);
     if (k.evts === 0) { k.evts = 1; avancer(e, R.D.ouverture, 'porte du quai ouverte, début du déchargement'); }
   }
-  // LE POINT OÙ L'ÉTAPE B INSÈRE LES TRAJETS (décision 6). `gestes` = [{ quoi: 'chercher' | 'poser', palette, case }], DÉJÀ appliqués à
-  // la base (l'état fait foi : un rechargement en pleine animation retombe sur la pause suivante) ; l'animation ne fait que montrer le
-  // passage de l'image d'avant à celle de la pause suivante (`visDe(e)`), en posant `ui.visDep` (l'image de l'instant, que `scene2` dessine
-  // à la place de `visDe`) et `ui.animDep` (le contrôleur ; tant qu'il existe, aucune case ne se propose). Ici (étape A, et en mouvement
-  // réduit) : rien à jouer, on saute à la pause suivante.
-  function jouerDepose(gestes, ensuite) {
-    ui.visDep = null; ui.animDep = null;
-    ensuite();
+  // L'ANIMATION PAR GESTE (décision 6, étape B). `gestes` = [{ quoi: 'porte' | 'chercher' | 'poser', palette, case }], DÉJÀ appliqués à
+  // la base, qui est sauvée AVANT de jouer (l'état fait foi : une page rechargée en plein geste retombe sur la pause suivante, `visDe`) ;
+  // l'animation ne fait que montrer le passage de l'image d'avant à celle de la pause suivante. `ui.visDep` = l'image de l'instant (que
+  // `scene2` / `imageIso` dessinent à la place de `visDe`), `ui.animDep` = le contrôleur (tant qu'il existe : aucune case proposée, pas
+  // de bulle, clics et clavier ignorés, « Passer l'animation » visible). La boucle `requestAnimationFrame` réécrit le dessin à chaque
+  // image (comme `animer`) ; « Passer » finit la chaîne, donc va jusqu'à la pause suivante. Mouvement réduit : aucune boucle, la pause
+  // tout de suite. `ensuite` prépare l'annonce de la pause ; le redessin qui la montre est fait ici. Les horloges : comme pendant `animer`,
+  // l'heure montrée rattrape celle de la base à l'instant où la chose arrive à l'écran (porte levée, palette posée).
+  function jouerDepose(e, gestes, ensuite, api) {
+    arreterDep();
+    if (reduit()) { api.sauver(); ensuite(); api.redessiner(); return; }
+    let t = 0;
+    const chaine = gestes.map((g) => {
+      const tr = g.quoi === 'porte' ? { legs: [], marques: {}, duree: T_PORTE, arrivee: null }
+        : g.quoi === 'chercher' ? trajetChercher(GEO) : trajetPoser(GEO, GEO.cases.find((c) => c.id === g.case));
+      const c = Object.assign({ t0: t, tr, libere: g.quoi === 'porte' ? R.D.ouverture : g.quoi === 'poser' ? R.D.parPalette : 0 }, g);
+      t += tr.duree;
+      return c;
+    });
+    const A = { e, chaine, duree: t, fait: new Set(), debut: null, t: 0, raf: null, z: null, focus: ui.focus, quoi: chaine[0].quoi, minuteVue: null, ensuite, api };
+    A.finir = () => finirDep(A, true);
+    A.boucle = (now) => boucleDep(A, now);
+    ui.animDep = A;
+    ui.visDep = visAvantDep(e, gestes);
+    appliquerDep(A, 0);
+    api.sauver();
+    api.redessiner();   // le dessin de l'instant 0 ; `brancher` accroche la boucle à la scène (`brancherDep`)
   }
+  // L'image d'avant le premier geste. Avant `chercher` : le cariste à vide au point d'attente, la file entière moins les palettes posées.
+  // Avant `poser` : il attend à la sortie du camion, la palette sur les fourches (la pause qu'on vient de quitter).
+  function visAvantDep(e, gestes) {
+    const g = gestes.find((x) => x.quoi !== 'porte'), posees = casesDesPalettes(e, false);
+    const portee = g && g.quoi === 'poser' ? g.palette : null;
+    if (portee) delete posees[portee];
+    const porte = gestes.some((x) => x.quoi === 'porte');
+    return { pos: [GEO.xPorte, GEO.ycSortie, portee ? CHARIOT_QUAI.LEV : 0], portee, posees, camion: ORDRE_DEP.filter((id) => id !== portee && !posees[id]), retard: 0, ouv: porte ? 0 : null };
+  }
+  // L'image à l'instant t de la chaîne (maquette, `appliquer`) : les instants nommés passés sont appliqués une fois (`leve` : la palette
+  // quitte la file et monte sur les fourches ; `pose` : elle est dans sa case), le chariot est interpolé, la file glisse d'un cran pendant
+  // que le cariste recule (de `sortie` + 200 ms jusqu'à la fin du geste, pour que la pause ne fasse pas sauter la file).
+  function appliquerDep(A, t) {
+    const V = ui.visDep;
+    for (const g of A.chaine) {
+      const tl = t - g.t0, M = g.tr.marques;
+      if (!A.fait.has(g)) {
+        if (g.quoi === 'chercher' && tl >= M.leve) { A.fait.add(g); V.camion = V.camion.filter((x) => x !== g.palette); V.portee = g.palette; V.retard = 1; }
+        else if (g.quoi === 'poser' && tl >= M.pose) { A.fait.add(g); V.posees = Object.assign({}, V.posees, { [g.palette]: g.case }); V.portee = null; }
+        else if (g.quoi === 'porte' && tl >= g.tr.duree) A.fait.add(g);
+      }
+      if (g.quoi === 'chercher' && A.fait.has(g)) { const d0 = M.sortie + 200, d1 = g.tr.duree; V.retard = 1 - Math.min(1, Math.max(0, (tl - d0) / Math.max(1, d1 - d0))); }
+    }
+    const g = A.chaine.find((x) => t < x.t0 + x.tr.duree) || A.chaine[A.chaine.length - 1];
+    V.pos = positionSur(g.tr.legs, t - g.t0, g.tr.legs.length ? g.tr.legs[0].a : V.pos);
+    if (g.quoi === 'porte') V.ouv = Math.min(1, Math.max(0, (t - g.t0) / T_PORTE));
+    else if (V.ouv != null) V.ouv = 1;
+    V.minute = A.e.minute - A.chaine.reduce((s, x) => s + (A.fait.has(x) ? 0 : x.libere), 0);
+    A.quoi = g.quoi;
+    const h = hhmm(V.minute), N = ORDRE_DEP.length;
+    V.leg = g.quoi === 'porte' ? `${h} — La porte du ${lieuMin} se lève.`
+      : g.quoi === 'chercher' ? `${h} — ${quiSort} sort la palette ${g.palette} du camion (${ORDRE_DEP.indexOf(g.palette) + 1} sur ${N}).`
+        : `${h} — ${quiSort} pose la palette ${g.palette} (${minuscule((DEPOSE.cases.find((c) => c.id === g.case) || { nom: g.case }).nom)}).`;
+  }
+  // Une image de la boucle : l'instant, le dessin, la légende, le compteur ; les horloges quand l'heure montrée change. La scène a
+  // disparu (autre étape, autre vue, séance quittée) : on saute à la pause, sans redessin (la base est déjà sauvée).
+  function boucleDep(A, now) {
+    A.raf = null;
+    if (ui.animDep !== A) return;
+    const z = A.z, svg = z && z.isConnected ? z.querySelector('[data-q-scene2]') : null;
+    if (!svg || !svg.isConnected) { finirDep(A, false); return; }
+    if (A.debut === null) A.debut = now - A.t;
+    A.t = now - A.debut;
+    if (A.t >= A.duree) { finirDep(A, true); return; }
+    appliquerDep(A, A.t);
+    const V = ui.visDep, im = imageDepose(V, A.e);
+    const gi = svg.querySelector('[data-g="iso"]');
+    if (gi) gi.innerHTML = im.iso;
+    const q = (s) => z.querySelector(s);
+    if (q('[data-q-leg]')) q('[data-q-leg]').textContent = im.leg;
+    if (q('[data-q-nb]')) q('[data-q-nb]').textContent = `${im.nb} / ${PAL[0].length}`;
+    if (q('[data-q-past]')) q('[data-q-past]').innerHTML = im.pastilles;
+    const sc = svg.closest('[data-q-phase]');
+    if (sc && sc.dataset.qGeste !== A.quoi) sc.dataset.qGeste = A.quoi;
+    if (V.minute !== A.minuteVue) { A.minuteVue = V.minute; majHorloges(z, eVuDep(A.e)); }
+    A.raf = requestAnimationFrame(A.boucle);
+  }
+  // Accrocher la boucle à la scène qu'on vient de dessiner (premier dessin du geste, ou un redessin en plein geste : la boucle continue
+  // sur la nouvelle scène, au même instant).
+  function brancherDep(z) {
+    const A = ui.animDep;
+    if (!A) return;
+    A.z = z;
+    if (!A.raf) A.raf = requestAnimationFrame(A.boucle);
+  }
+  // La fin d'une chaîne : la pause suivante, dessinée depuis la base (`visDe`). `montrer` : la scène est à l'écran (fin normale ou
+  // « Passer ») : annonce, focus, redessin ; sinon on efface seulement le geste.
+  function finirDep(A, montrer) {
+    if (ui.animDep !== A) return;
+    if (A.raf) cancelAnimationFrame(A.raf);
+    A.raf = null;
+    ui.animDep = null; ui.visDep = null; ui.focus = A.focus;
+    if (montrer) { A.ensuite(); A.api.redessiner(); }
+  }
+  // Un geste qui ne doit pas survivre (la vue redessinée pour une autre base, une autre étape) : effacé, sans redessin.
+  function arreterDep() { if (ui.animDep) finirDep(ui.animDep, false); }
+  // L'état que montrent les horloges : l'heure de la base, ou pendant un geste l'heure montrée à l'écran.
+  const eVuDep = (e) => (ui.visDep && ui.visDep.minute != null ? Object.assign({}, e, { minute: ui.visDep.minute }) : e);
   // Ce que la région `aria-live` annonce à une pause : la consigne du cariste avant la première palette, puis la palette en attente.
   function annoncePause(e) {
     const p = enAttenteDep(e);
@@ -3270,10 +3377,9 @@ export function creerQuai(Q, opts = {}) {
     if (Object.values(e.depose).filter((d) => d.pose).length === 1 && api.signal) api.signal(`quai:${Q.id}:depose`);
     const suite = enAttenteDep(e);
     ui.focus = focusApresDep(e, cid);
-    jouerDepose([{ quoi: 'poser', palette: p, case: cid }].concat(suite ? [{ quoi: 'chercher', palette: suite }] : []), () => {
+    jouerDepose(e, [{ quoi: 'poser', palette: p, case: cid }].concat(suite ? [{ quoi: 'chercher', palette: suite }] : []), () => {
       ui.annonceDep = `Palette ${p} posée : ${c.nom}. ${suite ? texteAttente(suite) : texteFinDep()}`;
-      api.sauver(); api.redessiner();
-    });
+    }, api);
   }
 
   if (R.controle) return vueControle();
@@ -3515,6 +3621,8 @@ export function creerQuai(Q, opts = {}) {
       // Étape ⓪ (sécurité) : tant que l'élève n'a pas commencé à décharger, ou s'il y revient pour relire.
       const etape0 = ouvert ? (e.etape ?? 1) || 1 : (LISTE && (!secuFaite(e) || e.etape === 0) ? 0 : 1);
       const etape = ARRET && etape0 > 2 ? 2 : COMMENCE && etape0 < 3 ? 3 : etape0;
+      // Dépose dirigée : un geste en cours ne survit pas à un dessin d'une autre base (base remise à zéro) ni d'une autre étape.
+      if (ui.animDep && (ui.animDep.e !== e || etape !== 2)) arreterDep();
       const corps = etape === 0 ? ecran0(e) : etape === 1 ? ecran1(e) : etape === 2 ? `<section class="quai-carte">${scene2(e)}</section>` : etape === 3 ? ecran3(e) : ecran4(e, api);
       const libs4 = ISO ? ETAPES_ISO.slice() : (M ? ['① Les camions arrivent'].concat(ETAPES.slice(1)) : ETAPES.slice()).map((l, i) => (i === 3 && !F ? `④ Réserves et ${zoneMin}` : l));
       const libs = LISTE ? [ETAPE_SECU].concat(libs4) : libs4;
@@ -3528,9 +3636,9 @@ export function creerQuai(Q, opts = {}) {
             <div class="note">${tete}</div></div>
         </div>
         ${Q.avertissement ? `<div class="quai-avert">${Q.avertissement}</div>` : ''}
-        ${horloges(e)}
+        ${horloges(eVuDep(e))}
         <nav class="quai-stepper" aria-label="Étapes de la réception">
-          ${libs.map((l, i) => [l, i + n0]).filter(([, n]) => (ARRET ? n <= 2 : COMMENCE ? n >= 3 : true)).map(([l, n]) => { const ferme = (n >= SEUIL_SECU && !secuFaite(e)) || (n > 1 && !ouvert) || (n > 2 && deposeEnCours(e));
+          ${libs.map((l, i) => [l, i + n0]).filter(([, n]) => (ARRET ? n <= 2 : COMMENCE ? n >= 3 : true)).map(([l, n]) => { const ferme = (n >= SEUIL_SECU && !secuFaite(e)) || (n > 1 && !ouvert) || (n > 2 && (deposeEnCours(e) || !!ui.animDep));
             return `<button data-q="etape" data-libre data-n="${n}" class="${etape === n ? 'on' : ''}" ${ferme ? 'disabled' : ''} ${etape === n ? 'aria-current="step"' : ''}>${l}</button>`; }).join('')}
         </nav>
         ${corps}
@@ -3551,7 +3659,8 @@ export function creerQuai(Q, opts = {}) {
 
       // `arret: 'dechargement'` : la dernière palette est posée (fin de l'animation, « Passer l'animation », mouvement réduit ou page rechargée : tous ces chemins
       // finissent ici, par un redessin). Le quai se fige comme après « Clore » et le geste part UNE fois : le drapeau est rangé dans l'état, un rechargement ne le renvoie pas.
-      if (ARRET && !e.dechargeFini && kc().decharge && kc().evts > PAL[0].length) {
+      // (Dépose dirigée : pas pendant le dernier geste ; le geste de fin part quand le cariste est revenu, ou au rechargement.)
+      if (ARRET && !ui.animDep && !e.dechargeFini && kc().decharge && kc().evts > PAL[0].length) {
         e.dechargeFini = true; e.fini = true;
         if (api.signal) api.signal(`quai:${Q.id}:dechargement`);
         api.sauver();
@@ -3621,10 +3730,12 @@ export function creerQuai(Q, opts = {}) {
       // pas d'animation, la fin directement (palettes posées, temps du quai compté).
       if (ui.lancer) {
         ui.lancer = false;
-        // Dépose dirigée : la porte s'ouvre, le cariste va chercher la première palette, puis la pause « choix » (étape B : animés).
+        // Dépose dirigée : la porte se lève (sauf si l'inspection l'a déjà ouverte), le cariste va chercher la première palette, puis la
+        // pause « choix ».
         if (JOUEE) {
           ouvrirDepose(e);
-          jouerDepose([{ quoi: 'chercher', palette: ORDRE_DEP[0] }], () => { ui.annonceDep = annoncePause(e); api.sauver(); api.redessiner(); });
+          const porte = !(SCENE && e.securite && e.securite.ouverte);
+          jouerDepose(e, (porte ? [{ quoi: 'porte' }] : []).concat([{ quoi: 'chercher', palette: ORDRE_DEP[0] }]), () => { ui.annonceDep = annoncePause(e); }, api);
           return;
         }
         if (reduit()) { evenements(e, fin(PAL[ca(e)].length)); api.sauver(); api.redessiner(); return; }
@@ -3633,6 +3744,7 @@ export function creerQuai(Q, opts = {}) {
       // Dépose dirigée : un clic sur une case, ou Entrée / Espace sur la case qui a le focus (un <g role="button"> ne reçoit pas de clic
       // du clavier). Puis l'annonce du cariste, posée 30 ms après le dessin dans la région `aria-live` (vide au dessin : elle est lue).
       if (JOUEE) {
+        brancherDep(z);   // un geste en cours : la boucle reprend sur cette scène
         on('depose', geste((ev, b) => choisirDepose(e, b.dataset.c, api)));
         const sv = z.querySelector('[data-q-scene2]');
         if (sv) {
@@ -3646,7 +3758,8 @@ export function creerQuai(Q, opts = {}) {
         const an = z.querySelector('[data-q-annonce]');
         if (an && ui.annonceDep) { const t = ui.annonceDep; ui.annonceDep = ''; setTimeout(() => { if (an.isConnected) an.textContent = t; }, 30); }
       }
-      on('passer', () => { if (ui.anim) ui.anim.finir(); api.redessiner(); });
+      // (Dépose dirigée : « Passer » finit le geste en cours et ceux qui s'enchaînent, jusqu'à la pause suivante ; le redessin est le sien.)
+      on('passer', () => { if (ui.animDep) { ui.animDep.finir(); return; } if (ui.anim) ui.anim.finir(); api.redessiner(); });
       on('revoir', () => {
         if (kc().evts <= PAL[ca(e)].length) return;
         api.redessiner();
