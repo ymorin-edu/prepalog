@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/ENT-8.7-action-decharger.md (§0, §6.3 et §7) puis docs/briefs/ENT-8.8-action-controler.md en entier. ENT-8.7 et le lot 1 du chantier moteur « quai en deux séances » (§7 d'ENT-8.7) doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré
 **Date du brief** : 16/10/2026
 **Conversation d'origine** : Cowork (Opus), 16/10/2026 à 19 h 02, **sur délégation de Tristan** (« écris le brief de 8.7 et 8.8, tu prends les
 décisions »). Aucune question de cadrage n'a été posée pour cette séance : **toutes les décisions sont de Cowork** (§11), à relire par Tristan à l'écran.
@@ -284,9 +284,43 @@ Bloc **`action-88`** (fichier `outils/test/action-88.mjs`, ligne dans `BLOCS` et
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+(Claude Code, sous-agent constructeur, 17/10/2026 ; décisions du chef de chantier : `COORDINATION-action.md` §8.)
+
+- **Texte de loi** : C. com. L133-3, 1er alinéa, **relu sur Légifrance le 17/10/2026** (LEGIARTI000021486442, version en vigueur depuis le
+  10/12/2009), recopié dans le document « Le droit » (apostrophe typographique). Légifrance écrit « si dans les trois jours » **sans** virgule après
+  « si » (le document d'ENT-6.4 en met une).
+- **Fichiers créés / modifiés** : créés `contenus/action-ent88.js`, `contenus/action-ent88-donnees.js` (tirage, quai d'un élève, phrases calculées),
+  `contenus/questions/ENT-8.8.js`, `contenus/corriges/ENT-8.8.js`, `outils/test/action-88.mjs` ; `activites/action-controler.js` remplace le squelette
+  (`pret: true, ouverture: 'prof'`) ; `outils/test.mjs` : une ligne dans `BLOCS`, une dans `GROUPES` (groupe 2) (alerte 7). Rien dans
+  `tirage-niveaux.mjs` : la séance ne déclare aucune banque `declarerTirage` (anomalies tirées par `tirerJeu`, comme ENT-4.4).
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** :
-- **Reste ouvert** :
+  1. **Niveaux** : aides de comptage **allumées pour tous**, pas de rappel « Fais le tour » propre à l'Accompagné (la vue quai ne lit pas
+     `db.aisance`, décision §8.2 n° 4) ; pas de `niveauxPrevus` (aucun jalon bonus possible sans changer le socle).
+  2. **Réplique de Marc** : « Je signe sous vos réserves. » impossible, la vue écrit en dur « C'est signé. Je recharge les palettes refusées et j'y
+     vais. Bonne journée ! » (et « Le chauffeur », sans prénom). Demande au moteur possible (`parole` après signature).
+  3. **Q1** : l'énoncé de Cowork (« palette P2, acceptée sans réserve ») serait faux chez un élève dont P2 a un problème : énoncé **calculé**
+     (`selon`) : P2 quand elle est acceptée, sinon la palette conforme de l'élève ; dommages construits (bougies cassées, boîtes fendues, torchons
+     déchirés).
+  4. **Q4** « à l'envoi » : `quand(db)` = compte rendu envoyé (aucun geste « envoi de phrases » n'est publié).
+  5. **Ligne « zone litiges »** quand les deux problèmes sont des avaries : « J'ai mis les 2 cartons abîmés de P2 et le carton abîmé de P3 en zone
+     litiges. » (construit).
+  6. **Couche « normale »** (piège) : la moitié de la couche du dessus manque (4 sur 8, 3 sur 6, 2 sur 5 : construit, le brief ne fixait pas le
+     nombre). Disposition dans la couche déduite de `parCouche` (8 → 4 × 2, 6 → 3 × 2, 5 → 5 × 1).
+  7. **« Avant de commencer »** : `bl` montre l'en-tête du document de ce camion (pas celui d'ENT-8.2, séances cloisonnées) ; `zone-litiges` le dessin
+     de la zone litiges déjà au dépôt (le plan d'ENT-8.2 n'est pas un document) ; carton écrasé, palette pleine et étiquette : dessins en traits
+     dans les documents de la séance (aucune image nouvelle).
+- **Décisions prises en route** : un jalon = un **rôle** (facile, moyen, piège, conforme), la palette change d'un élève à l'autre, `titreBilan`
+  « Palette P3 » / « Réserve de la palette P3 » ; les jalons du quai ne sont jugés qu'à la signature ; quai `action-quai2-controler` avec la dépose de
+  la variante A déclarée (palettes dessinées dans R1 à R4, comme à la fin d'ENT-8.7) ; graine = identifiant + « |action-controler ». Pire cas réel =
+  1/20 (la signature est obligatoire pour continuer).
+- **Tests** : bloc `action-88`, 16 cas verts ; `action-88 tirage-niveaux action questions` (avec `socle`) : 185/185. Sabotages : garde « au moins une
+  avarie » retirée → le cas « contrôle d'équité » tombe (le cas des 300 graines, lui, ne bouge pas : `ecrase-face` garantit déjà l'avarie) ; tirage
+  sans écrasé devant → tout tombe (aucun jeu conforme : le module lève maintenant une erreur claire) ; phrase juste calculée sur la palette au piège →
+  7 cas tombent (300 graines, témoins, parcours…) ; un poids changé (piège 2, conforme 1) → déclaration et note tombent. Suite entière : non lancée
+  (le chef de chantier la lance).
+- **Commits** : (chef de chantier)
+- **Reste ouvert** : textes de Cowork à relire à l'écran (messages de Samia, consigne du quai, phrases, Q1 à Q4 et retours, 10 notions) et ceux
+  construits par Claude Code (deux phrases du premier message, ouverture « Bonjour ! Les palettes… », 5 définitions du lexique, dommages de Q1,
+  dessins) ; la Messagerie affiche l'année réelle de la date du scénario (limite connue) ; la barre « lis ton nouveau message » pendant « Avant de
+  commencer » (moteur) ; la palette de ③ est sous la ligne de flottaison à 1366 × 768 (défilement vertical) ; trame élève (Cowork). **Rien n'a été vu à
+  l'écran par Tristan.**
