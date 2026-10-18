@@ -172,7 +172,7 @@ const decision = (cle) => (b) => {
 };
 
 // Jalons 9 et 10 : la fiche, comparée à ce que l'élève a LUI-MÊME compté.
-const jalonFiche = (id, titre, juger) => ({ id, titre, groupe: GROUPES.compteRendu, poids: POIDS[id], ecran: 'fiche',
+const jalonFiche = (id, titre, juger) => ({ id, titre, groupe: GROUPES.compteRendu, poids: POIDS[id], ecran: `fiche:${FICHE_ID}`,
   verifier(db) {
     const f = ficheEnvoyee(db, FICHE_ID);
     if (!f.envoye) return attente;

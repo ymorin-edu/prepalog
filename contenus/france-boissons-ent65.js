@@ -192,7 +192,7 @@ const jalonsRangement = etapesEntrepot(MASSE).map((e) => {
       return ko(F == null ? 'palette non posée' : `critère : ${F.join(', ')}`);
     } };
 });
-const jalonLigne = (pid) => ({ id: `stock-${pid}`, titre: `Entrée en stock : ligne ${pid}`, groupe: GROUPES.stock, poids: POIDS[`stock-${pid}`], ecran: 'fiche',
+const jalonLigne = (pid) => ({ id: `stock-${pid}`, titre: `Entrée en stock : ligne ${pid}`, groupe: GROUPES.stock, poids: POIDS[`stock-${pid}`], ecran: `fiche:${FICHE_ID}`,
   verifier(db) {
     const F = casesFausses(db, pid);
     if (F == null) return attente;

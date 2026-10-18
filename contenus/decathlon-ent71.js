@@ -202,7 +202,7 @@ export const POIDS = { 'besoin-date': 1.5, 'besoin-budget': 1.5, 'tri-liste': 3,
 const attente = { status: 'attente' };
 const ok = { status: 'ok' };
 const ko = { status: 'ko' };
-const jalon = (id, groupe, titre, juste) => ({ id, titre, groupe: GROUPES[groupe], poids: POIDS[id], ecran: 'fiche',
+const jalon = (id, groupe, titre, juste) => ({ id, titre, groupe: GROUPES[groupe], poids: POIDS[id], ecran: `fiche:${FICHE}`,
   verifier(db) { const f = fiche(db); return f.envoye ? (juste(f.v, jeuEleve(db)) ? ok : ko) : attente; } });
 const refs = (J) => J.offres.filter((o) => ['route', 'barge', 'rail'].includes(o.slot));
 
@@ -221,7 +221,7 @@ export const ETAPES = [
   jalon('decision-offre', 'decider', 'Décider : l’offre qui émet le moins de CO₂ parmi celles qui restent', (v, J) => v[B.retenue] === J.bonne.slot),
   jalon('decision-justif', 'decider', 'Décider : la justification « la date d’abord, puis le CO₂ »', (v) => v[B.justif] === JUSTIF_JUSTE),
   // Les cas bonus du confirmé : sans poids ni groupe, `null` quand l'élève ne les a pas reçus (caché à l'élève).
-  ...[1, 2].map((k) => ({ id: `bonus-${k}`, bonus: true, ecran: 'fiche', titre: `Offre en plus n° ${k} écartée pour la bonne raison`,
+  ...[1, 2].map((k) => ({ id: `bonus-${k}`, bonus: true, ecran: `fiche:${FICHE}`, titre: `Offre en plus n° ${k} écartée pour la bonne raison`,
     verifier(db) {
       const o = jeuEleve(db).offres.find((x) => x.slot === `bonus${k}`);
       if (!o) return null;

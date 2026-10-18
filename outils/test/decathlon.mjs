@@ -222,6 +222,39 @@ await v('ENT-7.1 : la réponse d’un voisin — le témoin rt-barge qui joue le
   vrai(claire.includes('Contargo, 760 €, 66 kg'), claire);
 });
 
+// « Corriger » rouvre la fiche. Deux fois : avec les contenus tels qu'ils sont, puis avec les jalons qui déclarent `ecran: 'fiche'` sans
+// identifiant (le moteur lit alors « la première fiche de la séance » : correctif du 18/10/2026, avant lui le bouton s'affichait sans rien rouvrir).
+for (const nu of [false, true]) {
+  await v(`ENT-7.1 : « Corriger » après un bilan faux rouvre le comparateur (le travail reste, l’envoi est retiré)${nu ? ' — jalons déclarés avec l’écran « fiche » sans identifiant' : ''}`, async () => {
+    const avant = await pg.evaluate(async (nu) => {
+      const C = await import('/contenus/decathlon-ent71.js');
+      const sauve = C.ETAPES.map((e) => e.ecran);
+      if (nu) C.ETAPES.forEach((e) => { e.ecran = 'fiche'; });
+      window.__ecransSauves = sauve;
+      return sauve;
+    }, nu);
+    try {
+      egal(avant.every((e) => /^fiche(:|$)/.test(e)), true, 'les jalons ont un écran de fiche : ' + avant.join(', '));
+      await monter({ uid: `dk71-corriger${nu ? '-nu' : ''}`, db: { tirages: { [ID]: tirage('rt-barge') } } });
+      await remplir(JUSTE('rail'));
+      vrai(await present('[data-fin-corriger]'), '« Corriger » proposé au bilan');
+      const avantClic = await base();
+      vrai(!!avantClic.fiches.cmp.envoye, 'la fiche est partie');
+      await pg.click(`${Z} [data-fin-corriger]`);
+      await pause();
+      const apres = await base();
+      egal(!!apres.fiches.cmp.envoye, false, 'l’envoi est retiré');
+      egal(apres.fiches.cmp.valeurs, avantClic.fiches.cmp.valeurs, 'le travail de l’élève est gardé');
+      vrai(await present('[data-fiche-envoyer]'), 'la fiche est rouverte à l’écran');
+    } finally {
+      await pg.evaluate(async () => {
+        const C = await import('/contenus/decathlon-ent71.js');
+        C.ETAPES.forEach((e, i) => { e.ecran = window.__ecransSauves[i]; });
+      });
+    }
+  });
+}
+
 await v('ENT-7.1 : inaction 0 — fiche vide refusée (« Il manque »), travail gardé ; fiche à moitié remplie refusée elle aussi', async () => {
   await monter({ uid: 'dk71-vide', db: { tirages: { [ID]: tirage('rt-rail') } } });
   await aller('fiche');

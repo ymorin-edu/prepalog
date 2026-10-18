@@ -1223,12 +1223,15 @@ export function creerEntreprise(U) {
       // 'transfert:<clé du mail>' ou 'dialogue:<id>').
       // `ecran` peut être une fonction de la base (chantier D-1 bis) : évaluée ici, à chaque fois, jamais rangée. Une
       // fonction qui plante ou rend autre chose qu'un texte est signalée et vaut « pas d'écran » (rien à rouvrir).
+      // Un écran « fiche » sans identifiant vaut la première fiche de la séance (18/10/2026) : sans cela, les découpages sur « : »
+      // plus bas lisaient le genre « fich » et « Corriger » ne rouvrait rien. C'est le seul endroit qui le règle : tout passe par ici.
+      const ecranNormalise = (ec) => (ec === 'fiche' && VFICHE ? `fiche:${VFICHE.id}` : ec);
       function ecranDe(e) {
-        if (typeof e.ecran !== 'function') return e.ecran || null;
+        if (typeof e.ecran !== 'function') return ecranNormalise(e.ecran || null);
         try {
           const x = e.ecran(db);
           if (x != null && typeof x !== 'string') throw new Error(`rend ${typeof x} au lieu d’un texte`);
-          return x || null;
+          return ecranNormalise(x || null);
         } catch (x) { signaler(`l’écran du jalon « ${e.id} » plante`, x); return null; }
       }
       function ecransAFaire(st) {
@@ -1373,8 +1376,8 @@ export function creerEntreprise(U) {
         if (!fini(st)) return DETAIL ? aCorrigerHtml() : '';
         // Le HTML est fabriqué par `entreprise-fin.js` (lot 9c, module 4) ; ici, ce qui dépend de la séance en cours.
         // Un `ecran` fonction de la base y arrive évalué (le module ne lit que des valeurs).
-        let etapesVues = etapes.some((e) => typeof e.ecran === 'function')
-          ? etapes.map((e) => (typeof e.ecran === 'function' ? Object.assign({}, e, { ecran: ecranDe(e) }) : e)) : etapes;
+        let etapesVues = etapes.some((e) => typeof e.ecran === 'function' || e.ecran === 'fiche')
+          ? etapes.map((e) => (typeof e.ecran === 'function' || e.ecran === 'fiche' ? Object.assign({}, e, { ecran: ecranDe(e) }) : e)) : etapes;
         // Bilan détaillé : `titreBilan` (texte ou fonction de la base) remplace le titre d'une case dans le détail, par exemple
         // le nom de l'acteur ou le rang de la ligne sur la fiche quand l'ordre y est tiré. Une fonction qui plante garde le titre.
         if (DETAIL) etapesVues = etapesVues.map((e) => {

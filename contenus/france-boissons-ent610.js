@@ -382,7 +382,7 @@ const attente = { status: 'attente' };
 const ok = { status: 'ok' };
 const ko = (detail) => (detail ? { status: 'ko', detail } : { status: 'ko' });
 
-const jalonControle = (id, titre, juste) => ({ id, titre, groupe: GROUPES.controle, poids: POIDS[id], ecran: 'fiche',
+const jalonControle = (id, titre, juste) => ({ id, titre, groupe: GROUPES.controle, poids: POIDS[id], ecran: `fiche:${FICHE_CONTROLE}`,
   verifier(db) { const c = comptesEleve(db); return c ? (juste(c) ? ok : ko()) : attente; } });
 
 const MOTS = { vide: 'vide', pasFormule: 'nombre tapé au lieu d’une formule', erreur: 'formule mal écrite', attente: 'il manque une donnée', valeur: 'à revoir' };
