@@ -86,6 +86,8 @@ export const ACTIVITES = [
   () => import('./action-controler.js'),
   () => import('./action-palette-lucas.js'),
   () => import('./action-evaluation-reception.js'),
+  // CHEP (centre de service de Templemars) — ENT-9.x. 1re, C2.5.
+  () => import('./chep-compte-palettes.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -169,6 +171,8 @@ export const ENTREPRISES = [
   { n: 7, nom: 'Decathlon', metier: 'Transport amont — entrepôt de Rouvignies (Nord)', logo: './contenus/trames/logos/decathlon-texte.svg' },
   // Logo de Wikimedia Commons (PD-textlogo, marque ; accord de Tristan, brief ENT-8.1 §2) ; charte : `contenus/action.js`.
   { n: 8, nom: 'Action', metier: 'Commerce à petits prix — entrepôts Geodis (Ensuès-la-Redonne) et GXO (Labastide-Saint-Pierre)', logo: './contenus/trames/logos/action.svg' },
+  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu du site chep.com ; charte : `contenus/chep.js`.
+  { n: 9, nom: 'CHEP', metier: 'Location-gestion de palettes — Templemars', logo: './contenus/trames/logos/chep-texte.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
