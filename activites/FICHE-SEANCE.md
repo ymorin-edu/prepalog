@@ -885,7 +885,7 @@ Un jalon (`etapes`) peut déclarer, en plus de `id`, `titre` et `verifier(db)` :
   **fixe** de la note, partagée entre ses cases : ajouter une case ne change pas l'équilibre.
 - `groupe` : la ligne du bandeau de fin (séance `correction`, ou visite notée au premier essai). Un groupe est juste quand toutes ses cases le sont. Le
   bandeau ne descend jamais à la case (une case oui/non nommée fausse donnerait la réponse) et n'affiche jamais de points.
-- `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'`, `'phrases:<id du message par phrases>'`, `'planning:<id du
+- `ecran` : où l'élève corrige, `'fiche:<id de la fiche>'` (`'fiche'` seul vaut la première fiche de la séance, depuis le 18/10/2026 ; préférer l'identifiant), `'phrases:<id du message par phrases>'`, `'planning:<id du
   planning>'`, `'transfert:<clé du message>'` (un message à transférer, voir plus haut) ou `'dialogue:<id du dialogue>'` (un appel : « Rappeler », voir « Vue « Dialogue à choix » ») ; ou une fonction `(db) => …` qui rend
   l'un de ces textes pour l'élève (son message tiré : « Fonction de la base de l'élève », plus haut). Le bouton « Corriger » n'apparaît que s'il y a un `ecran` à rouvrir parmi les jalons faux. Un planning se rouvre
   à la première version fausse, avec le planning envoyé : si c'est la 1re, la version d'après l'aléa est mise de côté et revient
