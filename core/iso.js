@@ -996,6 +996,154 @@ export function paletteFuts(I, pal, ox, oy, r, o = {}) {
   return g;
 }
 
+/* ========================== pile de palettes vides (MOTEUR-chep, lot B, 18/10/2026) */
+// Brief `docs/briefs/MOTEUR-chep-ramasse-et-piles.md` §3.2. Une PILE de palettes vides à blocs (1 200 × 1 000, 9 blocs, 15 cm
+// d'épaisseur), empilées sans écart, numérotées du bas (1) vers le haut. Chaque palette dit son pool par sa COULEUR et par son
+// MARQUAGE (lisible en noir et blanc, coordination CHEP §6) : CHEP bleu, LPR rouge, Logipal brique, Europe (EPAL) bois brut. Une
+// palette Europe fait 1 200 × 800 : centrée dans la pile, elle fait un RETRAIT sur ses grands côtés. Le marquage est DESSINÉ (des
+// traits, jamais un <text>) : aucun texte de la page ne nomme le pool (règle du quai iso, un test le garde). Le rouge des LPR est
+// un objet du décor, comme la cale rouge du quai : il ne dit pas « faux » (docs/decisions.md, 18/10/2026). Aucun vert.
+// Un dégât (planche cassée ou bloc arraché) se dessine sur UNE face (N, S, E ou W) : on ne le voit que si cette face est tournée
+// vers nous (`faceVisible`), donc de deux rotations consécutives sur quatre, comme la fuite d'un fût.
+export const PAL_VIDE = { L: 1.2, D: 1.0, H: 0.15, D_EPAL: 0.8, BLOC: 0.145 };
+export const PILE_MAX = 18;
+export const POOLS_PILE = ['chep', 'lpr', 'logipal', 'epal'];
+// Teintes [dessus, face avant, face droite], le marquage de chaque bloc de façade (de gauche à droite à l'écran) et son encre.
+// La 4e teinte : le creux entre deux blocs (l'ombre sous le plateau, où l'on devine les blocs du milieu).
+const POOL_DESSIN = {
+  chep: { c: ['#3a74c0', '#2a62ad', '#1f5091', '#15325a'], marque: [['CHEP'], ['CHEP'], ['CHEP']], encre: '#f6f3ec' },
+  lpr: { c: ['#cc4a3e', '#b23a31', '#932d26', '#561a16'], marque: [['LPR'], ['LPR'], ['LPR']], encre: '#f6f3ec' },
+  logipal: { c: ['#b0754c', '#9a6239', '#80502d', '#4a2e1b'], marque: [['LOGI'], null, ['PAL']], encre: '#f6f3ec' },
+  epal: { c: ['#e6cc9e', '#d6b683', '#bf9c69', '#6e5636'], marque: [['EPAL'], null, ['EUR']], encre: '#4a2a10' },
+};
+const VIDE_PILE = '#1c1714', BOIS_FRAIS = '#ecd7ac', TRAIT_PILE = 'rgba(0,0,0,.45)';
+// Les lettres du marquage, au pochoir : des traits sur une grille de 3 × 5.
+const GLYPHES = { C: 'M3 0H0V5H3', H: 'M0 0V5M3 0V5M0 2.5H3', E: 'M3 0H0V5H3M0 2.5H2.3', P: 'M0 5V0H3V2.6H0', L: 'M0 0V5H3',
+  R: 'M0 5V0H3V2.6H0M1.3 2.6L3 5', O: 'M0 0H3V5H0Z', G: 'M3 0H0V5H3V2.8H1.6', I: 'M1.5 0V5M.4 0H2.6M.4 5H2.6', A: 'M0 5V0H3V5M0 2.6H3', U: 'M0 0V5H3V0' };
+const largeurMot = (m) => m.length * 3 + (m.length - 1) * 1.1;
+const cheminMot = (m, dx = 0, dy = 0) => [...m].map((l, i) => (GLYPHES[l] || '').replace(/([MHVLZ])([^MHVLZ]*)/g, (t, c, a) => {
+  const v = a.trim().split(/[\s,]+/).filter(Boolean).map(Number), x0 = dx + i * 4.1;
+  if (c === 'H') return `H${(v[0] + x0).toFixed(2)}`;
+  if (c === 'V') return `V${(v[0] + dy).toFixed(2)}`;
+  if (c === 'Z') return 'Z';
+  return `${c}${(v[0] + x0).toFixed(2)} ${(v[1] + dy).toFixed(2)}`;
+})).join('');
+
+// `pile` = { palettes: [{ no, pool ('chep' | 'lpr' | 'logipal' | 'epal'), abime ('N' | 'S' | 'E' | 'W' | null) }] }, du bas vers le
+// haut ; (ox, oy) = coin monde min de l'emprise ; r = rotation (quarts de tour). Options : `echelle` (1 = grandeur réelle, l'étape ③ ;
+// le décor des étapes ② et ④ la réduit), `z`, `yMin` / `yMax` (coupe au plan du mur, comme les cartons : une face avant hors de la
+// tranche n'est pas dessinée, une face de côté est coupée), `lisible` (le marquage), `dents` (false : pas de dégât), `simple` (le
+// décor : un aplat et ses deux ouvertures par face), `sel` (la palette éclairée), `attrs(p)` (attributs du groupe d'une palette :
+// elle devient cliquable), `balises` (false : le dégât n'est pas balisé `data-iso-avarie` ; l'écran du quai le demande, les tests du kit
+// lisent la balise). Rien d'autre n'est écrit dans le dessin (ni titre, ni nom de pool, ni dégât).
+export function palettePile(I, pile, ox, oy, r, o = {}) {
+  const k = o.echelle || 1, L = PAL_VIDE.L * k, D = PAL_VIDE.D * k, H = PAL_VIDE.H * k, z0 = o.z || 0, bw = PAL_VIDE.BLOC * k;
+  const yMin = o.yMin ?? -99, yMax = o.yMax ?? 99;
+  const [W, DW] = r % 2 ? [D, L] : [L, D], cx = ox + W / 2, cy = oy + DW / 2;
+  const monde = (lx, ly) => { const [a, b] = rot(r, lx - L / 2, ly - D / 2); return [cx + a, cy + b]; };
+  const PL = pile.palettes || [];
+  let g = '';
+  PL.forEach((p, n) => {
+    const T = POOL_DESSIN[p.pool] || POOL_DESSIN.chep, z = z0 + n * H, d0 = p.pool === 'epal' ? (D - PAL_VIDE.D_EPAL * k) / 2 : 0;
+    const A = monde(0, d0), B = monde(L, D - d0);
+    const x0 = Math.min(A[0], B[0]), x1 = Math.max(A[0], B[0]), y0 = Math.min(A[1], B[1]), y1 = Math.max(A[1], B[1]);
+    let s = '';
+    // Le dessus (couvert par la palette d'au-dessus, sauf en haut de la pile ou devant une palette Europe).
+    const ya = Math.max(y0, yMin), yb = Math.min(y1, yMax);
+    if (yb > ya + 1e-6) {
+      s += I.face([[x0, ya, z + H], [x1, ya, z + H], [x1, yb, z + H], [x0, yb, z + H]], T.c[0], TRAIT_PILE);
+      if (n === PL.length - 1 && !o.simple) {
+        // Les planches du plateau, en haut de la pile seulement.
+        for (let q = 1; q < 7; q++) {
+          const [a0, b0] = monde(q * L / 7, d0), [a1, b1] = monde(q * L / 7, D - d0);
+          const ys = [b0, b1].map((v) => Math.min(yb, Math.max(ya, v)));
+          if (Math.abs(ys[0] - ys[1]) > 1e-6 || Math.abs(b0 - b1) < 1e-6) s += `<polyline points="${I.pts([[a0, ys[0], z + H + 0.001], [a1, ys[1], z + H + 0.001]])}" stroke="rgba(0,0,0,.28)" stroke-width="1"/>`;
+        }
+      }
+    }
+    // Les deux faces tournées vers nous.
+    const FACES = { S: [[0, D - d0], [L, D - d0]], N: [[L, d0], [0, d0]], E: [[L, D - d0], [L, d0]], W: [[0, d0], [0, D - d0]] };
+    ['N', 'E', 'S', 'W'].forEach((f) => {
+      const v = faceVisible(r, f);
+      if (!v) return;
+      const [la, lb] = FACES[f], len = Math.hypot(lb[0] - la[0], lb[1] - la[1]);
+      const pt = (sx) => monde(la[0] + (lb[0] - la[0]) * sx / len, la[1] + (lb[1] - la[1]) * sx / len);
+      if (v === 'front' && (y1 > yMax + 1e-6 || y1 < yMin - 1e-6)) return;
+      const coul = v === 'front' ? T.c[1] : T.c[2];
+      // Un rectangle de la face, de sa = s0 à s1 (le long de la face) et de za à zb (au-dessus du pied de la palette).
+      const rect = (s0, s1, za, zb, fill, stroke = 'none', dz = 0) => {
+        let [pa, pb] = [pt(s0), pt(s1)];
+        if (v === 'droite') {
+          const lo = Math.max(Math.min(pa[1], pb[1]), yMin), hi = Math.min(Math.max(pa[1], pb[1]), yMax);
+          if (hi <= lo + 1e-6) return '';
+          const sens = pa[1] <= pb[1];
+          pa = [x1, sens ? lo : hi]; pb = [x1, sens ? hi : lo];
+        } else { pa = [pa[0], y1]; pb = [pb[0], y1]; }
+        return I.face([[pa[0], pa[1], z + za + dz], [pb[0], pb[1], z + za + dz], [pb[0], pb[1], z + zb + dz], [pa[0], pa[1], z + zb + dz]], fill, stroke);
+      };
+      const blocs = [[0, bw], [len / 2 - bw / 2, len / 2 + bw / 2], [len - bw, len]];
+      const zb1 = 0.022 * k, zb2 = 0.106 * k, zb3 = 0.128 * k;
+      s += rect(0, len, 0, H, T.c[3]);
+      if (o.simple) {
+        s += rect(0, len, 0, zb1, coul) + rect(0, len, zb2, H, coul) + blocs.map(([a, b]) => rect(a, b, zb1, zb2, coul)).join('');
+      } else {
+        s += rect(0, len, 0, zb1, coul, TRAIT_PILE) + rect(0, len, zb2, zb3, coul, TRAIT_PILE) + rect(0, len, zb3, H, coul, TRAIT_PILE);
+        s += blocs.map(([a, b]) => rect(a, b, zb1, zb2, coul, TRAIT_PILE)).join('');
+      }
+      // Le marquage, sur les blocs, de gauche à droite à l'écran (le sens de lecture ne dépend pas de la rotation).
+      const tDe = (sx) => { const [wx, wy] = pt(sx); return v === 'front' ? wx - x0 : y1 - wy; };
+      if (o.lisible && !o.simple) {
+        const ordre = blocs.map(([a, b]) => (a + b) / 2).sort((a, b) => tDe(a) - tDe(b));
+        ordre.forEach((sm, i) => {
+          const lignes = T.marque[i];
+          if (!lignes) return;
+          const u = Math.min(bw * 0.86 / Math.max(...lignes.map(largeurMot)), (zb2 - zb1) * 0.62 / (lignes.length * 5 + (lignes.length - 1) * 1.6));
+          const tc = tDe(sm), zh = zb1 + (zb2 - zb1) / 2 + u * (lignes.length * 5 + (lignes.length - 1) * 1.6) / 2;
+          lignes.forEach((m, li) => {
+            const t0 = tc - largeurMot(m) * u / 2, zt = z + zh - li * u * 6.6;
+            const w = v === 'front' ? [x0 + t0, y1, zt] : [x1, y1 - t0, zt];
+            const [ex, ey] = I.P(...w), su = I.unite * u;
+            const m0 = C30 * su, m1 = (v === 'front' ? S30 : -S30) * su;
+            s += `<path d="${cheminMot(m)}" transform="matrix(${m0.toFixed(3)},${m1.toFixed(3)},0,${su.toFixed(3)},${ex.toFixed(1)},${ey.toFixed(1)})" fill="none" stroke="${T.encre}" stroke-width=".8" stroke-linecap="butt" stroke-linejoin="miter"/>`;
+          });
+        });
+      }
+      // Le dégât, sur sa face seulement : une planche cassée (n° impair) ou un bloc arraché (n° pair).
+      if (p.abime === f && o.dents !== false && !o.simple) {
+        // Un polygone de la face, en (s le long de la face, z au-dessus du pied de la palette).
+        const poly = (L, fill, stroke = 'none') => {
+          const P3 = L.map(([sx, zz]) => { const [wx, wy] = pt(sx); return v === 'front' ? [wx, y1, z + zz] : [x1, wy, z + zz]; });
+          if (v === 'droite' && P3.some((q) => q[1] < yMin - 1e-6 || q[1] > yMax + 1e-6)) return '';
+          return I.face(P3, fill, stroke);
+        };
+        let d = '';
+        if (p.no % 2) {
+          // La planche du plateau cassée en V : un bout pend, en biais, sur l'ouverture ; le bois frais se voit aux deux cassures.
+          const sc = len * 0.28, sd = sc + 0.3 * k;
+          d += rect(sc - 0.03 * k, sd, zb2, H, VIDE_PILE);
+          d += poly([[sc - 0.03 * k, H], [sc + 0.02 * k, zb2 + 0.004 * k], [sc - 0.03 * k, zb2]], BOIS_FRAIS);
+          d += poly([[sc + 0.02 * k, H - 0.07 * k], [sd, H], [sd, zb2], [sc + 0.02 * k, zb2 - 0.07 * k]], coul, TRAIT_PILE);
+          d += poly([[sc + 0.02 * k, H - 0.07 * k], [sc + 0.045 * k, H - 0.06 * k], [sc + 0.035 * k, zb2 - 0.062 * k], [sc + 0.02 * k, zb2 - 0.07 * k]], BOIS_FRAIS, TRAIT_PILE);
+        } else {
+          // Le bloc du milieu arraché (un bloc d'angle se verrait aussi de la face voisine) : un trou, du bois frais déchiré, un clou.
+          const [a, b] = blocs[1], m = (a + b) / 2;
+          d += rect(a, b, zb1, zb2, VIDE_PILE);
+          d += poly([[a, zb2], [b, zb2], [b - 0.02 * k, zb2 - 0.022 * k], [m + 0.02 * k, zb2 - 0.012 * k], [m - 0.01 * k, zb2 - 0.026 * k], [a + 0.015 * k, zb2 - 0.014 * k]], BOIS_FRAIS, TRAIT_PILE);
+          d += poly([[a, zb1], [a + 0.03 * k, zb1 + 0.024 * k], [m, zb1 + 0.01 * k], [b - 0.01 * k, zb1 + 0.02 * k], [b, zb1]], BOIS_FRAIS, TRAIT_PILE);
+          d += rect(m + 0.012 * k, m + 0.018 * k, zb1 + 0.024 * k, zb2 - 0.012 * k, '#8d9397');
+        }
+        s += o.balises === false ? d : `<g data-iso-avarie>${d}</g>`;
+      }
+      if (o.sel === p.no) s += rect(0, len, 0, H, 'none', '#d1a90f');
+    });
+    if (o.sel === p.no && yb > ya + 1e-6) s += `<polygon points="${I.pts([[x0, ya, z + H], [x1, ya, z + H], [x1, yb, z + H], [x0, yb, z + H]])}" fill="none" stroke="#d1a90f" stroke-width="2.5"/>`;
+    g += o.attrs && s ? `<g ${o.attrs(p)}>${s}</g>` : s;
+  });
+  return g;
+}
+// La hauteur d'une pile de n palettes vides (mètres, à l'échelle k).
+export const hauteurPileVide = (n, k = 1) => n * PAL_VIDE.H * k;
+
 /* ============================== l'allée de picking : fûts, casiers, travée à tiroir, palette client (D-7 lot 2) */
 // Les objets d'ENT-6.7 (brief `docs/briefs/ENT-6.7-france-boissons-preparation.md` §7.2 et §7.3), repris de la maquette
 // validée (`docs/briefs/france-boissons/maquette-6.7-preparation-vocale.html`) ; le CASIER est celui que Tristan a validé le

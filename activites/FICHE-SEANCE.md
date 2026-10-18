@@ -605,20 +605,73 @@ Sur une **palette** du camion (absent = cartons), avec `rendu: 'iso'`. Un bac de
 - Consigne d'aide (`aides.consignes`) propre aux fûts : « Compte les fûts de la palette, place par place. Regarde bien s'il
   manque une place dans le bac. Fais le tour de la palette si besoin. »
 
+#### Pile de palettes vides : `forme: 'pile'` (MOTEUR-chep, lot B, 18/10/2026)
+
+Cadrage : `docs/briefs/MOTEUR-chep-ramasse-et-piles.md` §3 (compte rendu du lot B en bas). Sur le modèle exact de `forme: 'fut'` : la
+séance **déclare ce qui est sur la pile**, le moteur **calcule** les comptes, dessine, et l'élève compte et décide à l'étape ③. Quai iso
+(`rendu: 'iso'`, `froid: false`, un camion), cariste au chariot frontal conseillé. Page d'essai : `outils/essai-quai-inspection.html#piles`
+(partie 5, cinq piles, jouable de bout en bout ; un tableau y montre ce que la vue calcule). Tests : bloc `quai-iso`, cas « Quai piles ».
+
+```js
+{ id: 'P3', forme: 'pile', ref: 'CHEP-1210', nom: 'Palettes CHEP 1 200 × 1 000 vides', bl: 15,
+  hauteur: 14,                          // palettes réellement sur la pile (défaut = bl) : 15 − 14 = 1 manquante
+  intrus: { 6: 'lpr', 11: 'epal' },     // n° de la palette (1 = en bas) → autre pool : 'lpr' | 'logipal' | 'epal'
+  abimee: { 9: 'S' },                   // n° → face où se voit le dégât : N, S, E, W
+  etiq: { ref: 'BC-27-0119-P3', nom: 'BON DE COLLECTE — PILE 3', poids: '15 palettes annoncées' } }
+```
+
+- **Calculés, jamais déclarés** : `comptePile(palette)` (exportée de `core/types/quai.js`, pure) rend `{ bl, hauteur, manquantes, intrus,
+  parPool: { lpr, logipal, epal }, abimees, chep, aCrediter, aReparer }` — `manquantes = bl − hauteur`, `chep = hauteur − intrus` (abîmées
+  comprises : CHEP les répare), `aCrediter = chep`, `aReparer = abimees`. Une séance s'en sert pour ses jalons et ses fiches (règle 5 de la
+  coordination CHEP). Le comptage attendu à l'étape ③ est la **hauteur**.
+- **La décision juste se calcule** (`decisionPile(palette)` → `{ attendu, motifs }`) : aucune histoire → « accepter » ; sinon « accepter
+  avec réserves » avec un motif par histoire, dans l'ordre `manquant`, `avarie` (abîmées), `produit` (d'un autre pool). Ne pas écrire
+  `attendu` ni les motifs : écrits, ils doivent être ceux-là (sinon refus). Deux histoires demandent `deuxMotifs: true` ; trois sont refusées.
+- **Le quai qui porte une pile déclare** : `unite: { un: 'palette', des: 'palettes', feminin: true }`, `decisions: ['accepter', 'reserves']`
+  (**pas de « Refuser »** : on ne refuse pas des palettes vides qui appartiennent au pool), des `motifs` qui contiennent ceux que demandent
+  ses piles, et de préférence `libelles: { avarie: { nom: 'Palettes abîmées', precision: 'à réparer', adjectif: 'abîmé' }, manquant: { nom:
+  'Palettes manquantes' }, produit: { nom: 'Palettes d’un autre pool' } }` et `document: { nom: 'Bon de collecte', court: 'BC' }`.
+- **Le motif `produit` se chiffre** pour une pile : « Nombre de palettes d'un autre pool » (un nombre, jugé contre `intrus`) ; la réserve
+  écrit « 2 palettes d’un autre pool ». Exemple de ligne : « P5 CHEP-1210 : acceptée sous réserve — manque 1 palette (BC 15, reçu 14) ;
+  1 palette d’un autre pool. » La fiche de contrôle a une 5e case, « Palettes d’un autre pool » (jamais corrigée, comme les autres).
+- **Refusé au chargement** (`verifierQuai`) : un n° hors de 1…hauteur, non entier (ou écrit « 06 ») ; une palette à la fois intruse et
+  abîmée (une seule histoire par palette) ; un pool inconnu (« chep » compris) ; une face inconnue ; `hauteur > bl` ; `hauteur` < 1 ; une
+  pile de plus de **18** palettes (le dessin ne serait plus lisible) ; `refs`, `etiqAvant`, `W`, `D`, `L`, `manque`, `avarie` (dire
+  `hauteur` et `abimee`) ; une clé inconnue ; un quai sans `unite` ; sans `decisions` ou avec « refuser » ; les aides de couches.
+- **Le dessin** (`palettePile`, `core/iso.js`) : palette à blocs 1 200 × 1 000 (9 blocs, 3 en façade, 15 cm), empilées sans écart,
+  numérotées du bas. Pools par la **couleur et le marquage** (lisible en noir et blanc) : CHEP bleu, « CHEP » sur les blocs ; LPR rouge,
+  « LPR » ; Logipal brique, « LOGI » et « PAL » sur les blocs de gauche et de droite ; Europe bois brut, « EPAL » et « EUR », et plus étroite (1 200 × 800,
+  centrée : elle fait un retrait). Le marquage est **tracé** (aucun `<text>`). Le rouge des LPR est un objet du décor, il ne dit pas
+  « faux ». Aucun vert. Une palette abîmée : planche cassée en V qui pend (n° impair) ou bloc du milieu arraché (n° pair), **visible
+  seulement quand sa face est tournée vers nous** (deux rotations consécutives sur quatre, comme la fuite d'un fût : face S aux vues 0
+  et 3, E 0 et 1, N 1 et 2, W 2 et 3). Il manque des palettes : la pile est simplement moins haute.
+- **À l'écran.** ② et ④ : les piles à 0,7 de leur taille (aplat et ouvertures, sans marquage ni dégât : de loin on ne les voit pas), les
+  légendes disent « pile » (« Le cariste sort la pile P4 au chariot », « Les 5 piles sont en zone de réception ») quand toutes les palettes
+  du quai sont des piles. ③ (« ③ Compter les piles ») : la pile en grand (l'échelle suit la plus haute pile du quai, pour que 14 et 15 se
+  comparent), quatre vues, **chaque palette cliquable** ; le zoom dit « Palette 9 / 14 » (le dénominateur est la hauteur réelle), montre la
+  palette **de près** entre ses voisines (marquage lisible, dégât visible si sa face est tournée vers nous) et l'étiquette de la pile.
+  **Aucun texte, titre ni attribut ne nomme un pool ou un dégât** (le dégât n'est pas balisé à l'écran ; un test le garde) : n'en ajouter
+  aucun. Brouillon de calcul imposé (comme les fûts). Consigne d'aide (`aides.consignes`) propre aux piles : « Compte les palettes de la pile
+  une à une, en cliquant dessus : chacune s’affiche de près, avec son numéro. Fais le tour de la pile : regarde le marquage et l’état de
+  chaque palette. »
+
 #### Unité et libellés des motifs : `unite`, `libelles`, `motifs` (tous les quais)
 
 | Champ | Contenu | Défaut | Refusé si |
 |---|---|---|---|
-| `unite` | `'fûts'` (pluriel en -s, le singulier s'en déduit) ou `{ un: 'cheval', des: 'chevaux' }` | `{ un: 'carton', des: 'cartons' }` | texte vide ou sans « s » final ; objet sans `un` ou sans `des` |
+| `unite` | `'fûts'` (pluriel en -s, le singulier s'en déduit) ou `{ un: 'cheval', des: 'chevaux' }` ; au féminin : `{ un: 'palette', des: 'palettes', feminin: true }` (MOTEUR-chep lot B) | `{ un: 'carton', des: 'cartons' }` | texte vide ou sans « s » final ; objet sans `un` ou sans `des` ; `feminin` qui n'est pas un booléen |
 | `motifs` | liste d'ids proposés : `avarie`, `manquant`, `produit`, `temperature` (sans froid, jamais « température ») | tous | **id inconnu** (avant D-4, ignoré en silence) ; pas une liste |
 | `libelles.avarie.nom` | nom du motif | « Cartons endommagés » (l'unité y entre) | texte vide |
 | `libelles.avarie.precision` | ce qui suit « endommagé(s) » dans la réserve | « écrasé(s) » accordé | texte vide |
+| `libelles.avarie.adjectif` | l'adjectif de l'avarie, au masculin singulier (« abîmé ») : le moteur l'accorde (« 2 palettes abîmées ») partout où « endommagé » entrait (MOTEUR-chep lot B) | « endommagé » | texte vide |
+| `decisions` | les décisions proposées à l'étape ③ : une partie de `accepter`, `reserves`, `refuser` (MOTEUR-chep lot B) | les trois | valeur inconnue, en double, liste vide, sans « accepter » ; un `attendu` de palette absent de la liste ; **obligatoire, sans « refuser »**, sur un quai qui porte une pile |
 | `libelles.manquant.nom`, `libelles.produit.nom` | noms de ces motifs | « Manquant », « Produit différent de la commande » | texte vide ; toute autre clé |
 
 L'unité est lue **partout** dans le texte du quai (champs chiffrés « Nombre de fûts endommagés / manquants », fiche de
 contrôle, colonne du BL « Fûts » et « Par fût », comptage, réserves, journal, jalon « 7 fûts », aides, zoom « Fût 3 / 8 »,
-aria-labels) : une seule source, **ne jamais l'écrire en dur dans un contenu**. Elle doit être **masculine** (« endommagés »,
-« manquants » : le moteur ne le vérifie pas). Sans `unite`, les textes sont ceux d'avant le chantier, caractère pour
+aria-labels) : une seule source, **ne jamais l'écrire en dur dans un contenu**. Masculine par défaut ; **féminine** avec `feminin: true`
+(MOTEUR-chep lot B, 18/10/2026) : « endommagées », « manquantes », « comptées », « concernées », « une palette », « cette palette » partout
+où l'unité entre. Sans `unite`, les textes sont ceux d'avant le chantier, caractère pour
 caractère. Exemple : `unite: 'fûts'` et `libelles: { avarie: { nom: 'Fût endommagé', precision: 'fuite' } }` donnent la
 réserve « P3 AFF-20 : acceptée sous réserve — 1 fût endommagé (fuite). ». `MOTIFS` reste exporté tel quel ; un corrigé qui
 écrit les motifs d'un quai à libellés déclarés appelle `libMotifs(L, Q)` (`libellesMotifs(Q)` rend la table).
@@ -646,7 +699,7 @@ cas « Quai arrêt », « Quai commence », « Quai deux séances », « Quai do
 |---|---|---|
 | `arret` | `'dechargement'` ou `{ etape: 'dechargement', texte: '…' }` | Le quai **s'arrête** quand la dernière palette est posée. Pas d'étapes ③ ④ : ni dans le stepper, ni atteignables, ni à l'écran. Une fois la dernière palette posée, un **bandeau de fin** (`texte` ; défaut « Les palettes sont en zone de réception. ») remplace « Compter la palette » ; aucun bouton Valider, Clore, Recommencer. L'image reste celle de la fin : palettes en zone de réception, camion à quai porte ouverte, chauffeur debout. La légende ne parle plus de signature, ni la consigne (`aides.consignes`) de compter. L'état est **figé** (`fini: true`, comme après « Clore » : le chrono réel s'arrête), le drapeau `dechargeFini` est rangé, et le geste `quai:<id>:dechargement` part **une fois**, quel que soit le chemin (fin de l'animation, « Passer l'animation », mouvement réduit, page rechargée en plein déchargement). Jalons : ceux des étapes jouées (ordre, sécurité, ticket), **pas** de comptage, décision, réserve, déballage, signature, rentrée. |
 | `commence` | `'controle'` | La vue **s'ouvre à ③**, déchargement déjà fait : palettes en zone de réception (image de ④), BL en main, chauffeur debout (il part à la signature, comme d'habitude). L'état est construit par `etatNeuf` : ni ligne de journal, ni minute (l'horloge du quai affiche `debut` s'il est déclaré, sinon l'arrivée du camion — **`debut`** est l'heure de début du quai, d'où le nom `commence`). Ni ⓪ ① ② (stepper ③ ④). Jalons : **ni** `ordre`, `securite-*`, `ticket` ; le reste (comptage, décision, réserves, déballage, signature, rentrée), Clore et le bilan sont inchangés. « Recommencer la réception » (sauf `recommencer: false`) revient à ③. |
-| `document` | texte, par exemple `'Bon de livraison — lettre de voiture'` | Le nom du document de transport dans les titres : « 📄 *document* n° BL… » aux étapes ① (quai iso ou non) et ④. Sans `document`, « Bon de livraison ». Le rappel de ③ dit « Revoir le document » quand un nom est déclaré (« Revoir le bon de livraison » sinon). **Ne change pas** : les abréviations « BL » des consignes, du journal et des jalons, la réplique par défaut du chauffeur (`camions[].parole` la remplace), et le quai « déjà réceptionné » (`mode: 'controle'`, autre mécanisme). |
+| `document` | texte, par exemple `'Bon de livraison — lettre de voiture'`, ou `{ nom: 'Bon de collecte', court: 'BC' }` (MOTEUR-chep lot B, 18/10/2026) | Le nom du document de transport dans les titres : « 📄 *document* n° BL… » aux étapes ① (quai iso ou non) et ④. Sans `document`, « Bon de livraison ». Le rappel de ③ dit « Revoir le document » quand un nom est déclaré (« Revoir le bon de livraison » sinon). **Le texte seul ne change pas** les abréviations « BL » des consignes, du journal et des jalons, ni la réplique par défaut du chauffeur. **La forme `{ nom, court }`** remplace en plus « BL » par `court` partout où l'élève le lit (réserve « (BC 15, reçu 14) », comptage, consignes, titre et bouton de l'étape ④, journal, signature, jalons) et nomme le document dans la réplique par défaut du chauffeur et la légende d'arrivée (« te remet le bon de collecte »). Refusé : `nom` ou `court` vide, autre clé. Le quai « déjà réceptionné » (`mode: 'controle'`) ne le lit pas. |
 | `rendCopie` | `false` (seule valeur) | (17/10/2026, ENT-8.10, à l'image du Planning) **En copie**, la clôture du quai ne rend pas la copie : le bouton s'appelle « Clore la réception » (deux clics, « Clore définitivement ? Cliquez pour confirmer »), `api.rendreCopie()` n'est pas appelé, et d'autres écrans peuvent suivre le quai (un compte rendu par phrases après la signature) ; la copie se rend par un autre écran. Sans l'option : « Clore la réception et rendre ma copie », qui rend la copie. Hors copie, sans effet. Toute autre valeur (`true`, `'oui'`) est refusée par `verifierQuai`. |
 
 **Contrôle au chargement** (`verifierQuai`, erreur en clair, la séance ne s'ouvre pas) : valeur inconnue de `arret` / `commence`, texte de
