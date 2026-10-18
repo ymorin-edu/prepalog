@@ -8,15 +8,17 @@
 // double), m (1 ou 2 palettes manquantes), i (1 ou 2 palettes d'un autre pool, leur pool et leurs places, jamais en haut ni en bas de
 // la pile), a (1 à 3 palettes abîmées, au moins une visible seulement de l'arrière), le pool et la place de l'intrus de la pile
 // « double », le numéro du bon de collecte, la pièce `dernier` (celle des quatre plates-formes qui a signalé ses vides le plus tard)
-// et V (les vides de Frais du Nord, 390 à 400 par pas de 5). Un confirmé reçoit en plus une 6e pile (abîmées, deux dégâts tous deux
+// V (les vides de Frais du Nord, 390 à 400 par pas de 5) et, depuis le 18/10/2026, les vides des quatre plates-formes de la tournée
+// (Douai 135 à 145, Prouvy 115 à 125, Roubaix 90 à 100, Dourges 65 à 75, par pas de 5 : `BORNES_VIDES`), tirés EN DERNIER pour que les
+// autres tirages d'une même graine ne bougent pas. Un confirmé reçoit en plus une 6e pile (abîmées, deux dégâts tous deux
 // visibles seulement de l'arrière), tirée chez TOUS (le générateur avance pareil) et ajoutée APRÈS les cinq : son socle est le même.
 // ⚠ Le jeu d'un élève est une fonction de son identifiant ET de ce fichier : changer le tirage changerait les piles d'un élève qui a
 // déjà commencé. Pas de tirage mémorisé (`declarerTirage`) : il aurait fallu inscrire la banque dans `BANQUES_FIGEES` du bloc de tests
 // `tirage-niveaux`, hors du périmètre de la séance (dit au compte rendu du brief).
 //
-// LES QUANTITÉS DES QUATRE PLATES-FORMES de la tournée sont FIXES (140, 120, 95, 70 : les médianes du §6.3) : la vue Tournée est une
-// déclaration fixe, ses points ne se lisent pas dans la base de l'élève (demande au moteur, §7 du brief). V, lui, n'est pas dans la
-// tournée : il est tiré.
+// LES QUANTITÉS DES QUATRE PLATES-FORMES de la tournée sont tirées par élève (§6.3), mêmes sites pour tous : depuis le 18/10/2026 la vue
+// Tournée lit ses points dans la base de l'élève (`tournee.points: (db) => […]`, chantier MOTEUR-tournee-points-par-eleve). Les
+// horaires, les distances et la capacité (390) sont les mêmes pour tous. V (Frais du Nord) n'est pas dans la tournée : il est tiré aussi.
 //
 // Aucun attendu n'est écrit en dur : les comptes des piles viennent de `comptePile` / `decisionPile` (le moteur du quai), les km, les
 // heures, les charges et les créneaux de la vue Tournée elle-même (`creerTournee(…).bilan`), la capacité de 26 places × 15 palettes.
@@ -57,12 +59,15 @@ const h = (hh, mm = 0) => hh * 60 + mm;
 // Les plates-formes : id de la carte → distributeur de l'univers, horaires d'enlèvement des vides (construits, jeu B du 18/10/2026).
 export const SITES = {
   lesquin: { dist: 'frais-nord', ville: 'Lesquin', horaire: [h(6), h(14)] },
-  douai: { dist: 'halles-artois', ville: 'Douai', horaire: [h(9), h(12)], vides: 140 },
-  prouvy: { dist: 'hainaut-primeurs', ville: 'Prouvy', horaire: [h(8), h(12)], vides: 120 },
-  roubaix: { dist: 'marchelys', ville: 'Roubaix', horaire: [h(6), h(9)], vides: 95 },
-  dourges: { dist: 'dourges', ville: 'Dourges', horaire: [h(9), h(12)], vides: 70 },
+  douai: { dist: 'halles-artois', ville: 'Douai', horaire: [h(9), h(12)] },
+  prouvy: { dist: 'hainaut-primeurs', ville: 'Prouvy', horaire: [h(8), h(12)] },
+  roubaix: { dist: 'marchelys', ville: 'Roubaix', horaire: [h(6), h(9)] },
+  dourges: { dist: 'dourges', ville: 'Dourges', horaire: [h(9), h(12)] },
 };
 export const IDS_TOURNEE = ['douai', 'prouvy', 'roubaix', 'dourges'];
+// Les vides de chaque plate-forme sont TIRÉS par élève (§6.3) : bornes (par pas de 5) et médianes (le témoin `@temoin…`, et l'instance de calcul `VUE` ci-dessous sur une base sans quantités ; la séance elle-même tire le jeu de la graine, même sur une base vide).
+export const BORNES_VIDES = { douai: [135, 145], prouvy: [115, 125], roubaix: [90, 100], dourges: [65, 75] };
+export const MEDIANES = { douai: 140, prouvy: 120, roubaix: 95, dourges: 70 };
 export const nomSite = (id) => (SITES[id] ? DISTRIBUTEURS[SITES[id].dist].nom : id);
 export const FRAIS = { id: 'lesquin', signale: '2027-01-18 07:40' };
 // La banque `dernier` : quatre pièces, une par plate-forme ; chacune porte les dates et heures des quatre avis (construites), la
@@ -97,14 +102,20 @@ function tirer(hz) {
   const bc = `BC-27-${String(hz.entier(100, 999)).padStart(4, '0')}`;
   const dernier = hz.choisir(BANQUE_DERNIER).id;
   const V = CAPACITE + 5 * hz.entier(0, 2);
-  return { ordre, m, i, poolI, placesI, a, abimees, poolD, placeD, abimees6, bc, dernier, V };
+  // Les vides des quatre plates-formes : tirés APRÈS tous les autres (les tirages d'une même graine ne bougent pas), trois valeurs chacun.
+  const vides = {
+    douai: BORNES_VIDES.douai[0] + 5 * hz.entier(0, 2), prouvy: BORNES_VIDES.prouvy[0] + 5 * hz.entier(0, 2),
+    roubaix: BORNES_VIDES.roubaix[0] + 5 * hz.entier(0, 2), dourges: BORNES_VIDES.dourges[0] + 5 * hz.entier(0, 2),
+  };
+  return { ordre, m, i, poolI, placesI, a, abimees, poolD, placeD, abimees6, bc, dernier, V, vides };
 }
 
 // L'élève TÉMOIN du brief (§6.2, tests et corrigé) : P1 juste ; P2 à 14 ; P3 une LPR au n° 6 ; P4 deux abîmées (n° 4 face N, n° 11 face S) ;
 // P5 à 14 avec une palette Europe au n° 9. Graine réservée `@temoin` (ou `@temoin-<pièce de dernier>`) : une vraie graine (identifiant de
 // compte) ne commence jamais par « @ ».
 export const TEMOIN = { ordre: ['juste', 'manque', 'intrus', 'abimees', 'double'], m: 1, i: 1, poolI: 'lpr', placesI: [6], a: 2,
-  abimees: { 4: 'N', 11: 'S' }, poolD: 'epal', placeD: 9, abimees6: { 3: 'W', 12: 'N' }, bc: 'BC-27-0119', dernier: 'dr-dourges', V: 395 };
+  abimees: { 4: 'N', 11: 'S' }, poolD: 'epal', placeD: 9, abimees6: { 3: 'W', 12: 'N' }, bc: 'BC-27-0119', dernier: 'dr-dourges', V: 395,
+  vides: { ...MEDIANES } };   // les médianes : un tirage possible, qui garde les valeurs écrites à la main des tests (425, 285, 305, 330, 355)
 
 // Les piles d'un jeu (déclarations du quai). `confirme` : la 6e pile en plus.
 export function pilesDe(jeu, { confirme = false } = {}) {
@@ -135,18 +146,21 @@ export function comptesDe(piles) {
 /* ================================================================== la tournée de ramasse (déclaration de la vue, partagée) */
 const libHoraire = ([a, b]) => `de ${Math.floor(a / 60)} h à ${Math.floor(b / 60)} h`;
 export const horaireDit = (id) => libHoraire(SITES[id].horaire);
-// Les points de la tournée : ceux de la carte (positions, rues), avec le nom typographique de l'univers, les vides et le créneau. Le
-// quartier est retiré : la ligne du point dit l'horaire des vides (sinon la carte y met le nom du quartier).
+// Les points de la tournée : ceux de la carte (positions, rues), avec le nom typographique de l'univers et le créneau. Le quartier est
+// retiré : la ligne du point dit l'horaire des vides (sinon la carte y met le nom du quartier). Les VIDES n'y sont pas : ils sont ceux de
+// l'élève (`pointsDe`, `tournee.points(db)`) ; la carte se dessine depuis cette liste sans lire les quantités.
 export const POINTS = CARTE.clients.filter((c) => IDS_TOURNEE.includes(c.id)).map((c) => ({
-  ...c, quartier: null, nom: nomSite(c.id), vides: SITES[c.id].vides,
+  ...c, quartier: null, nom: nomSite(c.id),
   zone: SITES[c.id].ville,
   creneau: { apres: SITES[c.id].horaire[0], avant: SITES[c.id].horaire[1], libelle: `enlèvement des vides ${horaireDit(c.id)}` },
 }));
+// Les points avec les vides d'un tirage : mêmes sites pour tous, valeurs de l'élève.
+export const pointsDe = (vides) => POINTS.map((p) => ({ ...p, vides: vides[p.id] }));
 export const HORAIRE = { depart: h(6), vitesse: 55, service: { base: 20, parColis: 0.05, champ: 'vides', unite: 'palette' } };
 export const TOURNEE_BASE = {
   id: TOURNEE_ID,
   plan: { carte: CARTE, clients: POINTS },
-  points: POINTS,
+  points: (db) => pointsDe(videsDeBase(db)),   // relue dans la base de l'élève à chaque dessin et par le bilan (moteur du 18/10/2026)
   mesures: [{ id: 'vides', libelle: 'Palettes vides à bord', unite: 'palettes', max: CAPACITE, depart: 0, reprend: 'vides',
     libelleDepasse: 'Le camion ne peut pas tout prendre' }],
   // `libelleRate` (18/10/2026) : un quai atteint après son heure d'enlèvement est « fermé », jamais « raté de N min ».
@@ -156,39 +170,57 @@ export const TOURNEE_BASE = {
   departAQuai: true,
 };
 // La vue elle-même, pour les jalons, le contrôle d'équité, le corrigé et les tests : son bilan, pas un calcul parallèle.
-const VUE = creerTournee(TOURNEE_BASE);
-export const bilanTournee = (etat) => VUE.bilan(etat);
-export const bilanOrdre = (ordre) => VUE.bilan({ ordre: ordre.map(String), quai: IDS_TOURNEE.filter((x) => !ordre.includes(x)), report: {}, juge: {}, valide: null });
+// ⚠ INSTANCE DE CALCUL : sa « base » n'est qu'un petit objet `{ vides }` (les quatre quantités), pas la base d'un élève. Elle ne peut pas
+// utiliser `TOURNEE_BASE.points` : celle-ci tire un jeu (`jeuDeBase` → `verifier` → `ordresDe` → cette instance) et la vue appelle
+// `points({})` dès sa création, avant que l'instance existe. Sur `{}`, les médianes (jamais vues par un élève).
+const VUE = creerTournee({ ...TOURNEE_BASE, points: (calc) => pointsDe((calc && calc.vides) || MEDIANES) });
+const videsDeBase = (db) => jeuDeBase(db || {}).vides;
+export const bilanTournee = (etat, db) => VUE.bilan(etat, { vides: videsDeBase(db) });
+const etatDe = (ordre) => ({ ordre: ordre.map(String), quai: IDS_TOURNEE.filter((x) => !ordre.includes(x)), report: {}, juge: {}, valide: null });
+export const bilanOrdre = (ordre, vides) => VUE.bilan(etatDe(ordre), { vides });
 export const tientHoraires = (b) => !b.creneaux.some((c) => c.charge && c.trop === 'tard');
 const permutations = (L) => (L.length <= 1 ? [L] : L.flatMap((x, i) => permutations([...L.slice(0, i), ...L.slice(i + 1)]).map((p) => [x, ...p])));
 // Pour une pièce : les six ordres des trois sites restants, chacun avec ses km et s'il tient les horaires ; l'ordre au plus court.
 const memo = new Map();
-export function ordresDe(idPiece) {
-  if (memo.has(idPiece)) return memo.get(idPiece);
-  const P = pieceDernier(idPiece);
+// Le jeu fournit la pièce `dernier` et les quatre quantités (mémo par pièce + quantités : trois valeurs par site, 324 combinaisons au plus).
+const cleVides = (vides) => IDS_TOURNEE.map((id) => vides[id]).join(',');
+export function ordresDe(jeu) {
+  const cle = `${jeu.dernier}|${cleVides(jeu.vides)}`;
+  if (memo.has(cle)) return memo.get(cle);
+  const P = pieceDernier(jeu.dernier);
   const reste = IDS_TOURNEE.filter((x) => x !== P.site);
-  const ordres = permutations(reste).map((o) => { const b = bilanOrdre(o); return { ordre: o, km: b.km, tient: tientHoraires(b), pic: b.pics.vides }; });
+  const ordres = permutations(reste).map((o) => { const b = bilanOrdre(o, jeu.vides); return { ordre: o, km: b.km, tient: tientHoraires(b), pic: b.pics.vides }; });
   const court = ordres.slice().sort((x, y) => x.km - y.km)[0];
-  const r = { reste, ordres, court, justes: ordres.filter((o) => o.tient), total: reste.reduce((t, id) => t + SITES[id].vides, 0) };
-  memo.set(idPiece, r);
+  const r = { reste, ordres, court, justes: ordres.filter((o) => o.tient), total: reste.reduce((t, id) => t + jeu.vides[id], 0) };
+  memo.set(cle, r);
   return r;
 }
 
 /* ================================================================== le contrôle d'équité (§6.2 et §6.3) */
-let ecartsBanque = null;
-export function equiteBanque() {
-  if (ecartsBanque) return ecartsBanque;
+// Pour CES quantités (mémo par quantités) : les quatre sites ne tiennent pas dans un camion, l'ordre au plus court rate les horaires dans
+// au moins deux pièces sur quatre, et chaque pièce garde au moins un ordre qui tient.
+const ecartsBanque = new Map();
+export function equiteBanque(vides) {
+  const cle = cleVides(vides);
+  if (ecartsBanque.has(cle)) return ecartsBanque.get(cle);
   const E = [];
-  const tous = IDS_TOURNEE.reduce((t, id) => t + SITES[id].vides, 0);
+  const tous = IDS_TOURNEE.reduce((t, id) => t + vides[id], 0);
   if (!(tous > CAPACITE)) E.push(`les quatre sites (${tous}) tiennent dans un camion : rien à reporter`);
-  const rates = BANQUE_DERNIER.filter((p) => !ordresDe(p.id).court.tient).length;
+  const O = BANQUE_DERNIER.map((p) => ordresDe({ dernier: p.id, vides }));
+  const rates = O.filter((o) => !o.court.tient).length;
   if (rates < 2) E.push(`l’ordre au plus court tient les horaires dans ${4 - rates} pièces sur 4 : les horaires ne servent à rien`);
+  BANQUE_DERNIER.forEach((p, k) => { if (!O[k].justes.length) E.push(`${p.id} : aucun ordre ne tient les horaires`); });
   if (new Set(BANQUE_DERNIER.map((p) => p.site)).size !== 4) E.push('la banque « dernier » ne couvre pas les quatre plates-formes');
-  ecartsBanque = E;
+  ecartsBanque.set(cle, E);
   return E;
 }
 export function verifier(jeu) {
-  const E = [...equiteBanque()];
+  const vo = jeu && jeu.vides;
+  const E = [];
+  // Les vides des quatre plates-formes : chacun dans ses bornes, par pas de 5 (sinon on ne calcule rien dessus).
+  const videsOk = !!vo && IDS_TOURNEE.every((id) => Number.isInteger(vo[id]) && vo[id] >= BORNES_VIDES[id][0] && vo[id] <= BORNES_VIDES[id][1] && vo[id] % 5 === 0);
+  if (!videsOk) E.push(`les vides des quatre plates-formes ${vo ? IDS_TOURNEE.map((id) => `${id} ${vo[id]}`).join(', ') : '(absents)'} sont hors des bornes ou pas par pas de 5`);
+  else E.push(...equiteBanque(vo));
   if (!jeu || !Array.isArray(jeu.ordre) || [...jeu.ordre].sort().join() !== [...HISTOIRES].sort().join()) return [...E, 'l’ordre des histoires n’est pas une permutation des cinq'];
   const piles = pilesDe(jeu);
   const D = piles.map(decisionPile);
@@ -211,7 +243,8 @@ export function verifier(jeu) {
   if (IDS_TOURNEE.some((id) => id !== P.site && t[id] >= t[P.site])) E.push(`${P.id} : ${P.site} n’est pas le dernier à signaler`);
   if (IDS_TOURNEE.some((id) => t[id] < minutesDe('2027-01-18 00:00') || t[id] > minutesDe(LIMITE_SIGNALEMENT))) E.push(`${P.id} : un avis hors du lundi 18/01 au mardi 19/01 à 11 h`);
   if (minutesDe(FRAIS.signale) >= t[P.site]) E.push('Frais du Nord a signalé après le site reporté');
-  const O = ordresDe(P.id);
+  if (!videsOk) return E;
+  const O = ordresDe(jeu);
   if (!(O.total <= CAPACITE)) E.push(`${P.id} : sans ${P.site}, ${O.total} palettes ne tiennent pas dans ${CAPACITE}`);
   if (!O.justes.length) E.push(`${P.id} : aucun ordre ne tient les horaires`);
   return E;
@@ -273,5 +306,5 @@ export const etatTournee = (db) => (db && db.transport && db.transport[ID] && db
 export function tourneeEnvoyee(db) {
   const e = etatTournee(db);
   if (!e || !e.termine || !Array.isArray(e.ordre)) return null;
-  return { e, b: bilanTournee({ ordre: e.ordre, quai: Array.isArray(e.quai) ? e.quai : [], report: {}, juge: {}, valide: null, phase: e.phase }) };
+  return { e, b: bilanTournee({ ordre: e.ordre, quai: Array.isArray(e.quai) ? e.quai : [], report: {}, juge: {}, valide: null, phase: e.phase }, db) };
 }

@@ -9,7 +9,7 @@
 import { graineDeBase } from '../../core/tirage.js';
 import { comptePile, decisionPile } from '../../core/types/quai.js';
 import { palettes } from '../chep.js';
-import { jeuDe, pilesDe, comptesDe, pieceDernier, ordresDe, nomSite, horaireDit, CAPACITE, PLACES_SOL, PILE_VIDES, SITES, IDS_TOURNEE,
+import { jeuDe, pilesDe, comptesDe, pieceDernier, ordresDe, nomSite, horaireDit, CAPACITE, PLACES_SOL, PILE_VIDES, BORNES_VIDES, IDS_TOURNEE,
   bilanOrdre, creditDeSonControle, quaiClos } from '../chep-ent92-donnees.js';
 
 const NOMS_POOL = { lpr: 'LPR (rouge)', epal: 'Europe EPAL (bois brut)', logipal: 'Logipal (brique)' };
@@ -34,12 +34,15 @@ export const CORRIGE = {
       note: 'Le crédit est jugé sur le contrôle DE L’ÉLÈVE (une erreur ne se paie qu’une fois) : une pile mal comptée coûte au compte, pas au crédit.' },
     { etape: 3, etapeTitre: 'Organiser la ramasse', genre: 'question', texte: 'Le besoin et la tournée',
       rep: `Capacité = ${PLACES_SOL} places au sol × ${PILE_VIDES} palettes par pile = ${CAPACITE} palettes vides. Frais du Nord (au moins ${CAPACITE}) : un camion `
-        + `complet à lui seul. Les quatre autres (${IDS_TOURNEE.map((id) => SITES[id].vides).join(' + ')} = ${IDS_TOURNEE.reduce((t, id) => t + SITES[id].vides, 0)}) ne tiennent pas `
+        + `complet à lui seul. Les quatre autres (tirés par élève : ${IDS_TOURNEE.map((id) => `${nomSite(id)} ${BORNES_VIDES[id][0]} à ${BORNES_VIDES[id][1]}`).join(', ')}) `
+        + `font entre ${IDS_TOURNEE.reduce((t, id) => t + BORNES_VIDES[id][0], 0)} et ${IDS_TOURNEE.reduce((t, id) => t + BORNES_VIDES[id][1], 0)} palettes selon l’élève, `
+        + `toujours plus que ${CAPACITE} : ils ne tiennent pas `
         + 'dans un camion : on reporte à vendredi la plate-forme qui a signalé ses vides le plus tard (comparer le jour, puis l’heure), puis on ordonne les '
         + `trois autres pour respecter les heures d’enlèvement (Roubaix ${horaireDit('roubaix')}, Prouvy ${horaireDit('prouvy')}, Douai ${horaireDit('douai')}, `
         + `Dourges ${horaireDit('dourges')}).`,
-      note: 'Les quantités des quatre plates-formes sont les mêmes pour tous (la vue Tournée ne les tire pas : demande au moteur, brief §7). Ce qui change : '
-        + 'les dates et heures des avis, donc le site à reporter.' },
+      note: 'Les quantités des quatre plates-formes sont tirées par élève depuis le 18/10/2026 (par pas de 5, dans les bornes ci-dessus) ; les sites, '
+        + 'les horaires et la capacité sont les mêmes pour tous. Ce qui change aussi : les dates et heures des avis, donc le site à reporter. '
+        + 'Les quantités de chaque élève sont dans « Sa ramasse » (choisir l’élève ci-dessus).' },
     { etape: 4, etapeTitre: 'La note', genre: 'question', texte: 'Comment la note est-elle calculée ?',
       rep: '15 jalons pondérés et 3 questions notées, total 20 : contrôler 8 (le compte de chaque pile 0,4 × 5, les autres pools 2, les abîmées 2, '
         + 'décisions et réserves 2), créditer 3 (à créditer 2 ; hors pool, réparation et sort des autres pools 1), organiser 6 (capacité 1, Frais du Nord 1, '
@@ -69,9 +72,9 @@ export function corrigeEleve(base, uid) {
   const J = jeuDe(g);
   const conf = db.aisance === 'confirme';
   const P = pilesDe(J, { confirme: conf }), C = comptesDe(P);
-  const Pd = pieceDernier(J.dernier), O = ordresDe(J.dernier);
+  const Pd = pieceDernier(J.dernier), O = ordresDe(J);
   const juste = O.justes.slice().sort((a, b) => a.km - b.km)[0];
-  const bj = bilanOrdre(juste.ordre);
+  const bj = bilanOrdre(juste.ordre, J.vides);
   const items = [
     { genre: 'fait', texte: 'Son bon de collecte', rep: `${J.bc} · ${palettes(C.annoncees)} annoncées en ${P.length} piles de ${PILE_VIDES}` },
     { genre: 'tableau', texte: 'Ses piles (dans l’ordre du camion)', entetes: ['Pile', 'Palettes sur la pile', 'Ce qu’il y a', 'Décision et réserve attendues'],
@@ -85,7 +88,8 @@ export function corrigeEleve(base, uid) {
     items.push({ genre: 'question', texte: 'Le crédit attendu d’après SON contrôle (ce que juge la séance)', rep: `à créditer ${s.aCrediter} ; hors pool ${s.horsPool} ; réparation ${s.reparation}.` });
   }
   items.push({ genre: 'question', texte: 'Sa ramasse',
-    rep: `Frais du Nord : ${palettes(J.V)} → un camion complet. Plate-forme qui a signalé le plus tard : ${nomSite(Pd.site)} (${Pd.signale[Pd.site].replace(/^2027-01-(\d\d) /, (x, j) => `${j}/01 à `).replace(':', ' h ')}) → reportée à vendredi. `
+    rep: `Ses vides : ${IDS_TOURNEE.map((id) => `${nomSite(id)} ${J.vides[id]}`).join(', ')} : ${IDS_TOURNEE.reduce((t, id) => t + J.vides[id], 0)}, plus que ${CAPACITE}. `
+      + `Frais du Nord : ${palettes(J.V)} → un camion complet. Plate-forme qui a signalé le plus tard : ${nomSite(Pd.site)} (${Pd.signale[Pd.site].replace(/^2027-01-(\d\d) /, (x, j) => `${j}/01 à `).replace(':', ' h ')}) → reportée à vendredi. `
       + `Les trois autres : ${O.total} palettes, ça tient. Un ordre juste : ${juste.ordre.map(nomSite).join(' → ')} (${Math.round(juste.km)} km, retour vers ${hm(bj.arrivee)}). `
       + `${O.court.tient ? 'Ici, l’ordre au plus court tient aussi les horaires.' : `L’ordre au plus court (${O.court.ordre.map(nomSite).join(' → ')}) rate un horaire.`} `
       + `${O.justes.length} ordre${O.justes.length > 1 ? 's' : ''} sur 6 tiennent.` });

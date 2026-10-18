@@ -332,8 +332,8 @@ contrôles d'`etatInitial` et des `phases` se font sur cette liste. Au dessin, u
 que sur la base vide, est signalée (console, une fois) et la tournée affiche un avis d'erreur à sa place (`[data-tournee-erreur]`) :
 rien ne se branche, rien n'est écrit ; au bilan, la même faute est signalée et le bilan se calcule sur la base vide (aucun jalon ne
 plante). Une liste fixe : rien ne change. **Attention aux caches du contenu** : une séance qui fige ses quantités ailleurs (corrigé,
-liste `SITES`, mémo d'équité : ENT-9.2 garde ainsi ses médianes 140, 120, 95, 70) ne profite de rien tant qu'elle ne les tire pas
-aussi. Tests : bloc `ramasse` (« points par élève »).
+liste `SITES`, mémo d'équité) ne profite de rien tant qu'elle ne les tire pas
+aussi (ENT-9.2 les a tirées le 18/10/2026 : voir `contenus/chep-ent92-donnees.js`). Tests : bloc `ramasse` (« points par élève »).
 
 **Feuille de calcul dans une fiche, dessin en document, pastilles d'étape** (chantier D-10, 13/10/2026, brief ENT-6.10 §7) :
 - Bloc **`grille`** : `{ type: 'grille', id: 'compte', feuille: { colonnes: ['A', 'B', 'C'], decimales: 2, colonneAide: 'Aide',

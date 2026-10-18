@@ -5,7 +5,11 @@
 // - l'élève TÉMOIN (graine `@temoin…`) : P1 juste 15 ; P2 à 14 ; P3 15 dont une LPR (n° 6) ; P4 15 dont deux abîmées (n° 4 face N, n° 11 face S) ;
 //   P5 à 14 dont une Europe (n° 9) → annoncées 75, reçues 73, d'un autre pool 2, À CRÉDITER 71, en réparation 2, manquantes 2 ;
 // - un second témoin (m = 2, i = 2 aux n° 5 et 8) → reçues 72, autres 3, à créditer 69, réparation 2, manquantes 3 ;
-// - capacité 26 × 15 = 390 ; les quatre plates-formes 140 + 120 + 95 + 70 = 425 ;
+// - capacité 26 × 15 = 390 ; les quatre plates-formes du TÉMOIN (les médianes) 140 + 120 + 95 + 70 = 425 ; elles sont TIRÉES par élève depuis le
+//   18/10/2026 (Douai 135 à 145, Prouvy 115 à 125, Roubaix 90 à 100, Dourges 65 à 75, par pas de 5, brief §6.3) ;
+// - deux élèves RÉELS (graines `eleve-vides-69` et `eleve-vides-189`, trouvées une fois pour toutes puis écrites ici) : le premier a les
+//   maxima 145 + 125 + 100 + 75 = 445, la pièce `dr-prouvy`, ses piles et son crédit (69 à créditer, 3 hors pool, 2 en réparation) ; le second
+//   les minima 135 + 115 + 90 + 65 = 405 et la pièce `dr-dourges` ;
 // - pour chaque pièce de `dernier`, un ordre juste et un ordre faux (calculés à la main sur la carte, puis relus par la vue) :
 //   Douai reporté : juste Roubaix → Prouvy → Dourges ; faux Prouvy → Roubaix → Dourges (Roubaix fermé à 9 h) ;
 //   Prouvy reporté : juste Roubaix → Douai → Dourges ; faux Douai → Dourges → Roubaix (le plus court) ;
@@ -135,15 +139,20 @@ await v('ENT-9.2 : au registre — meta (1re, C2.5, guidage, barème 20, parcour
 });
 
 // ─────────────────────────────────────────────────────────── les données (valeurs écrites à la main)
-await v('ENT-9.2 : données — le témoin (75 annoncées, 73 reçues, 2 d’un autre pool, 71 à créditer, 2 en réparation, 2 manquantes), un second témoin (69 à créditer), la capacité 390, les décisions calculées', async () => {
+await v('ENT-9.2 : données — le témoin (75 annoncées, 73 reçues, 2 d’un autre pool, 71 à créditer, 2 en réparation, 2 manquantes), un second témoin (69 à créditer), la capacité 390, les décisions calculées, les vides des quatre plates-formes (médianes du témoin, bornes)', async () => {
   const r = await pg.evaluate(async () => {
     const D = await import('/contenus/chep-ent92-donnees.js');
     const Q = await import('/core/types/quai.js');
     const T = D.pilesDe(D.TEMOIN);
     const T2 = D.pilesDe({ ...D.TEMOIN, m: 2, i: 2, placesI: [5, 8] });
     return { c1: D.comptesDe(T), c2: D.comptesDe(T2), cap: D.CAPACITE, dec: T.map((p) => `${p.id}:${Q.decisionPile(p).attendu}:${Q.decisionPile(p).motifs.join('+')}`),
-      haut: T.map((p) => Q.comptePile(p).hauteur), conf: D.pilesDe(D.TEMOIN, { confirme: true }).map((p) => p.id), sites: D.IDS_TOURNEE.map((id) => D.SITES[id].vides),
-      ecarts: D.verifier(D.TEMOIN) };
+      haut: T.map((p) => Q.comptePile(p).hauteur), conf: D.pilesDe(D.TEMOIN, { confirme: true }).map((p) => p.id), sites: D.IDS_TOURNEE.map((id) => D.TEMOIN.vides[id]), medianes: D.MEDIANES, bornes: D.BORNES_VIDES,
+      sitesSansVides: D.IDS_TOURNEE.map((id) => 'vides' in D.SITES[id]), pointsSansVides: D.POINTS.map((p) => 'vides' in p),
+      ecarts: D.verifier(D.TEMOIN),
+      // `verifier` contrôle les bornes et le pas de 5 des vides : un jeu hors bornes est refusé, les extrêmes permis passent.
+      refus: [{ douai: 150 }, { douai: 142 }, { roubaix: 85 }, { dourges: 80 }, { prouvy: 110 }].map((o) => D.verifier({ ...D.TEMOIN, vides: { ...D.TEMOIN.vides, ...o } }).length > 0),
+      sansVides: D.verifier({ ...D.TEMOIN, vides: undefined }).length > 0,
+      extremes: [D.verifier({ ...D.TEMOIN, vides: { douai: 145, prouvy: 125, roubaix: 100, dourges: 75 } }), D.verifier({ ...D.TEMOIN, vides: { douai: 135, prouvy: 115, roubaix: 90, dourges: 65 } })] };
   });
   egal(r.c1, { annoncees: 75, recues: 73, autres: 2, aCrediter: 71, reparation: 2, manquantes: 2 }, 'témoin 1');
   egal(r.c2, { annoncees: 75, recues: 72, autres: 3, aCrediter: 69, reparation: 2, manquantes: 3 }, 'témoin 2');
@@ -151,21 +160,27 @@ await v('ENT-9.2 : données — le témoin (75 annoncées, 73 reçues, 2 d’un 
   egal(r.haut, [15, 14, 15, 15, 14], 'hauteurs');
   egal(r.dec, ['P1:accepter:', 'P2:reserves:manquant', 'P3:reserves:produit', 'P4:reserves:avarie', 'P5:reserves:manquant+produit'], 'décisions');
   egal(r.conf, ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'], 'confirmé : une 6e pile après les cinq');
-  egal(r.sites, [140, 120, 95, 70], 'les quatre plates-formes');
+  egal(r.sites, [140, 120, 95, 70], 'les quatre plates-formes du témoin');
+  egal(r.medianes, { douai: 140, prouvy: 120, roubaix: 95, dourges: 70 }, 'les médianes');
+  egal(r.bornes, { douai: [135, 145], prouvy: [115, 125], roubaix: [90, 100], dourges: [65, 75] }, 'les bornes du brief §6.3');
+  egal([r.sitesSansVides, r.pointsSansVides], [[false, false, false, false], [false, false, false, false]], 'ni les sites ni les points du plan ne portent de quantité fixe');
   egal(r.ecarts, [], 'le témoin est équitable');
+  egal(r.refus, [true, true, true, true, true], 'verifier refuse un vide hors de ses bornes ou pas par pas de 5');
+  egal([r.sansVides, r.extremes], [true, [[], []]], 'verifier refuse un jeu sans vides ; les maxima et les minima permis sont équitables');
 });
 
-await v('ENT-9.2 : la ramasse — pour chaque pièce, l’ordre juste écrit à la main tient (camion, horaires) et l’ordre faux rate ; l’ordre au plus court rate dans deux pièces sur quatre ; les avis donnent le bon « dernier »', async () => {
+await v('ENT-9.2 : la ramasse (vides médians du témoin) — pour chaque pièce, l’ordre juste écrit à la main tient (camion, horaires) et l’ordre faux rate ; l’ordre au plus court rate dans deux pièces sur quatre ; les avis donnent le bon « dernier »', async () => {
   const r = await pg.evaluate(async ({ JUSTES, FAUX }) => {
     const D = await import('/contenus/chep-ent92-donnees.js');
-    const lire = (o) => { const b = D.bilanOrdre(o); return { tard: b.creneaux.filter((c) => c.charge && c.trop === 'tard').map((c) => c.id), trop: b.depassements, rep: b.reportes, pic: b.pics.vides }; };
+    const V = D.TEMOIN.vides;
+    const lire = (o) => { const b = D.bilanOrdre(o, V); return { tard: b.creneaux.filter((c) => c.charge && c.trop === 'tard').map((c) => c.id), trop: b.depassements, rep: b.reportes, pic: b.pics.vides }; };
     const out = {};
     for (const P of D.BANQUE_DERNIER) {
-      const o = D.ordresDe(P.id);
+      const o = D.ordresDe({ ...D.TEMOIN, dernier: P.id });
       const dernier = Object.entries(P.signale).sort((a, b) => (a[1] < b[1] ? 1 : -1))[0][0];
       out[P.id] = { juste: lire(JUSTES[P.id]), faux: lire(FAUX[P.id]), court: o.court.ordre.join('>'), courtTient: o.court.tient, justes: o.justes.length, dernier, total: o.total };
     }
-    return { out, ids: D.BANQUE_DERNIER.map((p) => p.id), tous: D.bilanOrdre(['douai', 'prouvy', 'roubaix', 'dourges']).depassements, banque: D.equiteBanque() };
+    return { out, ids: D.BANQUE_DERNIER.map((p) => p.id), tous: D.bilanOrdre(['douai', 'prouvy', 'roubaix', 'dourges'], V).depassements, banque: D.equiteBanque(V) };
   }, { JUSTES, FAUX });
   egal(r.ids, ['dr-douai', 'dr-prouvy', 'dr-roubaix', 'dr-dourges'], 'banque figée : quatre pièces, ids jamais changés');
   egal(r.tous, ['vides'], 'les quatre sites ne tiennent pas dans un camion');
@@ -296,31 +311,140 @@ await v('ENT-9.2 : « Corriger » — le crédit à 75 → bilan, « Corriger »
 });
 
 // ─────────────────────────────────────────────────────────── le tirage
-await v('ENT-9.2 : tirage — 200 élèves : zéro secours, zéro écart, chaque pièce de « dernier » entre 15 et 35 %, histoires et quantités variées, intrus jamais en haut ni en bas, un dégât de l’arrière, crédit de 66 à 72', async () => {
+await v('ENT-9.2 : tirage — 300 élèves : zéro secours, zéro écart, chaque pièce de « dernier » entre 15 et 35 %, histoires et quantités variées, intrus jamais en haut ni en bas, un dégât de l’arrière, crédit de 66 à 72 ; les vides des quatre plates-formes prennent leurs trois valeurs, dans leurs bornes, par pas de 5', async () => {
   const r = await pg.evaluate(async () => {
     const D = await import('/contenus/chep-ent92-donnees.js');
     const Q = await import('/core/types/quai.js');
-    const out = { dernier: {}, secours: 0, ecarts: [], ordres: new Set(), credit: new Set(), V: new Set(), bc: new Set(), bords: 0, arriere: 0, i: new Set(), a: new Set() };
-    for (let k = 0; k < 200; k++) {
+    const out = { dernier: {}, secours: 0, ecarts: [], ordres: new Set(), credit: new Set(), V: new Set(), bc: new Set(), bords: 0, arriere: 0, i: new Set(), a: new Set(),
+      vides: { douai: new Set(), prouvy: new Set(), roubaix: new Set(), dourges: new Set() }, combis: new Set(), hors: [] };
+    const BORNES = { douai: [135, 145], prouvy: [115, 125], roubaix: [90, 100], dourges: [65, 75] };
+    for (let k = 0; k < 300; k++) {
       const t = D.tirageDe(`el-${k}`);
       if (t.secours) out.secours++;
       const J = t.jeu;
       const e = D.verifier(J); if (e.length) out.ecarts.push(`${k}: ${e.join(' ; ')}`);
       out.dernier[J.dernier] = (out.dernier[J.dernier] || 0) + 1;
+      for (const id of Object.keys(BORNES)) {
+        out.vides[id].add(J.vides[id]);
+        if (!(J.vides[id] >= BORNES[id][0] && J.vides[id] <= BORNES[id][1] && J.vides[id] % 5 === 0)) out.hors.push(`${k} ${id} ${J.vides[id]}`);
+      }
+      out.combis.add(Object.keys(BORNES).map((id) => J.vides[id]).join());
       out.ordres.add(J.ordre.join()); out.V.add(J.V); out.bc.add(J.bc); out.i.add(J.i); out.a.add(J.a);
       const P = D.pilesDe(J);
       out.credit.add(D.comptesDe(P).aCrediter);
       P.forEach((p) => { const h = Q.comptePile(p).hauteur; Object.keys(p.intrus || {}).forEach((n) => { if (+n === 1 || +n === h) out.bords++; }); });
       if (Object.values(J.abimees).some((f) => f === 'N' || f === 'W')) out.arriere++;
     }
-    return { ...out, ordres: out.ordres.size, credit: [...out.credit].sort(), V: [...out.V].sort(), bc: out.bc.size, i: [...out.i].sort(), a: [...out.a].sort() };
+    const tri = (E) => [...E].sort((x, y) => x - y);
+    return { ...out, ordres: out.ordres.size, credit: [...out.credit].sort(), V: [...out.V].sort(), bc: out.bc.size, i: [...out.i].sort(), a: [...out.a].sort(),
+      vides: Object.fromEntries(Object.entries(out.vides).map(([id, E]) => [id, tri(E)])), combis: out.combis.size };
   });
-  egal([r.secours, r.ecarts, r.bords, r.arriere], [0, [], 0, 200], 'secours, écarts, intrus au bord, dégât de l’arrière');
-  for (const id of ['dr-douai', 'dr-prouvy', 'dr-roubaix', 'dr-dourges']) { const p = (r.dernier[id] || 0) / 2; vrai(p >= 15 && p <= 35, `${id} : ${p} %`); }
+  egal([r.secours, r.ecarts, r.bords, r.arriere], [0, [], 0, 300], 'secours, écarts, intrus au bord, dégât de l’arrière');
+  for (const id of ['dr-douai', 'dr-prouvy', 'dr-roubaix', 'dr-dourges']) { const p = (r.dernier[id] || 0) / 3; vrai(p >= 15 && p <= 35, `${id} : ${p} %`); }
+  egal(r.hors, [], 'un vide hors de ses bornes ou pas par pas de 5');
+  egal(r.vides, { douai: [135, 140, 145], prouvy: [115, 120, 125], roubaix: [90, 95, 100], dourges: [65, 70, 75] }, 'chaque plate-forme prend ses trois valeurs (minimum, médiane, maximum)');
+  vrai(r.combis >= 20, `combinaisons de quantités différentes : ${r.combis}`);
   vrai(r.ordres >= 40, `ordres des histoires : ${r.ordres}`);
   vrai(r.credit.every((c) => c >= 66 && c <= 72) && r.credit.length >= 3, 'crédits : ' + r.credit.join(', '));
   egal([r.V, r.i, r.a], [[390, 395, 400], [1, 2], [1, 2, 3]], 'V, intrus, abîmées');
   vrai(r.bc >= 100, `numéros de bon : ${r.bc}`);
+});
+
+
+// ─────────────────────────────────────────────────────────── les vides tirés par élève (18/10/2026)
+// Deux élèves RÉELS (pas `@temoin`), graines et quantités écrites à la main (trouvées une fois pour toutes, voir l'en-tête) :
+//   A `eleve-vides-69`  : Douai 145, Prouvy 125, Roubaix 100, Dourges 75 = 445 ; pièce `dr-prouvy` (Hainaut Primeurs a signalé le plus tard) ;
+//   B `eleve-vides-189` : Douai 135, Prouvy 115, Roubaix 90, Dourges 65 = 405 ; pièce `dr-dourges`.
+const ELEVE_A = { graine: 'eleve-vides-69', vides: { douai: 145, prouvy: 125, roubaix: 100, dourges: 75 }, total: 445 };
+const ELEVE_B = { graine: 'eleve-vides-189', vides: { douai: 135, prouvy: 115, roubaix: 90, dourges: 65 }, total: 405 };
+const NOMS_SITES = { douai: 'Halles d’Artois', prouvy: 'Hainaut Primeurs', roubaix: 'MarchéLys', dourges: 'Primeurs du Delta' };
+const DEJA = { fiches: { credit: { valeurs: {}, envoye: { at: 1 }, envois: 1 }, besoin: { valeurs: {}, envoye: { at: 1 }, envois: 1 } } };
+const sansEspaces = (t) => t.replace(/[\s\u00a0\u202f]+/g, ' ');
+
+await v('ENT-9.2 : vides tirés par élève — deux élèves réels ont chacun SES quantités : la liste des arrêts, la jauge, les avis, le corrigé ; les marqueurs de la carte sont les mêmes ; aucun avis d’erreur de la vue', async () => {
+  const lu = {};
+  for (const E of [ELEVE_A, ELEVE_B]) {
+    await monter({ uid: `ch92-${E.graine}`, graine: E.graine, db: DEJA });
+    await aller('accueil'); await aller('tournee');
+    // À l'ouverture, tout est « à quai » : la liste du quai porte déjà les quantités de l'élève.
+    const quai = sansEspaces(await pg.$eval(`${Z} .tour-quai`, (e) => e.textContent));
+    for (const id of ['douai', 'prouvy', 'roubaix', 'dourges']) await pg.click(`${Z} [data-reprendre="${id}"]`).then(() => pause(50));
+    lu[E.graine] = await pg.evaluate(({ Z }) => {
+      const z = document.querySelector(Z);
+      return { quai: null, liste: Object.fromEntries([...z.querySelectorAll('#tourListe .tour-item')].map((li) => [li.querySelector('strong').textContent.trim(), li.querySelector('.note').textContent.replace(/[\s\u00a0\u202f]+/g, ' ')])),
+        tete: z.querySelector('[data-tour-profil="vides"] .tour-j-tete').textContent.replace(/[\s\u00a0\u202f]+/g, ' '),
+        jauge: z.querySelector('[data-tour-profil="vides"]').textContent.replace(/[\s\u00a0\u202f]+/g, ' '),
+        plan: z.querySelector('.plan-boite').innerHTML, erreur: !!z.querySelector('[data-tournee-erreur]') };
+    }, { Z });
+    lu[E.graine].quai = quai;
+    // Les avis (documents) et le corrigé de CET élève.
+    const doc = await pg.evaluate(async (uid) => {
+      const S = await import('/contenus/chep-ent92.js');
+      const C = await import('/contenus/corriges/ENT-9.2.js');
+      const db = window.__f.db;
+      const avis = Object.fromEntries(['douai', 'prouvy', 'roubaix', 'dourges', 'lesquin'].map((id) => [id, S.DOCUMENTS.find((d) => d.id === `avis-${id}`).html(db).replace(/[\s\u00a0\u202f]+/g, ' ')]));
+      const ramasse = C.corrigeEleve(db, uid).items.find((x) => x.texte === 'Sa ramasse').rep;
+      const commun = C.CORRIGE.items.find((x) => x.etape === 3);
+      return { avis, ramasse, commun: commun.rep + ' ' + commun.note };
+    }, `ch92-${E.graine}`);
+    lu[E.graine].doc = doc;
+    egal(await present('[data-tournee-erreur]'), false, `${E.graine} : avis d'erreur de la vue Tournée`);
+  }
+  for (const E of [ELEVE_A, ELEVE_B]) {
+    const L = lu[E.graine];
+    for (const id of Object.keys(E.vides)) {
+      const n = E.vides[id];
+      vrai(L.liste[NOMS_SITES[id]] && L.liste[NOMS_SITES[id]].includes(`${n} palettes à reprendre`), `${E.graine} : la ligne de ${NOMS_SITES[id]} ne dit pas ${n} : ` + JSON.stringify(L.liste));
+      vrai(L.quai.includes(`${n} palettes`), `${E.graine} : la liste du quai ne dit pas ${n} palettes : ` + L.quai.slice(0, 300));
+      vrai(L.doc.avis[id].includes(`${n} palettes CHEP prêtes à l’enlèvement`), `${E.graine} : l'avis de ${NOMS_SITES[id]} ne dit pas ${n} : ` + L.doc.avis[id].slice(0, 400));
+    }
+    // La jauge : son pic est la somme de SES quatre quantités, lue en tête de jauge ; elle ne dit pas de combien c'est trop.
+    vrai(L.tete.includes(`${E.total} / 390`), `${E.graine} : la tête de la jauge ne dit pas ${E.total} / 390 : ` + L.tete);
+    vrai(/Le camion ne peut pas tout prendre/.test(L.jauge) && !/dépassée de|de trop|\b(55|15)\b palettes/.test(L.jauge), `${E.graine} : la jauge : ` + L.jauge);
+    egal(L.erreur, false, `${E.graine} : avis d'erreur`);
+    // Le corrigé : SES quatre quantités et leur total.
+    const dit = ['douai', 'prouvy', 'roubaix', 'dourges'].map((id) => `${NOMS_SITES[id]} ${E.vides[id]}`).join(', ');
+    vrai(L.doc.ramasse.includes(`Ses vides : ${dit} : ${E.total}, plus que 390.`), `${E.graine} : « Sa ramasse » : ` + L.doc.ramasse);
+  }
+  // Les deux élèves ne voient pas les mêmes quantités, mais la même carte (mêmes sites, mêmes marqueurs).
+  vrai(lu[ELEVE_A.graine].plan.length > 500 && lu[ELEVE_A.graine].plan === lu[ELEVE_B.graine].plan, 'les marqueurs du plan changent d’un élève à l’autre');
+  vrai(JSON.stringify(lu[ELEVE_A.graine].liste) !== JSON.stringify(lu[ELEVE_B.graine].liste), 'les deux élèves ont la même liste');
+  // Le corrigé commun ne fige plus 425 : il donne les bornes (405 à 445) et dit que les quantités sont tirées.
+  const commun = lu[ELEVE_A.graine].doc.commun;
+  vrai(/entre 405 et 445 palettes selon l’élève/.test(commun) && /plus que 390/.test(commun) && !/\b425\b/.test(commun) && /tirées par élève/.test(commun), 'corrigé commun : ' + commun);
+  // Le retour que dit le corrigé suit les quantités de l'élève (d'une fraction de minute, mais ça passe la minute pour ces deux-là) : relevé
+  // sur deux autres élèves aux quantités extrêmes (graines `eleve-vides-20` : maxima, pièce Douai ; `eleve-vides-422` : minima, pièce Roubaix).
+  // Avec les médianes, le premier dirait 9 h 57 et le second 10 h 27. Le dernier arrêt attend l'ouverture de son quai (9 h pour Dourges) : seul son service
+  // compte, 20 min + 0,05 min par palette (75 palettes : 23,75 min), puis le retour.
+  const retours = await pg.evaluate(async () => {
+    const C = await import('/contenus/corriges/ENT-9.2.js');
+    return ['eleve-vides-20', 'eleve-vides-422'].map((g) => C.corrigeEleve({ tirage: { graine: g } }, 'x').items.find((x) => x.texte === 'Sa ramasse').rep);
+  });
+  vrai(retours[0].includes('Primeurs du Delta (135 km, retour vers 9 h 58)') && retours[0].includes('Primeurs du Delta 75 : 445'), 'corrigé de eleve-vides-20 : ' + retours[0]);
+  vrai(retours[1].includes('Primeurs du Delta (112 km, retour vers 10 h 26)') && retours[1].includes('Primeurs du Delta 65 : 405'), 'corrigé de eleve-vides-422 : ' + retours[1]);
+  egal(erreursF, [], 'aucune erreur JS');
+});
+
+await v('ENT-9.2 : vides tirés par élève, parcours juste de l’élève A (145 + 125 + 100 + 75 ; Hainaut Primeurs reporté) — 20 / 20, son pic 320 et sa tournée jugés sur SES quantités, Yannick reprend son ordre', async () => {
+  // Les piles de A, lues une fois dans `D.pilesDe` puis écrites ici : P1 15 juste ; P2 à 14 (1 manquante, 1 d'un autre pool) ; P3 15 dont 2 abîmées ;
+  // P4 à 13 (2 manquantes) ; P5 15 dont 2 d'un autre pool → annoncées 75, reçues 72, 3 d'un autre pool, 69 à créditer, 2 en réparation.
+  const PLAN_A = { P1: [15, 'accepter', []], P2: [14, 'reserves', [['manquant', 1], ['produit', 1]]], P3: [15, 'reserves', [['avarie', 2]]],
+    P4: [13, 'reserves', [['manquant', 2]]], P5: [15, 'reserves', [['produit', 2]]] };
+  const CREDIT_A = { annoncees: 75, aCrediter: 69, horsPool: 3, reparation: 2, sort: 'cote' };
+  const BESOIN_A = { capacite: 390, frais: 'complet', total: ELEVE_A.total, toutTient: 'non' };
+  await monter({ uid: 'ch92-reel-a', graine: ELEVE_A.graine });
+  await parcours({ plan: PLAN_A, credit: CREDIT_A, bes: BESOIN_A, ordre: ['roubaix', 'douai', 'dourges'] });
+  const n = await note();
+  egal(jalons(n), tout('ok'), 'jalons');
+  egal(QUESTIONS_NOTEES.map((j) => n.detail[j]), ['ok', 'ok', 'ok'], 'questions notées');
+  proche(n.score, 20, 'note');
+  // La tournée envoyée est jugée sur SES quantités : 100, puis 100 + 145, puis 100 + 145 + 75 (avec les médianes, 305).
+  const T = await pg.evaluate(async () => { const D = await import('/contenus/chep-ent92-donnees.js'); const t = D.tourneeEnvoyee(window.__f.db); return { pic: t.b.pics.vides, profil: t.b.profils.vides, reportes: t.b.reportes, retenus: t.b.retenus.map((p) => p.id) }; });
+  egal([T.pic, T.profil, T.reportes, T.retenus], [320, [0, 100, 245, 320], ['prouvy'], ['roubaix', 'douai', 'dourges']], 'la tournée envoyée, sur ses quantités');
+  const E = await entrants();
+  vrai(E[E.length - 1].text.includes('MarchéLys → Halles d’Artois → Primeurs du Delta. Hainaut Primeurs passe vendredi.'), 'Yannick reprend son ordre : ' + E[E.length - 1].text);
+  egal(await present('[data-tournee-erreur]'), false, 'avis d’erreur de la vue Tournée');
+  egal(erreursF, [], 'aucune erreur JS');
 });
 
 // ─────────────────────────────────────────────────────────── confirmé, accompagné

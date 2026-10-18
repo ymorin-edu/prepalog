@@ -32,7 +32,7 @@ import { EQUIPE, LEXIQUE, mailDe, heureScenario, STYLE_DOCUMENTS, PIED, PIED_REC
   date, palettes, ech, JOURS } from './chep.js';
 import {
   ID, ID_VOLET, QUAI_ID, TOURNEE_ID, FICHES, SCENARIO, EXPEDITEUR, TRANSPORTEUR, CAPACITE, PLACES_SOL, PILE_VIDES, NB_PILES,
-  SITES, IDS_TOURNEE, FRAIS, nomSite, horaireDit, TOURNEE_BASE, pilesDe, comptesDe, jeuDe, jeuDeBase, pilesDeBase, dernierDe, confirme,
+  SITES, IDS_TOURNEE, FRAIS, nomSite, horaireDit, TOURNEE_BASE, POINTS, pilesDe, comptesDe, jeuDe, jeuDeBase, pilesDeBase, dernierDe, confirme,
   constats, creditDeSonControle, fiche, dejaEnvoyee, lireNombre, etatQuai, quaiClos, tourneeEnvoyee,
 } from './chep-ent92-donnees.js';
 import { graineDeBase, niveauEleve } from '../core/tirage.js';
@@ -107,13 +107,14 @@ const DOC_REGLES = { id: 'regles-credit', titre: 'Règles de crédit d’un reto
     ${PIED('Règle interne reconstituée à partir du fonctionnement public du pool (Autorité de la concurrence, 2009) — document pédagogique, non contractuel.')}
   </article>` };
 
-// Les avis de palettes vides (un par site ; Frais du Nord : V, tiré ; les quatre autres : 140, 120, 95, 70, date et heure de la pièce `dernier`).
+// Les avis de palettes vides (un par site ; Frais du Nord : V, tiré ; les quatre autres : leurs vides tirés par élève, 135 à 145 pour Douai,
+// 115 à 125 Prouvy, 90 à 100 Roubaix, 65 à 75 Dourges ; date et heure de la pièce `dernier`).
 const ADRESSE = {};
-TOURNEE_BASE.points.forEach((p) => { ADRESSE[p.id] = p.adresse; });
+POINTS.forEach((p) => { ADRESSE[p.id] = p.adresse; });
 ADRESSE.lesquin = 'rue Henri Ghesquière, 59810 Lesquin';
 export function avisDe(db, site) {
   const J = jeuDeBase(db || {}), P = dernierDe(db || {});
-  const n = site === 'lesquin' ? J.V : SITES[site].vides;
+  const n = site === 'lesquin' ? J.V : J.vides[site];
   const signale = site === 'lesquin' ? FRAIS.signale : P.signale[site];
   const D = DISTRIBUTEURS[SITES[site].dist];
   return { site, nom: D.nom, ville: D.ville, n, signale, horaire: horaireDit(site), adresse: ADRESSE[site] };
