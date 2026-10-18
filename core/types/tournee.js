@@ -135,7 +135,7 @@
 //   consigneFeuille: '…'      remplace la consigne de la feuille de calcul.
 //   pastilles, rappel         les pastilles et le rappel de la phase (voir plus haut).
 //   raz: { libelle, confirmer, titre, toast }   les textes du bouton « Recommencer » de la phase.
-//   termine: { libelle, confirmer, fait, rouvrir }
+//   termine: { libelle, confirmer, fait, rouvrir, toast }
 //                             un bouton « J'ai terminé » sous la feuille. Deux clics (le premier arme,
 //                             comme « Recommencer ») ; il horodate `etat.termine`, et la vue se FIGE
 //                             tant qu'il y est. Aucun verdict. `fait` est le texte affiché ensuite
@@ -154,6 +154,41 @@
 //     contraintes s'affichent en étiquettes ; sur « calcul », à droite de la feuille comme d'habitude.
 //     L'onglet ouvert est gardé en mémoire le temps de la page ; à l'ouverture, et quand la phase
 //     change (l'imprévu), c'est le premier qui n'est pas fait.
+//
+// UNE CHARGE QUI MONTE ET DESCEND LE LONG DE LA TOURNÉE (chantier MOTEUR-chep, lot A, 18/10/2026 ;
+// c'est le lot 4 de `MOTEUR-vue-tournee-camion.md`, construit pour la ramasse de palettes vides de
+// CHEP ENT-9.2 / 9.4, et prêt pour France Boissons en 1re : pleins déposés, vides repris) :
+//
+//   mesures: [{ id: 'vides', libelle: 'Palettes vides à bord', unite: 'palettes', max: 390,
+//               depart: 0, reprend: 'vides',                 // on part à vide, chaque arrêt ajoute ses vides
+//               libelleDepasse: 'Le camion ne peut pas tout prendre' }]
+//   mesures: [{ id: 'place', libelle: 'Places au sol', unite: 'pal.', max: 14,
+//               depart: 'somme', depose: 'pleins', reprend: 'vides' }]   // on part plein, on dépose puis on reprend
+//     Une mesure qui déclare `depart`, `depose` ou `reprend` n'est plus un total mais un PROFIL :
+//     charge au départ (`depart` : un nombre, ou 'somme' = la somme des `depose` des arrêts retenus),
+//     puis après chaque arrêt `charge − depose + reprend` (on dépose avant de reprendre). **C'est le
+//     pic qui compte**, pas le total : `cumuls[id]` vaut le pic (les jauges, le report et
+//     `exigeConforme` le lisent comme avant), `depassements` le cite si un point du parcours passe
+//     `max`. Le bilan donne aussi `profils[id]` ([départ, après l'arrêt 1, …]), `pics[id]` et
+//     `charges[id]` ({ [idPoint]: charge après cet arrêt }) : une feuille de calcul qui fait recopier
+//     la charge les lit dans `grille.lignes(bilan)`, rang par rang, comme `troncons`.
+//     Jauge parlante : le pic en tête, et le profil EN MARCHES (une marche par étape, rouge au-delà
+//     de `max`) ; muette (`jaugesRepere`, copie, `sansVerdict`) : repère seul, comme les autres.
+//     Un profil ne dit jamais « de combien » la limite est passée, même parlant : la pastille est
+//     `libelleDepasse` (défaut « <libellé> dépassée »). Sans `depart`/`depose`/`reprend`, rien ne change.
+//   quai: { libelle: 'Reporter à vendredi', titre: 'Reportés à la tournée de vendredi',
+//           reprendre: 'remettre dans la tournée', vide: 'Aucun : tous les sites sont dans la tournée.', max: 1 }
+//     Les textes du « laisser à quai » (le bouton de la ligne, le titre du bandeau, le bouton de
+//     retour, la phrase quand il est vide), et `max` : au-delà de ce nombre d'arrêts laissés, le
+//     report et « J'ai terminé » sont refusés (« 2 arrêts reportés : 1 au plus »). `quai: false` et
+//     `quai: true` gardent leur sens ; `libelleQuai` / `libelleCharger` restent lus (les anciens).
+//     Le bilan donne `reportes` (les ids laissés à quai) et `reportesTrop`.
+//   id: 'chep-ramasse'            // sert aux gestes publiés (défaut 'tournee')
+//   quand: (db) => booléen         // la tournée reste hors du menu tant que c'est faux (comme une fiche)
+//     Gestes publiés (`signaux`, pour les questions au fil et les messages déclenchés) :
+//     `tournee:<id>:envoyer` (le report validé — juste ou faux, pas refusé — ou « J'ai terminé »
+//     confirmé, ou « Enregistrer » en copie) et `tournee:<id>:reporter` (un arrêt laissé à quai, quand
+//     le quai existe). Ils partent juste avant la sauvegarde, par `api.signal` (voir entreprise.js).
 
 import { ech } from '../ui.js';
 import { svgPlan, legendePlan, distanceKm } from './plan.js';
@@ -197,6 +232,27 @@ export function creerTournee(T) {
   const H = T.horaire || null;
   const REPORT = T.report || [];
   const pointDe = (id) => POINTS.find((p) => String(p.id) === String(id));
+  // L'identifiant de la tournée dans les gestes publiés (lot A, voir l'en-tête).
+  const ID = String(T.id || 'tournee');
+  // ── Une mesure en PROFIL (lot A) : elle monte et descend le long de la tournée ─────────
+  const estProfil = (m) => m.depart != null || m.depose != null || m.reprend != null;
+  // Ce que porte un arrêt pour une mesure : « 60 kg » (un total), ou « 140 palettes à reprendre »,
+  // « 6 pal. à déposer, 2 pal. à reprendre » (un profil).
+  const mesureTexte = (m, p) => {
+    const u = m.unite || '';
+    if (!estProfil(m)) return `${fr(Number(p[m.champ] || 0))} ${u}`.trim();
+    const parts = [];
+    if (m.depose) parts.push(`${fr(Number(p[m.depose] || 0))} ${u} à déposer`.replace(/\s+/g, ' '));
+    if (m.reprend) parts.push(`${fr(Number(p[m.reprend] || 0))} ${u} à reprendre`.replace(/\s+/g, ' '));
+    return parts.join(', ');
+  };
+  // La pastille d'une limite franchie : un profil ne dit jamais de combien (règle du 02/10).
+  const texteDepasse = (m) => m.libelleDepasse || `${m.libelle} dépassée`;
+  // Les textes et la borne du « laisser à quai » (lot A) : `quai: { … }`.
+  const QUAI_OPT = T.quai && typeof T.quai === 'object' ? T.quai : {};
+  const QUAI_MAX = QUAI_OPT.max != null ? Number(QUAI_OPT.max) : null;
+  const texteReportes = (b) => (QUAI_MAX == null || !b.reportesTrop ? ''
+    : `${b.reportes.length} arrêts ${QUAI_OPT.libelle ? 'reportés' : 'laissés à quai'} : ${QUAI_MAX} au plus.`);
 
   // ── Le temps de service d'un arrêt (chantier D, 03/10/2026, pour ENT-3.4) ───────────────
   // `horaire.service` est un nombre (6 min par arrêt, comme jusqu'ici) OU `{ base, parColis }` :
@@ -220,8 +276,9 @@ export function creerTournee(T) {
     return Number(S.base || 0) + Number(S.parColis || 0) * Number((p && p[S.champ || 'colis']) || 0);
   };
   // Le temps par arrêt tel que l'écran le dit.
+  // `service.unite` (lot A) : ce qu'on compte par arrêt (« par palette » ; défaut « par colis », inchangé).
   const texteService = () => (SERVICE_COLIS
-    ? `${fr(Number(H.service.base || 0))} min par arrêt, plus ${fr(Number(H.service.parColis || 0))} min par colis`
+    ? `${fr(Number(H.service.base || 0))} min par arrêt, plus ${fr(Number(H.service.parColis || 0))} min par ${H.service.unite || 'colis'}`
     : `${fr(Number(H.service || 0))} min par arrêt`);
 
   // ── Les phases de la journée (voir l'en-tête) ───────────────────────────────────────────
@@ -312,9 +369,11 @@ export function creerTournee(T) {
   let razArme = false;
   let terminerArme = false;   // « J'ai terminé » : même geste en deux clics que « Recommencer »
   let refusTermine = null;    // sans quai (D-9, lot 2) : pourquoi « J'ai terminé » est refusé, le temps d'un dessin
-  // Sans quai : le message qui refuse une tournée où il reste des clients à placer.
-  const texteAPlacer = (b) => (QUAI || !b.aPlacer.length ? ''
-    : `Il reste ${b.aPlacer.length} client${b.aPlacer.length > 1 ? 's' : ''} à placer dans la tournée : tous sont à servir.`);
+  // Sans quai : le message qui refuse une tournée où il reste des clients à placer. Avec un quai
+  // borné (`quai.max`, lot A) : celui qui refuse trop d'arrêts laissés.
+  const texteAPlacer = (b) => (!QUAI && b.aPlacer.length
+    ? `Il reste ${b.aPlacer.length} client${b.aPlacer.length > 1 ? 's' : ''} à placer dans la tournée : tous sont à servir.`
+    : texteReportes(b));
   let ongletActif = null;     // les onglets (voir l'en-tête) : celui qui est ouvert, en mémoire
   let phaseVue = null;        // la phase du dernier dessin : un changement rouvre le premier onglet à faire
 
@@ -450,10 +509,30 @@ export function creerTournee(T) {
 
     const cumuls = {};
     const depassements = [];
+    // Un profil (lot A) : la charge au départ, puis après chaque arrêt ; le pic tient lieu de cumul.
+    const profils = {}, pics = {}, charges = {};
     MESURES.forEach((m) => {
-      const s = retenus.reduce((t, p) => t + Number(p[m.champ] || 0), 0);
-      cumuls[m.id] = s;
-      if (m.max != null && s > m.max) depassements.push(m.id);
+      if (!estProfil(m)) {
+        const s = retenus.reduce((t, p) => t + Number(p[m.champ] || 0), 0);
+        cumuls[m.id] = s;
+        if (m.max != null && s > m.max) depassements.push(m.id);
+        return;
+      }
+      let c = m.depart === 'somme'
+        ? retenus.reduce((t, p) => t + Number((m.depose && p[m.depose]) || 0), 0)
+        : Number(m.depart || 0);
+      const prof = [c];
+      const ch = {};
+      retenus.forEach((p) => {
+        // On dépose avant de reprendre (défaut du brief, réaliste).
+        c = c - Number((m.depose && p[m.depose]) || 0) + Number((m.reprend && p[m.reprend]) || 0);
+        prof.push(c);
+        ch[String(p.id)] = c;
+      });
+      const pic = Math.max(...prof);
+      profils[m.id] = prof; pics[m.id] = pic; charges[m.id] = ch;
+      cumuls[m.id] = pic;
+      if (m.max != null && pic > m.max) depassements.push(m.id);
     });
 
     // Le trajet : départ → arrêts dans l'ordre → arrivée. Un arrêt coûte en plus son temps
@@ -553,6 +632,11 @@ export function creerTournee(T) {
 
     return {
       retenus, ecartes, cumuls, km, minutes, arrivee, depassements, enRetard,
+      // Les profils de charge (lot A) : [départ, après l'arrêt 1, …], le pic, et la charge après chaque arrêt.
+      profils, pics, charges,
+      // Les arrêts laissés à quai (« reportés »), et s'ils sont trop nombreux (`quai.max`).
+      reportes: ecartes.map((p) => String(p.id)),
+      reportesTrop: QUAI_MAX != null && ecartes.length > QUAI_MAX,
       // Le temps passé aux arrêts, en minutes (avec un service par colis, il dépend des clients).
       service,
       // L'attente à l'ouverture, par arrêt et au total (D-9), et l'heure où le véhicule repart.
@@ -573,10 +657,12 @@ export function creerTournee(T) {
   // `muet` : la jauge est un repère de limite et ne dit plus le total. Elle perd aussi sa
   // barre — un trait rempli à 99 % sur un plafond de 180 kg annoncerait « 179 » aussi sûrement
   // que le chiffre.
-  function jauge(m, valeur, muet) {
+  function jauge(m, b, muet) {
+    const valeur = b.cumuls[m.id];
     const max = m.max;
     const trop = max != null && valeur > max;
     const part = max ? Math.min(100, valeur / max * 100) : 0;
+    const profil = estProfil(m);
     // Seules les mesures PLAFONNÉES se taisent. Une mesure sans plafond n'est pas une
     // contrainte, donc il n'y a pas de « repère de limite » à en faire — et afficher
     // « à calculer » sur un total que personne ne demande enverrait l'élève travailler pour
@@ -586,11 +672,31 @@ export function creerTournee(T) {
       return `<div class="tour-jauge tour-jauge-repere ${trop && !sv ? 'trop' : ''}">
         <div class="tour-j-tete"><span>${ech(m.libelle)}</span>
           <b class="mono">max ${fr(max)} ${ech(m.unite || '')}</b></div>
-        <span class="note">C'est la limite à ne pas dépasser.
-          Le total, c'est à vous de le calculer.</span>
+        <span class="note">${profil
+          ? 'C\'est la limite à ne pas dépasser, à aucun moment de la tournée. Ce qu\'il y a à bord après chaque arrêt, c\'est à vous de le calculer.'
+          : 'C\'est la limite à ne pas dépasser. Le total, c\'est à vous de le calculer.'}</span>
         ${m.comparaison ? `<span class="tour-compare">${ech(m.comparaison)}</span>` : ''}
-        ${sv ? '' : (trop ? `<span class="pastille crit">${ech(m.libelle)} dépassée</span>`
+        ${sv ? '' : (trop ? `<span class="pastille crit">${ech(texteDepasse(m))}</span>`
           : (DANS_GRILLE && valeur > 0 ? '<span class="pastille ok">limite respectée</span>' : ''))}
+      </div>`;
+    }
+    // Un profil (lot A) : le pic en tête, le profil en marches dessous, et jamais « de combien ».
+    if (profil) {
+      const prof = b.profils[m.id] || [valeur];
+      const u = m.unite || '';
+      const etapes = [{ nom: 'au départ', v: prof[0] }, ...b.retenus.map((p, i) => ({ nom: `après ${p.nom}`, v: prof[i + 1] }))];
+      const plafond = Math.max(max != null ? max : 0, ...prof, 1);
+      const iPic = prof.indexOf(valeur);
+      return `<div class="tour-jauge tour-jauge-profil ${trop ? 'trop' : ''}" data-tour-profil="${ech(m.id)}">
+        <div class="tour-j-tete"><span>${ech(m.libelle)}</span>
+          <b class="mono">${fr(valeur)}${max != null ? ` / ${fr(max)}` : ''} ${ech(u)}</b></div>
+        <div class="tour-j-profil" role="img" aria-label="${ech(etapes.map((e) => `${e.nom} : ${fr(e.v)} ${u}`).join(' ; '))}">
+          ${etapes.map((e) => `<span class="tour-j-marche${max != null && e.v > max ? ' trop' : ''}" style="height:${Math.max(2, e.v / plafond * 100)}%"
+            title="${ech(`${e.nom} : ${fr(e.v)} ${u}`)}"></span>`).join('')}
+          ${max != null ? `<i class="tour-j-plafond" style="bottom:${max / plafond * 100}%"></i>` : ''}
+        </div>
+        <span class="note">Au plus fort de la tournée, ${ech(etapes[iPic < 0 ? 0 : iPic].nom)} : ${fr(valeur)} ${ech(u)} à bord.</span>
+        ${trop ? `<span class="pastille crit">${ech(texteDepasse(m))}</span>` : ''}
       </div>`;
     }
     return `<div class="tour-jauge ${trop ? 'trop' : ''}">
@@ -755,6 +861,10 @@ export function creerTournee(T) {
   /* ------------------------------------------------------------------------------- la vue */
   return {
     nav: { id: 'tournee', libelle: T.libelle || 'Tournée' },
+    // La tournée reste hors du menu tant que `quand(db)` est faux (lot A ; l'enseignant la voit toujours).
+    quand: typeof T.quand === 'function' ? T.quand : null,
+    // Les gestes publiés (lot A, voir l'en-tête) : `reporter` seulement si le quai existe.
+    signaux: [`tournee:${ID}:envoyer`].concat(QUAI ? [`tournee:${ID}:reporter`] : []),
 
     html(etat0, opts = {}) {
       const etat = Object.assign(vide(), etat0 || {});
@@ -800,7 +910,7 @@ export function creerTournee(T) {
           <span class="tour-rang">${pos + 1}</span>
           <span class="tour-texte">
             <span class="tour-nom"><span class="tour-num mono">${ech(numeroDe(id))} ·</span><strong>${ech(p.nom)}</strong></span>
-            <span class="note">${ech(p.zone || '')}${MESURES.map((m) => ` · ${fr(Number(p[m.champ] || 0))} ${ech(m.unite || '')}`).join('')}${creneauNote(p)}</span>
+            <span class="note">${ech(p.zone || '')}${MESURES.map((m) => ` · ${ech(mesureTexte(m, p))}`).join('')}${creneauNote(p)}</span>
           </span>
           ${fige ? '' : `<span class="tour-boutons">
             <button class="btn btn-s" data-haut="${pos}" ${pos === 0 ? 'disabled' : ''}
@@ -808,7 +918,7 @@ export function creerTournee(T) {
             <button class="btn btn-s" data-bas="${pos}" ${pos === n - 1 ? 'disabled' : ''}
               aria-label="Descendre ${ech(p.nom)}">↓</button>
             <button class="btn btn-s" data-quai="${ech(id)}"
-              title="${QUAI ? 'Laisser cet arrêt à quai, pour une autre tournée' : 'Retirer cet arrêt de la tournée, pour le replacer ailleurs'}">retirer</button>
+              title="${QUAI ? (QUAI_OPT.libelle ? ech(`${QUAI_OPT.libelle} : cet arrêt sort de la tournée`) : 'Laisser cet arrêt à quai, pour une autre tournée') : 'Retirer cet arrêt de la tournée, pour le replacer ailleurs'}">${ech(QUAI && QUAI_OPT.libelle ? QUAI_OPT.libelle : 'retirer')}</button>
           </span>`}
         </li>`;
       };
@@ -853,18 +963,18 @@ export function creerTournee(T) {
             <span class="note">commande annulée : ne se charge plus</span></span></li>`;
         }).join('')}</ul></div>`;
       const quai = `<div class="tour-quai">
-        <div class="ent-lbl">${ech(T.libelleQuai || (QUAI ? 'Laissés à quai' : 'À placer dans la tournée'))} (${aQuai.length})</div>
+        <div class="ent-lbl">${ech(T.libelleQuai || QUAI_OPT.titre || (QUAI ? 'Laissés à quai' : 'À placer dans la tournée'))} (${aQuai.length})</div>
         ${aQuai.length === 0
-          ? `<p class="note">${QUAI ? 'Aucun. Tout est chargé dans le véhicule.' : 'Aucun. Tous les clients sont dans la tournée.'}</p>`
+          ? `<p class="note">${QUAI ? ech(QUAI_OPT.vide || 'Aucun. Tout est chargé dans le véhicule.') : 'Aucun. Tous les clients sont dans la tournée.'}</p>`
           : `${QUAI ? '' : '<p class="note">Tous les clients sont à servir : aucun ne reste à quai.</p>'}
           <ul class="tour-liste tour-liste-quai tour-puces">${aQuai.map((id) => {
               const p = pointDe(id);
               return !p ? '' : `<li class="tour-item tour-puce">
                 <span class="tour-texte">
                 <span class="tour-nom"><span class="tour-num mono">${ech(numeroDe(id))} ·</span><strong>${ech(p.nom)}</strong></span>
-                <span class="note">${MESURES.map((m) => `${fr(Number(p[m.champ] || 0))} ${ech(m.unite || '')}`).join(' · ')}${creneauNote(p)}</span>
+                <span class="note">${MESURES.map((m) => ech(mesureTexte(m, p))).join(' · ')}${creneauNote(p)}</span>
                 </span>${fige ? '' : `<span class="tour-boutons">
-                <button class="btn btn-s" data-reprendre="${ech(id)}">${ech(T.libelleCharger || 'reprendre')}</button>
+                <button class="btn btn-s" data-reprendre="${ech(id)}">${ech(T.libelleCharger || QUAI_OPT.reprendre || 'reprendre')}</button>
                 </span>`}</li>`;
             }).join('')}</ul>`}
         ${lignesAnnulees}
@@ -911,7 +1021,7 @@ export function creerTournee(T) {
           ${razArme ? '<button class="btn btn-s" data-tour-raz-non>Annuler</button>' : ''}
         </div>`;
       const ONG = optDe(etat, 'onglets') || [];
-      const jaugesHtml = `${etiq || ONG.length ? '' : raz}${MESURES.map((m) => jauge(m, b.cumuls[m.id], muet)).join('')}
+      const jaugesHtml = `${etiq || ONG.length ? '' : raz}${MESURES.map((m) => jauge(m, b, muet)).join('')}
             ${jaugeHoraire(b, muet)}${jaugeConduite(b, muet)}${b.creneaux.map((c) => jaugeCreneau(c, b, muet)).join('')}`;
       // Les contraintes en ÉTIQUETTES : la limite seule, sans phrase ni verdict, en une ligne
       // au-dessus de la feuille. La feuille prend alors toute la largeur.
@@ -1114,6 +1224,8 @@ export function creerTournee(T) {
     brancher(z, api) {
       const etat = api.etat;
       if (!etat.ordre) Object.assign(etat, vide());
+      // Un geste publié (lot A) : dit à l'hôte juste avant la sauvegarde.
+      const sig = (n) => { if (api.signal) api.signal(`tournee:${ID}:${n}`); };
       const etaitArme = razArme;
       razArme = false;          // tout redessin désarme ; seul le premier clic ci-dessous réarme
       const terminerEtaitArme = terminerArme;
@@ -1144,8 +1256,9 @@ export function creerTournee(T) {
           return;
         }
         etat.termine = Date.now();
+        sig('envoyer');
         api.sauver(); api.redessiner();
-        if (api.toast) api.toast('Correction terminée.');
+        if (api.toast) api.toast((optDe(etat, 'termine') || {}).toast || 'Correction terminée.');
       });
       z.querySelector('[data-tour-terminer-non]')?.addEventListener('click', () => api.redessiner());
       z.querySelector('[data-tour-rouvrir]')?.addEventListener('click', () => {
@@ -1202,6 +1315,7 @@ export function creerTournee(T) {
         etat.ordre = etat.ordre.filter((x) => String(x) !== String(id));
         if (!etat.quai.some((x) => String(x) === String(id))) etat.quai.push(String(id));
         invalider();
+        if (QUAI) sig('reporter');
         api.sauver(); api.redessiner();
       };
       // **À la fin, toujours.** C'est la règle expliquée à la classe, et c'est ce qui fait de la
@@ -1332,6 +1446,7 @@ export function creerTournee(T) {
         if (COPIE) {
           etat.enregistre = Date.now();
           etat.juge = {}; etat.bloque = null; etat.valide = null;
+          sig('envoyer');
           api.sauver(); api.redessiner();
           if (api.toast) api.toast('Résultats enregistrés.');
           return;
@@ -1370,10 +1485,12 @@ export function creerTournee(T) {
           (b.depassements || []).forEach((id) => {
             const m = MESURES.find((x) => x.id === id);
             if (!m) return;
-            maux.push(muetAuReport
-              ? `${m.libelle.toLowerCase()} dépassée`
+            // Un profil (lot A) ne dit jamais de combien, même quand les jauges parlent.
+            maux.push(muetAuReport || estProfil(m)
+              ? texteDepasse(m).replace(/^./, (x) => x.toLowerCase())
               : `${m.libelle.toLowerCase()} dépassée de ${fr(b.cumuls[id] - m.max)} ${m.unite || ''}`.trim());
           });
+          if (b.reportesTrop) maux.push(texteReportes(b).replace(/\.$/, ''));
           if (b.enRetard) {
             maux.push(muetAuReport
               ? `${H.libelleLimite || 'horaire limite'} manqué`
@@ -1413,6 +1530,7 @@ export function creerTournee(T) {
           juge[r.id] = estJuste(normaliser(etat.report[r.id]), r.valeur(b), r.tolerance);
         });
         etat.juge = juge;
+        sig('envoyer');
         const fini = REPORT.every((r) => juge[r.id]);
         if (fini) etat.valide = Date.now(); else etat.valide = null;
         api.sauver(); api.redessiner();

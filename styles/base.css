@@ -1248,6 +1248,14 @@ fieldset[disabled] .ent-cases label{ cursor:default }
 .tour-j-barre i{ display:block; height:100%; background:var(--vert-fond) }
 .tour-jauge.trop .tour-j-barre i{ background:var(--rouge) }
 .tour-jauge .pastille{ align-self:flex-start }
+/* Le profil en marches d'une charge qui monte et descend (MOTEUR-chep lot A, 18/10/2026) : une marche par
+   étape (départ, puis après chaque arrêt), le plafond en trait, la marche qui le passe en rouge. Les
+   couleurs sont celles de la barre : rien de neuf à déclarer par thème. */
+.tour-j-profil{ position:relative; display:flex; align-items:flex-end; gap:3px; height:54px; padding:0 2px;
+  border-bottom:1px solid var(--filet); background:var(--survol); border-radius:4px 4px 0 0 }
+.tour-j-marche{ flex:1; min-width:6px; background:var(--vert-fond); border-radius:2px 2px 0 0 }
+.tour-j-marche.trop{ background:var(--rouge) }
+.tour-j-plafond{ position:absolute; left:0; right:0; border-top:2px dashed var(--encre-douce); pointer-events:none }
 
 .tour-report{ margin-top:22px; padding-top:16px; border-top:1px solid var(--filet) }
 .tour-cases{ display:grid; gap:12px; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); margin-top:10px }

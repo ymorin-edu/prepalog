@@ -289,7 +289,7 @@ export function creerEntreprise(U) {
   const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
   {
     // La messagerie est de toutes les séances : son geste (le transfert d'un message, chantier D-1) est toujours connu.
-    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL, VCOUR, VLOC].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
+    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL, VCOUR, VLOC, VTOUR].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
     // Le geste de transfert d'UN message (`messagerie:transfert:<clé>`) : connu pour les messages que le volet sème avec un
     // `transfert`, et pour ceux qu'il déclare dans `volet.transferables` (les messages qui arrivent plus tard, par un déclencheur).
     // Une clé qu'il ne déclare pas (faute de frappe) empêche la séance de s'ouvrir.
@@ -837,6 +837,11 @@ export function creerEntreprise(U) {
         if (!VPL || estProf || !VPL.quand) return !!VPL;
         try { return !!VPL.quand(db, ctx.meta.id); } catch (x) { signaler('la condition « quand » du Planning plante', x); return false; }
       };
+      // La Tournée, même patron (MOTEUR-chep lot A, 18/10/2026) : `tournee.quand(db, séance)` ; l'enseignant la voit toujours.
+      const tourOuvert = () => {
+        if (!VTOUR || estProf || !VTOUR.quand) return !!VTOUR;
+        try { return !!VTOUR.quand(db, ctx.meta.id); } catch (x) { signaler('la condition « quand » de la Tournée plante', x); return false; }
+      };
       const rappelPermis = (id) => {
         const eD = lireTel() && lireTel()[id], a = appelRetenu(eD);
         return !!(CORRECTION && !COPIE && eD && eD.rappel && a && eD.rappel > a.debut);
@@ -1300,6 +1305,7 @@ export function creerEntreprise(U) {
         if (fermeture(v)) return false;
         if (v === 'mail' || v === 'accueil') return true;
         if (v === 'planning') return plOuvert();
+        if (v === 'tournee' && VTOUR) return tourOuvert();
         if (v === 'entrepot') return !!VENT;
         if (v === 'localiser') return !!VLOC;
         if (v === 'fiche' || v.startsWith('fiche:')) {
@@ -1689,7 +1695,7 @@ export function creerEntreprise(U) {
                   VTEL && telOuvert() && item('telephone', VTEL.nav.libelle, appelEnCoursIci() ? 'en cours' : 0),
                   VQUAI && item('quai', VQUAI.nav.libelle),
                   VPL && plOuvert() && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
-                  VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && item('tournee', VTOUR.nav.libelle),
+                  VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && tourOuvert() && item('tournee', VTOUR.nav.libelle),
                   VINV && item('inventaire', VINV.nav.libelle), ...itemsQuestions(item)]))}
                 ${groupe('Données', [
                   montre('commandes') && item('commandes', 'Commandes', aFaire, ['commandes', 'commande']),
@@ -1898,7 +1904,7 @@ export function creerEntreprise(U) {
         const z = hote.querySelector('#entMain');
         const vues = {
           accueil: vueAccueil, ...MSG.vues, ...COM.vues, ...REC.vues,
-          plan: vuePlan, tournee: vueTournee,
+          plan: vuePlan, tournee: VTOUR && tourOuvert() ? vueTournee : vueAccueil,
           itineraires: VITI ? () => VITI.html(db) : vueAccueil,
           ...CAT.vues, ...STK.vues, ...BLO.vues,
           inventaire: VINV ? vueInventaire : vueAccueil,
@@ -2056,7 +2062,8 @@ export function creerEntreprise(U) {
         if (!db.transport[cleTransport][vue]) db.transport[cleTransport][vue] = {};
         return db.transport[cleTransport][vue];
       };
-      const apiTransport = (cle) => ({ etat: etatTransport(cle), sauver, redessiner: dessiner, toast, db });
+      // `signal` : les gestes de la tournée (lot A, 18/10/2026) ; le plan n'en publie aucun et ne l'appelle pas.
+      const apiTransport = (cle) => ({ etat: etatTransport(cle), sauver, redessiner: dessiner, toast, db, signal });
 
       function vuePlan() { return VPLAN.html(etatTransport('plan')); }
 
@@ -2375,7 +2382,7 @@ export function creerEntreprise(U) {
           // compte jusqu'au suivi de classe (colonne « Itinéraires ouverts »), sans rien juger de plus.
           ctx.jeu.sauver(); remonterEtapes();
         } });
-        if (E.vue === 'tournee' && VTOUR) VTOUR.brancher(z, apiTransport('tournee'));
+        if (E.vue === 'tournee' && VTOUR && tourOuvert()) VTOUR.brancher(z, apiTransport('tournee'));
         if (E.vue === 'fichiers' && VTAB) VTAB.brancher(z, apiTableur());
         if (E.vue === 'extractions' && VTAB && VTAB.navExtractions) VTAB.brancherExtractions(z, apiTableur());
         if (E.vue === 'inventaire' && VINV && !VINV.attente(db)) VINV.brancher(z, etatInventaire(), apiInventaire());

@@ -106,7 +106,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `transportId` | texte | Clé de `db.transport` partagée entre deux séances (sinon l'`id` de la séance). | `activites/boost-ent32.js` |
 | `plan` | objet | Plan schématique, ou carte réelle avec `plan.carte`. | `activites/boost-ent32.js` |
 | `carteItineraires` | objet | Carte des itinéraires d'un point A à un point B par plusieurs modes (route, barge, rail), sur une carte réelle ; consultée, jamais notée. Voir « Vue « Carte des itinéraires » » plus bas. | (Decathlon ENT-7.x, à venir) |
-| `tournee` | objet | La tournée à construire sur le plan. | `activites/boost-ent32.js` |
+| `tournee` | objet | La tournée à construire sur le plan (options dans l'en-tête de `core/types/tournee.js`). Depuis le 18/10/2026 (MOTEUR-chep lot A) : une mesure en **profil** (`depart: 0 \| 'somme'`, `depose`, `reprend`, `libelleDepasse` : la charge monte et descend, le **pic** compte, jauge en marches ; le bilan donne `profils`, `pics`, `charges`), `quai: { libelle, titre, reprendre, vide, max }`, `id` (sert aux gestes), `quand(db)` (hors du menu tant que faux). | `activites/boost-ent32.js` ; profil : `outils/essai-tournee-ramasse.html` (CHEP ENT-9.2, à venir) |
 | `quai` | objet ou fonction | Quai de réception (voir « Vue quai ») ; une **fonction de la graine** = un quai tiré par élève. | `activites/picard-ent42.js` ; tiré : `activites/picard-ent44.js` |
 | `planning` | objet | Planning : cartes sur une grille (voir « Vue Planning »). | `activites/smoby-arrivee.js` |
 | `entrepot` | objet | Plan d'entrepôt : rangement, préparation, visite, stockage de masse (et comptage), allée de picking (voir « Vue Plan d'entrepôt »). | `activites/smoby-rangement.js` |
@@ -2016,6 +2016,7 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   |---|---|
   | fiche `<id>` | `fiche:<id>:<bloc>` (choisir, cocher, remettre en ordre ; une saisie à la sortie de la case), `fiche:<id>:<bloc>:<ligne>` (classer une ligne d'un tableau oui / non), `fiche:<id>:envoyer` |
   | planning `<id>` | `planning:<id>:poser` (poser, déplacer, retirer une carte), `planning:<id>:envoyer` |
+  | tournée (`tournee.id`, défaut `tournee`) | `tournee:<id>:envoyer` (le report validé — juste ou faux, pas refusé —, « J'ai terminé » confirmé, ou « Enregistrer » en copie), `tournee:<id>:reporter` (un arrêt laissé à quai ; publié seulement si le quai existe, pas avec `quai: false`) ; MOTEUR-chep lot A, 18/10/2026 |
   | quai `<id>` | `quai:<id>:decharger`, `quai:<id>:valider` (une palette), `quai:<id>:cloturer` ; si le quai déclare `arret: 'dechargement'` (17/10/2026), en plus `quai:<id>:dechargement` (la dernière palette est posée, **une fois**, quel que soit le chemin) ; s'il déclare `depose` (17/10/2026, « La dépose dirigée par l'élève »), en plus `quai:<id>:depose` (la première palette posée par l'élève, **une fois**) ; en inspection sur la scène (`securite.mode: 'scene'`, D-4) en plus `scene:<id>:signaler` (chaque envoi de marques), `scene:<id>:decharger` (le figeage « C'est bon », pas l'arrêt par le collègue) |
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |

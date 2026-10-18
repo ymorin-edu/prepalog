@@ -54,6 +54,7 @@
 .ct-eauL{ fill:none; stroke:#b9d4e6 }
 .ct-rail{ fill:none; stroke:#7d7770 }
 .ct-railT{ fill:none; stroke:#fff }
+.ct-frontiere{ fill:none; stroke:#9a9288; stroke-opacity:.85; stroke-linecap:round }
 .ct-grille{ stroke:#5b544b; stroke-opacity:.55; fill:none }
 .ct-cadre{ stroke:#5b544b; fill:none }
 .ct-q{ fill:rgba(52,92,253,.10); stroke:var(--ardoise-fond); cursor:pointer; transition:fill .15s }

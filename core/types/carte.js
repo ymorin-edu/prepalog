@@ -145,6 +145,7 @@ function svgCarte(C, o = {}) {
       <path class="ct-bati" d="${K.bati}"/>
       ${routes}
       <path class="ct-rail" d="${K.rail}"/><path class="ct-railT" d="${K.rail}"/>
+      <path class="ct-frontiere" d="${K.frontiere || ''}"/>
       <path class="ct-grille" d="${dG}"/>
       <path class="ct-masque"/>
       ${quartiers}${qnoms}${etiq}${reperes}
@@ -298,6 +299,9 @@ function monterScene(z, C, ui, o = {}) {
     svg.querySelector('.ct-rail').style.strokeWidth = (2.2 + 2.4 * zz) * k;
     const rt = svg.querySelector('.ct-railT'); rt.style.strokeWidth = (1.2 + 1.6 * zz) * k;
     rt.style.strokeDasharray = `${6 * k} ${6 * k}`;
+    // Une frontière (carte régionale de la ramasse, MOTEUR-chep lot A) : trait clair en tirets ; absente, le chemin est vide.
+    const fro = svg.querySelector('.ct-frontiere');
+    if (fro) { fro.style.strokeWidth = (1.6 + 1.2 * zz) * k; fro.style.strokeDasharray = `${9 * k} ${5 * k}`; }
     svg.querySelector('.ct-eauL').style.strokeWidth = 2 * k;
     svg.querySelector('.ct-grille').style.strokeWidth = (1.1 + 0.5 * zz) * k;
     svg.querySelector('.ct-cadre').style.strokeWidth = 1.6 * k;
@@ -745,7 +749,8 @@ export function carteTournee(P) {
       if (!z.querySelector('[data-ct-svg]')) return null;
       const geste = o.lecture ? 'La tournée se lit sur la carte ; elle ne se modifie pas.' : 'Cliquez les clients dans l’ordre de passage.';
       return monterScene(z, C, ui, {
-        aide: () => (ui.vue === 'ensemble' ? `${geste} ${C.unite === 'commune' ? 'Une commune' : 'Un quartier'} s’ouvre avec ses boutons.` : geste),
+        // `unite` : « quartier » (ville), « commune » (côte), « zone » (carte régionale de la ramasse, lot A).
+        aide: () => (ui.vue === 'ensemble' ? `${geste} ${C.unite === 'commune' ? 'Une commune' : C.unite === 'zone' ? 'Une zone' : 'Un quartier'} s’ouvre avec ses boutons.` : geste),
         // Un clic sur un quartier (hors d'un point) l'ouvre ; un point garde son clic à lui.
         clicQuartier: (ev) => !ev.target.closest('[data-clic-point],[data-clic-extremite]'),
       });

@@ -35,10 +35,15 @@ const d = (a, b) => C.trajets[`${a}|${b}`].m;
 // Le temps de service d'un arrêt : un nombre, ou `{ base, parColis, champ }` — la MÊME formule
 // que `serviceDe` dans core/types/tournee.js (chantier D, 03/10/2026).
 const PAR_ID = Object.fromEntries(C.clients.map((c) => [String(c.id), c]));
+// Une donnée d'un arrêt : celle du calibrage (`J.arrets[id]`, mode ramasse) avant celle de la carte.
+const donnee = (id, cle) => {
+  const a = (J.arrets || {})[id];
+  return a && a[cle] != null ? a[cle] : (PAR_ID[id] || {})[cle];
+};
 const svc = (id) => {
   const S = J.service;
   if (!S || typeof S !== 'object') return Number(S || 0);
-  return Number(S.base || 0) + Number(S.parColis || 0) * Number((PAR_ID[id] || {})[S.champ || 'colis'] || 0);
+  return Number(S.base || 0) + Number(S.parColis || 0) * Number(donnee(id, S.champ || 'colis') || 0);
 };
 const sommeSvc = (ids) => ids.reduce((t, id) => t + svc(id), 0);
 // L'attente à l'ouverture (chantier D-9, lot 1) : arrivé chez un client avant `creneau.apres`, on
@@ -60,6 +65,76 @@ const finDe = (mCarte, svcTotal, att) => {
 };
 const hm = (m) => `${Math.floor(m / 60)} h ${String(Math.round(m % 60)).padStart(2, '0')}`;
 function* perms(a) { if (a.length < 2) { yield a; return; } for (let i = 0; i < a.length; i++) for (const p of perms([...a.slice(0, i), ...a.slice(i + 1)])) yield [a[i], ...p]; }
+
+// ── Une CHARGE QUI MONTE ET DESCEND (MOTEUR-chep lot A, 18/10/2026) : la MÊME règle que `bilanDe` ─
+// `J.mesure = { depart: 0 | 'somme', depose, reprend, max }` : charge au départ, puis après chaque
+// arrêt `charge − depose + reprend` ; c'est le PIC qui se compare à `max`. Rend le profil et le pic.
+const profilDe = (ids) => {
+  const M = J.mesure || {};
+  let c = M.depart === 'somme' ? ids.reduce((t, id) => t + Number((M.depose && donnee(id, M.depose)) || 0), 0) : Number(M.depart || 0);
+  const prof = [c];
+  ids.forEach((id) => { c = c - Number((M.depose && donnee(id, M.depose)) || 0) + Number((M.reprend && donnee(id, M.reprend)) || 0); prof.push(c); });
+  return { prof, pic: Math.max(...prof) };
+};
+
+// ── Mode RAMASSE (CHEP ENT-9.2 / 9.4) ────────────────────────────────────────────────────────
+// `J.mode: 'ramasse'`, avec `J.arrets[id] = { vides, creneau: { apres, avant } }`, `J.mesure`, `J.reporte`
+// (l'arrêt qu'on attend à quai : celui qui a signalé le plus tard) et `J.courtDoitRater` (facultatif).
+// Ce que doit tenir la journée :
+//   1. tout prendre dépasse la capacité (« le camion ne peut pas tout prendre ») ;
+//   2. sans l'arrêt reporté, le pic tient dans le camion ;
+//   3. au moins un ordre des arrêts restants respecte tous les créneaux (boucle dépôt → … → dépôt) ;
+//   4. si `courtDoitRater`, l'ordre le plus court en km rate un créneau (l'ordre compte vraiment).
+if (J.mode === 'ramasse') {
+  const pbR = [];
+  const ids = Object.keys(J.arrets || {});
+  const fin = C.trajets[`${ids[0]}|arrivee`] ? 'arrivee' : 'depart';
+  const cren = (id) => donnee(id, 'creneau');
+  const tout = profilDe(ids);
+  console.log(`ramasse : ${ids.length} arrêts, ${ids.map((id) => `${id} ${donnee(id, J.mesure.reprend || 'vides')}`).join(', ')} ; tout prendre → pic ${tout.pic} pour ${J.mesure.max}`);
+  if (!(tout.pic > J.mesure.max)) pbR.push('tout tient dans le camion : rien à reporter');
+  const restants = ids.filter((id) => id !== J.reporte);
+  if (J.reporte && !ids.includes(J.reporte)) pbR.push(`l'arrêt reporté « ${J.reporte} » n'est pas un arrêt`);
+  const sans = profilDe(restants);
+  console.log(`sans ${J.reporte || 'personne'} → pic ${sans.pic}`);
+  if (J.reporte && sans.pic > J.mesure.max) pbR.push(`sans ${J.reporte}, le pic (${sans.pic}) dépasse encore ${J.mesure.max}`);
+  // Les autres reports possibles : ce qu'ils donnent (information, pas une règle).
+  ids.filter((id) => id !== J.reporte).forEach((id) => {
+    const r = profilDe(ids.filter((x) => x !== id));
+    console.log(`  (en reportant ${id} à la place : pic ${r.pic}${r.pic > J.mesure.max ? ' — dépasse' : ''})`);
+  });
+  const ev = (p) => {
+    const ch = ['depart', ...p, fin]; let m = 0, ok = true, servi = 0, att = 0; const deb = {};
+    for (let i = 1; i < ch.length; i++) {
+      m += d(ch[i - 1], ch[i]);
+      if (i < ch.length - 1) {
+        const a = J.depart + ALLER + m / 1000 / J.vitesse * 60 + servi + att;
+        const w = ouverture(cren(ch[i]), a);
+        att += w; deb[ch[i]] = a + w;
+        if (tropTard(cren(ch[i]), a + w)) ok = false;
+        servi += svc(ch[i]);
+      }
+    }
+    return { m, ok, fin: finDe(m, sommeSvc(p), att), deb };
+  };
+  let n = 0, tiennent = 0, court = null, meilleur = null;
+  for (const p of perms(restants)) {
+    n++;
+    const r = ev(p);
+    if (r.ok) { tiennent++; if (!meilleur || r.m < meilleur.m) meilleur = { p, ...r }; }
+    if (!court || r.m < court.m) court = { p, ...r };
+  }
+  console.log(`${n} ordres des ${restants.length} arrêts restants : ${tiennent} respectent tous les créneaux`);
+  console.log(`plus court : ${court.p.join(' ')} — ${(court.m / 1000).toFixed(1)} km, retour ${hm(court.fin)}, créneaux ${court.ok ? 'tenus' : 'RATÉS'}`);
+  if (meilleur) {
+    console.log(`meilleur qui tient tout : ${meilleur.p.join(' ')} — ${(meilleur.m / 1000).toFixed(1)} km, retour ${hm(meilleur.fin)} ; arrivées ${meilleur.p.map((id) => `${id} ${hm(meilleur.deb[id])}`).join(', ')} ; profil ${profilDe(meilleur.p).prof.join(' → ')}`);
+  }
+  if (!tiennent) pbR.push('aucun ordre ne respecte tous les créneaux');
+  if (J.courtDoitRater && court.ok) pbR.push('le plus court chemin respecte déjà tous les créneaux : l’ordre ne force rien');
+  if (pbR.length) { console.error('\nCALAGE FAUX :\n  - ' + pbR.join('\n  - ')); process.exit(1); }
+  console.log('\ncalage tenu.');
+  process.exit(0);
+}
 
 const pb = [];
 const W = C.clients.reduce((s, c) => s + c.kg, 0), trop = W - J.chargeUtile;
