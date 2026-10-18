@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| ENT-9.1 CHEP (le compte palettes) | `contenus/chep*.js (à créer)`, `contenus/questions/ENT-9.1.js (à créer)`, `contenus/corriges/ENT-9.1.js (à créer)`, `activites/chep-compte-palettes.js (à créer)`, `activites/index.js` (ligne ENTREPRISES + ligne registre), `outils/test/chep-91.mjs (à créer)`, `outils/test/chep/commun.mjs (à créer)`, `outils/test.mjs` (lignes BLOCS/GROUPES), `docs/briefs/ENT-9.1-chep-compte-palettes.md`, `docs/decisions.md` | 18/10/2026 |
+| ENT-9.1 CHEP (le compte palettes) | `contenus/chep*.js (à créer)`, `contenus/questions/ENT-9.1*.js (à créer)`, `contenus/corriges/ENT-9.1*.js (à créer)`, `activites/chep-*.js (à créer)`, `activites/index.js` (ligne ENTREPRISES + ligne registre), `outils/test/chep*.mjs (à créer)`, `outils/test/chep/*.mjs (à créer)`, `outils/test.mjs` (lignes BLOCS/GROUPES), `docs/briefs/ENT-9.1-chep-compte-palettes.md`, `docs/decisions.md` | 18/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
