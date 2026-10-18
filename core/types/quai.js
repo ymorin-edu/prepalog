@@ -2214,14 +2214,14 @@ export function creerQuai(Q, opts = {}) {
       <div class="quai-etat-carton" data-q-etat-carton>${vu ? '<b class="quai-depasse">⚠ Fuite</b> sur cette face.' : `Ce que tu vois de ${ceUnite(R.u)} ${ech(R.u.un)} depuis ici : <b>intact</b>.`}</div>
       <div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
   }
-  // Une pile : « Palette 9 / 14 », la palette de près (le marquage s'y lit, le dégât s'y voit si sa face est tournée vers nous), et
+  // Une pile : « Palette 9 » (sans la hauteur de la pile : elle se lit en cliquant la palette du haut, décision de Tristan du 18/10/2026), la palette de près (le marquage s'y lit, le dégât s'y voit si sa face est tournée vers nous), et
   // l'étiquette de la pile. AUCUN texte ne nomme le pool ni le dégât (règle du quai iso) : l'élève le voit sur le dessin.
   function zoomPile(p, s, cm) {
     const PL = palettesDePile(p), q = s.carton ? PL[s.carton - 1] : null;
     if (!q) return `<span class="note">🔍 Clique sur une palette de la pile : tu la vois ici de près, avec son numéro (${fmtMin(C.etiquette)} la première fois).</span>`;
     const et = p.etiq || {};
     return `<div class="quai-etiq quai-etiq-carton" data-q-etiquette data-q-carton-vu="${q.no}">
-        <div class="quai-etiq-l1"><b>${ech(cm.fournisseur)}</b><span>${ech(maj(R.u.un))} <b>${q.no}</b> / ${PL.length}</span></div>
+        <div class="quai-etiq-l1"><b>${ech(cm.fournisseur)}</b><span>${ech(maj(R.u.un))} <b>${q.no}</b></span></div>
         ${procheDePile(p, q.no, s.vue)}
         ${et.ref ? `<div class="quai-etiq-ref">${ech(et.ref)}</div>` : ''}${et.nom ? `<div>${ech(et.nom)}</div>` : ''}${et.poids ? `<div>${ech(et.poids)}</div>` : ''}</div>
       <div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;

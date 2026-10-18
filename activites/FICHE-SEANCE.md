@@ -648,7 +648,7 @@ séance **déclare ce qui est sur la pile**, le moteur **calcule** les comptes, 
 - **À l'écran.** ② et ④ : les piles à 0,7 de leur taille (aplat et ouvertures, sans marquage ni dégât : de loin on ne les voit pas), les
   légendes disent « pile » (« Le cariste sort la pile P4 au chariot », « Les 5 piles sont en zone de réception ») quand toutes les palettes
   du quai sont des piles. ③ (« ③ Compter les piles ») : la pile en grand (l'échelle suit la plus haute pile du quai, pour que 14 et 15 se
-  comparent), quatre vues, **chaque palette cliquable** ; le zoom dit « Palette 9 / 14 » (le dénominateur est la hauteur réelle), montre la
+  comparent), quatre vues, **chaque palette cliquable** ; le zoom dit « Palette 9 » (le numéro seul : la hauteur se lit en cliquant la palette du haut, choix de Tristan du 18/10/2026), montre la
   palette **de près** entre ses voisines (marquage lisible, dégât visible si sa face est tournée vers nous) et l'étiquette de la pile.
   **Aucun texte, titre ni attribut ne nomme un pool ou un dégât** (le dégât n'est pas balisé à l'écran ; un test le garde) : n'en ajouter
   aucun. Brouillon de calcul imposé (comme les fûts). Consigne d'aide (`aides.consignes`) propre aux piles : « Compte les palettes de la pile

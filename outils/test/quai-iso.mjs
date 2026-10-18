@@ -3269,7 +3269,7 @@ const HP = '[data-hote-piles]';
 const ongletPile = async (p, id) => { await p.click(`${HP} [data-q="sel"]:has-text("${id}")`); await p.waitForSelector(`${HP} [data-q-palette]`); };
 const cliquerPalette = (p, n) => p.$eval(`${HP} [data-q-palette] [data-q-carton="${n}"]`, (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
 
-await v('Quai piles : à l’étape ③, aucun texte, titre ni attribut ne nomme un pool ou un dégât — dessin et zoom, cinq piles, quatre vues ; « Palette 9 / 14 »', async () => {
+await v('Quai piles : à l’étape ③, aucun texte, titre ni attribut ne nomme un pool ou un dégât — dessin et zoom, cinq piles, quatre vues ; le zoom dit « Palette 9 », jamais la hauteur', async () => {
   const p = await pagePiles();
   const fautes = [];
   for (const id of ['P1', 'P2', 'P3', 'P4', 'P5']) {
@@ -3299,7 +3299,11 @@ await v('Quai piles : à l’étape ③, aucun texte, titre ni attribut ne nomme
   await ongletPile(p, 'P2');
   egal(await p.$$eval(`${HP} [data-q-palette] [data-q-carton]`, (L) => L.length), 14, 'P2 : 14 palettes cliquables');
   await cliquerPalette(p, 9);
-  egal(await p.$eval(`${HP} [data-q-etiquette] .quai-etiq-l1 span`, (s) => s.textContent.replace(/\s+/g, ' ').trim()), 'Palette 9 / 14', 'le zoom de P2');
+  egal(await p.$eval(`${HP} [data-q-etiquette] .quai-etiq-l1 span`, (s) => s.textContent.replace(/\s+/g, ' ').trim()), 'Palette 9', 'le zoom de P2 : le numéro, sans la hauteur');
+  // La hauteur (14) se lit en cliquant la palette du haut, et nulle part dans le zoom d'une autre palette.
+  vrai(!/\b14\b/.test(await p.$eval(`${HP} [data-q-etiquette]`, (z) => z.textContent)), 'le zoom de la palette 9 ne dit pas 14');
+  await cliquerPalette(p, 14);
+  egal(await p.$eval(`${HP} [data-q-etiquette] .quai-etiq-l1 span`, (s) => s.textContent.replace(/\s+/g, ' ').trim()), 'Palette 14', 'la palette du haut de P2 dit 14');
   vrai(await p.$(`${HP} [data-q-etiquette] svg[data-q-proche]`), 'la palette se voit de près dans le zoom');
   await p.close();
 });

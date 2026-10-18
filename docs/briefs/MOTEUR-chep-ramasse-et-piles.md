@@ -272,11 +272,12 @@ l'étape ③. Le quai reste sans froid (`froid: false`), en iso (`rendu: 'iso'`)
   unité absente, `decisions` absentes, « refuser » proposé, trois histoires, deux sans `deuxMotifs`, motif absent, aides de couches, sans iso,
   `feminin`, `adjectif`, `document`) et `decisions` sur un quai de cartons ; le kit (dégât de deux vues consécutives seulement pour chaque face et
   chaque type, pile de 14 moins haute d'une palette, ni texte ni titre, aucun vert, retrait de 10 cm de la palette Europe) ; l'écran ③ (rien ne nomme
-  un pool ni un dégât, cinq piles × quatre vues, dessin et zoom ; « Palette 9 / 14 ») ; le dégât de P4 vu de près aux vues 1 et 2 seulement ; les
+  un pool ni un dégât, cinq piles × quatre vues, dessin et zoom ; le zoom dit « Palette 9 », jamais la hauteur, et « Palette 14 » en haut de P2) ; le dégât de P4 vu de près aux vues 1 et 2 seulement ; les
   accords au féminin (et rien ne change sans `feminin`) ; pas de « Refuser », la réserve « d'un autre pool » chiffrée (« LPR » est faux, 1 est juste),
   « BC » partout et plus aucun « BL » ; la partie 5 jouée de bout en bout (17 jalons justes). **Douze sabotages éprouvés**, chacun fait tomber le cas visé : CHEP qui retire les abîmées, décision qui oublie l’autre pool, palette intruse et abîmée acceptée, dégât dessiné de toutes les vues, un `title` par palette, le dégât balisé à l’écran (ce sabotage a d’abord raté : « avarie » manquait aux mots interdits du test, ajouté), zoom toujours vu de face, `feminin` ignoré, autre pool en texte, « Refuser » remis, « BL » gardé dans la réserve, piles non dessinées au décor. Non-régression : les 95 cas existants du bloc `quai-iso` (référence Spartoo octet pour octet, fûts, ENT-8.7/8.8, dépose) verts sans modification ; suite entière **1780/1780** (`node outils/test-parallele.mjs`, 615 s), dont `picard`, `spartoo`, `fb-6.4`, `action-87` à `action-810`, sans modification.
 - **Commits** : voir `git log` du 18/10/2026 (EN-COURS, lot B, compte rendu).
-- **Reste ouvert** : validation à l'écran par Tristan (`outils/essai-quai-inspection.html#piles`, captures envoyées) ; « Palette 9 / 14 » **gardé**
-  par Tristan (18/10/2026), bien qu'il donne la hauteur réelle dès le premier clic ;
+- **Reste ouvert** : validation à l'écran par Tristan (`outils/essai-quai-inspection.html#piles`, captures envoyées) ; zoom ramené à
+  **« Palette 9 »** par Tristan (18/10/2026) : le brief disait « Palette 9 / 14 », qui donnait la hauteur réelle — donc les manquantes, avec « 15
+  palettes annoncées » juste dessous — dès le premier clic ; la hauteur se lit maintenant en cliquant la palette du haut ;
   ENT-9.2 et 9.4 déclarent leurs piles (rien de déclaré dans une séance ici) ; les textes du support encore au masculin « palette » hors étape ③ et
   légendes (voir écart j) ; « Distri Escaut » à renommer et horaires d'ENT-9.2 §6.3 à recaler (restes du lot A).
