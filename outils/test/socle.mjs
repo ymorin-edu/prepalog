@@ -2321,11 +2321,11 @@ await v('Simulog : une séance au numéro d’entreprise inconnu reste visible (
   const r = await pl.evaluate(async () => {
     const { entreprisesDe } = await import('/activites/index.js');
     const m = (code) => ({ meta: { id: code, code } });
-    return entreprisesDe([m('ENT-1.1'), m('ENT-9.1'), m('ENT'), m('ENT-3.2')])
+    return entreprisesDe([m('ENT-1.1'), m('ENT-99.1'), m('ENT'), m('ENT-3.2')])
       .map((e) => ({ id: e.id, logo: !!e.logo, codes: e.acts.map((a) => a.meta.code).join() }));
   });
   const vu = r.map((e) => `${e.id}:${e.codes}`).join(' | ');
-  if (vu !== '1:ENT-1.1 | 3:ENT-3.2 | autres:ENT-9.1,ENT') throw new Error(vu);
+  if (vu !== '1:ENT-1.1 | 3:ENT-3.2 | autres:ENT-99.1,ENT') throw new Error(vu);
   if (r.find((e) => e.id === 'autres').logo) throw new Error('« Autres » ne doit pas avoir de logo');
 });
 

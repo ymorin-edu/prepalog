@@ -136,10 +136,10 @@ await v('Niveaux : l’onglet montre élèves × entreprises (Cdiscount, plus ce
   await ongletProf('niveaux');
   vrai(picardDeclare, 'activites/picard-ent42.js n’a plus la ligne « id » attendue : la déclaration d’essai est à revoir');
   const cols = await pg.$$eval('[data-col-scenario]', (L) => L.map((x) => x.dataset.colScenario));
-  // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026), Action (8) depuis ENT-8.1 (15/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
-  egal(cols, ['2', '4', '6', '7', '8'], 'colonnes');
+  // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026), Action (8) depuis ENT-8.1 (15/10/2026), CHEP (9) depuis ENT-9.1 (18/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
+  egal(cols, ['2', '4', '6', '7', '8', '9'], 'colonnes');
   const noms = await pg.$$eval('[data-col-scenario] strong', (L) => L.map((x) => x.textContent.trim()));
-  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon', 'Action'], 'en-têtes');
+  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon', 'Action', 'CHEP'], 'en-têtes');
   const valeurs = await pg.$$eval('[data-niveau-eleve]', (L) => [...new Set(L.map((s) => s.value))]);
   egal(valeurs, ['standard'], 'valeurs');
   egal(await pg.$$eval('[data-niveau-eleve]', (L) => L.length), cols.length * Object.keys(EL).length, 'cases');   // une case par élève et par colonne
@@ -528,6 +528,12 @@ const BANQUES_FIGEES = {
       'msg-journaliste'],
   },
   // ENT-7.1 Decathlon (13/10/2026).
+  // ENT-9.1 CHEP (18/10/2026) : le document partiel (Europe ou LPR mêlées), le document sans mouvement (Europe seules, ou commande), les bonus du confirmé.
+  'contenus/chep-ent91-donnees.js': {
+    partiel: ['pa-europe', 'pa-lpr'],
+    nonMouvement: ['nm-europe', 'nm-commande'],
+    bonus: ['bo-doublon', 'bo-lundi'],
+  },
   'contenus/decathlon-ent71-donnees.js': {
     retard: ['rt-rail', 'rt-barge'],
     horsListe: ['hl-eflux', 'hl-bateliers', 'hl-railco', 'hl-eclair'],

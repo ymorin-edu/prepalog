@@ -50,7 +50,8 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'action-87',
   'action-88',
   'action-89',
-  'action-810'];
+  'action-810',
+  'chep-91'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,
@@ -74,7 +75,7 @@ const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], qu
 // Une séance France Boissons nouvelle (`fb-6.7`…) va dans le groupe le plus léger.
 const GROUPES = {
   1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps', 'tirage-niveaux', 'fb-6.1', 'quai-iso', 'fb-6.9', 'decathlon-74', 'localiser', 'action-81',
-    'action-87'],
+    'action-87', 'chep-91'],
   2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite', 'questions', 'fb-6.3', 'fb-6.10',
     'action-83',
     'action-88'],
