@@ -130,7 +130,7 @@ en haut ni en bas), `abimees` (a 1 à 2, au moins une visible seulement de l'arr
 | Site | Vides | Enlèvement (construit) |
 |---|---|---|
 | **MarchéLys** (Roubaix) | 390 à 400 (camion complet) | 6 h – 14 h |
-| Frais du Nord (Lesquin) | 130 (125 à 135) | 13 h – 17 h |
+| Frais du Nord (Lesquin) | 130 (125 à 135) | 13 h – 17 h (codé 9 h 30 – 17 h depuis le 19/10/2026, voir le compte rendu) |
 | Halles d'Artois (Douai) | 110 (105 à 115) | 6 h – 9 h 30 |
 | Hainaut Primeurs (Prouvy) | 100 (95 à 105) | 9 h – 13 h |
 | Primeurs du Delta (Dourges) | 75 (70 à 80) | 7 h – 12 h |
@@ -209,6 +209,7 @@ reporté ; le détail de la note se lit dans le Suivi.
   vers 13 h 36) ; seule la pièce « Frais du Nord reporté » attend 38 à 39 min (ENT-9.2 : 16 à 87 min). **Je n'ai rien recalé** : les horaires du
   brief sont codés tels quels (une ligne par site dans `SITES`, `contenus/chep-ent94-donnees.js`) ; si Tristan les change, le cas « la ramasse » du
   bloc et le jeu figé sont à réécrire (valeurs à la main). À trancher par Tristan.
+  **19/10/2026 : option A tranchée par Tristan** — le créneau de Frais du Nord (Lesquin) passe de 13 h – 17 h à **9 h 30 – 17 h** (`SITES`, les autres sites inchangés). Relevé sur la vraie carte (81 combinaisons de vides) : chaque pièce garde au moins un ordre juste ; attente du meilleur ordre juste par pièce (reporté : Frais du Nord / Halles / Hainaut / Delta) 38–39 / 87 / 88–89 / 89 min, retour au plus tard 10 h 54 ; l'ordre au plus court rate toujours dans « Frais du Nord reporté » et « Halles reporté ». Un cas réécrit (« la ramasse » : ordres faux 1 site au lieu de 2 pour Halles et Hainaut reportés, ordres qui tiennent 3 / 5 / 3 / 2, attente 39 / 87 / 89 / 89) ; la phrase du corrigé sur l'attente suit ; jeu figé, parcours 20/20, voisin et pièges inchangés.
 - **Écarts par rapport au brief** (et pourquoi) :
   1. **« Rendre ma copie » toujours disponible** (décision du chef, précédents 8.5, 8.6, 8.10) : le message de Sandrine et l'accueil disent « Quand tes
      trois parties sont envoyées, clique sur « Rendre ma copie » » (brief §4.6 : remise « possible quand les trois parties sont envoyées »). À valider.
@@ -272,8 +273,5 @@ reporté ; le détail de la note se lit dans le Suivi.
   crédit, besoin, tournée, après la remise, Suivi enseignant (dossier de captures de la session ; à refaire : `CAPTURES_ENT94=<dossier> node
   outils/test.mjs chep-94`).
 - **Commits** : voir `git log` (par le chef de chantier).
-- **Reste ouvert** : (1) **l'attente du camion** (Frais du Nord à 13 h, ci-dessus) : à trancher par Tristan ; (2) **le Suivi d'une copie rendue
-  n'affiche que la note** (« 20 sur 20 — copie rendue à … », `core/prof.js` vers la ligne 1076) : le détail jalon par jalon est rangé dans
-  `detail` (avec les titres quand le repérage existe) mais aucun écran ne le montre pour une copie — critère §10 « le détail de la note se lit dans
-  le Suivi » non tenu par le moteur ; demande au moteur à part ; (3) validation à l'écran par Tristan (poids, écarts 4 à 11, textes, durée 1 h 20) ;
+- **Reste ouvert** : (1) **clos le 19/10/2026** : l'attente du camion (option A, Frais du Nord 9 h 30 – 17 h, ci-dessus) ; (2) **clos le 19/10/2026** : le Suivi d'une copie rendue montre désormais, au survol de la note, le détail jalon par jalon (titre, points sur poids, questions) ; la remarque d'origine (« 20 sur 20 — copie rendue à … » seul, `core/prof.js` vers la ligne 1076) est traitée, voir `docs/decisions.md` ; (3) validation à l'écran par Tristan (poids, écarts 4 à 11, textes, durée 1 h 20) ;
   (4) la remise toujours possible (écart 1).

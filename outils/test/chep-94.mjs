@@ -13,7 +13,7 @@
 //   mouvement, B transfert, C partiel, D émission ; P1 juste, P2 à 13, P3 deux LPR (n° 5 et 11), P4 deux abîmées (n° 3 avant, n° 12 arrière) →
 //   à créditer 56, hors pool 2, réparation 2 ; Halles d'Artois (Douai) a signalé le plus tard.
 // - La ramasse (médianes), une tournée juste et une fausse par pièce de `dernier` (l'ordre se raisonne à la main : Douai ferme à 9 h 30, il passe
-//   tôt ; Frais du Nord n'ouvre qu'à 13 h, il passe en dernier ; Prouvy ouvre à 9 h ; km et heures relus par la vue) :
+//   tôt ; Frais du Nord n'ouvre qu'à 9 h 30, il passe en dernier ; Prouvy ouvre à 9 h ; km et heures relus par la vue) :
 //   Frais du Nord reporté (285) : juste Halles d'Artois → Primeurs du Delta → Hainaut Primeurs ; faux Hainaut → Halles → Delta (Douai fermé, le plus court) ;
 //   Halles d'Artois reporté (305) : juste Delta → Hainaut → Frais du Nord ; faux Frais du Nord → Hainaut → Delta (le plus court) ;
 //   Hainaut reporté (315) : juste Halles → Delta → Frais du Nord (le plus court) ; faux Frais du Nord → Halles → Delta ;
@@ -270,13 +270,13 @@ await v('ENT-9.4 : la ramasse (médianes) — pour chaque pièce, l’ordre just
   egal(Object.fromEntries(Object.entries(O).map(([k, x]) => [k, x.dernier])), { 'dr-lesquin': 'lesquin', 'dr-douai': 'douai', 'dr-prouvy': 'prouvy', 'dr-dourges': 'dourges' }, 'le dernier à signaler');
   egal(Object.fromEntries(Object.entries(O).map(([k, x]) => [k, x.total])), { 'dr-lesquin': 285, 'dr-douai': 305, 'dr-prouvy': 315, 'dr-dourges': 340 }, 'totaux sans le site reporté');
   for (const k of Object.keys(O)) egal([O[k].juste.tard, O[k].juste.trop, O[k].juste.rep], [[], [], [k.slice(3)]], `${k} : l’ordre juste`);
-  egal([O['dr-lesquin'].faux.tard, O['dr-douai'].faux.tard, O['dr-prouvy'].faux.tard, O['dr-dourges'].faux.tard], [['douai'], ['prouvy', 'dourges'], ['douai', 'dourges'], ['douai']], 'les ordres faux');
+  egal([O['dr-lesquin'].faux.tard, O['dr-douai'].faux.tard, O['dr-prouvy'].faux.tard, O['dr-dourges'].faux.tard], [['douai'], ['dourges'], ['douai'], ['douai']], 'les ordres faux');
   egal(Object.fromEntries(Object.entries(O).map(([k, x]) => [k, x.courtTient])), { 'dr-lesquin': false, 'dr-douai': false, 'dr-prouvy': true, 'dr-dourges': true }, 'l’ordre au plus court');
-  egal(Object.fromEntries(Object.entries(O).map(([k, x]) => [k, x.justes])), { 'dr-lesquin': 3, 'dr-douai': 2, 'dr-prouvy': 2, 'dr-dourges': 1 }, 'ordres qui tiennent');
+  egal(Object.fromEntries(Object.entries(O).map(([k, x]) => [k, x.justes])), { 'dr-lesquin': 3, 'dr-douai': 5, 'dr-prouvy': 3, 'dr-dourges': 2 }, 'ordres qui tiennent');
   egal(r.banque, [], 'équité de la banque');
   egal([r.complet, r.V, r.signale], ['roubaix', 395, '2027-01-29 07:40'], 'MarchéLys : camion complet, signalé le premier');
-  // L'attente relevée (pour le compte rendu : Frais du Nord n'ouvre qu'à 13 h).
-  egal(Object.fromEntries(Object.entries(O).map(([k, x]) => [k, x.juste.attente])), { 'dr-lesquin': 39, 'dr-douai': 250, 'dr-prouvy': 299, 'dr-dourges': 252 }, 'attente du camion (min)');
+  // L'attente relevée (pour le compte rendu : Frais du Nord ouvre à 9 h 30, option A du 19/10/2026).
+  egal(Object.fromEntries(Object.entries(O).map(([k, x]) => [k, x.juste.attente])), { 'dr-lesquin': 39, 'dr-douai': 87, 'dr-prouvy': 89, 'dr-dourges': 89 }, 'attente du camion (min)');
 });
 
 await v('ENT-9.4 : diffère de 9.2 — aucun horaire d’enlèvement n’est celui d’ENT-9.2 ; le camion complet n’est plus Frais du Nord ; une fiche « besoin » remplie comme en 9.2 (Frais du Nord) est fausse', async () => {

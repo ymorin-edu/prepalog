@@ -152,7 +152,7 @@ const h = (hh, mm = 0) => hh * 60 + mm;
 // Les horaires d'enlèvement des vides (brief §6.3, construits) : AUCUN n'est celui d'ENT-9.2, et le camion complet n'est plus Frais du Nord.
 export const SITES = {
   roubaix: { dist: 'marchelys', ville: 'Roubaix', horaire: [h(6), h(14)] },
-  lesquin: { dist: 'frais-nord', ville: 'Lesquin', horaire: [h(13), h(17)] },
+  lesquin: { dist: 'frais-nord', ville: 'Lesquin', horaire: [h(9, 30), h(17)] },
   douai: { dist: 'halles-artois', ville: 'Douai', horaire: [h(6), h(9, 30)] },
   prouvy: { dist: 'hainaut-primeurs', ville: 'Prouvy', horaire: [h(9), h(13)] },
   dourges: { dist: 'dourges', ville: 'Dourges', horaire: [h(7), h(12)] },
@@ -285,5 +285,5 @@ export function tourneeEnvoyee(db) {
   if (!e || !e.termine || !Array.isArray(e.ordre)) return null;
   return { e, b: bilanTournee({ ordre: e.ordre, quai: Array.isArray(e.quai) ? e.quai : [], report: {}, juge: {}, valide: null, phase: e.phase }, db) };
 }
-// L'attente du camion pour un ordre juste (relevée pour le compte rendu : avec Frais du Nord ouvert à 13 h, elle est longue).
+// L'attente du camion pour un ordre juste (relevée pour le compte rendu : avec Frais du Nord ouvert à 9 h 30, elle reste sous 1 h 30).
 export const attenteDe = (ordre, vides) => bilanOrdre(ordre, vides).attente;

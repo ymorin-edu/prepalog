@@ -43,7 +43,7 @@ export const CORRIGE = {
         + `${CAPACITE} : on reporte la plate-forme qui a signalé le plus tard (comparer le jour, puis l’heure), puis on ordonne les trois autres pour tenir `
         + `les heures d’enlèvement (${IDS_TOURNEE.map((id) => `${nomSite(id)} ${horaireDit(id)}`).join(', ')}).`,
       note: 'Les horaires et le site à camion complet ne sont PAS ceux d’ENT-9.2 : un élève qui recopie sa tournée de mardi se trompe. Quand Frais du '
-        + 'Nord (ouvert à 13 h) est dans la tournée, le camion attend longtemps avant Lesquin : c’est permis (il attend l’ouverture).' },
+        + 'Nord (ouvert à 9 h 30) est dans la tournée, le camion peut attendre l’ouverture avant Lesquin (moins d’1 h 30 pour un bon ordre) : c’est permis.' },
     { etape: 4, etapeTitre: 'La note', genre: 'question', texte: 'Comment la note est-elle calculée ?',
       rep: '13 jalons pondérés et 4 points d’« Avant de commencer », total 20 : compte 6 (documents fixes 1, partiel 1, sans mouvement 1, colonnes 1, solde '
         + 'par formule 2), retour 6 (compte de chaque pile 0,375 × 4, autres pools 1,5, abîmées 1,5, crédit et réparation 1,5), ramasse 4 (capacité et '
