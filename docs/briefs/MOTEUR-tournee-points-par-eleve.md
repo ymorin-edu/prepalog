@@ -1,6 +1,7 @@
 # Brief de chantier moteur — Tournée : des points qui se lisent dans la base de l'élève
 
-**Statut** : **cadrage à valider par Tristan** (18/10/2026)
+**Statut** : **option A validée par Tristan le 18/10/2026** (« A et retouches 9.2 après ») : construction en cours ; ENT-9.2 sera
+retouchée **après**, dans un chantier contenu à part (§6, question 2)
 **Date du brief** : 18/10/2026
 **Conversation d'origine** : Claude Code (session Fable, lancée par la session ENT-9.2 / 9.3). Demande au moteur **n° 6** du brief
 `ENT-9.2-chep-ramasse-et-retours.md` (§7). Séances servies : **ENT-9.4** (évaluation CHEP, jeu tiré par élève : §6.3 du brief, « vides
@@ -131,4 +132,40 @@ pas ce que demande le brief. **Écartée**, sauf si Tristan veut le strict minim
    demande un chantier contenu de ≈ 2 à 3 h (données, corrigé, tests `chep-92`, contrôle d'équité à refaire). Proposition : **ne pas y toucher
    maintenant** (séance livrée, à essayer à l'écran), le décider après ENT-9.4.
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(Claude Code, 18/10/2026 : session Fable ; état des lieux par un sous-agent Sonnet, construction par un sous-agent Opus)*
+
+**Livré** : option A, telle que décrite au §3, dans `core/types/tournee.js` (en-tête « POINTS PAR ÉLÈVE », `creerTournee(T, { signaler })`,
+`evaluerPoints`, `POINTS0` / `IDS0`, `pointsBruts`, `pointsSurs`, `fenetresDe`, `pointsDe(e, L)`, `numeroDeL`, `bilanDe(etat, db)` /
+`bilanSur(etat, L)`, `lignesGrille(etat, db)`, avis `[data-tournee-erreur]`, `bilan(etat, db)`, `amorcer(etat, db)`, `passerPhase(etat, n, db)`,
+`brancher` sur `api.db`), trois lignes dans `core/types/entreprise.js` (`signaler` passé, `db` à `passerPhase` et `amorcer`), huit cas dans
+`outils/test/ramasse.mjs` (section « points par élève », dans une page à part pour que les erreurs attendues en console ne touchent pas le cas
+« aucune erreur de console » du bloc), fiche de séance à jour (ligne `tournee`, paragraphe « `tournee.points` aussi »).
+
+**Les sept comportements, chacun tombé sous sabotage** (sabotages appliqués un à un par script, bloc relancé, moteur remis à l'identique) :
+1. fonction qui rend la liste fixe = même bilan et même écran (tombé quand `vide()` relit `T.points` comme une constante) ;
+2. deux bases, deux résultats : pic 425 → 485, retour 08 h 13 → 08 h 25, la liste dit « 200 », marqueurs du plan identiques (tombé quand la
+   base est ignorée, quand `bilan` oublie `db`, quand la liste est mémorisée au premier appel) ;
+3. séance montée, la base change entre deux dessins, l'écran suit ; le refus du report lit la même base (tombé quand le dessin ignore `opts.db`,
+   quand `brancher` ignore `api.db`) ;
+4. `bilan(etat)` sans base = base vide, sans erreur (tombé sans le repli `|| {}`) ;
+5. chargement : fonction qui plante, rend un texte ou un point sans `id` → refusée, message avec le nom de la tournée et « base vide », refusée
+   aussi par `creerEntreprise` (tombé sans le nom dans le message, sans contrôle du type) ;
+6. dessin : fonction qui plante ou autres sites → avis, un seul signalement après deux dessins, rien d'écrit ; bilan de la base vide (tombé sans
+   comparaison des ids, si `brancher` branche malgré l'avis, si le bilan plante au lieu de repartir de la base vide) ;
+7. `etatInitial` et `passerPhase` avec une fonction : amorce et phase 2 comme en liste fixe, ids inconnus refusés (tombé quand `etatInitial`
+   est contrôlé sur une liste vide).
+
+**Écarts par rapport au cadrage, assumés** : `vide()`, `etatDepart`, `amorcer` et `passerPhase` lisent les ids de la base vide (`IDS0`) sans
+réévaluer `points(db)` : ils n'utilisent que les ids, les mêmes pour tous par la règle 1, et n'ont pas à dépendre d'une fonction qui pourrait
+planter au moment d'écrire dans la base (`db` y est accepté, sans effet, c'est écrit). L'avis d'erreur passe avant le verrou de repérage.
+Libellés des signalements : « la tournée « id » ne se dessine pas : … », « le bilan de la tournée « id » repart de la base vide : … »,
+« « points(db) » rend d'autres sites que sur une base vide (A, B, C au lieu de A, B, C, D) ».
+
+**Vérifié** (tests) : liste fixe identique (HTML au caractère près, blocs `boost`, `carte`, `transport`, `fb-6.9`, `chep-92` : 227/227 sans
+modification) ; `ramasse` 22/22 (14 + 8). **Supposé** : le rendu sur une vraie carte (`plan.carte`) avec une fonction (la carte se dessine
+depuis `plan.clients`, inchangé ; seul un plan dessiné a été testé avec une fonction) ; le chemin hôte → feuille de calcul (`grille.lignes`)
+avec une fonction (le code passe `db`, aucun test ne le couvre) : ENT-9.4 les couvrira. **Rien n'a été vu à l'écran dans un navigateur** par
+Tristan : il n'y a pas d'écran nouveau à juger, seulement un comportement ; la première séance qui l'utilise (ENT-9.4) sera celle à essayer.
+
+**Reste ouvert** : le commentaire de `contenus/chep-ent92-donnees.js` (ligne ~17) dit encore que les quantités de la tournée sont figées par le
+moteur : à corriger dans le chantier contenu « ENT-9.2 : tirer les vides » (décision de Tristan du 18/10 : « retouches 9.2 après »).

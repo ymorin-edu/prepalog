@@ -263,6 +263,9 @@ fil ; 5 — oui, `tournee.quand(db)`.
    médianes (140, 120, 95, 70) pour tous ; seuls la pièce `dernier` (dates des avis, site à reporter) et V (Frais du Nord, hors tournée) sont
    tirés. Ce qu'il faudrait : `tournee.points` (au moins `vides` et `zone`) en fonction `(db) => …`, comme `fiche.blocs`, relu à chaque dessin
    et par `bilan`. Utile aussi à ENT-9.4 (évaluation, jeu tiré par élève).
+   **→ Livrée au moteur le 18/10/2026** (brief `MOTEUR-tournee-points-par-eleve.md`, option A validée par Tristan : mêmes sites pour tous,
+   valeurs par élève, `bilan(etat, db)`). ENT-9.2 garde ses médianes pour l'instant : les tirer est un chantier contenu à part, décidé par
+   Tristan « après » (« A et retouches 9.2 après »).
 
 ## 7 bis. Séance déjà jouée ? Non.
 
