@@ -5,7 +5,8 @@
 // moteur seul : profil de charge, pic, dépassement dit sans « de combien », report d'un arrêt, borne du
 // quai, gestes publiés, ouverture conditionnelle, et le cas d'origine du lot 4 (on part plein, on dépose,
 // on reprend). Le second, SUR LA CARTE DU NORD (`contenus/chep-carte.js`), éprouve les km, les horaires et
-// l'accord du calage (`outils/carte/calibrer.mjs`, mode ramasse) avec la vue.
+// l'accord du calage (`outils/carte/calibrer.mjs`, mode ramasse) avec la vue. Entre les deux, « points par élève »
+// (chantier MOTEUR-tournee-points-par-eleve, 18/10/2026) : `points: (db) => […]`, dans une page à part.
 //
 // VALEURS ÉCRITES À LA MAIN (le code les calcule, le test les écrit) :
 // - ramasse : A 140, B 120, C 95, D 70 palettes vides, camion de 390, départ à vide.
@@ -232,6 +233,288 @@ await v('ramasse : les gestes sont publiés (connu à la création, inconnu refu
   vrai(/geste inconnu « tournee:autre:envoyer »/.test(r.inconnu), 'un geste inconnu passe : ' + r.inconnu);
   vrai(/geste inconnu « tournee:essai-ramasse:reporter »/.test(r.sansQuai), 'sans quai, « reporter » est publié : ' + r.sansQuai);
 });
+
+// ── Points par élève (chantier MOTEUR-tournee-points-par-eleve, 18/10/2026) ─────────────────────
+// `points: (db) => […]` : mêmes sites pour tous, valeurs lues dans la base de l'élève. Une page à part, pour
+// que les erreurs ATTENDUES (fonction qui plante, signalée dans la console) ne se mêlent pas à celles du bloc.
+// VALEURS ÉCRITES À LA MAIN, plan en ligne droite (1 km entre dépôt, A, B, C, D ; 4 km de D au retour), 60 km/h
+// (1 min par km), départ 6 h, service 10 min + 0,2 min par palette :
+// - base vide (A 140, B 120, C 95, D 70) : services 38, 34, 29, 24 = 125 ; arrivées A 6 h 01 (361), B 400, C 435,
+//   D 465 ; retour 360 + 8 + 125 = 493 (08 h 13) ; pic 425.
+// - base { essai: { vides: { A: 200 } } } : service A = 50 ; arrivées A 361, B 412, C 447, D 477 ; retour 505
+//   (08 h 25) ; pic 485. Sans D : 0 → 200 → 320 → 415, dépasse 390 (en base vide, 355 tient).
+const pp = await ctxR.newPage();
+pp.setDefaultTimeout(8000);
+const erreursP = [];
+pp.on('pageerror', (e) => erreursP.push('PAGEERROR: ' + e.message));
+pp.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursP.push(m.text()); });
+await pp.goto(BASE);
+await pp.waitForSelector('#btnProf', { timeout: 8000 });
+await pp.evaluate(async () => {
+  const m = await import('/core/types/entreprise.js');
+  const t = await import('/core/types/tournee.js');
+  const SITES = [
+    { id: 'A', nom: 'Site A', vides: 140, x: 120, y: 60 }, { id: 'B', nom: 'Site B', vides: 120, x: 180, y: 60 },
+    { id: 'C', nom: 'Site C', vides: 95, x: 240, y: 60 }, { id: 'D', nom: 'Site D', vides: 70, x: 300, y: 60 },
+  ];
+  const MESURE = { id: 'vides', libelle: 'Palettes vides à bord', unite: 'palettes', max: 390, depart: 0, reprend: 'vides',
+    libelleDepasse: 'Le camion ne peut pas tout prendre' };
+  const RAMASSE = (o = {}) => Object.assign({
+    id: 'essai-ramasse', libelle: 'Ramasse', titre: 'Ramasse d\'essai', points: SITES,
+    mesures: [MESURE], departAQuai: true, exigeConforme: true,
+    quai: { libelle: 'Reporter à vendredi', titre: 'Reportés à la tournée de vendredi', reprendre: 'remettre dans la tournée',
+      vide: 'Aucun : tous les sites sont dans la tournée.', max: 1 },
+    report: [{ id: 'pic', libelle: 'Au plus, à bord', unite: 'palettes', valeur: (b) => b.pics.vides }],
+  }, o);
+  // La fonction de la base du brief : les vides d'un site sont tirés dans `db.essai.vides`, sinon ceux du plan.
+  const TIRE = (db) => SITES.map((s) => ({ ...s, vides: (db.essai && db.essai.vides && db.essai.vides[s.id]) || s.vides }));
+  const PLAN = { largeur: 400, hauteur: 120, grille: { colonnes: 'ABCD', lignes: 2 }, echelle: { pixels: 60, libelle: '1 km' },
+    depart: { nom: 'Dépôt', x: 60, y: 60 }, arrivee: { nom: 'Retour au dépôt', x: 60, y: 60 }, points: SITES };
+  const HORAIRE = { depart: 6 * 60, vitesse: 60, service: { base: 10, parColis: 0.2, champ: 'vides', unite: 'palette' } };
+  const commun = {
+    ENTREPRISE: { nom: 'Essai Points', sousTitre: 'scénario d\'essai' },
+    VOCAB: { unit: 'pièce', unitPl: 'pièces', sizeLabel: 'Taille' },
+    CATALOGUE: { MODELS: [], MM: {}, VARIANTS: [], VM: {} }, SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [], CM: {}, THEME: {},
+    baseDeDepart: () => ({ v: 1, seq: 1, stock: {}, mails: [], orders: [], receptions: [], moves: [], customers: [], suppliers: [], _depart: [] }),
+  };
+  const monter = (hoteId, tournee, metaId, db) => {
+    const hote = document.createElement('div');
+    hote.id = hoteId;
+    document.body.appendChild(hote);
+    const act = m.creerEntreprise(Object.assign({}, commun, { etapes: [], tournee }));
+    act.rendre(hote, {
+      meta: { id: metaId, portee: 'eleve', code: 'ESS-P', titre: 'Essai points' },
+      profil: { prenom: 'Léa', nom: 'Dupont', role: 'eleve' },
+      jeu: { etat: () => db, sauver: () => {} },
+      enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+    });
+    return db;
+  };
+  const etat = (ordre, quai) => ({ ordre, quai, report: {}, juge: {}, valide: null });
+  // Un dessin dans un bloc à part, pour le lire comme l'écran.
+  const dessin = (V, e, db) => { const d = document.createElement('div'); d.innerHTML = V.html(e, { db }); return d; };
+  window.__pts = { m, t, SITES, RAMASSE, TIRE, PLAN, HORAIRE, commun, monter, etat, dessin };
+});
+const ouvrirP = async (zone) => { await pp.click(`${zone} .ent-nav[data-vue="tournee"]`); await pp.waitForTimeout(80); };
+const accueilP = async (zone) => { await pp.click(`${zone} .ent-nav[data-vue="accueil"]`); await pp.waitForTimeout(60); };
+
+await v('points par élève (1) : une fonction qui rend la liste fixe donne le même bilan et le même écran que la liste fixe (425, 355, rien de reporté)', async () => {
+  const r = await pp.evaluate(() => {
+    const { t, RAMASSE, SITES, etat } = window.__pts;
+    const fixe = t.creerTournee(RAMASSE());
+    const fn = t.creerTournee(RAMASSE({ points: () => SITES }));
+    const lire = (V, ordre, quai) => {
+      const b = V.bilan(etat(ordre, quai));
+      return { profil: b.profils.vides, pic: b.pics.vides, charges: b.charges.vides, retenus: b.retenus.map((p) => p.id),
+        ecartes: b.ecartes.map((p) => p.id), reportes: b.reportes, depasse: b.depassements, points: b.points.map((p) => p.id) };
+    };
+    const e = etat(['A', 'B', 'C'], ['D']);
+    return { fixe: lire(fixe, ['A', 'B', 'C', 'D'], []), fn: lire(fn, ['A', 'B', 'C', 'D'], []), fnSansD: lire(fn, ['A', 'B', 'C'], ['D']),
+      ecranVide: fixe.html({}) === fn.html({}), ecranCharge: fixe.html(e) === fn.html(e), aVide: /140 palettes à reprendre/.test(fn.html({})) };
+  });
+  egal(r.fixe.profil, [0, 140, 260, 355, 425], 'liste fixe : profil');
+  egal(r.fn.profil, [0, 140, 260, 355, 425], 'fonction : profil');
+  egal(r.fn.pic, 425, 'fonction : pic'); egal(r.fn.depasse, ['vides'], 'fonction : dépassement');
+  egal(r.fn.charges, { A: 140, B: 260, C: 355, D: 425 }, 'fonction : charge après chaque arrêt');
+  egal(r.fn.retenus, ['A', 'B', 'C', 'D'], 'fonction : retenus'); egal(r.fn.reportes, [], 'fonction : rien de reporté');
+  egal(r.fn.points, ['A', 'B', 'C', 'D'], 'fonction : points du bilan');
+  egal(r.fnSansD.pic, 355, 'fonction sans D : pic'); egal(r.fnSansD.ecartes, ['D'], 'fonction sans D : écartés'); egal(r.fnSansD.depasse, [], 'fonction sans D : tient');
+  egal(r.fn, r.fixe, 'fonction et liste fixe : bilans différents');
+  vrai(r.ecranVide && r.ecranCharge, 'l’écran d’une fonction qui rend la liste fixe n’est pas celui de la liste fixe');
+  vrai(r.aVide, 'à l’ouverture, tout n’est pas à quai avec ses 140 palettes');
+});
+
+await v('points par élève (2) : deux bases, deux résultats — pic 425 → 485, retour 08 h 13 → 08 h 25, la liste dit « 200 », les marqueurs du plan ne bougent pas', async () => {
+  const r = await pp.evaluate(() => {
+    const { t, RAMASSE, TIRE, PLAN, HORAIRE, etat, dessin } = window.__pts;
+    const V = t.creerTournee(RAMASSE({ plan: PLAN, points: TIRE, horaire: HORAIRE }));
+    const e = etat(['A', 'B', 'C', 'D'], []);
+    const dbs = [{}, { essai: { vides: { A: 200 } } }];
+    const lire = (db) => {
+      const b = V.bilan(e, db);
+      const d = dessin(V, e, db);
+      return { pic: b.pics.vides, km: Math.round(b.km * 100) / 100, retour: Math.round(b.arrivee),
+        arrivees: Object.fromEntries(Object.entries(b.arrivees).map(([k, x]) => [k, Math.round(x)])),
+        liste: d.querySelector('#tourListe').textContent.replace(/\s+/g, ' '),
+        tete: d.querySelector('[data-tour-profil="vides"] .tour-j-tete b').textContent.replace(/\s+/g, ' '),
+        horaire: [...d.querySelectorAll('.tour-jauge')].map((j) => j.textContent).join(' ').replace(/\s+/g, ' '),
+        plan: d.querySelector('.plan-boite').innerHTML };
+    };
+    return dbs.map(lire);
+  });
+  const [a, b] = r;
+  egal(a.pic, 425, 'base vide : pic'); egal(b.pic, 485, 'base tirée : pic');
+  egal(a.km, 8, 'base vide : km'); egal(b.km, 8, 'base tirée : km');
+  egal(a.retour, 493, 'base vide : retour (8 h 13)'); egal(b.retour, 505, 'base tirée : retour (8 h 25)');
+  egal(a.arrivees, { A: 361, B: 400, C: 435, D: 465 }, 'base vide : arrivées');
+  egal(b.arrivees, { A: 361, B: 412, C: 447, D: 477 }, 'base tirée : arrivées');
+  vrai(/140 palettes à reprendre/.test(a.liste) && !/200 palettes/.test(a.liste), 'base vide : la liste : ' + a.liste.slice(0, 200));
+  vrai(/200 palettes à reprendre/.test(b.liste) && !/140 palettes/.test(b.liste), 'base tirée : la liste ne dit pas « 200 » : ' + b.liste.slice(0, 200));
+  vrai(/425 \/ 390/.test(a.tete.replace(/ /g, ' ')) && /485 \/ 390/.test(b.tete.replace(/ /g, ' ')), 'têtes de jauge : ' + a.tete + ' | ' + b.tete);
+  vrai(/08 h 13/.test(a.horaire) && /08 h 25/.test(b.horaire), 'heure de retour à l’écran : ' + a.horaire.slice(0, 160) + ' | ' + b.horaire.slice(0, 160));
+  vrai(a.plan.length > 500 && a.plan === b.plan, 'le plan (marqueurs, noms, numéros) change avec la base');
+});
+
+await v('points par élève (3) : dans une séance montée, la base change entre deux dessins et l’écran suit sans rien rouvrir ; le refus du report lit la même base', async () => {
+  const z3 = '#ptsRelu';
+  await pp.evaluate(() => {
+    const { RAMASSE, TIRE, monter } = window.__pts;
+    window.__pts.dbRelu = monter('ptsRelu', RAMASSE({ id: 'essai-relu', points: TIRE }), 'ess-pts-relu', {});
+  });
+  await ouvrirP(z3);
+  const avant = await pp.textContent(`${z3} .tour-quai`);
+  vrai(/140 palettes à reprendre/.test(avant), 'avant le tirage, le site A n’a pas 140 palettes : ' + avant.slice(0, 200));
+  // Le tirage arrive dans la base (comme après « Réinitialiser ») : le geste suivant redessine, rien n'est rouvert.
+  await pp.evaluate(() => { window.__pts.dbRelu.essai = { vides: { A: 200 } }; });
+  await pp.click(`${z3} [data-reprendre="A"]`); await pp.waitForTimeout(60);
+  const ligne = await pp.textContent(`${z3} #tourListe`);
+  vrai(/200 palettes à reprendre/.test(ligne) && !/140 palettes/.test(ligne), 'après le tirage, la ligne de A : ' + ligne.slice(0, 200));
+  for (const id of ['B', 'C']) { await pp.click(`${z3} [data-reprendre="${id}"]`); await pp.waitForTimeout(60); }
+  const tete = await pp.textContent(`${z3} [data-tour-profil="vides"] .tour-j-tete b`);
+  vrai(/415\s*\/\s*390/.test(tete.replace(/ /g, ' ')), 'A B C avec A = 200 : la tête ne dit pas 415 / 390 : ' + tete);
+  // En base vide, A B C tiendrait (355) : le refus prouve que la validation lit la base de l'élève.
+  await pp.fill(`${z3} [data-report="pic"]`, '415');
+  await pp.click(`${z3} [data-tour-valider]`); await pp.waitForTimeout(80);
+  const refus = await pp.textContent(`${z3} .tour-report .avis-err`).catch(() => '');
+  vrai(/le camion ne peut pas tout prendre/.test(refus), 'la validation ne lit pas la base de l’élève (A B C passe) : ' + refus);
+});
+
+await v('points par élève (4) : `bilan(etat)` sans base = la base vide (compatibilité des contenus), sans aucune erreur', async () => {
+  const avant = erreursP.length;
+  const r = await pp.evaluate(() => {
+    const { t, RAMASSE, TIRE, etat } = window.__pts;
+    const V = t.creerTournee(RAMASSE({ points: TIRE }));
+    const e = etat(['A', 'B', 'C', 'D'], []);
+    return { sans: V.bilan(e).pics.vides, vide: V.bilan(e, {}).pics.vides, tire: V.bilan(e, { essai: { vides: { A: 200 } } }).pics.vides,
+      profil: V.bilan(e).profils.vides };
+  });
+  egal(r.sans, 425, 'bilan(etat) sans base'); egal(r.vide, 425, 'bilan(etat, {})'); egal(r.tire, 485, 'bilan(etat, base tirée)');
+  egal(r.profil, [0, 140, 260, 355, 425], 'profil sans base');
+  egal(erreursP.slice(avant), [], 'un bilan sans base signale une erreur');
+});
+
+await v('points par élève (5) : au chargement, une fonction qui plante sur une base vide, ou qui ne rend pas un tableau de points, fait refuser la séance (message qui nomme la tournée)', async () => {
+  const r = await pp.evaluate(() => {
+    const { t, m, RAMASSE, commun } = window.__pts;
+    const essai = (f) => { try { f(); return 'passe'; } catch (e) { return e.message; } };
+    const boum = () => { throw new Error('boum'); };
+    return {
+      boum: essai(() => t.creerTournee(RAMASSE({ points: boum }))),
+      texte: essai(() => t.creerTournee(RAMASSE({ points: () => 'texte' }))),
+      sansId: essai(() => t.creerTournee(RAMASSE({ points: () => [{ nom: 'sans id' }] }))),
+      seance: essai(() => m.creerEntreprise(Object.assign({}, commun, { etapes: [], tournee: RAMASSE({ id: 'essai-seance', points: boum }) }))),
+      bonne: essai(() => m.creerEntreprise(Object.assign({}, commun, { etapes: [], tournee: RAMASSE({ points: (db) => window.__pts.TIRE(db) }) }))),
+    };
+  });
+  vrai(/tournée « essai-ramasse » : « points\(db\) » ne marche pas sur une base vide : boum/.test(r.boum), 'fonction qui plante : ' + r.boum);
+  vrai(/tournée « essai-ramasse » : « points\(db\) » ne marche pas sur une base vide : « points\(db\) » rend string au lieu d’un tableau/.test(r.texte), 'fonction qui rend un texte : ' + r.texte);
+  vrai(/tournée « essai-ramasse » .*base vide.*sans « id »/.test(r.sansId), 'point sans id : ' + r.sansId);
+  vrai(/tournée « essai-seance » : « points\(db\) » ne marche pas sur une base vide : boum/.test(r.seance), 'la séance se charge malgré tout : ' + r.seance);
+  egal(r.bonne, 'passe', 'une fonction correcte refuse la séance');
+});
+
+await v('points par élève (6) : au dessin, une fonction qui plante (ou rend d’autres sites) montre un avis, signale une fois, n’écrit rien ; le bilan repart de la base vide', async () => {
+  const avant = erreursP.length;
+  await pp.evaluate(() => {
+    const { RAMASSE, SITES, monter } = window.__pts;
+    window.__pts.dbErr = monter('ptsErr', RAMASSE({ id: 'essai-err', points: (db) => { if (db.essai) throw new Error('boum'); return SITES; } }),
+      'ess-pts-err', { essai: true });
+    window.__pts.dbIds = monter('ptsIds', RAMASSE({ id: 'essai-ids', points: (db) => (db.essai ? SITES.filter((s) => s.id !== 'D') : SITES) }),
+      'ess-pts-ids', { essai: true });
+  });
+  for (const zone of ['#ptsErr', '#ptsIds']) {
+    await ouvrirP(zone);
+    await accueilP(zone);
+    await ouvrirP(zone);        // deux dessins : une seule erreur signalée
+    vrai(await pp.$(`${zone} [data-tournee-erreur]`), `${zone} : pas d’avis d’erreur`);
+    egal(await pp.$$eval(`${zone} #tourListe, ${zone} .tour-quai, ${zone} [data-tour-valider]`, (e) => e.length), 0, `${zone} : la tournée se dessine quand même`);
+    vrai(/La tournée ne s’affiche pas \(erreur de la séance\)/.test(await pp.textContent(`${zone} [data-tournee-erreur]`)), `${zone} : texte de l’avis`);
+  }
+  const ecrit = await pp.evaluate(() => [window.__pts.dbErr, window.__pts.dbIds].map((db) => {
+    const e = db.transport && Object.values(db.transport)[0] && Object.values(db.transport)[0].tournee;
+    return e ? Object.keys(e) : [];
+  }));
+  egal(ecrit, [[], []], 'quelque chose est écrit dans l’état de la tournée');
+  const nouvelles = erreursP.slice(avant);
+  egal(nouvelles.filter((x) => /la tournée « essai-err » ne se dessine pas : boum/.test(x)).length, 1, 'fonction qui plante, signalée une fois : ' + nouvelles.join(' | '));
+  egal(nouvelles.filter((x) => /la tournée « essai-ids » ne se dessine pas : « points\(db\) » rend d’autres sites que sur une base vide/.test(x)).length, 1,
+    'autres sites, signalés une fois : ' + nouvelles.join(' | '));
+  egal(nouvelles.length, 2, 'd’autres erreurs : ' + nouvelles.join(' | '));
+  // Le bilan sur cette base : celui de la base vide, sans plantage (signalé une fois, même appelé deux fois).
+  const avantB = erreursP.length;
+  const b = await pp.evaluate(() => {
+    const { t, RAMASSE, SITES, etat } = window.__pts;
+    const e = etat(['A', 'B', 'C', 'D'], []);
+    const V1 = t.creerTournee(RAMASSE({ points: (db) => { if (db.essai) throw new Error('boum'); return SITES; } }));
+    const V2 = t.creerTournee(RAMASSE({ id: 'essai-ids', points: (db) => (db.essai ? SITES.filter((s) => s.id !== 'D') : SITES) }));
+    const d = { essai: true };
+    return { p1: V1.bilan(e, d).pics.vides, p1bis: V1.bilan(e, d).pics.vides, p2: V2.bilan(e, d).pics.vides, r2: V2.bilan(e, d).retenus.map((p) => p.id) };
+  });
+  egal(b, { p1: 425, p1bis: 425, p2: 425, r2: ['A', 'B', 'C', 'D'] }, 'le bilan d’une base fautive n’est pas celui de la base vide');
+  const nb = erreursP.slice(avantB);
+  egal(nb.filter((x) => /\[tournee\] le bilan de la tournée « essai-ramasse » repart de la base vide : boum/.test(x)).length, 1, 'bilan qui plante, signalé une fois : ' + nb.join(' | '));
+  egal(nb.filter((x) => /\[tournee\] le bilan de la tournée « essai-ids » repart de la base vide : « points\(db\) » rend d’autres sites/.test(x)).length, 1, 'bilan aux autres sites : ' + nb.join(' | '));
+  egal(nb.length, 2, 'd’autres erreurs : ' + nb.join(' | '));
+  vrai(!nouvelles.concat(nb).some((x) => /PAGEERROR/.test(x)), 'la page a planté');
+  erreursP.splice(avant);   // attendues : elles ne comptent pas dans « aucune erreur » ci-dessous
+});
+
+await v('points par élève (7) : `etatInitial` et `passerPhase` avec des points en fonction — l’amorce pose l’ordre déclaré, la phase 2 annule C, comme en liste fixe', async () => {
+  const r = await pp.evaluate(() => {
+    const { t, RAMASSE, SITES, TIRE, monter, dessin } = window.__pts;
+    const opts = { etatInitial: { ordre: ['B', 'A'], quai: ['C', 'D'] }, phases: { 2: { annules: ['C'] } } };
+    const essai = (f) => { try { f(); return 'passe'; } catch (e) { return e.message; } };
+    const db = { essai: { vides: { A: 200 } } };
+    const jouer = (points) => {
+      const V = t.creerTournee(RAMASSE(Object.assign({ points }, opts)));
+      const e = {};
+      const amorce = V.amorcer(e, db);
+      const apresAmorce = { ordre: [...e.ordre], quai: [...e.quai], amorce: !!e.amorce };
+      const phase = V.passerPhase(e, 2, db);
+      const b = V.bilan(e, db);
+      const d = dessin(V, e, db);
+      return { amorce, apresAmorce, phase, n: e.phase && e.phase.n, ordre: e.ordre, quai: e.quai, annules: b.annules,
+        points: b.points.map((p) => p.id), profil: b.profils.vides,
+        annuleEcran: (d.querySelector('[data-tour-annules]') || {}).textContent || '', encore: V.amorcer(e, db), rejoue: V.passerPhase(e, 2, db) };
+    };
+    const ecran = (() => {
+      const dbE = { essai: { vides: { A: 200 } } };
+      monter('ptsAmorce', RAMASSE(Object.assign({ id: 'essai-amorce', points: TIRE }, opts)), 'ess-pts-amorce', dbE);
+      return dbE;
+    })();
+    window.__pts.dbAmorce = ecran;
+    return {
+      fn: jouer(TIRE), fixe: jouer(SITES),
+      inconnuInit: essai(() => t.creerTournee(RAMASSE({ points: TIRE, etatInitial: { ordre: ['B', 'E'] } }))),
+      inconnuPhase: essai(() => t.creerTournee(RAMASSE({ points: TIRE, phases: { 2: { annules: ['E'] } } }))),
+    };
+  });
+  egal(r.fn.amorce, true, 'l’amorce ne s’est pas faite');
+  egal(r.fn.apresAmorce, { ordre: ['B', 'A'], quai: ['C', 'D'], amorce: true }, 'l’amorce');
+  egal(r.fn.phase, true, 'la phase 2 ne s’applique pas'); egal(r.fn.n, 2, 'numéro de phase');
+  egal(r.fn.ordre, ['B', 'A'], 'ordre après la phase'); egal(r.fn.quai, ['D'], 'C annulé reste au quai');
+  egal(r.fn.annules, ['C'], 'annulés du bilan'); egal(r.fn.points, ['A', 'B', 'D'], 'points de la phase');
+  egal(r.fn.profil, [0, 120, 320], 'profil B puis A = 200 (base de l’élève)');
+  vrai(/Commandes annulées \(1\)/.test(r.fn.annuleEcran) && /Site C/.test(r.fn.annuleEcran), 'l’écran ne barre pas C : ' + r.fn.annuleEcran);
+  egal([r.fn.encore, r.fn.rejoue], [false, false], 'l’amorce ou la phase se rejouent');
+  egal(r.fixe.profil, [0, 120, 260], 'liste fixe : profil B puis A = 140');
+  const sansValeurs = (x) => ({ ...x, profil: null });
+  egal(sansValeurs(r.fn), sansValeurs(r.fixe), 'fonction et liste fixe : amorce ou phase différentes');
+  vrai(/etatInitial cite « E », qui n'est pas un point/.test(r.inconnuInit), 'etatInitial inconnu : ' + r.inconnuInit);
+  vrai(/la phase 2 cite « E », qui n'est pas un point/.test(r.inconnuPhase), 'phase inconnue : ' + r.inconnuPhase);
+  // Par l'hôte : la tournée du collègue est posée à la première ouverture, avec les valeurs de l'élève.
+  await ouvrirP('#ptsAmorce');
+  const liste = await pp.$$eval('#ptsAmorce #tourListe .tour-item', (e) => e.map((x) => x.textContent.replace(/\s+/g, ' ')));
+  egal(liste.length, 2, 'deux arrêts posés par l’amorce');
+  vrai(/Site B/.test(liste[0]) && /Site A/.test(liste[1]) && /200 palettes à reprendre/.test(liste[1]), 'l’ordre ou les valeurs de l’amorce à l’écran : ' + liste.join(' | '));
+  const e = await pp.evaluate(() => Object.values(window.__pts.dbAmorce.transport)[0].tournee);
+  vrai(e.amorce && e.ordre.join() === 'B,A', 'l’amorce n’est pas rangée dans la base : ' + JSON.stringify(e));
+});
+
+await v('points par élève : aucune autre erreur de console dans la page des essais', async () => {
+  if (erreursP.length) throw new Error([...new Set(erreursP)].slice(0, 3).join(' | '));
+});
+await pp.close();
 
 // ── Le montage sur la carte du Nord ──────────────────────────────────────────────────────────
 // La journée d'essai (celle de `outils/essai-tournee-ramasse.html` et du calage `outils/carte/chep.json`) :

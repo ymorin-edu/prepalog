@@ -106,7 +106,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `transportId` | texte | Clé de `db.transport` partagée entre deux séances (sinon l'`id` de la séance). | `activites/boost-ent32.js` |
 | `plan` | objet | Plan schématique, ou carte réelle avec `plan.carte`. | `activites/boost-ent32.js` |
 | `carteItineraires` | objet | Carte des itinéraires d'un point A à un point B par plusieurs modes (route, barge, rail), sur une carte réelle ; consultée, jamais notée. Voir « Vue « Carte des itinéraires » » plus bas. | (Decathlon ENT-7.x, à venir) |
-| `tournee` | objet | La tournée à construire sur le plan (options dans l'en-tête de `core/types/tournee.js`). Depuis le 18/10/2026 (MOTEUR-chep lot A) : une mesure en **profil** (`depart: 0 \| 'somme'`, `depose`, `reprend`, `libelleDepasse` : la charge monte et descend, le **pic** compte, jauge en marches ; le bilan donne `profils`, `pics`, `charges`), `quai: { libelle, titre, reprendre, vide, max }`, `id` (sert aux gestes), `quand(db)` (hors du menu tant que faux), `horaire.libelleRate` (18/10/2026 : « quai fermé à l’arrivée » à la place de « Créneau raté (de N min) », pastille et refus du report, jamais « de combien »). | `activites/boost-ent32.js` ; profil : `outils/essai-tournee-ramasse.html` (CHEP ENT-9.2, à venir) |
+| `tournee` | objet | La tournée à construire sur le plan (options dans l'en-tête de `core/types/tournee.js`). Depuis le 18/10/2026 (MOTEUR-chep lot A) : une mesure en **profil** (`depart: 0 \| 'somme'`, `depose`, `reprend`, `libelleDepasse` : la charge monte et descend, le **pic** compte, jauge en marches ; le bilan donne `profils`, `pics`, `charges`), `quai: { libelle, titre, reprendre, vide, max }`, `id` (sert aux gestes), `quand(db)` (hors du menu tant que faux), `horaire.libelleRate` (18/10/2026 : « quai fermé à l’arrivée » à la place de « Créneau raté (de N min) », pastille et refus du report, jamais « de combien »). Depuis le 18/10/2026 (MOTEUR-tournee-points-par-eleve) : `points` accepte une fonction `(db) => […]` pour une séance tirée par élève — **les ids sont fixes** (ceux de la base vide, donc du plan), **les valeurs sont par élève** (`vides`, `kg`, `creneau`…) ; le contenu passe alors la base à son bilan, `VUE.bilan(etat, db)` (voir « Fonction de la base de l'élève »). | `activites/boost-ent32.js` ; profil : `outils/essai-tournee-ramasse.html` (CHEP ENT-9.2, à venir) |
 | `quai` | objet ou fonction | Quai de réception (voir « Vue quai ») ; une **fonction de la graine** = un quai tiré par élève. | `activites/picard-ent42.js` ; tiré : `activites/picard-ent44.js` |
 | `planning` | objet | Planning : cartes sur une grille (voir « Vue Planning »). | `activites/smoby-arrivee.js` |
 | `entrepot` | objet | Plan d'entrepôt : rangement, préparation, visite, stockage de masse (et comptage), allée de picking (voir « Vue Plan d'entrepôt »). | `activites/smoby-rangement.js` |
@@ -318,6 +318,22 @@ vide, par exemple). Au dessin, une fonction qui plante est signalée (console, c
 un avis d'erreur ; une fiche qui ne se dessine pas ne part pas. Les gestes publiés par une fiche à `blocs(db)` sont ceux du dessin
 sur base vide, plus `fiche:<id>:envoyer`. Valeurs fixes : rien ne change. Exemple : `contenus/france-boissons-ent61.js`
 (`FICHE_QUI`, `DOC_ORGANIGRAMME_ELEVE`, jalons du courrier) ; tests : bloc `fb-6.1`.
+
+**`tournee.points` aussi** (chantier MOTEUR-tournee-points-par-eleve, 18/10/2026, demande n° 6 du brief ENT-9.2) : une tournée
+n'est plus forcément une liste fixe. `points: (db) => POINTS_PLAN.map((p) => ({ ...p, vides: videsDe(db, p.id) }))` donne à chaque
+élève **ses** quantités (créneaux, zone… aussi), avec une règle propre : **mêmes sites pour tous, valeurs tirées**. La fonction rend
+exactement les ids de la base vide (ceux du plan quand il y a une carte : la carte se dessine depuis `plan.clients`, ses marqueurs
+ne changent pas) ; des sites différents par élève, ce serait une carte par élève (autre chantier). Relue à chaque dessin de la
+tournée et par le bilan : **un contenu tiré passe la base à son bilan**, `VUE.bilan(etat, db)` dans ses jalons `verifier(db)` ;
+`VUE.bilan(etat)` sans base calcule sur la base vide (les contenus qui ne tirent rien ne changent pas). Même piège que plus haut :
+jamais mémorisée, rien écrit. Contrôle au chargement : appelée une fois sur `{}` ; si elle plante, ne rend pas un tableau ou rend un
+point sans `id`, la séance ne se charge pas (« tournée « <id> » : « points(db) » ne marche pas sur une base vide : … ») ; les
+contrôles d'`etatInitial` et des `phases` se font sur cette liste. Au dessin, une fonction qui plante, ou qui rend d'autres sites
+que sur la base vide, est signalée (console, une fois) et la tournée affiche un avis d'erreur à sa place (`[data-tournee-erreur]`) :
+rien ne se branche, rien n'est écrit ; au bilan, la même faute est signalée et le bilan se calcule sur la base vide (aucun jalon ne
+plante). Une liste fixe : rien ne change. **Attention aux caches du contenu** : une séance qui fige ses quantités ailleurs (corrigé,
+liste `SITES`, mémo d'équité : ENT-9.2 garde ainsi ses médianes 140, 120, 95, 70) ne profite de rien tant qu'elle ne les tire pas
+aussi. Tests : bloc `ramasse` (« points par élève »).
 
 **Feuille de calcul dans une fiche, dessin en document, pastilles d'étape** (chantier D-10, 13/10/2026, brief ENT-6.10 §7) :
 - Bloc **`grille`** : `{ type: 'grille', id: 'compte', feuille: { colonnes: ['A', 'B', 'C'], decimales: 2, colonneAide: 'Aide',

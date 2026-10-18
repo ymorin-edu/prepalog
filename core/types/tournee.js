@@ -192,6 +192,32 @@
 //     `tournee:<id>:envoyer` (le report validé — juste ou faux, pas refusé — ou « J'ai terminé »
 //     confirmé, ou « Enregistrer » en copie) et `tournee:<id>:reporter` (un arrêt laissé à quai, quand
 //     le quai existe). Ils partent juste avant la sauvegarde, par `api.signal` (voir entreprise.js).
+//
+// POINTS PAR ÉLÈVE (chantier MOTEUR-tournee-points-par-eleve, 18/10/2026, demande n° 6 du brief ENT-9.2) :
+// une séance tirée par élève donne à chacun SES quantités, comme `fiche.blocs(db)` (chantier D-1 bis) :
+//
+//   plan: { carte: CARTE, clients: POINTS_PLAN },        // identité et positions : FIXES (ids, x, y, nom, numéro)
+//   points: (db) => POINTS_PLAN.map((p) => ({ ...p, vides: videsDe(db, p.id) })),   // quantités, créneaux, zone : PAR ÉLÈVE
+//
+//     - La composition est fixe, les valeurs varient : `points(db)` rend LES MÊMES ids que sur la base vide (ceux
+//       du plan quand il y a une carte). Tout le reste du point (`vides`, `kg`, `colis`, `zone`, `creneau`…) peut
+//       dépendre de l'élève. La carte dessine le plan : des sites différents par élève sont un autre chantier.
+//     - Relue à chaque dessin (`html(etat, { db })`, `brancher` par `api.db`) et par le bilan, qui prend un second
+//       argument : `bilan(etat, db)`. Sans `db`, c'est la base vide (`bilan(etat)` des contenus qui ne tirent rien
+//       ne change pas) : une séance tirée passe `db` à son `VUE.bilan(etat, db)`, que ses jalons ont déjà.
+//       `amorcer(etat, db)` et `passerPhase(etat, n, db)` l'acceptent aussi ; ils ne lisent que les ids, qui ne
+//       dépendent pas de la base : la base n'y change rien.
+//     - Au chargement, `points` est appelé une fois sur une base vide `{}` : s'il plante ou ne rend pas un tableau
+//       de points ayant chacun un `id`, la séance ne se charge pas (« tournée « <id> » : « points(db) » ne marche
+//       pas sur une base vide : … »). Les contrôles d'`etatInitial` et des phases se font sur cette liste.
+//     - Au dessin, une fonction qui plante (ou qui rend d'autres sites que sur la base vide) est signalée une fois
+//       (`signaler`, passé par `creerTournee(T, { signaler })` ; sinon la console) et la vue montre un avis d'erreur
+//       à la place de la tournée (`[data-tournee-erreur]`) : rien ne se branche, rien n'est écrit dans la base.
+//       Dans le bilan, la même faute est signalée et le bilan se calcule sur la liste de la base vide : aucun
+//       jalon ne plante.
+//     - Jamais mémorisée, jamais d'écriture (même piège que `blocs(db)`) : évaluée une fois par bilan et une fois
+//       par dessin, une `map` sur quelques points.
+//     - Une liste fixe (`points: [...]`, ou ceux du plan) : rien ne change.
 
 import { ech } from '../ui.js';
 import { svgPlan, legendePlan, distanceKm } from './plan.js';
@@ -215,7 +241,7 @@ const aCreneau = (c) => !!c && (c.avant != null || c.apres != null);
 // Le créneau en étiquette (« Contraintes ») : sans ouverture, le texte d'avant, inchangé.
 const etiquetteCreneau = (c) => (c.apres == null ? `${c.nom} : avant ${hhmm(c.avant)}` : `${c.nom} : ${libelleCreneau(c)}`);
 
-export function creerTournee(T) {
+export function creerTournee(T, { signaler } = {}) {
   // Le plan est FACULTATIF. Une séance peut n'avoir qu'une contrainte de charge — ordonner
   // des arrêts et voir le plafond — sans aucune carte : c'est le cas de la plupart des
   // scénarios Simulog, où le transport n'est qu'une contrainte de plus et non le sujet.
@@ -230,13 +256,61 @@ export function creerTournee(T) {
   const PLAN = T.plan ? (T.plan.carte ? planDeCarte(T.plan) : T.plan) : null;
   const CARTE = PLAN && PLAN.carte ? carteTournee(PLAN) : null;
   const km1 = (a, b) => (CARTE ? kmCarte(PLAN, a, b) : distanceKm(PLAN, a, b));
-  const POINTS = T.points || (PLAN ? PLAN.points : []);
   const MESURES = T.mesures || [];
   const H = T.horaire || null;
   const REPORT = T.report || [];
-  const pointDe = (id) => POINTS.find((p) => String(p.id) === String(id));
   // L'identifiant de la tournée dans les gestes publiés (lot A, voir l'en-tête).
   const ID = String(T.id || 'tournee');
+  // ── Les points : une liste fixe, ou une fonction de la base de l'élève (voir l'en-tête) ───
+  const POINTS_FN = typeof T.points === 'function' ? T.points : null;
+  const POINTS_FIXES = POINTS_FN ? null : (T.points || (PLAN ? PLAN.points : []));
+  const contenuDe = (x) => (x === null ? 'null' : (Array.isArray(x) ? 'un tableau' : typeof x));
+  // `points(db)` évalué et contrôlé : un tableau de points ayant chacun un `id` (sinon une erreur qui le dit).
+  const evaluerPoints = (db) => {
+    const r = POINTS_FN(db || {});
+    if (!Array.isArray(r)) throw new Error(`« points(db) » rend ${contenuDe(r)} au lieu d’un tableau de points`);
+    r.forEach((p, i) => {
+      if (!p || typeof p !== 'object' || p.id == null) throw new Error(`« points(db) » rend un point sans « id » (le point n° ${i + 1})`);
+    });
+    return r;
+  };
+  // Contrôle au chargement : la fonction est essayée sur une base vide. C'est cette liste (`POINTS0`) que lisent
+  // les contrôles de création (phases, `etatInitial`) et les ids de la tournée, les mêmes pour tous.
+  let POINTS0 = POINTS_FIXES;
+  if (POINTS_FN) {
+    try { POINTS0 = evaluerPoints({}); } catch (x) {
+      throw new Error(`tournée « ${ID} » : « points(db) » ne marche pas sur une base vide : ${x && x.message ? x.message : x}`);
+    }
+  }
+  const IDS0 = POINTS0.map((p) => String(p.id));
+  const cleIds = (ids) => JSON.stringify([...ids].sort());
+  // La liste de CETTE base, dans l'ordre de la base vide (le numéro d'un client en dépend). Une liste fixe est rendue
+  // telle quelle. Lève une erreur si la fonction plante, ou si elle rend d'autres sites que sur la base vide.
+  function pointsBruts(db) {
+    if (!POINTS_FN) return POINTS_FIXES;
+    const r = evaluerPoints(db);
+    const ids = r.map((p) => String(p.id));
+    if (cleIds(ids) !== cleIds(IDS0)) {
+      throw new Error(`« points(db) » rend d’autres sites que sur une base vide (${ids.join(', ')} au lieu de ${IDS0.join(', ')})`);
+    }
+    return ids.every((id, i) => id === IDS0[i]) ? r : IDS0.map((id) => r.find((p) => String(p.id) === id));
+  }
+  // Repli sans plantage : la faute est signalée (une fois) et l'appelant décide (avis au dessin, base vide au bilan).
+  const dejaSignale = new Set();
+  const signalerPoints = (quoi, x) => {
+    if (signaler) { signaler(quoi, x); return; }
+    const cle = `${quoi}|${x && x.message ? x.message : x}`;
+    if (dejaSignale.has(cle)) return;
+    dejaSignale.add(cle);
+    console.error(`[tournee] ${quoi} : ${x && x.message ? x.message : x}`);
+  };
+  const pointsSurs = (db, quoi) => {
+    try { return pointsBruts(db); } catch (x) { signalerPoints(quoi, x); return null; }
+  };
+  const QUOI_DESSIN = `la tournée « ${ID} » ne se dessine pas`;
+  const QUOI_BILAN = `le bilan de la tournée « ${ID} » repart de la base vide`;
+  // Un point par son id, dans une liste évaluée (par défaut celle de la base vide : contrôles de création).
+  const pointDe = (id, L = POINTS0) => L.find((p) => String(p.id) === String(id));
   // ── Une mesure en PROFIL (lot A) : elle monte et descend le long de la tournée ─────────
   const estProfil = (m) => m.depart != null || m.depose != null || m.reprend != null;
   // Ce que porte un arrêt pour une mesure : « 60 kg » (un total), ou « 140 palettes à reprendre »,
@@ -265,8 +339,9 @@ export function creerTournee(T) {
   // Arrivé avant l'ouverture d'un client : on attend (défaut), ou c'est raté (voir l'en-tête).
   const ATTENTE = T.tropTot !== 'rate';
   // Une journée à fenêtres d'ouverture : la fiche du client sur la carte dit alors son créneau.
-  const FENETRES = POINTS.some((p) => p.creneau && p.creneau.apres != null)
-    || Object.values(T.phases || {}).some((c) => Object.values((c && c.creneaux) || {}).some((x) => x && x.apres != null));
+  // Lue sur la liste du dessin en cours (points par élève : les créneaux peuvent dépendre de la base).
+  const FENETRES_PHASES = Object.values(T.phases || {}).some((c) => Object.values((c && c.creneaux) || {}).some((x) => x && x.apres != null));
+  const fenetresDe = (L) => L.some((p) => p.creneau && p.creneau.apres != null) || FENETRES_PHASES;
   // Approche hors carte, pause, tournée sans quai (D-9, lot 2, voir l'en-tête).
   const APPROCHE = H && H.approche ? Object.assign({ vitesse: 90 }, H.approche) : null;
   const PAUSE = H && H.pause ? H.pause : null;
@@ -307,13 +382,13 @@ export function creerTournee(T) {
   const figeDe = (e) => !!optDe(e, 'fige') || (!!optDe(e, 'termine') && !!(e && e.termine));
   // Les points de la phase en cours : sans les annulés, avec les créneaux de la phase. Un point
   // dont le créneau a changé porte `creneauChange` (et `creneauLeve` s'il n'en a plus) : l'écran
-  // le repère. Les objets du contenu ne sont jamais modifiés.
-  const pointsDe = (e) => {
+  // le repère. Les objets du contenu ne sont jamais modifiés. `L` : la liste évaluée pour la base en cours.
+  const pointsDe = (e, L) => {
     const c = cfgPhase(e);
-    if (!c) return POINTS;
+    if (!c) return L;
     const an = annulesDe(e);
     const cr = c.creneaux || {};
-    return POINTS.filter((p) => !an.includes(String(p.id))).map((p) => {
+    return L.filter((p) => !an.includes(String(p.id))).map((p) => {
       if (!Object.prototype.hasOwnProperty.call(cr, String(p.id))) return p;
       const q = Object.assign({}, p, { creneauChange: true });
       if (cr[String(p.id)]) q.creneau = cr[String(p.id)];
@@ -323,10 +398,10 @@ export function creerTournee(T) {
   };
   // Le numéro du client, celui que portent la fiche de tournée, le mail du responsable et le
   // rond bleu de la carte. Il ne bouge jamais ; l'ordre de passage, lui, est la pastille verte.
-  const numeroDe = (id) => {
-    const p = pointDe(id);
+  const numeroDeL = (id, L) => {
+    const p = pointDe(id, L);
     if (p && p.numero != null) return p.numero;
-    const i = POINTS.findIndex((q) => String(q.id) === String(id));
+    const i = L.findIndex((q) => String(q.id) === String(id));
     return i < 0 ? '' : i + 1;
   };
 
@@ -445,7 +520,9 @@ export function creerTournee(T) {
   // droite si la limite est tenue — la comparaison qu'on lui demande de faire se fait d'un coup
   // d'œil. La carte et le récapitulatif, eux, se partagent le haut de la page.
   const DANS_GRILLE = !!T.contraintesDansGrille && !!GRILLE;
-  const lignesGrille = (etat) => (T.grille && T.grille.lignes ? T.grille.lignes(bilanDe(etat)) : []);
+  // Les lignes de la feuille : pour une base (`brancher`, relue à chaque recalcul) ou pour la liste du dessin en cours.
+  const lignesGrille = (etat, db) => (T.grille && T.grille.lignes ? T.grille.lignes(bilanDe(etat, db)) : []);
+  const lignesSur = (etat, L) => (T.grille && T.grille.lignes ? T.grille.lignes(bilanSur(etat, L)) : []);
 
   // ── D'où part l'élève : véhicule vide, ou véhicule plein ? ──────────────────────────────
   // Par défaut, tous les arrêts sont déjà chargés et l'élève retire ce qui ne passe pas.
@@ -459,14 +536,15 @@ export function creerTournee(T) {
   //
   // L'option reste déclarative : un scénario où le transporteur arrive déjà chargé et où le
   // travail consiste à retirer le surplus garde l'ancien comportement sans rien écrire.
+  // Les ids sont ceux de la base vide : avec des points par élève, ce sont les mêmes pour tous (voir l'en-tête).
   const vide = () => (T.departAQuai
-    ? { ordre: [], quai: POINTS.map((p) => String(p.id)), report: {}, juge: {}, valide: null }
-    : { ordre: POINTS.map((p) => String(p.id)), quai: [], report: {}, juge: {}, valide: null });
+    ? { ordre: [], quai: [...IDS0], report: {}, juge: {}, valide: null }
+    : { ordre: [...IDS0], quai: [], report: {}, juge: {}, valide: null });
 
   // ── L'état de départ d'une séance « à corriger » ─────────────────────────────────────────
   // Une erreur de contenu (un client inconnu, un client à la fois chargé et à quai) est une erreur
   // franche à la création, pas un trou qu'on découvrirait à l'écran — comme `creerCarte`.
-  const ids = POINTS.map((p) => String(p.id));
+  const ids = IDS0;
   if (T.etatInitial) {
     const I = T.etatInitial;
     const ordre = (I.ordre || []).map(String);
@@ -502,10 +580,16 @@ export function creerTournee(T) {
   /* ------------------------------------------------------------------ le calcul du bilan */
   // Tout se recalcule à partir de l'ordre courant, à chaque dessin. Rien n'est mémorisé :
   // une valeur mise en cache finirait par mentir après un déplacement.
-  function bilanDe(etat) {
+  // `db` : la base de l'élève (points par élève ; absente = base vide). Une fonction `points(db)` qui plante est
+  // signalée et le bilan se calcule sur la liste de la base vide : aucun jalon ne plante.
+  function bilanDe(etat, db) {
+    return bilanSur(etat, pointsSurs(db || {}, QUOI_BILAN) || POINTS0);
+  }
+  // Le bilan sur une liste déjà évaluée (`L`) : les objets de `retenus` sont ceux de cette liste.
+  function bilanSur(etat, L) {
     // Les points de la PHASE en cours : un client annulé n'est ni chargé ni à quai — il ne
     // compte nulle part, même si un état ancien le citait encore.
-    const PTS = pointsDe(etat);
+    const PTS = pointsDe(etat, L);
     const dePhase = (id) => PTS.find((p) => String(p.id) === String(id));
     const retenus = etat.ordre.map(dePhase).filter(Boolean);
     const ecartes = etat.quai.map(dePhase).filter(Boolean);
@@ -872,11 +956,22 @@ export function creerTournee(T) {
     signaux: [`tournee:${ID}:envoyer`].concat(QUAI ? [`tournee:${ID}:reporter`] : []),
 
     html(etat0, opts = {}) {
+      // Les points de CETTE base, évalués une fois pour tout le dessin (voir l'en-tête). Une fonction qui
+      // plante, ou qui rend d'autres sites : un avis à la place de la vue, et `brancher` ne branche rien.
+      const db = opts.db || {};
+      const L = pointsSurs(db, QUOI_DESSIN);
+      if (!L) {
+        return `<div class="ent-tete"><h2>${ech(T.titre || 'Tournée')}</h2></div>
+          <div class="avis avis-err" data-tournee-erreur>La tournée ne s’affiche pas (erreur de la séance) : signale-le à ton professeur.</div>`;
+      }
+      const numeroDe = (id) => numeroDeL(id, L);
+      const FENETRES = fenetresDe(L);
+      const lignesGrille = (etat) => lignesSur(etat, L);
       const etat = Object.assign(vide(), etat0 || {});
       sv = svDe(etat);
-      const b = bilanDe(etat);
+      const b = bilanSur(etat, L);
       // Ce que l'écran affiche est la journée de la phase en cours (créneaux compris).
-      const PTS = pointsDe(etat);
+      const PTS = pointsDe(etat, L);
       const pointDe = (id) => PTS.find((p) => String(p.id) === String(id));
       const annules = annulesDe(etat);
       const juge = etat.juge || {};
@@ -962,7 +1057,7 @@ export function creerTournee(T) {
       const lignesAnnulees = !annules.length ? '' : `<div class="tour-annules" data-tour-annules>
         <div class="ent-lbl">Commandes annulées (${annules.length})</div>
         <ul class="tour-liste tour-puces">${annules.map((id) => {
-          const p = POINTS.find((q) => String(q.id) === id);
+          const p = L.find((q) => String(q.id) === id);
           return !p ? '' : `<li class="tour-item tour-puce tour-puce-annule" data-annule="${ech(id)}">
             <span class="tour-texte"><span class="tour-nom"><s><span class="tour-num mono">${ech(numeroDe(id))} ·</span><strong>${ech(p.nom)}</strong></s></span>
             <span class="note">commande annulée : ne se charge plus</span></span></li>`;
@@ -1186,7 +1281,8 @@ export function creerTournee(T) {
     },
 
     // Exposé pour les jalons du contenu : `verifier(db)` recalcule le bilan sans dessiner.
-    bilan: bilanDe,
+    // `bilan(etat, db)` : avec des points par élève, la séance passe la base ; sans elle, la base vide.
+    bilan: (etat, db) => bilanDe(etat, db),
 
     // ── Installer la tournée de départ (séance « à corriger ») ──────────────────────────────
     // Appelé par l'hôte AVANT de dessiner. **Une seule fois** : l'état porte `amorce` (l'horodatage
@@ -1195,8 +1291,9 @@ export function creerTournee(T) {
     //
     // Un état qui porte DÉJÀ du travail (un arrêt chargé, un bout posé) mais pas de marque n'est
     // pas touché non plus : on pose seulement la marque. Rend vrai si quelque chose a changé, pour
-    // que l'hôte sauve.
-    amorcer(etat) {
+    // que l'hôte sauve. `db` (points par élève) est accepté et n'y change rien : l'amorce ne lit que les ids,
+    // les mêmes pour tous — elle n'a pas à dépendre d'une fonction `points(db)` qui pourrait planter.
+    amorcer(etat, db) {
       if (!T.etatInitial || !etat || etat.amorce) return false;
       const aTravaille = (etat.ordre && etat.ordre.length) || etat.depart || etat.arrivee;
       if (aTravaille) { etat.amorce = Date.now(); return true; }
@@ -1211,7 +1308,8 @@ export function creerTournee(T) {
     // retire les clients annulés de la tournée comme du quai, et note la tournée de départ de la
     // phase (celle que remet « Recommencer »). La correction en cours ne vaut plus rien : les
     // données ont changé sous les formules. Rend vrai si quelque chose a changé, pour que l'hôte sauve.
-    passerPhase(etat, n) {
+    // `db` (points par élève) : accepté, sans effet, comme pour `amorcer` (seuls les ids et les annulés comptent).
+    passerPhase(etat, n, db) {
       if (!PHASES[n] || !etat || numPhase(etat) >= n) return false;
       if (!etat.ordre) Object.assign(etat, vide());
       const copie = (x) => JSON.parse(JSON.stringify(x));
@@ -1227,6 +1325,10 @@ export function creerTournee(T) {
     },
 
     brancher(z, api) {
+      // Points par élève : le dessin a montré l'avis d'erreur. Rien ne se branche, rien n'est écrit dans la base.
+      if (z.querySelector('[data-tournee-erreur]')) return;
+      // La base de l'élève : relue par la feuille à chaque recalcul et par les refus (points par élève).
+      const db = api.db || {};
       const etat = api.etat;
       if (!etat.ordre) Object.assign(etat, vide());
       // Un geste publié (lot A) : dit à l'hôte juste avant la sauvegarde.
@@ -1253,7 +1355,7 @@ export function creerTournee(T) {
       z.querySelector('[data-tour-terminer]')?.addEventListener('click', () => {
         if (!terminerEtaitArme) { terminerArme = true; api.redessiner(); return; }
         // Sans quai : une tournée incomplète ne se termine pas.
-        const manque = texteAPlacer(bilanDe(etat));
+        const manque = texteAPlacer(bilanDe(etat, db));
         if (manque) {
           refusTermine = manque;
           api.redessiner();
@@ -1275,7 +1377,7 @@ export function creerTournee(T) {
       // aucun geste ne peut changer l'état, même un clic forcé sur un bouton qui n'existe plus.
       if (figeDe(etat)) {
         if (GRILLE) {
-          GRILLE.brancher(z, { etat: etat.grille || { cases: {}, juge: {} }, lignes: () => lignesGrille(etat), lectureSeule: true,
+          GRILLE.brancher(z, { etat: etat.grille || { cases: {}, juge: {} }, lignes: () => lignesGrille(etat, db), lectureSeule: true,
             sauver: () => {}, redessiner: api.redessiner, toast: api.toast });
         }
         return;
@@ -1417,7 +1519,7 @@ export function creerTournee(T) {
         if (!etat.grille) etat.grille = { cases: {}, juge: {}, valide: null };
         GRILLE.brancher(z, {
           etat: etat.grille,
-          lignes: () => lignesGrille(etat),
+          lignes: () => lignesGrille(etat, db),
           sauver: () => { api.sauver(); majEtapes(z, etat, api.db); },
           redessiner: api.redessiner,
           toast: api.toast,
@@ -1456,7 +1558,7 @@ export function creerTournee(T) {
           if (api.toast) api.toast('Résultats enregistrés.');
           return;
         }
-        const b = bilanDe(etat);
+        const b = bilanDe(etat, db);
         // Sans quai (D-9, lot 2) : tous les clients sont à servir, le report attend qu'ils soient placés.
         const manque = texteAPlacer(b);
         if (manque) {

@@ -163,7 +163,8 @@ export function creerEntreprise(U) {
   // La CARTE DES ITINÉRAIRES (13/10/2026, brief MOTEUR-carte-regionale) : d'un point A à un point B par plusieurs modes,
   // sur une carte réelle (`core/types/carte-itineraires.js`). On la consulte, rien n'y est noté ni rangé dans la base.
   const VITI = U.carteItineraires ? creerCarteItineraires(U.carteItineraires) : null;
-  const VTOUR = U.tournee ? creerTournee(Object.assign({ plan: U.plan }, U.tournee, COPIE ? { copie: true } : {})) : null;
+  // `signaler` : des points fonction de la base (`tournee.points(db)`, 18/10/2026) qui plantent au dessin ou au bilan.
+  const VTOUR = U.tournee ? creerTournee(Object.assign({ plan: U.plan }, U.tournee, COPIE ? { copie: true } : {}), { signaler }) : null;
   // L'écran « Inventaire » (02/10/2026, chantier E), sur le même principe : il n'existe que si
   // la séance déclare un `inventaire` — format dans `claude/prepalog-inventaire-format.md`.
   //
@@ -685,7 +686,7 @@ export function creerEntreprise(U) {
           if (!vrai) return;
           const g = (d.semer ? d.semer(prenom, db) : null) || {};
           (g.mails || []).forEach((m) => ajouterMail(Object.assign(m, { declenche: d.id })));
-          if (d.phaseTournee && VTOUR) VTOUR.passerPhase(etatTransport('tournee'), d.phaseTournee);
+          if (d.phaseTournee && VTOUR) VTOUR.passerPhase(etatTransport('tournee'), d.phaseTournee, db);
           // Même principe pour un quai « déjà réceptionné » (ENT-4.3) : le temps 2 s'ouvre avec le message.
           if (d.phaseQuai && VQUAI && VQUAI.passerPhase) VQUAI.passerPhase(etatQuai(), d.phaseQuai);
           // Et pour un planning : l'aléa s'applique, le planning de l'élève reste tel quel (« à reprendre »).
@@ -2357,7 +2358,7 @@ export function creerEntreprise(U) {
           : null;
         // Séance « à corriger » : la tournée du collègue est posée à la première ouverture, une
         // seule fois (voir `amorcer` dans tournee.js). Sans `etatInitial`, rien ne se passe.
-        if (!verrou && VTOUR.amorcer && VTOUR.amorcer(etatTransport('tournee'))) sauver();
+        if (!verrou && VTOUR.amorcer && VTOUR.amorcer(etatTransport('tournee'), db)) sauver();
         return VTOUR.html(etatTransport('tournee'), { verrou, db });
       }
 
