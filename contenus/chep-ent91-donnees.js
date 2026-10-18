@@ -225,69 +225,86 @@ export const dejaEnvoyee = (id) => (db) => fiche(db, id).deja;
 export function declaration(v, role) {
   return { type: v[champ('type', role)] || null, part: v[champ('part', role)] || null, qte: lireNombre(v[champ('qte', role)]) };
 }
-// Les lignes du relevé d'après SES déclarations : un document déclaré « mouvement » = une ligne (ordre des onglets). `sens` : 'entree'
-// pour une émission, 'sortie' pour un transfert ou un retour. Une erreur de type ne se paie qu'une fois : la grille lit ces lignes.
-export function lignesDeclarees(db) {
-  const J = jeuEleve(db), { v } = fiche(db, FICHES.decl);
-  return J.documents.map((d) => ({ doc: d, decl: declaration(v, d.role) }))
-    .filter((x) => x.decl.type && x.decl.type !== 'aucun')
-    .map((x) => ({ role: x.doc.role, lettre: x.doc.lettre, type: x.decl.type, part: x.decl.part, qte: x.decl.qte,
-      sens: x.decl.type === 'emission' ? 'entree' : 'sortie' }));
-}
 // Les adresses des cases du relevé : ligne 1 = en-tête, ligne 2 = S0 (D2), lignes 3… = ses lignes, dernière ligne = le solde (colonne D).
 export const ligneSolde = (nLignes) => nLignes + 3;
 export const caseSolde = (nLignes) => `D${ligneSolde(nLignes)}`;
 export const caseEntree = (i) => `B${i + 3}`;
 export const caseSortie = (i) => `C${i + 3}`;
-// Le solde attendu d'après SES lignes et S0 (règle « une erreur ne se paie qu'une fois »), ou null si une quantité est illisible.
-export function soldeDeclare(db) {
-  const L = lignesDeclarees(db), J = jeuEleve(db);
-  if (L.some((l) => !Number.isFinite(l.qte))) return null;
-  return solde({ depart: J.s0, emissions: L.filter((l) => l.sens === 'entree').map((l) => l.qte), transferts: L.filter((l) => l.sens === 'sortie').map((l) => l.qte) });
-}
 
 // ─────────────────────────────────────────────────────────────── ③ la grille du relevé (pure : lue aussi par les questions et le corrigé)
-// Un bloc CONSTANT (la feuille garde son état par objet), ses lignes calculées sur les déclarations de l'élève : ligne 1 l'en-tête, ligne 2
-// le solde de départ (donné), une ligne par document qu'IL a déclaré comme mouvement, dernière ligne le solde (formule). Dans chaque ligne :
-// la quantité dans la bonne colonne, 0 dans l'autre (une case à remplir ne reste pas vide, comme un compte).
+// LA FABRIQUE DU RELEVÉ (18/10/2026, pour ENT-9.4 : l'évaluation reprend ce relevé SANS AIDE, sur son propre jeu). Elle rend les lignes
+// déclarées, le solde déclaré, les lignes de la grille, le bloc grille (CONSTANT : la feuille garde son état par objet) et la lecture du solde.
+//   o = { jeuEleve(db), ficheDecl, ficheReleve, blocId, semaine: { debut, fin }, depart (« relevé au 11/01 »), titre,
+//         evaluation (vrai : ni colonne « Aide », ni note sous une ligne, ni « = » dans la case du solde) }
+// ENT-9.1 l'appelle avec ses valeurs : ses lignes, ses notes, son bloc et ses textes ne changent pas d'un caractère.
+// Un bloc CONSTANT, ses lignes calculées sur les déclarations de l'élève : ligne 1 l'en-tête, ligne 2 le solde de départ (donné), une ligne
+// par document qu'IL a déclaré comme mouvement, dernière ligne le solde (formule). Dans chaque ligne : la quantité dans la bonne colonne, 0
+// dans l'autre (une case à remplir ne reste pas vide, comme un compte).
 const saisie = (attendu, o = {}) => ({ saisie: true, attendu, placeholder: ' ', ...o });
 // Les aides, courtes : la colonne « Aide » est étroite (une ligne longue allonge toute la grille).
 const AIDE_SENS = { entree: 'Émission → Entrées (+), 0 en Sorties.', sortie: 'Transfert ou retour → Sorties (−), 0 en Entrées.' };
 const AIDE_GUIDAGE = 'Émission : entrée. Transfert, retour : sortie.';
 const TYPE_COURT = { emission: 'Émission', transfert: 'Transfert', retour: 'Retour' };
-export function lignesReleve(db) {
-  const J = jeuEleve(db), L = lignesDeclarees(db);
-  const accompagne = niveauEleve(db) === 'accompagne';
-  const refsB = L.map((_, i) => caseEntree(i)), refsC = L.map((_, i) => caseSortie(i));
-  // L'attendu du solde se calcule sur LA FEUILLE DE L'ÉLÈVE (ses cases, même fausses) : une erreur ne se paie qu'une fois.
-  const attenduSolde = (lire) => {
-    const vals = [...refsB, ...refsC].map(lire);
-    if (vals.some((x) => x == null || !Number.isFinite(x))) return null;
-    return J.s0 + refsB.reduce((s, r) => s + lire(r), 0) - refsC.reduce((s, r) => s + lire(r), 0);
-  };
-  return [
-    { A: '', B: 'Entrées (+)', C: 'Sorties (−)', D: 'Solde', entete: true },
-    { A: `Solde au ${date(SEMAINE.debut)}`, B: '', C: '', D: J.s0, note: 'Donné (relevé au 11/01).' },
-    ...L.map((l) => {
-      const q = Number.isFinite(l.qte) ? l.qte : 0;
-      return { A: `Doc. ${l.lettre} — ${TYPE_COURT[l.type] || libType(l.type)} — ${libPartenaireCourt(l.part) || '?'} — ${Number.isFinite(l.qte) ? l.qte : '?'}`,
-        B: saisie(l.sens === 'entree' ? q : 0), C: saisie(l.sens === 'sortie' ? q : 0), note: accompagne ? AIDE_SENS[l.sens] : AIDE_GUIDAGE };
-    }),
-    { A: `Solde au ${date(SEMAINE.fin)}`, B: '', C: '', D: saisie(attenduSolde, { formule: true, placeholder: '=' }),
-      note: L.length ? 'Formule : D2 + entrées − sorties.' : 'Aucune ligne : le solde ne bouge pas (= D2).' },
-  ];
+export function fabriqueReleve({ jeuEleve: jeuDeLaBase, ficheDecl, ficheReleve, blocId, semaine, depart, titre, evaluation = false }) {
+  // Les lignes du relevé d'après SES déclarations : un document déclaré « mouvement » = une ligne (ordre des onglets). `sens` : 'entree'
+  // pour une émission, 'sortie' pour un transfert ou un retour. Une erreur de type ne se paie qu'une fois : la grille lit ces lignes.
+  function lignesDeclarees(db) {
+    const J = jeuDeLaBase(db), { v } = fiche(db, ficheDecl);
+    return J.documents.map((d) => ({ doc: d, decl: declaration(v, d.role) }))
+      .filter((x) => x.decl.type && x.decl.type !== 'aucun')
+      .map((x) => ({ role: x.doc.role, lettre: x.doc.lettre, type: x.decl.type, part: x.decl.part, qte: x.decl.qte,
+        sens: x.decl.type === 'emission' ? 'entree' : 'sortie' }));
+  }
+  // Le solde attendu d'après SES lignes et S0 (règle « une erreur ne se paie qu'une fois »), ou null si une quantité est illisible.
+  function soldeDeclare(db) {
+    const L = lignesDeclarees(db), J = jeuDeLaBase(db);
+    if (L.some((l) => !Number.isFinite(l.qte))) return null;
+    return solde({ depart: J.s0, emissions: L.filter((l) => l.sens === 'entree').map((l) => l.qte), transferts: L.filter((l) => l.sens === 'sortie').map((l) => l.qte) });
+  }
+  function lignesReleve(db) {
+    const J = jeuDeLaBase(db), L = lignesDeclarees(db);
+    const accompagne = !evaluation && niveauEleve(db) === 'accompagne';
+    const refsB = L.map((_, i) => caseEntree(i)), refsC = L.map((_, i) => caseSortie(i));
+    // L'attendu du solde se calcule sur LA FEUILLE DE L'ÉLÈVE (ses cases, même fausses) : une erreur ne se paie qu'une fois.
+    const attenduSolde = (lire) => {
+      const vals = [...refsB, ...refsC].map(lire);
+      if (vals.some((x) => x == null || !Number.isFinite(x))) return null;
+      return J.s0 + refsB.reduce((s, r) => s + lire(r), 0) - refsC.reduce((s, r) => s + lire(r), 0);
+    };
+    const note = (texte) => (evaluation ? {} : { note: texte });
+    return [
+      { A: '', B: 'Entrées (+)', C: 'Sorties (−)', D: 'Solde', entete: true },
+      { A: `Solde au ${date(semaine.debut)}`, B: '', C: '', D: J.s0, ...note(`Donné (${depart}).`) },
+      ...L.map((l) => {
+        const q = Number.isFinite(l.qte) ? l.qte : 0;
+        return { A: `Doc. ${l.lettre} — ${TYPE_COURT[l.type] || libType(l.type)} — ${libPartenaireCourt(l.part) || '?'} — ${Number.isFinite(l.qte) ? l.qte : '?'}`,
+          B: saisie(l.sens === 'entree' ? q : 0), C: saisie(l.sens === 'sortie' ? q : 0), ...note(accompagne ? AIDE_SENS[l.sens] : AIDE_GUIDAGE) };
+      }),
+      { A: `Solde au ${date(semaine.fin)}`, B: '', C: '', D: saisie(attenduSolde, evaluation ? { formule: true } : { formule: true, placeholder: '=' }),
+        ...note(L.length ? 'Formule : D2 + entrées − sorties.' : 'Aucune ligne : le solde ne bouge pas (= D2).') },
+    ];
+  }
+  const BLOC = { type: 'grille', id: blocId, titre, lignes: lignesReleve, manque: 'des cases du relevé ({n})',
+    feuille: evaluation
+      ? { titre: 'Relevé du compte', colonnes: ['A', 'B', 'C', 'D'], decimales: 0, donneesGrisees: true, largeurs: { A: '46%', B: '15%', C: '15%', D: '15%' } }
+      : { titre: 'Relevé du compte', colonnes: ['A', 'B', 'C', 'D'], decimales: 0, colonneAide: 'Aide', donneesGrisees: true,
+        largeurs: { A: '36%', B: '12%', C: '12%', D: '12%', aide: 'auto' } } };
+  // Le solde de l'élève, lu dans sa feuille par `lireFeuille` (donnée par l'appelant : ce fichier n'importe pas le moteur) : la valeur de sa
+  // case du solde (une formule calculée, ou un nombre tapé), ou null.
+  function soldeDeLaFeuille(lireFeuille, db) {
+    const n = lignesDeclarees(db).length;
+    const F = lireFeuille(ficheReleve, BLOC, db);
+    const v = F.valeur(caseSolde(n));
+    if (Number.isFinite(v)) return v;
+    const b = lireNombre(F.brut(caseSolde(n)));
+    return Number.isFinite(b) ? b : null;
+  }
+  return { lignesDeclarees, soldeDeclare, lignesReleve, BLOC, soldeDeLaFeuille };
 }
-export const BLOC_RELEVE = { type: 'grille', id: BLOC_COMPTE, titre: 'Mets chaque quantité dans la bonne colonne (0 dans l’autre), puis écris la formule du solde',
-  lignes: lignesReleve, manque: 'des cases du relevé ({n})',
-  feuille: { titre: 'Relevé du compte', colonnes: ['A', 'B', 'C', 'D'], decimales: 0, colonneAide: 'Aide', donneesGrisees: true,
-    largeurs: { A: '36%', B: '12%', C: '12%', D: '12%', aide: 'auto' } } };
-// Le solde de l'élève, lu dans sa feuille par `lireFeuille` (donnée par l'appelant : ce fichier n'importe pas le moteur) : la valeur de sa case
-// du solde (une formule calculée, ou un nombre tapé), ou null.
-export function soldeDeLaFeuille(lireFeuille, db) {
-  const n = lignesDeclarees(db).length;
-  const F = lireFeuille(FICHES.releve, BLOC_RELEVE, db);
-  const v = F.valeur(caseSolde(n));
-  if (Number.isFinite(v)) return v;
-  const b = lireNombre(F.brut(caseSolde(n)));
-  return Number.isFinite(b) ? b : null;
-}
+const RELEVE_91 = fabriqueReleve({ jeuEleve, ficheDecl: FICHES.decl, ficheReleve: FICHES.releve, blocId: BLOC_COMPTE, semaine: SEMAINE,
+  depart: 'relevé au 11/01', titre: 'Mets chaque quantité dans la bonne colonne (0 dans l’autre), puis écris la formule du solde' });
+export const lignesDeclarees = RELEVE_91.lignesDeclarees;
+export const soldeDeclare = RELEVE_91.soldeDeclare;
+export const lignesReleve = RELEVE_91.lignesReleve;
+export const BLOC_RELEVE = RELEVE_91.BLOC;
+export const soldeDeLaFeuille = RELEVE_91.soldeDeLaFeuille;

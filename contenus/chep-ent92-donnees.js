@@ -144,23 +144,28 @@ export function comptesDe(piles) {
 }
 
 /* ================================================================== la tournée de ramasse (déclaration de la vue, partagée) */
-const libHoraire = ([a, b]) => `de ${Math.floor(a / 60)} h à ${Math.floor(b / 60)} h`;
+// « 9 h », « 9 h 30 » : une heure ronde s'écrit sans minutes (ENT-9.2 n'a que des heures rondes ; ENT-9.4 a « 9 h 30 »).
+export const heureDite = (m) => (m % 60 ? `${Math.floor(m / 60)} h ${String(m % 60).padStart(2, '0')}` : `${Math.floor(m / 60)} h`);
+export const libHoraire = ([a, b]) => `de ${heureDite(a)} à ${heureDite(b)}`;
 export const horaireDit = (id) => libHoraire(SITES[id].horaire);
 // Les points de la tournée : ceux de la carte (positions, rues), avec le nom typographique de l'univers et le créneau. Le quartier est
 // retiré : la ligne du point dit l'horaire des vides (sinon la carte y met le nom du quartier). Les VIDES n'y sont pas : ils sont ceux de
 // l'élève (`pointsDe`, `tournee.points(db)`) ; la carte se dessine depuis cette liste sans lire les quantités.
-export const POINTS = CARTE.clients.filter((c) => IDS_TOURNEE.includes(c.id)).map((c) => ({
-  ...c, quartier: null, nom: nomSite(c.id),
-  zone: SITES[c.id].ville,
-  creneau: { apres: SITES[c.id].horaire[0], avant: SITES[c.id].horaire[1], libelle: `enlèvement des vides ${horaireDit(c.id)}` },
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : les points de la carte pour des sites et leurs horaires (`sites[id] = { dist, ville, horaire }`).
+export const pointsCarte = (sites, ids) => CARTE.clients.filter((c) => ids.includes(c.id)).map((c) => ({
+  ...c, quartier: null, nom: DISTRIBUTEURS[sites[c.id].dist].nom,
+  zone: sites[c.id].ville,
+  creneau: { apres: sites[c.id].horaire[0], avant: sites[c.id].horaire[1], libelle: `enlèvement des vides ${libHoraire(sites[c.id].horaire)}` },
 }));
+export const POINTS = pointsCarte(SITES, IDS_TOURNEE);
 // Les points avec les vides d'un tirage : mêmes sites pour tous, valeurs de l'élève.
 export const pointsDe = (vides) => POINTS.map((p) => ({ ...p, vides: vides[p.id] }));
 export const HORAIRE = { depart: h(6), vitesse: 55, service: { base: 20, parColis: 0.05, champ: 'vides', unite: 'palette' } };
-export const TOURNEE_BASE = {
-  id: TOURNEE_ID,
-  plan: { carte: CARTE, clients: POINTS },
-  points: (db) => pointsDe(videsDeBase(db)),   // relue dans la base de l'élève à chaque dessin et par le bilan (moteur du 18/10/2026)
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : la déclaration de la tournée de ramasse (`id`, les points de la carte, `points(db)`).
+export const tourneeChep = ({ id, clients, points }) => ({
+  id,
+  plan: { carte: CARTE, clients },
+  points,   // relue dans la base de l'élève à chaque dessin et par le bilan (moteur du 18/10/2026)
   mesures: [{ id: 'vides', libelle: 'Palettes vides à bord', unite: 'palettes', max: CAPACITE, depart: 0, reprend: 'vides',
     libelleDepasse: 'Le camion ne peut pas tout prendre' }],
   // `libelleRate` (18/10/2026) : un quai atteint après son heure d'enlèvement est « fermé », jamais « raté de N min ».
@@ -168,7 +173,8 @@ export const TOURNEE_BASE = {
   quai: { libelle: 'Reporter à vendredi', titre: 'Reportés à la tournée de vendredi', reprendre: 'remettre dans la tournée',
     vide: 'Aucun : les quatre sites sont dans la tournée.', max: 1 },
   departAQuai: true,
-};
+});
+export const TOURNEE_BASE = tourneeChep({ id: TOURNEE_ID, clients: POINTS, points: (db) => pointsDe(videsDeBase(db)) });
 // La vue elle-même, pour les jalons, le contrôle d'équité, le corrigé et les tests : son bilan, pas un calcul parallèle.
 // ⚠ INSTANCE DE CALCUL : sa « base » n'est qu'un petit objet `{ vides }` (les quatre quantités), pas la base d'un élève. Elle ne peut pas
 // utiliser `TOURNEE_BASE.points` : celle-ci tire un jeu (`jeuDeBase` → `verifier` → `ordresDe` → cette instance) et la vue appelle
@@ -176,44 +182,55 @@ export const TOURNEE_BASE = {
 const VUE = creerTournee({ ...TOURNEE_BASE, points: (calc) => pointsDe((calc && calc.vides) || MEDIANES) });
 const videsDeBase = (db) => jeuDeBase(db || {}).vides;
 export const bilanTournee = (etat, db) => VUE.bilan(etat, { vides: videsDeBase(db) });
-const etatDe = (ordre) => ({ ordre: ordre.map(String), quai: IDS_TOURNEE.filter((x) => !ordre.includes(x)), report: {}, juge: {}, valide: null });
-export const bilanOrdre = (ordre, vides) => VUE.bilan(etatDe(ordre), { vides });
 export const tientHoraires = (b) => !b.creneaux.some((c) => c.charge && c.trop === 'tard');
 const permutations = (L) => (L.length <= 1 ? [L] : L.flatMap((x, i) => permutations([...L.slice(0, i), ...L.slice(i + 1)]).map((p) => [x, ...p])));
-// Pour une pièce : les six ordres des trois sites restants, chacun avec ses km et s'il tient les horaires ; l'ordre au plus court.
-const memo = new Map();
-// Le jeu fournit la pièce `dernier` et les quatre quantités (mémo par pièce + quantités : trois valeurs par site, 324 combinaisons au plus).
-const cleVides = (vides) => IDS_TOURNEE.map((id) => vides[id]).join(',');
-export function ordresDe(jeu) {
-  const cle = `${jeu.dernier}|${cleVides(jeu.vides)}`;
-  if (memo.has(cle)) return memo.get(cle);
-  const P = pieceDernier(jeu.dernier);
-  const reste = IDS_TOURNEE.filter((x) => x !== P.site);
-  const ordres = permutations(reste).map((o) => { const b = bilanOrdre(o, jeu.vides); return { ordre: o, km: b.km, tient: tientHoraires(b), pic: b.pics.vides }; });
-  const court = ordres.slice().sort((x, y) => x.km - y.km)[0];
-  const r = { reste, ordres, court, justes: ordres.filter((o) => o.tient), total: reste.reduce((t, id) => t + jeu.vides[id], 0) };
-  memo.set(cle, r);
-  return r;
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : le calcul de la ramasse sur une instance de la vue (`vue`, base de calcul `{ vides }`),
+// pour les sites `ids` de la tournée et la banque `dernier` (`banque`, une pièce par site). Rend :
+//   bilanOrdre(ordre, vides)  le bilan de la vue pour cet ordre (les autres sites à quai) ;
+//   ordresDe(jeu)             pour la pièce `jeu.dernier` : les six ordres des trois sites restants (km, horaires tenus, pic), l'ordre au plus court ;
+//   equiteBanque(vides)       le contrôle d'équité pour CES quantités (mémo par quantités) : les quatre sites ne tiennent pas dans un camion,
+//                             l'ordre au plus court rate les horaires dans au moins deux pièces sur quatre, chaque pièce garde un ordre qui tient.
+export function fabriqueRamasse({ vue, ids, banque, capacite }) {
+  const piece = (id) => banque.find((p) => p.id === id) || null;
+  const etatDe = (ordre) => ({ ordre: ordre.map(String), quai: ids.filter((x) => !ordre.includes(x)), report: {}, juge: {}, valide: null });
+  const bilanOrdre = (ordre, vides) => vue.bilan(etatDe(ordre), { vides });
+  // Le jeu fournit la pièce `dernier` et les quatre quantités (mémo par pièce + quantités).
+  const memo = new Map();
+  const cleVides = (vides) => ids.map((id) => vides[id]).join(',');
+  function ordresDe(jeu) {
+    const cle = `${jeu.dernier}|${cleVides(jeu.vides)}`;
+    if (memo.has(cle)) return memo.get(cle);
+    const P = piece(jeu.dernier);
+    const reste = ids.filter((x) => x !== P.site);
+    const ordres = permutations(reste).map((o) => { const b = bilanOrdre(o, jeu.vides); return { ordre: o, km: b.km, tient: tientHoraires(b), pic: b.pics.vides }; });
+    const court = ordres.slice().sort((x, y) => x.km - y.km)[0];
+    const r = { reste, ordres, court, justes: ordres.filter((o) => o.tient), total: reste.reduce((t, id) => t + jeu.vides[id], 0) };
+    memo.set(cle, r);
+    return r;
+  }
+  const ecartsBanque = new Map();
+  function equiteBanque(vides) {
+    const cle = cleVides(vides);
+    if (ecartsBanque.has(cle)) return ecartsBanque.get(cle);
+    const E = [];
+    const tous = ids.reduce((t, id) => t + vides[id], 0);
+    if (!(tous > capacite)) E.push(`les quatre sites (${tous}) tiennent dans un camion : rien à reporter`);
+    const O = banque.map((p) => ordresDe({ dernier: p.id, vides }));
+    const rates = O.filter((o) => !o.court.tient).length;
+    if (rates < 2) E.push(`l’ordre au plus court tient les horaires dans ${4 - rates} pièces sur 4 : les horaires ne servent à rien`);
+    banque.forEach((p, k) => { if (!O[k].justes.length) E.push(`${p.id} : aucun ordre ne tient les horaires`); });
+    if (new Set(banque.map((p) => p.site)).size !== 4) E.push('la banque « dernier » ne couvre pas les quatre plates-formes');
+    ecartsBanque.set(cle, E);
+    return E;
+  }
+  return { bilanOrdre, ordresDe, equiteBanque };
 }
+const RAMASSE_92 = fabriqueRamasse({ vue: VUE, ids: IDS_TOURNEE, banque: BANQUE_DERNIER, capacite: CAPACITE });
+export const bilanOrdre = RAMASSE_92.bilanOrdre;
+export const ordresDe = RAMASSE_92.ordresDe;
 
 /* ================================================================== le contrôle d'équité (§6.2 et §6.3) */
-// Pour CES quantités (mémo par quantités) : les quatre sites ne tiennent pas dans un camion, l'ordre au plus court rate les horaires dans
-// au moins deux pièces sur quatre, et chaque pièce garde au moins un ordre qui tient.
-const ecartsBanque = new Map();
-export function equiteBanque(vides) {
-  const cle = cleVides(vides);
-  if (ecartsBanque.has(cle)) return ecartsBanque.get(cle);
-  const E = [];
-  const tous = IDS_TOURNEE.reduce((t, id) => t + vides[id], 0);
-  if (!(tous > CAPACITE)) E.push(`les quatre sites (${tous}) tiennent dans un camion : rien à reporter`);
-  const O = BANQUE_DERNIER.map((p) => ordresDe({ dernier: p.id, vides }));
-  const rates = O.filter((o) => !o.court.tient).length;
-  if (rates < 2) E.push(`l’ordre au plus court tient les horaires dans ${4 - rates} pièces sur 4 : les horaires ne servent à rien`);
-  BANQUE_DERNIER.forEach((p, k) => { if (!O[k].justes.length) E.push(`${p.id} : aucun ordre ne tient les horaires`); });
-  if (new Set(BANQUE_DERNIER.map((p) => p.site)).size !== 4) E.push('la banque « dernier » ne couvre pas les quatre plates-formes');
-  ecartsBanque.set(cle, E);
-  return E;
-}
+export const equiteBanque = RAMASSE_92.equiteBanque;
 export function verifier(jeu) {
   const vo = jeu && jeu.vides;
   const E = [];
@@ -280,8 +297,10 @@ export const etatQuai = (db) => (db && db.quais && db.quais[QUAI_ID]) || null;
 export const quaiClos = (db) => !!(etatQuai(db) && etatQuai(db).fini);
 // Ce que l'élève a constaté sur une pile : son compte, sa décision, et pour chaque motif coché sa quantité (0 si le motif n'est pas
 // coché ; une valeur qui n'est pas un nombre compte 0 : il n'a rien chiffré).
-export function constats(db, pid) {
-  const s = (etatQuai(db) && etatQuai(db).palettes && etatQuai(db).palettes[pid]) || {};
+export const constats = (db, pid) => constatsDe(etatQuai(db), pid);
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : la même lecture sur l'état d'un quai quelconque (`db.quais[<id>]`, ou null).
+export function constatsDe(e, pid) {
+  const s = (e && e.palettes && e.palettes[pid]) || {};
   const q = (m) => { const v = s.motif === m ? s.res : s.motif2 === m ? s.res2 : null; if (v == null) return null; const n = lireNombre(v); return Number.isFinite(n) ? n : 0; };
   const motifs = [s.motif, s.motif2].filter((m) => m && m !== 'aucun');
   return { valide: !!s.valide, compte: Number.isFinite(s.compte) ? s.compte : null, decision: s.decision || '', motifs,
@@ -289,9 +308,11 @@ export function constats(db, pid) {
 }
 // Le crédit attendu D'APRÈS SON CONTRÔLE (règle « une erreur ne se paie qu'une fois ») : pour chaque pile de son quai, son compte moins
 // ses palettes d'un autre pool ; hors pool = ses palettes d'un autre pool ; réparation = ses palettes abîmées.
-export function creditDeSonControle(db) {
-  return pilesDeBase(db).reduce((t, p) => {
-    const c = constats(db, p.id);
+export const creditDeSonControle = (db) => creditDe(pilesDeBase(db), etatQuai(db));
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : le même calcul pour des piles et l'état d'un quai quelconque.
+export function creditDe(piles, e) {
+  return piles.reduce((t, p) => {
+    const c = constatsDe(e, p.id);
     return { aCrediter: t.aCrediter + (c.compte || 0) - (c.produit || 0), horsPool: t.horsPool + (c.produit || 0), reparation: t.reparation + (c.avarie || 0) };
   }, { aCrediter: 0, horsPool: 0, reparation: 0 });
 }

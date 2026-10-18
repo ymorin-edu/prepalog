@@ -28,13 +28,17 @@ export { ID, SCENARIO, TIRAGE, BLOC_RELEVE, lignesReleve } from './chep-ent91-do
 
 // ─────────────────────────────────────────────────────────────── les documents
 // Un document de l'élève, à sa place (A à G) : rendu par le gabarit de son genre. `(db) => html`.
-function documentHtml(d) {
-  if (!d) return '<article class="ch-doc"><p class="ch-st">Pas de document à cette place.</p></article>';
-  if (d.genre === 'emission') return docBonEmission({ numero: d.numero, iso: d.iso, client: CLIENT, qte: d.qte, camion: 'tournée du matin' });
-  if (d.genre === 'retour') return docBonRetour({ numero: d.numero, iso: d.iso, client: CLIENT, qte: d.qte, motif: 'surplus de campagne, palettes vides' });
-  if (d.genre === 'commande') return docCommande({ numero: d.numero, iso: d.iso, client: CLIENT, qte: d.qte, livraisonIso: d.livraison });
-  return docBordereau({ numero: d.numero, iso: d.iso, de: CLIENT, a: DISTRIBUTEURS[d.a], lignes: d.lignes, supports: d.supports, duplicata: !!d.duplicata });
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : le rendu d'un document du jeu pour un client émetteur donné.
+export function documentChep(client) {
+  return (d) => {
+    if (!d) return '<article class="ch-doc"><p class="ch-st">Pas de document à cette place.</p></article>';
+    if (d.genre === 'emission') return docBonEmission({ numero: d.numero, iso: d.iso, client, qte: d.qte, camion: 'tournée du matin' });
+    if (d.genre === 'retour') return docBonRetour({ numero: d.numero, iso: d.iso, client, qte: d.qte, motif: 'surplus de campagne, palettes vides' });
+    if (d.genre === 'commande') return docCommande({ numero: d.numero, iso: d.iso, client, qte: d.qte, livraisonIso: d.livraison });
+    return docBordereau({ numero: d.numero, iso: d.iso, de: client, a: DISTRIBUTEURS[d.a], lignes: d.lignes, supports: d.supports, duplicata: !!d.duplicata });
+  };
 }
+const documentHtml = documentChep(CLIENT);
 const LETTRES = ['a', 'b', 'c', 'd', 'e', 'f', 'g'];
 export const DOCUMENTS = [
   ...LETTRES.map((l, i) => ({ id: `doc-${l}`, titre: `Document ${l.toUpperCase()}`, court: `Document ${l.toUpperCase()}`,
@@ -48,47 +52,65 @@ export { STYLE_DOCUMENTS };
 export const docsDe = (db) => jeuEleve(db).documents.map((d) => d.id);
 
 // ─────────────────────────────────────────────────────────────── ② la fiche « déclarations à valider » (portail clients)
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : la fiche des déclarations d'un client émetteur, sur le jeu de l'élève.
+//   o = { id, client, documents(db), jeuEleve(db), finSemaine (iso), partenaires, sousTitre, envoi,
+//         evaluation (vrai : ni l'encadré « Pour déclarer », ni l'aide de l'accompagné) }
 const AIDE_ACCOMPAGNE = 'Regarde le cadre « Supports de charge » du document : combien de palettes CHEP ?';
-export const FICHE_DECL = {
-  id: FICHES.decl, libelle: 'Portail — déclarations', titre: `Portail clients CHEP — déclarations à valider — compte ${CLIENT.compte}`,
+export function ficheDeclChep({ id, client, documents, jeuEleve: jeuDeLaBase, finSemaine, partenaires, sousTitre, envoi, evaluation = false }) {
+  return {
+    id, libelle: 'Portail — déclarations', titre: `Portail clients CHEP — déclarations à valider — compte ${client.compte}`,
+    sousTitre,
+    documents,
+    largeurDocs: 0.9,
+    serree: true,
+    defile: true,   // cinq à sept cadres : la fiche défile dans sa colonne, le bouton d'envoi reste visible (comme ENT-7.1)
+    bouton: 'Ouvrir le portail — déclarations',
+    blocs: (db) => {
+      const J = jeuDeLaBase(db);
+      const accompagne = !evaluation && niveauEleve(db) === 'accompagne';
+      return [
+        ...(evaluation ? [] : [{ type: 'encadre', titre: 'Pour déclarer', texte: 'Seules les palettes CHEP se déclarent.\nUne palette Europe ou d’un autre pool ne passe pas sur le compte.\n'
+          + `Une commande ou un document daté après le ${date(finSemaine, { annee: true })} n’est pas encore un mouvement.` }]),
+        ...J.documents.map((d) => ({ type: 'cadre', titre: `Document ${d.lettre}`, blocs: [
+          { type: 'liste', id: champ('type', d.role), lib: 'Mouvement de palettes CHEP', vide: 'Choisir…', choix: TYPES, manque: `le mouvement du document ${d.lettre}` },
+          { type: 'liste', id: champ('part', d.role), lib: 'Partenaire', vide: 'Choisir…', choix: partenaires, manque: `le partenaire du document ${d.lettre}` },
+          { type: 'nombre', id: champ('qte', d.role), lib: 'Palettes CHEP', unite: 'palettes', min: 0, entier: true, manque: `les palettes CHEP du document ${d.lettre}`,
+            ...(accompagne ? { consigne: AIDE_ACCOMPAGNE } : {}) },
+        ] })),
+      ];
+    },
+    envoi,
+  };
+}
+export const FICHE_DECL = ficheDeclChep({ id: FICHES.decl, client: CLIENT, documents: docsDe, jeuEleve, finSemaine: SEMAINE.fin, partenaires: PARTENAIRES,
   sousTitre: 'Les documents de la semaine à gauche, un cadre par document à droite. C’est Hélène Caron qui validera.',
-  documents: docsDe,
-  largeurDocs: 0.9,
-  serree: true,
-  defile: true,   // cinq à sept cadres : la fiche défile dans sa colonne, le bouton d'envoi reste visible (comme ENT-7.1)
-  bouton: 'Ouvrir le portail — déclarations',
-  blocs: (db) => {
-    const J = jeuEleve(db);
-    const accompagne = niveauEleve(db) === 'accompagne';
-    return [
-      { type: 'encadre', titre: 'Pour déclarer', texte: 'Seules les palettes CHEP se déclarent.\nUne palette Europe ou d’un autre pool ne passe pas sur le compte.\n'
-        + `Une commande ou un document daté après le ${date(SEMAINE.fin, { annee: true })} n’est pas encore un mouvement.` },
-      ...J.documents.map((d) => ({ type: 'cadre', titre: `Document ${d.lettre}`, blocs: [
-        { type: 'liste', id: champ('type', d.role), lib: 'Mouvement de palettes CHEP', vide: 'Choisir…', choix: TYPES, manque: `le mouvement du document ${d.lettre}` },
-        { type: 'liste', id: champ('part', d.role), lib: 'Partenaire', vide: 'Choisir…', choix: PARTENAIRES, manque: `le partenaire du document ${d.lettre}` },
-        { type: 'nombre', id: champ('qte', d.role), lib: 'Palettes CHEP', unite: 'palettes', min: 0, entier: true, manque: `les palettes CHEP du document ${d.lettre}`,
-          ...(accompagne ? { consigne: AIDE_ACCOMPAGNE } : {}) },
-      ] })),
-    ];
-  },
-  envoi: { bouton: 'Préparer les déclarations pour Hélène', a: 'Hélène Caron', suite: 'Sandrine t’écrit dans la Messagerie.' },
-};
+  envoi: { bouton: 'Préparer les déclarations pour Hélène', a: 'Hélène Caron', suite: 'Sandrine t’écrit dans la Messagerie.' } });
 
 // ─────────────────────────────────────────────────────────────── ③ le relevé du compte (bloc grille, lignes = SES déclarations)
 // La grille (`BLOC_RELEVE`, `lignesReleve`) est dans les données pures : les questions au fil et le corrigé la lisent aussi.
-export const FICHE_RELEVE = {
-  id: FICHES.releve, libelle: 'Portail — relevé du compte', titre: `Relevé du compte ${CLIENT.compte} — semaine du 11 au 15/01/2027`,
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : la fiche du relevé, autour du bloc grille de `fabriqueReleve` (chep-ent91-donnees.js).
+//   o = { id, client, semaineDite (« 11 au 15/01/2027 »), sousTitre, documents, quand(db), bloc, envoi }
+export function ficheReleveChep({ id, client, semaineDite, sousTitre, documents, quand, bloc, envoi }) {
+  return {
+    id, libelle: 'Portail — relevé du compte', titre: `Relevé du compte ${client.compte} — semaine du ${semaineDite}`,
+    sousTitre,
+    documents,
+    largeurDocs: 0.6,   // la grille a besoin de place : le relevé de départ et les conditions se lisent dans une colonne plus étroite
+    serree: true,
+    bouton: 'Ouvrir le relevé du compte',
+    quand,
+    blocs: [bloc],
+    defile: true,   // jusqu'à sept lignes (un confirmé qui déclare tout) : la fiche défile dans sa colonne, le bouton d'envoi reste visible
+    envoi,
+  };
+}
+export const FICHE_RELEVE = ficheReleveChep({ id: FICHES.releve, client: CLIENT, semaineDite: '11 au 15/01/2027',
   sousTitre: 'Une ligne par mouvement que tu as déclaré. Dernière ligne : tape « = » puis clique sur les cases.',
   documents: ['releve-11', 'conditions'],
-  largeurDocs: 0.6,   // la grille a besoin de place : le relevé au 11/01 et les conditions se lisent dans une colonne plus étroite
-  serree: true,
-  bouton: 'Ouvrir le relevé du compte',
   // « Déjà envoyée » et non « envoyée » : une fiche rouverte par « Corriger » perd son état envoyé, le relevé resterait ouvert.
   quand: dejaEnvoyee(FICHES.decl),
-  blocs: [BLOC_RELEVE],
-  defile: true,   // jusqu'à sept lignes (un confirmé qui déclare tout) : la fiche défile dans sa colonne, le bouton d'envoi reste visible
-  envoi: { bouton: 'Enregistrer le relevé', a: 'Sandrine', suite: 'Hélène t’écrit dans la Messagerie.' },
-};
+  bloc: BLOC_RELEVE,
+  envoi: { bouton: 'Enregistrer le relevé', a: 'Sandrine', suite: 'Hélène t’écrit dans la Messagerie.' } });
 
 // ─────────────────────────────────────────────────────────────── ④ la réponse à Hélène (phrases à choisir)
 // Le solde repris est CELUI DE L'ÉLÈVE (la valeur de sa case du relevé), jamais corrigé. Calculé une fois, quand le message entre dans la base.

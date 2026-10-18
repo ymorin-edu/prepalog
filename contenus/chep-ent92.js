@@ -54,8 +54,16 @@ const PIED_92 = PIED(PIED_RECONSTITUE);
 
 // Le bon de collecte d'Opale Frais (annoncé : des piles de 15), avec les réserves ÉCRITES PAR L'ÉLÈVE au quai (rien de corrigé).
 export function docBonCollecte(db) {
-  const J = jeuDeBase(db || {}), P = pilesDe(J, { confirme: confirme(db || {}) }), C = comptesDe(P);
-  const e = etatQuai(db || {});
+  const J = jeuDeBase(db || {});
+  return htmlBonCollecte({ bc: J.bc, piles: pilesDe(J, { confirme: confirme(db || {}) }), etat: etatQuai(db || {}), expediteur: EXPEDITEUR,
+    prepare: '2027-01-18' });
+}
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : le bon de collecte d'un distributeur (`expediteur`), ses piles, les réserves écrites au quai
+// (`etat` = `db.quais[<id>]`, ou null) ; `prepare` = la date où il l'a préparé (iso).
+export function htmlBonCollecte({ bc, piles: P, etat: e, expediteur, prepare }) {
+  const C = comptesDe(P);
+  const J = { bc };
+  const EXPEDITEUR = expediteur;
   const lignes = e && e.ecrit ? (e.lignes || []) : null;
   const reserves = !lignes ? '<p class="ch-st" data-bc-reserves="vide">Pas encore de réserves écrites : elles s’écrivent au quai des retours.</p>'
     : lignes.length ? `<ul class="ch-ul" data-bc-reserves="eleve">${lignes.map((l) => `<li>${ech(l.texte)}</li>`).join('')}</ul>`
@@ -63,7 +71,7 @@ export function docBonCollecte(db) {
   return `<article class="ch-doc" aria-label="Bon de collecte ${ech(J.bc)}">
     ${entete(`${EXPEDITEUR.nom} — plate-forme de produits frais`, [EXPEDITEUR.ville, `[[bon de collecte|Bon de collecte]] n° ${J.bc}`])}
     <p class="ch-t">Bon de collecte — palettes vides</p>
-    <p class="ch-st">Préparé le ${date('2027-01-18', { long: true })}, remis au transporteur pour le centre de service CHEP de Templemars</p>
+    <p class="ch-st">Préparé le ${date(prepare, { long: true })}, remis au transporteur pour le centre de service CHEP de Templemars</p>
     <dl class="ch-dl">
       <dt>Expéditeur</dt><dd>${ech(EXPEDITEUR.nom)} — ${ech(EXPEDITEUR.ville)}</dd>
       <dt>Destinataire</dt><dd>CHEP — [[centre de service]] de Templemars, quai des retours</dd>
@@ -98,7 +106,7 @@ export const REGLES_CREDIT = [
   'À envoyer en réparation : les palettes CHEP abîmées.',
   'Le crédit se calcule sur ce qu’on a contrôlé au quai, pile par pile, pas sur ce que le bon annonce.',
 ];
-const DOC_REGLES = { id: 'regles-credit', titre: 'Règles de crédit d’un retour', court: 'Règles de crédit',
+export const DOC_REGLES = { id: 'regles-credit', titre: 'Règles de crédit d’un retour', court: 'Règles de crédit',
   html: `<article class="ch-doc" aria-label="Règles de crédit d’un retour">
     ${entete('CHEP — centre de service de Templemars', ['Quai des retours', 'Règle interne'])}
     <p class="ch-t">Créditer un retour de palettes vides</p>
@@ -121,8 +129,9 @@ export function avisDe(db, site) {
 }
 export const AVIS_IDS = ['lesquin', ...IDS_TOURNEE];
 const docAvis = (site) => ({ id: `avis-${site}`, titre: `Avis de palettes vides — ${nomSite(site)}`, court: `Avis — ${nomSite(site)}`,
-  html: (db) => {
-    const A = avisDe(db, site);
+  html: (db) => htmlAvis(avisDe(db, site)) });
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : l'avis d'un site, `A = { nom, ville, adresse, signale ('AAAA-MM-JJ hh:mm'), horaire (dit), n }`.
+export function htmlAvis(A) {
     return `<article class="ch-doc" aria-label="Avis de palettes vides — ${ech(A.nom)}">
     ${entete(`${A.nom} — plate-forme de produits frais`, [A.ville, 'Portail clients CHEP'])}
     <p class="ch-t">Avis de palettes vides</p>
@@ -134,7 +143,7 @@ const docAvis = (site) => ({ id: `avis-${site}`, titre: `Avis de palettes vides 
     ${cadreSupports([`<b>${palettes(A.n)} CHEP prêtes à l’enlèvement</b>`, `Palettes vides 1 200 × 1 000, empilées par ${PILE_VIDES}.`])}
     ${PIED_92}
   </article>`;
-  } });
+}
 // La consigne de Yannick, en document (pour l'avoir sous les yeux à côté de la fiche).
 export const TEXTE_REGLE = `La règle : un camion complet pour un site qui peut le remplir à lui seul ; les autres, en tournée. Si tout ne tient pas, on reporte le site qui a signalé ses vides le plus tard : il passera vendredi. Nos semis prennent ${PLACES_SOL} piles au sol, et on empile les vides par ${PILE_VIDES}. Départ et retour ici, à 6 h.`;
 const DOC_REGLE = { id: 'regle-ramasse', titre: 'La règle de la ramasse (Yannick)', court: 'La règle de la ramasse',
@@ -194,7 +203,7 @@ function dessinPalette(p, aria) {
 }
 export const ALT_LPR = 'Dessin : une palette vide rouge, marquée « LPR » sur ses blocs.';
 export const ALT_ABIMEE = 'Dessin : une palette vide bleue, marquée « CHEP » sur ses blocs ; une planche de la façade est cassée.';
-const DOC_DESSIN_LPR = { id: 'dessin-lpr', titre: 'Une palette arrivée avec un retour', court: 'Une palette (1)',
+export const DOC_DESSIN_LPR = { id: 'dessin-lpr', titre: 'Une palette arrivée avec un retour', court: 'Une palette (1)',
   html: `<article class="ch-doc" aria-label="Une palette arrivée avec un retour">${dessinPalette({ pool: 'lpr', abime: null }, ALT_LPR)}
     ${PIED('Dessin construit pour l’exercice (kit de dessin de Prepalog).')}</article>` };
 const DOC_DESSIN_ABIMEE = { id: 'dessin-abimee', titre: 'Une palette vue au quai des retours', court: 'Une palette (2)',
@@ -220,17 +229,25 @@ export const LIBELLES_QUAI = { avarie: { nom: 'Palettes abîmées', precision: '
 export function quaiDuJeu(jeu, niveau = 'standard') {
   const piles = pilesDe(jeu, { confirme: niveau === 'confirme' });
   const consigne = niveau === 'accompagne' ? `${CONSIGNE_GREGORY} ${RAPPEL_ACCOMPAGNE}` : CONSIGNE_GREGORY;
+  return quaiChep({ id: QUAI_ID, piles, bc: jeu.bc, debut: '08:05', arrivee: '08:10', fournisseur: `${EXPEDITEUR.nom} (Dunkerque)`,
+    avertissement: `<b>Grégory :</b> « ${ech(consigne)} »<br>Le quai est un <b>dessin construit</b>. Opale Frais, le transporteur, les piles et le bon de collecte sont <b>construits pour l’exercice</b>.`,
+    parole: 'Bonjour ! Les vides d’Opale Frais, de Dunkerque. Voilà le bon de collecte.', aides: { consignes: true, chefDeQuai: true } });
+}
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : le quai des retours de Templemars pour des piles (`piles`, `bc`), un porteur (`fournisseur`,
+// `arrivee`, `parole`), un mot en tête (`avertissement`), des aides (`aides`, `{}` en évaluation) et, en copie, `rendCopie: false`.
+export function quaiChep({ id, piles, bc, debut, arrivee, fournisseur, avertissement, parole, aides, rendCopie }) {
   return {
-    id: QUAI_ID,
+    id,
     libelle: 'Quai des retours',
     rendu: 'iso',
     froid: false,
     titre: 'CHEP — centre de service de Templemars — quai des retours',
     destinataire: 'CHEP Templemars',
-    avertissement: `<b>Grégory :</b> « ${ech(consigne)} »<br>Le quai est un <b>dessin construit</b>. Opale Frais, le transporteur, les piles et le bon de collecte sont <b>construits pour l’exercice</b>.`,
+    avertissement,
     // Le porteur repart une fois le bon signé : le contrôle ne se recommence pas (une pile se « Modifie » tant que les réserves ne sont pas écrites).
     recommencer: false,
-    debut: '08:05',
+    ...(rendCopie === false ? { rendCopie: false } : {}),
+    debut,
     unite: { un: 'palette', des: 'palettes', feminin: true },
     motifs: ['manquant', 'avarie', 'produit'],
     deuxMotifs: true,
@@ -241,10 +258,10 @@ export function quaiDuJeu(jeu, niveau = 'standard') {
     zone: { nom: 'Zone de réception' },
     dechargement: { ouverture: 0.5, parPalette: 1, par: 'cariste' },
     calcul: { forme: 'brouillon' },
-    aides: { consignes: true, chefDeQuai: true },
+    aides,
     camions: [{
-      transporteur: TRANSPORTEUR.nom, fournisseur: `${EXPEDITEUR.nom} (Dunkerque)`, bl: jeu.bc, arrivee: '08:10',
-      parole: 'Bonjour ! Les vides d’Opale Frais, de Dunkerque. Voilà le bon de collecte.',
+      transporteur: TRANSPORTEUR.nom, fournisseur, bl: bc, arrivee,
+      parole,
       palettes: piles,
     }],
   };
@@ -259,15 +276,26 @@ export const SORT = [
   { v: 'cote', lib: '…sont mises de côté : elles ne sont pas à CHEP et ne se créditent pas.' },
   { v: 'factures', lib: '…sont créditées puis facturées à leur loueur.' },
 ];
-const nb = (id, lib, manque) => ({ type: 'nombre', id, lib, unite: 'palettes', min: 0, entier: true, manque });
-export const FICHE_CREDIT = {
-  id: FICHES.credit, libelle: 'Crédit du retour', titre: 'Crédit du retour — Opale Frais',
+export const nb = (id, lib, manque) => ({ type: 'nombre', id, lib, unite: 'palettes', min: 0, entier: true, manque });
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : la fiche du crédit d'un retour. `blocs(db)` : les cases (ENT-9.2 : l'encadré, les quatre
+// nombres et le sort des autres pools ; ENT-9.4 : les nombres seuls, sans aide).
+export function ficheCreditChep({ id, titre, sousTitre, documents, quand, blocs, envoi }) {
+  return {
+    id, libelle: 'Crédit du retour', titre,
+    sousTitre,
+    documents,
+    largeurDocs: 1.1,
+    serree: true,
+    defile: true,   // cinq cases et un choix long : la fiche défile dans sa colonne, le bouton d'envoi reste visible (comme ENT-9.1)
+    bouton: 'Préparer le crédit',
+    quand,
+    blocs,
+    envoi,
+  };
+}
+export const FICHE_CREDIT = ficheCreditChep({ id: FICHES.credit, titre: 'Crédit du retour — Opale Frais',
   sousTitre: 'À gauche, le bon de collecte avec tes réserves et les règles de crédit. Grégory valide avant midi.',
   documents: ['bon-collecte', 'regles-credit'],
-  largeurDocs: 1.1,
-  serree: true,
-  defile: true,   // cinq cases et un choix long : la fiche défile dans sa colonne, le bouton d'envoi reste visible (comme ENT-9.1)
-  bouton: 'Préparer le crédit',
   quand: quaiClos,
   blocs: (db) => [
     { type: 'encadre', titre: `Bon de collecte ${jeuDeBase(db || {}).bc}`, texte: 'Le crédit se calcule sur ton contrôle au quai, pile par pile.' },
@@ -277,8 +305,7 @@ export const FICHE_CREDIT = {
     nb('reparation', 'Palettes CHEP à envoyer en réparation', 'les palettes à réparer'),
     { type: 'choix', id: 'sort', lib: 'Les palettes d’un autre pool…', colonne: true, choix: SORT, manque: 'le sort des palettes d’un autre pool' },
   ],
-  envoi: { bouton: 'Envoyer le crédit à Grégory', a: 'Grégory', suite: 'Grégory te répond dans la Messagerie.' },
-};
+  envoi: { bouton: 'Envoyer le crédit à Grégory', a: 'Grégory', suite: 'Grégory te répond dans la Messagerie.' } });
 
 // ─────────────────────────────────────────────────────────────── ③ la fiche « besoin de la ramasse »
 export const FRAIS_CHOIX = [
@@ -286,13 +313,24 @@ export const FRAIS_CHOIX = [
   { v: 'tournee', lib: 'dans la tournée' },
   { v: 'attendre', lib: 'attendre la semaine prochaine' },
 ];
-export const FICHE_BESOIN = {
-  id: FICHES.besoin, libelle: 'Ramasse du mercredi', titre: 'Ramasse du mercredi 20/01 — besoin',
+// FABRIQUE (18/10/2026, partagée avec ENT-9.4) : la fiche du besoin de la ramasse. `blocs(db)` : les cases (ENT-9.2 : capacité, Frais du Nord,
+// total, « tout tient » ; ENT-9.4 : capacité et site à camion complet).
+export function ficheBesoinChep({ id, libelle, titre, sousTitre, documents, quand, blocs, envoi }) {
+  return {
+    id, libelle, titre,
+    sousTitre,
+    documents,
+    largeurDocs: 1,
+    serree: true,
+    bouton: 'Préparer la ramasse',
+    quand,
+    blocs,
+    envoi,
+  };
+}
+export const FICHE_BESOIN = ficheBesoinChep({ id: FICHES.besoin, libelle: 'Ramasse du mercredi', titre: 'Ramasse du mercredi 20/01 — besoin',
   sousTitre: 'À gauche, les avis de la semaine et la règle de Yannick.',
   documents: ['regle-ramasse', ...AVIS_IDS.map((s) => `avis-${s}`)],
-  largeurDocs: 1,
-  serree: true,
-  bouton: 'Préparer la ramasse',
   quand: dejaEnvoyee(FICHES.credit),
   blocs: (db) => [
     nb('capacite', 'Capacité d’un camion (palettes vides)', 'la capacité du camion'),
@@ -300,8 +338,7 @@ export const FICHE_BESOIN = {
     nb('total', 'Les autres sites : total des palettes à collecter', 'le total des autres sites'),
     { type: 'choix', id: 'toutTient', lib: 'Tout tient-il dans un camion ?', choix: [{ v: 'oui', lib: 'Oui' }, { v: 'non', lib: 'Non' }], manque: 'si tout tient dans un camion' },
   ],
-  envoi: { bouton: 'Envoyer à Yannick', a: 'Yannick', suite: 'Yannick te répond dans la Messagerie.' },
-};
+  envoi: { bouton: 'Envoyer à Yannick', a: 'Yannick', suite: 'Yannick te répond dans la Messagerie.' } });
 
 // ─────────────────────────────────────────────────────────────── ④ la tournée de ramasse
 export const TOURNEE = {

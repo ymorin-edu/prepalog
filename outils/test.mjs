@@ -54,6 +54,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'chep-91',
   'chep-92',
   'chep-93',
+  'chep-94',
   'ramasse'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
@@ -87,6 +88,7 @@ const GROUPES = {
   4: ['fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.7', 'carte-region', 'decathlon', 'dialogue', 'courriel', 'action',
     'action-85', 'action-86',
     'chep-92',
+    'chep-94',
     'action-810'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne

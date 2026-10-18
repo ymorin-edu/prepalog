@@ -90,6 +90,7 @@ export const ACTIVITES = [
   () => import('./chep-compte-palettes.js'),
   () => import('./chep-ramasse-retours.js'),
   () => import('./chep-releve-conteste.js'),
+  () => import('./chep-evaluation.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
