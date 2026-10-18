@@ -89,6 +89,7 @@ export const ACTIVITES = [
   // CHEP (centre de service de Templemars) — ENT-9.x. 1re, C2.5.
   () => import('./chep-compte-palettes.js'),
   () => import('./chep-ramasse-retours.js'),
+  () => import('./chep-releve-conteste.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et

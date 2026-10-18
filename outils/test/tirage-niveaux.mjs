@@ -534,6 +534,10 @@ const BANQUES_FIGEES = {
     nonMouvement: ['nm-europe', 'nm-commande'],
     bonus: ['bo-doublon', 'bo-lundi'],
   },
+  // ENT-9.3 CHEP (18/10/2026) : le document de la cliente qui explique l'écart (transfert absent ou quantité déclarée fausse ; l'autre en bonus du confirmé).
+  'contenus/chep-ent93-donnees.js': {
+    client: ['a2-frais-nord', 'a3-halles-artois'],
+  },
   'contenus/decathlon-ent71-donnees.js': {
     retard: ['rt-rail', 'rt-barge'],
     horsListe: ['hl-eflux', 'hl-bateliers', 'hl-railco', 'hl-eclair'],
