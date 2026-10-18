@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| ENT-9.3 CHEP (séance : le relevé contesté) — session Fable, séance construite par un sous-agent Opus | `activites/chep-releve-conteste.js (à créer)`, `contenus/chep-ent93*.js (à créer)`, `contenus/questions/ENT-9.3.js (à créer)`, `contenus/corriges/ENT-9.3.js (à créer)`, `outils/test/chep-93.mjs (à créer)`, `outils/test.mjs` (lignes BLOCS/GROUPES), `outils/test/tirage-niveaux.mjs` (une ligne BANQUES_FIGEES), `activites/index.js` (une ligne), `outils/test/chep/commun.mjs` (ajouts seulement), `docs/briefs/ENT-9.3-*.md`, `docs/decisions.md`, `docs/chantiers.md` | 18/10/2026 |
 | Correctifs moteur après ENT-9.2 (chauffeur « palettes refusées », pastille de créneau déclarable, menu après « Clore ») — session Fable | `core/types/quai.js`, `core/types/tournee.js`, `core/types/entreprise.js`, `activites/FICHE-SEANCE.md`, `outils/test/quai-iso.mjs`, `outils/test/ramasse.mjs`, `outils/test/transport.mjs` (ajouts), `contenus/chep-ent92.js` (déclaration), `docs/decisions.md` | 18/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
