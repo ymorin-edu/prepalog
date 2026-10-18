@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/COORDINATION-chep.md, docs/briefs/ENT-9.1-chep-compte-palettes.md (§6, compte rendu) puis docs/briefs/ENT-9.3-chep-releve-conteste.md. État des lieux du §7, durée, puis construis.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (18/10/2026, `pret: true, ouverture: 'prof'` : Tristan l'essaie à l'écran et l'ouvre lui-même à son groupe)
 **Date du brief** : 17/10/2026
 **Conversation d'origine** : Cowork (Opus), 17/10/2026, décisions déléguées par Tristan. Choix secondaires marqués **(Cowork)**.
 **À lire avec `COORDINATION-chep.md` et ENT-9.1** (même cliente, mêmes fiches du portail).
@@ -251,11 +251,57 @@ voit au bilan ; la réponse honnête (solde qui **augmente** de k) est comprise 
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code à la livraison, 18/10/2026, session Fable ; séance construite par un sous-agent Opus)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés** : `contenus/chep-ent93-donnees.js` (banque `client`, tirage mémorisé, équité, jeu de l'élève, grille du relevé corrigé, attendus
+  calculés), `contenus/chep-ent93.js` (documents : notre relevé de la semaine, bon de retour avec le visa de Grégory, rapport de tri, inventaire ;
+  fiches `enquete` et `corrige`, phrases `reponse-helene-2`, messages, jalons, pastilles, accueil), `contenus/questions/ENT-9.3.js`,
+  `contenus/corriges/ENT-9.3.js`, `activites/chep-releve-conteste.js`, `outils/test/chep-93.mjs`. **Modifiés** : `activites/index.js` (une ligne),
+  **`outils/test.mjs`** (`chep-93` dans `BLOCS` et au groupe 3 de `GROUPES`), **`outils/test/tirage-niveaux.mjs`** (la banque `client` dans
+  `BANQUES_FIGEES`). Rien dans `core/`, `styles/`, `contenus/chep.js` ni `outils/test/chep/commun.mjs`.
+- **État des lieux du §7 (vérifié dans le code)** : aucune demande au moteur. `choix`, `juste` et `texte` d'une ligne de phrases acceptent une
+  fonction de la base (`core/phrases.js`) ; une ligne imposée s'affiche en texte simple, ni italique ni couleur (`ent-phr-fixe`, `styles/base.css`) ;
+  le visa « 5 piles × 15 = 75 — OK, G.V. » est en italique **dans le document** (classe `ch93-main`, police du site, aucune image) ; cadres par
+  `blocs(db)`, documents par `documents(db)`, grille qui lit l'enquête : comme ENT-9.1.
+- **Poids codés (ceux du §5, tels quels, à corriger à l'écran)** : repérer 7 — bon de retour 2 (`retour`), document de la cliente 2 (`client`),
+  documents justes 1 (`justes`), écart de l'inventaire 2 (`inventaire`) ; mettre à jour 6 — qui corrige 2 (`qui`), colonnes 2 (`colonnes`), solde et
+  écart par formule 2 (`solde`) ; ramasse 1 (`frais`) ; répondre 3 (`rep-chep`, `rep-demande`, `rep-inventaire`) ; questions 3 (`compter-retour`,
+  `qui-declare`, `ecart-restant`). Total 20. Bonus du confirmé : la seconde pièce de la banque, trois cas (`bonus-type`, `bonus-qte`, `bonus-qui`,
+  +0,5 chacun, +1,5 au plus) ; `null` chez un standard. Question n° 4 en réserve (`actif: false`), n° 5 et « Pour réfléchir » en réflexion.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  1. **Grille sur quatre colonnes, comme ENT-9.1** (A libellé, B « À ajouter (+) », C « À retirer (−) », D soldes, ligne d'en-tête) : le solde du
+     relevé est en D2 (grisé), les corrections à partir de la ligne 3, puis solde corrigé (formule), inventaire (grisé), écart restant (formule). Le
+     brief mettait les soldes en colonne B.
+  2. **Rapport de tri : « dont {rep} à réparer », rep tiré de 6 à 8** au lieu de 3 fixe : avec k = 3 (témoin ①), « 3 à réparer » et « 3 LPR » se
+     seraient confondus.
+  3. **Jalons 1 et 2** jugent le type **et** la correction avec son nombre (« ajouter k », « retirer T2 / x ») ; **jalon 3** juge le type et
+     « aucune » (le 0 n'est pas jugé) ; **jalon 6** juge le sens seulement (quantité > 0 dans la bonne colonne, 0 dans l'autre), comme 9.1 ;
+     **jalon 7** exige les deux formules et des valeurs cohérentes avec **ses** cases. Sans aucune correction dans l'enquête, 6 et 7 sont faux.
+  4. **Ligne « demande » du confirmé** : l'action de l'autre pièce, prévue comme piège, serait juste pour lui (il a les deux pièces) : il reçoit
+     les deux actions ensemble en phrase juste, et comme pièges « Nous corrigeons nous-mêmes… » et « Il n'y a rien à faire de votre côté. »
+  5. **Réflexion n° 5 à l'envoi de la réponse** (`apresMail`, comme 9.1) : le geste `messagerie:phrase:chep` arriverait au premier choix, avant
+     l'envoi. Sandrine joint aussi les conditions à son message (la question n° 2 s'y réfère).
+  6. **`precedente: 'chep-ramasse-retours'`** : la séance se joue après ENT-9.2 (parcours strict).
+  7. **Question p3** adossée à « Conditions » (art. 5) et non à « Règles de crédit » (document propre à 9.2, non exporté par l'univers).
+  8. **Ordre des cadres** : le bon de retour d'abord, puis ses bordereaux dans l'ordre tiré (la pièce en plus du confirmé en dernier) ; nos
+     documents (relevé, bon de retour, rapport de tri) gardent un ordre fixe. Les choix « Son inventaire » et « Frais du Nord » sont tirés.
+- **Décisions prises en route** : avec « aucune », la case du nombre reçoit 0 (une case à remplir ne reste pas vide) ; **équité** : aucune égalité
+  entre k, e, rep, T2, d, x, r, B1, B2, 75, l'émission E et F, contrôlée pour tout le monde (sinon le tirage pencherait vers une pièce), plus
+  S_rel > S_parc, solde au 15/01 ≥ 100, une seule anomalie client dans le socle ; sur 200 graines : 0 secours, A2 tiré à 44,5 % ; témoins :
+  ① T2 23, B1 19, B2 21, E 160, F 125, rep 6 (solde au 15/01 : 247), ② d 10, x 15, B1 22, B2 18, E 140, F 118, rep 7 (235) ; documents construits :
+  RET-27-00512 (19/01), TRI-27-0193 (20/01), EM-27-01207 (18/01, 120 à 200 palettes, pas de 20), bordereaux BL-ET-27-0335 (lun. 18/01, Hainaut
+  Primeurs), 0338 (mer. 20/01, Halles d'Artois, A3), 0341 (jeu. 21/01, Frais du Nord, A2), 0344 (ven. 22/01, MarchéLys) ; base sans tirage (contrôle
+  au chargement) = témoin ① avec A2 en plus, pour que les gestes `qui-a2` et `qui-a3` soient tous deux publiés ; gabarits du relevé, du bon de retour
+  visé, du rapport de tri et de l'inventaire dans `chep-ent93.js` (à monter dans `chep.js` si 9.4 les reprend) ; aides de l'accompagné sous chaque
+  cadre (celle des bordereaux vient du brief, les trois autres sont construites) ; le retour d'Endives du Ternois dit « 75 en 5 piles » comme celui
+  d'Opale Frais le même jour en 9.2 (voulu par le brief, numéro différent).
+- **Tests** : bloc `chep-93`, **16 cas, ≈ 31 s**, 16/16 ; non-régression `chep-93 chep-91 chep-92 tirage-niveaux dependances socle questions` :
+  243/243 (aucun cas existant réécrit). **Sabotages éprouvés** (chacun remis en place, fichiers comparés) : 269 écrit en dur → le témoin ② tombe
+  (données, parcours ②, tirage : 13/16) ; jalon 7 jugé sur le solde réel → « une erreur ne se paie qu'une fois », « voisin » et « pièges » tombent
+  (13/16) ; **inventaire sans la phrase entre parenthèses → aucun cas ne tombe** (16/16) : c'est un indice, pas une donnée, comme le brief le
+  demande. Suite entière : voir la ligne du jour dans `docs/decisions.md`.
+- **Commits** : voir `git log` du 18/10/2026 (EN-COURS, séance, compte rendu).
+- **Reste ouvert** : validation à l'écran par Tristan (poids, questions, textes) ; la limite de « Corriger », la même qu'en 9.1 (le relevé corrigé
+  n'est pas rouvert mais ses lignes se recalculent sur l'enquête : un élève qui change le **sens** d'une correction après le bilan peut faire retomber
+  le jalon 6 ; Sandrine prévient que le relevé reste tel quel) ; la réponse par phrases montre k et « augmente », l'élève peut revenir corriger
+  l'enquête en le sachant ; chez un confirmé, neuf onglets de documents sur trois lignes (le test d'ergonomie passe) ; trame courte (Cowork).
