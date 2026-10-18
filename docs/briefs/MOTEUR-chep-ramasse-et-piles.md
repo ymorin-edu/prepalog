@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/chantiers.md, docs/briefs/COORDINATION-chep.md, docs/briefs/MOTEUR-vue-tournee-camion.md (§6) puis docs/briefs/MOTEUR-chep-ramasse-et-piles.md. Fais l'état des lieux du lot A en lecture seule, annonce la durée, construis le lot A avec sa page d'essai, et envoie-moi une capture avant le lot B.
 > ```
 
-**Statut** : **lot A livré** (18/10/2026, à valider à l’écran) ; lot B à implémenter
+**Statut** : **lot A livré** (18/10/2026, validé à l’écran sur captures) ; **lot B livré** (18/10/2026, à valider à l’écran)
 **Date du brief** : 17/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de CHEP (décisions déléguées par Tristan, 17/10/2026). Séances servies : **ENT-9.2**
 (les deux lots), **ENT-9.4** (les deux lots), puis d'autres (§1).
@@ -231,11 +231,52 @@ l'étape ③. Le quai reste sans froid (`froid: false`), en iso (`rendu: 'iso'`)
   rebâtir la carte ; en vue d’ensemble, le nom « CHEP Templemars » touche presque le rond 1 (Lesquin, à 10 km) ; question §5.1 : vitesse 55 km/h
   gardée (à juger sur le calage).
 
-## Compte rendu — lot B *(à remplir à la livraison)*
+## Compte rendu — lot B *(Claude Code, 18/10/2026 : session Opus)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers modifiés** : `core/iso.js` (`palettePile`, `PAL_VIDE`, `PILE_MAX`, `POOLS_PILE` : la palette à blocs, la pile, le marquage tracé, les
+  deux dégâts, le retrait de la palette Europe), `core/types/quai.js` (`forme: 'pile'`, `comptePile`, `decisionPile`, `palettesDePile` exportées ;
+  refus au chargement ; unité au féminin ; `libelles.avarie.adjectif` ; `decisions` ; `document: { nom, court }` ; motif `produit` chiffré pour une
+  pile ; étape ③ des piles et zoom de près ; légendes « pile »), `outils/essai-quai-inspection.html` et `.js` (partie 5, `#piles`, `quaiPiles`,
+  `PILES_ESSAI`), `outils/test/quai-iso.mjs` (10 cas ajoutés, aucun cas existant réécrit), `activites/FICHE-SEANCE.md` (« Pile de palettes vides »,
+  tables de l'unité, des libellés et du document). `outils/test.mjs` **n'est pas touché** (le bloc `quai-iso` existait).
+- **État des lieux (vérifié dans le code)** : réutilisés tels quels — `verifierQuai`, la règle de visibilité des fûts (`faceVisible` : deux rotations
+  consécutives sur quatre), l'étape ③ (quatre vues, objets cliquables, zoom, brouillon imposé), le chariot frontal et les places en zone de réception,
+  `deuxMotifs`, le jugement de la réserve. Neufs — le dessin, `comptePile`, le motif `produit` chiffré (il attendait une référence en texte), l'accord
+  au féminin (« endommagés », « manquants », « un carton », « ce carton », « comptés » étaient écrits en dur), la liste des décisions (« Refuser »
+  était écrit en dur), la décision calculée.
+- **Ce que la séance déclare (noms définitifs)** : sur la pile `{ forme: 'pile', ref, nom, bl, hauteur, intrus: { n°: 'lpr' | 'logipal' | 'epal' },
+  abimee: { n°: 'N' | 'S' | 'E' | 'W' }, etiq }` (ni `attendu` ni motifs : ils se calculent) ; sur le quai `unite: { un: 'palette', des: 'palettes',
+  feminin: true }`, `decisions: ['accepter', 'reserves']`, `motifs: ['manquant', 'avarie', 'produit']`, `deuxMotifs: true`, `libelles: { avarie: { nom:
+  'Palettes abîmées', precision: 'à réparer', adjectif: 'abîmé' }, manquant: { nom: 'Palettes manquantes' }, produit: { nom: 'Palettes d’un autre
+  pool' } }`, `document: { nom: 'Bon de collecte', court: 'BC' }`. Exemple complet : `quaiPiles()` dans `outils/essai-quai-inspection.js`.
+- **Écarts par rapport au brief** (et pourquoi) : (a) **`document: { nom, court }` n'existait pas** (le lot 1 ne prenait qu'un texte, qui ne change
+  que les titres) : ajouté ; `court` remplace « BL » partout où l'élève le lit ; le texte seul ne change rien (ENT-8.8 intact) ; (b) **« abîmées »
+  demande `libelles.avarie.adjectif: 'abîmé'`** : `feminin` seul accorde « endommagées » ; (c) la réserve d'un manque garde la forme du moteur,
+  « manque 1 palette (BC 15, reçu 14) », et non « 1 palette manquante » (l'exemple du §3.3 était donné « par exemple » ; la forme commune à tous les
+  quais est gardée) ; (d) le **bloc arraché est celui du milieu** (un bloc d'angle appartient à deux faces : il se verrait de trois vues sur quatre) ;
+  (e) la palette **Europe est dessinée en 1 200 × 800** (format réel), centrée : elle fait un retrait dans la pile, un indice de plus que la teinte et
+  le marquage ; (f) Logipal porte « LOGI » et « PAL » sur ses deux blocs extérieurs (un mot de 7 lettres sur un bloc ne se lisait pas en noir et
+  blanc) ; (g) **pas de capture en sombre** : CHEP est en `papier: true`, le dessin du quai a ses teintes fixes ; (h) le zoom ajoute **la palette de
+  près, entre ses voisines** (le brief disait « le marquage, lisible au zoom ») et l'étiquette de la pile ; (i) la fiche de contrôle d'un quai de piles
+  a une 5e case « Palettes d'un autre pool » (sinon l'élève n'avait nulle part où noter ce constat) ; (j) un quai dont toutes les palettes sont des
+  piles dit « pile » dans le stepper, les légendes du déchargement, le titre et le comptage de l'étape ③ ; les autres textes disent encore
+  « palette » quand ils parlent du support (« 2 palettes non validées », par exemple).
+- **Décisions prises en route** : le marquage est **tracé** (aucun `<text>`), le dégât **n'est pas balisé** à l'écran (`balises: false`), rien n'y
+  porte de `title` : aucun texte de la page ne nomme le pool ni le dégât ; l'échelle de l'étape ③ suit la pile la plus haute du quai (14 et 15 se
+  comparent) ; les piles au décor (② ④) sont à 0,7, sans marquage ni dégât ; refus à 18 palettes (question §5.2 : oui) ; consigne d'aide propre aux
+  piles dans `aides.consignes` (question §5.3 : oui) ; « vue de du côté droit » corrigé en « vue du côté droit » à l'étape ③ (tous les quais iso,
+  aucun test ne lisait ce texte). Ligne du jour dans `docs/decisions.md` (dont « le rouge des LPR est un objet du décor »).
+- **Tests** : bloc `quai-iso`, **10 cas « Quai piles »** — `comptePile` écrit à la main sur trois piles ; décision attendue calculée (cinq piles,
+  réserves écrites à la main) et décision écrite fausse refusée ; 30 refus au chargement (n° hors de la pile, 0, non entier, « 06 », intruse et
+  abîmée, pool inconnu, « chep » en intrus, face inconnue, `hauteur > bl`, 19 palettes, `refs`, `etiqAvant`, `W`, `manque`, `avarie`, clé inconnue,
+  unité absente, `decisions` absentes, « refuser » proposé, trois histoires, deux sans `deuxMotifs`, motif absent, aides de couches, sans iso,
+  `feminin`, `adjectif`, `document`) et `decisions` sur un quai de cartons ; le kit (dégât de deux vues consécutives seulement pour chaque face et
+  chaque type, pile de 14 moins haute d'une palette, ni texte ni titre, aucun vert, retrait de 10 cm de la palette Europe) ; l'écran ③ (rien ne nomme
+  un pool ni un dégât, cinq piles × quatre vues, dessin et zoom ; « Palette 9 / 14 ») ; le dégât de P4 vu de près aux vues 1 et 2 seulement ; les
+  accords au féminin (et rien ne change sans `feminin`) ; pas de « Refuser », la réserve « d'un autre pool » chiffrée (« LPR » est faux, 1 est juste),
+  « BC » partout et plus aucun « BL » ; la partie 5 jouée de bout en bout (17 jalons justes). **Douze sabotages éprouvés**, chacun fait tomber le cas visé : CHEP qui retire les abîmées, décision qui oublie l’autre pool, palette intruse et abîmée acceptée, dégât dessiné de toutes les vues, un `title` par palette, le dégât balisé à l’écran (ce sabotage a d’abord raté : « avarie » manquait aux mots interdits du test, ajouté), zoom toujours vu de face, `feminin` ignoré, autre pool en texte, « Refuser » remis, « BL » gardé dans la réserve, piles non dessinées au décor. Non-régression : les 95 cas existants du bloc `quai-iso` (référence Spartoo octet pour octet, fûts, ENT-8.7/8.8, dépose) verts sans modification ; suite entière **1780/1780** (`node outils/test-parallele.mjs`, 615 s), dont `picard`, `spartoo`, `fb-6.4`, `action-87` à `action-810`, sans modification.
+- **Commits** : voir `git log` du 18/10/2026 (EN-COURS, lot B, compte rendu).
+- **Reste ouvert** : validation à l'écran par Tristan (`outils/essai-quai-inspection.html#piles`, captures envoyées) ; **question** : « Palette 9 / 14 »
+  donne la hauteur réelle dès le premier clic (donc le nombre de manquantes sans compter) — « Palette 9 » seul obligerait à cliquer celle du haut ;
+  ENT-9.2 et 9.4 déclarent leurs piles (rien de déclaré dans une séance ici) ; les textes du support encore au masculin « palette » hors étape ③ et
+  légendes (voir écart j) ; « Distri Escaut » à renommer et horaires d'ENT-9.2 §6.3 à recaler (restes du lot A).

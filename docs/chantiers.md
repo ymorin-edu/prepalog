@@ -70,7 +70,7 @@
 | **Lot F — CHEP (1re, C2.5, ENT-9.1 → 9.4)** : briefs Cowork du 17/10/2026, coordination dans `docs/briefs/COORDINATION-chep.md`, ordre dans `FEUILLE-DE-ROUTE-chep.md` | | | | | | | |
 | F-0 | ENT-9.1 « le compte palettes » (aucune vue nouvelle), univers `contenus/chep.js`, entreprise n° 9 | brief ENT-9.1 | ≈ 5 h | Fable | non | — | **livrée (18/10/2026)**, `pret: true, ouverture: 'prof'`, à essayer par Tristan |
 | F-1 | **Tournée de ramasse (MOTEUR-chep lot A)** : mesure en profil (le pic compte), jauge en marches, `quai: { … }` borné, gestes `tournee:<id>:envoyer` / `reporter`, `quand`, `service.unite` ; carte régionale du Nord (`construire-ramasse.py`, `extraire-chep.mjs`, `contenus/chep-carte.js`), couche `frontiere` ; `calibrer.mjs` mode ramasse | brief `MOTEUR-chep-ramasse-et-piles` §2 | ≈ 7 h | Fable | oui | D-9 | **livré (18/10/2026)** : bloc `ramasse` (13 cas), non-régression `transport`, `boost`, `carte`, `carte-region`, `fb-6.9`, `chep-91` sans modification ; page d’essai `outils/essai-tournee-ramasse.html` et captures **à valider par Tristan** avant le lot B ; horaires d’ENT-9.2 §6.3 à recaler par Cowork |
-| F-2 | **Piles de palettes vides au quai iso** (`forme: 'pile'`, `comptePile`, unité au féminin, MOTEUR-chep lot B) | brief §3 | ≈ 9 h | Fable | oui | F-1 | à faire, après validation du lot A |
+| F-2 | **Piles de palettes vides au quai iso** (`forme: 'pile'`, `comptePile`, `decisionPile`, unité au féminin, `decisions`, `document: { nom, court }`, MOTEUR-chep lot B) | brief §3 | ≈ 9 h | Fable | oui | F-1 | **livré (18/10/2026)**, page `outils/essai-quai-inspection.html#piles`, à valider à l’écran par Tristan (captures envoyées) |
 
 ## Le détail, dans l'ordre
 
