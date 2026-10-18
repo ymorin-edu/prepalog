@@ -1034,6 +1034,27 @@ export async function rendreEspaceProf(hote, ctx) {
     const metasTous = mods.map((m) => m.meta);
     const verrouillables = seancesBase.filter((m) => m.precedente);
 
+    // Les questions d'« Avant de commencer » d'une évaluation : la part et le détail juste / « Je ne sais pas » / faux.
+    const ventilation = (qo) => `${qo.justes} juste${qo.justes > 1 ? 's' : ''}, ${qo.nsp} « Je ne sais pas », ${qo.faux} fausse${qo.faux > 1 ? 's' : ''}`;
+    const phraseOuverture = (qo) => ` — Les questions : ${formaterNote(qo.points)} / ${formaterNote(qo.part)} (${ventilation(qo)})`;
+    // Le détail d'une copie rendue, jalon par jalon (19/10/2026) : titre, points obtenus sur le poids, puis l'ouverture notée.
+    // Lecture seule, rangé par le moteur avec la copie (`detail.jalons`, `detail.ouverture`). Une copie sans `jalons`
+    // (non pondérée, ou rendue avant) retombe sur les titres et l'état de chaque jalon, ou ne dit rien de plus.
+    const detailCopie = (d) => {
+      if (!d) return '';
+      let L = [];
+      let dansLaListe = false;   // la part des questions est un jalon de la liste : on y joint la ventilation, sans la redire
+      if (Array.isArray(d.jalons)) {
+        dansLaListe = !!d.ouverture && d.jalons.some((j) => j.id === 'ouverture');
+        L = d.jalons.map((j) => `${j.points >= j.poids - 1e-6 ? '✓' : j.points > 0 ? '◑' : '✗'} ${j.titre} : ${formaterNote(j.points)} sur ${formaterNote(j.poids)}${
+          dansLaListe && j.id === 'ouverture' ? ` (${ventilation(d.ouverture)})` : ''}`);
+      } else if (d.titres) {
+        L = Object.entries(d.titres).filter(([id]) => typeof d[id] === 'string').map(([id, titre]) => `${d[id] === 'ok' ? '✓' : '✗'} ${titre}`);
+      }
+      const qo = d.ouverture && !dansLaListe ? phraseOuverture(d.ouverture).replace(/^ — /, '') : '';
+      return L.length || qo ? `Détail de la note :\n${L.concat(qo ? [qo] : []).join('\n')}` : '';
+    };
+
     const cellule = (e, m) => {
       const t = par[e.uid]?.[m.id];
       if (aLaMain(m)) {
@@ -1072,8 +1093,9 @@ export async function rendreEspaceProf(hote, ctx) {
         if (avant) alertes.push(`Copie rendue ${dateHeureRendu(t.rendu)} alors que la séance a été ouverte pour la première fois ${dateHeureRendu(ouvertLe)} : elle n'a pas pu être faite dans l'application. Rouvrez-la si besoin.`);
         if (ver && ver.etat === 'ecart') alertes.push(`La note enregistrée (${formaterNote(t.score)}/${t.max}) ne correspond pas au recalcul depuis le travail de l'élève (${rv}). Rouvrez la copie puis ramassez-la pour reprendre la note recalculée.`);
         if (ver && ver.etat === 'sans-base') alertes.push("Aucun travail enregistré pour cet élève dans cette séance : la note ne peut pas venir de l'application. Rouvrez la copie si besoin.");
+        const dt = detailCopie(t.detail);
         // Une copie suspecte ne prend ni le vert « juste » ni le rouge « faux » : le doute passe avant la note.
-        return `<td class="num ${douteuse ? '' : classe} copie-cell${douteuse ? ' note-douteuse' : ''}" title="${ech(`${t.meilleur} sur ${max} — copie ${libelleRendu(t)}${alertes.length ? `\n${alertes.join('\n')}` : ''}`)}">${lu}
+        return `<td class="num ${douteuse ? '' : classe} copie-cell${douteuse ? ' note-douteuse' : ''}"${dt ? ' data-copie-detail' : ''} title="${ech(`${t.meilleur} sur ${max} — copie ${libelleRendu(t)}${alertes.length ? `\n${alertes.join('\n')}` : ''}${dt ? `\n${dt}` : ''}`)}">${lu}
           <span class="note copie-mention" data-copie-mention>${avant ? "rendue avant l'ouverture" : t.ramasse ? 'ramassée' : 'rendue'}</span>${mentionVer
             ? `<span class="note copie-verif" data-copie-verif="${ech(ver.etat)}">${ech(mentionVer)}</span>` : ''}
           <button type="button" class="btn-copie-rouvrir" data-copie-rouvrir data-uid="${ech(e.uid)}" data-aid="${ech(m.id)}"
@@ -1129,7 +1151,7 @@ export async function rendreEspaceProf(hote, ctx) {
         const dontBonus = bo && bo.total ? ` — dont bonus +${formaterNote(bo.points || 0)} (${bo.justes} cas sur ${bo.total})` : '';
         // Les questions d'« Avant de commencer » d'une évaluation : la part et le détail juste / « Je ne sais pas » / faux.
         const qo = t.detail && t.detail.ouverture;
-        const dontQuestions = qo ? ` — Les questions : ${formaterNote(qo.points)} / ${formaterNote(qo.part)} (${qo.justes} juste${qo.justes > 1 ? 's' : ''}, ${qo.nsp} « Je ne sais pas », ${qo.faux} fausse${qo.faux > 1 ? 's' : ''})` : '';
+        const dontQuestions = qo ? phraseOuverture(qo) : '';
         return `<td class="num ${classe}"${dontBonus ? ' data-bonus' : ''} title="${ech(`${formaterNote(t.meilleur)} sur ${max}${dontBonus}${dontQuestions} — ${corr}${so ? `
 ${so.phrase}` : ''}`)}"
           >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>${

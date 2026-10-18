@@ -314,6 +314,88 @@ await v('copie : la règle Firestore fige un résultat rendu pour l’élève (t
   if (!/resource == null\s*\|\|\s*\(!\('rendu' in resource\.data\)/.test(suppr)) throw new Error('règle de suppression absente : ' + suppr);
 });
 
+/* ---------------------------------------------------------- le détail d'une copie, lu dans le Suivi */
+// Chantier du 19/10/2026 (suite d'ENT-9.4 : « le détail de la note se lit dans le Suivi »). Deux faces : le moteur range, avec la copie,
+// chaque jalon (titre, points sur poids) ; le Suivi de l'enseignant le lit au survol de la note. Rien ne change hors copie pondérée.
+await v('copie : le moteur range le détail jalon par jalon (titre, points obtenus sur le poids) pour une copie pondérée — et pour elle seule', async () => {
+  const r = await pg.evaluate(async () => {
+    const B = await import('/contenus/boost.js');
+    const ETAPES = [
+      { id: 'a', titre: 'Premier jalon', poids: 10, verifier: () => ({ status: 'ok' }) },
+      { id: 'b', titre: 'Deuxième jalon', poids: 6, fraction: () => 0.25, verifier: () => ({ status: 'ok' }) },
+      { id: 'c', titre: 'Jalon raté', poids: 4, verifier: () => ({ status: 'ko' }) },
+    ];
+    const fab = (o) => creerEntreprise({
+      ENTREPRISE: B.ENTREPRISE, VOCAB: B.VOCAB, CATALOGUE: B.CATALOGUE, SUPPLIERS: B.SUPPLIERS, SUP_BY_ID: B.SUP_BY_ID, CUSTOMERS: B.CUSTOMERS,
+      CM: B.CM, baseDeDepart: B.baseDeDepart, THEME: B.THEME, exercice: 'Essai', ...o });
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const lire = (m) => { const n = m.noter({}); return { score: n.score, max: n.max, jalons: n.detail.jalons || null, a: n.detail.a, c: n.detail.c }; };
+    return {
+      copie: lire(fab({ etapes: ETAPES, copie: true })),
+      travail: lire(fab({ etapes: ETAPES })),
+      sansPoids: lire(fab({ etapes: ETAPES.map(({ poids, ...e }) => e), copie: true })),
+    };
+  });
+  if (r.copie.score !== 11.5 || r.copie.max !== 20) throw new Error('note de la copie : ' + JSON.stringify(r.copie));
+  if (JSON.stringify(r.copie.jalons) !== JSON.stringify([
+    { id: 'a', titre: 'Premier jalon', poids: 10, points: 10 },
+    { id: 'b', titre: 'Deuxième jalon', poids: 6, points: 1.5 },
+    { id: 'c', titre: 'Jalon raté', poids: 4, points: 0 }])) throw new Error('jalons rangés : ' + JSON.stringify(r.copie.jalons));
+  if (r.copie.a !== 'ok' || r.copie.c !== 'ko') throw new Error('l’état de chaque jalon doit rester rangé : ' + JSON.stringify(r.copie));
+  if (r.travail.jalons !== null || r.travail.score !== 11.5) throw new Error('hors copie, le détail ne change pas : ' + JSON.stringify(r.travail));
+  if (r.sansPoids.jalons !== null) throw new Error('une copie sans poids n’a pas de détail pondéré : ' + JSON.stringify(r.sansPoids));
+});
+
+await v('copie : Suivi — au survol de la note d’une copie rendue, chaque jalon (titre, points sur poids) et la part des questions ; sans détail rangé, rien de plus', async () => {
+  const ctx = await nav.newContext({ viewport: { width: 1366, height: 768 } });
+  const p = await ctx.newPage();
+  p.setDefaultTimeout(6000);
+  try {
+    await p.goto(BASE); await p.waitForSelector('#btnProf', { timeout: 8000 });
+    await p.click('#btnProf'); await p.waitForSelector('#btnProfEspace'); await p.click('#btnProfEspace');
+    await p.waitForSelector('#gNom');
+    await p.fill('#gNom', 'Détail copie'); await p.selectOption('#gNiveau', '1re'); await p.click('#btnCreerG'); await p.waitForTimeout(300);
+    // Une évaluation pondérée de la liste (copie: true, bareme 20) : on lui rend trois copies écrites à la main.
+    const aid = await p.evaluate(async () => {
+      const I = await import('/activites/index.js');
+      const mods = await Promise.all(I.ACTIVITES.map((f) => f().then((x) => x).catch(() => null)));
+      return mods.filter((m) => m && m.meta && m.meta.copie && m.meta.bareme === 20 && typeof m.noter === 'function').map((m) => m.meta.id)[0];
+    });
+    if (!aid) throw new Error('aucune évaluation pondérée au registre');
+    const jalons = [{ id: 'j1', titre: 'Les documents', poids: 1, points: 1 }, { id: 'j2', titre: 'Le solde', poids: 2, points: 0 },
+      { id: 'j3', titre: 'Chaque pile', poids: 0.375, points: 0.375 }, { id: 'j4', titre: 'Le crédit', poids: 1.5, points: 0.5 }];
+    const copies = [
+      { score: 5.875, max: 20, detail: { j1: 'ok', j2: 'ko', j3: 'ok', j4: 'ok', jalons, ouverture: { points: 4, part: 4, justes: 4, nsp: 0, faux: 0, sur: 4, tirees: [] } } },
+      { score: 7, max: 20, detail: { j1: 'ok', j2: 'ko', titres: { j1: 'Les documents', j2: 'Le solde' } } },
+      { score: 7, max: 20, detail: { x: 'ok' } },
+      // La part des questions est un jalon de la liste : sa ligne porte la ventilation, la phrase « Les questions » n'est pas redite.
+      { score: 4, max: 20, detail: { ouverture: { points: 4, part: 4, justes: 3, nsp: 1, faux: 0, sur: 4 }, jalons: [{ id: 'ouverture', titre: 'Les questions', poids: 4, points: 4 }] } },
+    ];
+    await p.evaluate(async ({ L, aid }) => {
+      const { B } = await import('/core/backend.js');
+      const g = Object.entries(JSON.parse(localStorage.getItem('prepalog:groupes') || '{}')).find(([, x]) => x.nom === 'Détail copie')[0];
+      await B.creerEleves(g, L.map((c, i) => ({ nom: 'Eleve' + i, prenom: 'Zoé', matricule: '950' + i, code: 'zy9' + i })));
+      const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+      for (const [i, c] of L.entries()) await B.rendreCopie(g, Object.keys(u).find((k) => u[k].matricule === '950' + i), aid, { ...c, nom: 'Eleve' + i, prenom: 'Zoé' });
+    }, { L: copies, aid });
+    await p.click('[data-ong="suivi"]'); await p.waitForSelector('#contenuProf td.copie-cell');
+    const cases = await p.$$eval('#contenuProf td.copie-cell', (L) => L.map((x) => ({ titre: x.title, detail: x.hasAttribute('data-copie-detail') })));
+    if (cases.length !== 4) throw new Error('copies rendues dans le Suivi : ' + cases.length);
+    const [a, b, c, d] = cases;
+    if (!a.detail || a.titre.split('\n').slice(1).join('\n') !== 'Détail de la note :\n✓ Les documents : 1 sur 1\n✗ Le solde : 0 sur 2\n✓ Chaque pile : 0,375 sur 0,375\n'
+      + '◑ Le crédit : 0,5 sur 1,5\nLes questions : 4 / 4 (4 justes, 0 « Je ne sais pas », 0 fausse)') throw new Error('infobulle : ' + JSON.stringify(a.titre));
+    if (!/^5.875 sur 20 — copie rendue à /.test(a.titre) || !/^7 sur 20 — copie rendue à /.test(b.titre)) throw new Error('la note elle-même change : ' + a.titre.split('\n')[0] + ' / ' + b.titre.split('\n')[0]);
+    // Une copie rendue avant ce chantier : les titres et l'état de chaque jalon, sans poids ni points.
+    if (!b.detail || b.titre.split('\n').slice(1).join('\n') !== 'Détail de la note :\n✓ Les documents\n✗ Le solde') throw new Error('repli : ' + JSON.stringify(b.titre));
+    // Aucun détail rangé : l'infobulle d'avant, mot pour mot (note, heure de remise).
+    if (c.detail || /Détail|✓|✗/.test(c.titre) || c.titre.split('\n').length !== 1) throw new Error('détail inventé : ' + JSON.stringify(c.titre));
+    if (!d.detail || d.titre.split('\n').slice(1).join('\n') !== 'Détail de la note :\n✓ Les questions : 4 sur 4 (3 justes, 1 « Je ne sais pas », 0 fausse)') throw new Error('ouverture en jalon : ' + JSON.stringify(d.titre));
+    // Lecture seule : rien à cliquer, rien à saisir dans la note ; le seul geste reste « rouvrir ».
+    const gestes = await p.$$eval('#contenuProf td.copie-cell', (L) => L.map((x) => x.querySelectorAll('input, select, textarea').length + ':' + x.querySelectorAll('button').length));
+    if (gestes.join(' ') !== '0:1 0:1 0:1 0:1') throw new Error('gestes de la case : ' + gestes);
+  } finally { await ctx.close(); }
+});
+
 await v('copie : aucune erreur JavaScript', async () => {
   if (erreursCp.length) throw new Error(erreursCp.slice(0, 3).join(' / '));
 });

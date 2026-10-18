@@ -416,12 +416,18 @@ export function creerEntreprise(U) {
     const detail = {};
     const erreurs = {};
     let ok = 0;
+    const jalons = [];
     etapes.forEach((e) => {
       let st = 'ko';
       try { st = e.verifier(db, U).status; } catch (x) { st = 'erreur'; erreurs[e.id] = signaler(`le jalon « ${e.id} » plante`, x); }
       detail[e.id] = st;
-      if (st === 'ok') ok += poidsDe(e) * (typeof e.fraction === 'function' ? e.fraction(db) : 1);
+      const pts = st === 'ok' ? poidsDe(e) * (typeof e.fraction === 'function' ? e.fraction(db) : 1) : 0;
+      ok += pts;
+      if (poidsDe(e) > 0) jalons.push({ id: e.id, titre: e.titre || e.id, poids: arrondi(poidsDe(e)), points: arrondi(pts) });
     });
+    // Copie pondérée : le détail jalon par jalon (titre, points sur poids), pour le Suivi de l'enseignant (19/10/2026).
+    // Seulement en évaluation : le détail d'une séance de travail ne change pas.
+    if (COPIE && AVEC_POIDS) detail.jalons = jalons;
     // La part des questions d'« Avant de commencer » en évaluation : le détail juste / « Je ne sais pas » / faux, lu par l'enseignant.
     if (MQ && MQ.ouverture && MQ.ouverture.part != null && db) {
       const n = noteOuverture(db, MQ);
