@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/COORDINATION-chep.md puis docs/briefs/ENT-9.1-chep-compte-palettes.md en entier. Fais l'état des lieux du §7 en lecture seule, dis-moi ce qui contredit le brief, annonce la durée, puis construis la séance (univers contenus/chep.js compris).
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (18/10/2026, `pret: true, ouverture: 'prof'` : Tristan l’essaie à l’écran et l’ouvre lui-même à son groupe)
 **Date du brief** : 17/10/2026
 **Conversation d'origine** : Cowork (Opus), 17/10/2026. **Décisions déléguées par Tristan** (seul le nombre de séances, 4, est de lui) :
 tout ce qui suit a été tranché par Cowork, et les choix secondaires sont marqués **(Cowork)**. **À lire avec `COORDINATION-chep.md`**,
@@ -330,11 +330,65 @@ en 50 min.
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu *(rempli par Claude Code à la livraison, 18/10/2026, session Fable + agents de lecture Sonnet)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : créés `contenus/chep.js` (univers 9.x : identité, charte, équipe, clients, lexique, conditions, gabarits des
+  documents, `solde`, `coutLocation`, « CHEP en bref », « Le droit »), `contenus/chep-ent91-donnees.js` (banques, tirage, équité, jeu de l'élève,
+  grille du relevé, attendus calculés), `contenus/chep-ent91.js` (documents, fiches `decl` et `releve`, phrases, messages, jalons, pastilles,
+  barre « Étape suivante », accueil), `contenus/questions/ENT-9.1.js`, `contenus/corriges/ENT-9.1.js`, `activites/chep-compte-palettes.js`,
+  `contenus/trames/logos/chep-texte.svg` (le nom en texte, bleu du site chep.com #0078BF ; pas le logo officiel), `outils/test/chep-91.mjs`,
+  `outils/test/chep/commun.mjs`. Modifiés : `activites/index.js` (ligne du registre, ligne ENTREPRISES n° 9), **`outils/test.mjs`** (lignes
+  `BLOCS` et `GROUPES`, groupe 1), `outils/test/tirage-niveaux.mjs` (colonne « 9 CHEP » de l'onglet Niveaux, `BANQUES_FIGEES`),
+  `outils/test/socle.mjs` (un cas prenait ENT-9.1 comme numéro d'entreprise inconnu : ENT-99.1 à la place).
+- **État des lieux du §7 (vérifié dans le code)** : 1. `blocs(db)` et `documents(db)` existent ; les gestes d'une fiche à `blocs(db)` sont
+  publiés sur base vide, donc les blocs portent des identifiants **par rôle** (`type-partiel`, `qte-retour`…) et la base vide rend le jeu témoin :
+  les questions 1 et 2 ont leur geste. 2. La grille à `lignes(db)` existe (ENT-6.10) ; le solde est jugé par la valeur de sa case et par
+  `estFormule`, jamais par une adresse fixe ; le bloc grille est un objet constant (la feuille garde son état par objet). 3. `texte: (db) => …`
+  sur une ligne imposée est accepté par `core/phrases.js` (évalué une fois, quand le message d'Hélène entre dans la base, après l'envoi du relevé) :
+  aucun test moteur ne le couvrait, le bloc `chep-91` le couvre. 4. `niveauEleve(db)` est lisible dans `blocs(db)` et `lignes(db)` : l'accompagné
+  a sa phrase sous chaque cadre et une aide par ligne du relevé.
+- **Écarts par rapport au brief** (et pourquoi) : (a) **relevé : la quantité dans la bonne colonne et 0 dans l'autre** (une case « à remplir »
+  vide bloque l'envoi d'une fiche, et un compte s'écrit ainsi) ; (b) **jalon 6** jugé sur le **sens** (la quantité > 0 du bon côté, 0 de l'autre),
+  sans rejuger la quantité (jalons 2 et 5 le font) : sinon un élève qui corrige une quantité de ses déclarations après le bilan voyait son relevé,
+  resté figé, retomber ; Sandrine le dit dans l'accusé de correction ; (c) **jalon 8** = la formule donne D2 + ses entrées − ses sorties **telles
+  qu'il les a écrites dans la grille** (un nombre tapé à la main peut être juste : 8 ✓, 7 ✗) ; (d) `ecran` des jalons = `fiche:decl`,
+  `fiche:releve`, `phrases:reponse-helene` (jamais `fiche` nu : le moteur découpe sur « : », voir « Reste ouvert ») ; (e) le relevé s'ouvre sur
+  « déjà envoyée » et non « envoyée » (une fiche rouverte par « Corriger » perd son état envoyé) ; (f) le contrôle d'équité n'exige la distinction
+  que des cinq nombres que l'élève déclare (E, T, R, total du partiel, ses CHEP) plus trois paires (commande ≠ E, Europe seules ≠ total du partiel,
+  lundi ≠ T) : l'exigence « aucune quantité égale à une autre » retirait trop souvent la pièce `nm-europe` (39,5 % sur 200 graines) ; (g) le
+  bordereau du lundi (confirmé) est tiré de 20 à 26 palettes (24 fixe pouvait valoir T) ; (h) l'accent de la charte est **#006eb0** (le bleu du
+  site, #0078bf, fait 4,2 : 1 sur le fond papier, sous les 4,5 ; il reste au nom « CHEP » du bandeau, en gros et gras) ; (i) « Pour réfléchir »
+  et la réflexion n° 5 arrivent à l'envoi de la réponse à Hélène (`apresMail`), corrigées au bilan ; (j) Sandrine parle à la place d'Hélène dans
+  les questions au fil (une cliente ne questionne pas l'alternant).
+- **Décisions prises en route** : `ouverture: 'prof'` (règle du 03/10) ; une base par séance ; pas de trame ; le document `releve-11` (relevé
+  au 11/01) joint au message d'Hélène ; « Le droit » joint au message de Sandrine (question n° 2) ; la barre « Étape suivante » gardée (décision
+  Cowork) malgré le défilement qu'elle ajoute (voir « Reste ouvert »). **Poids codés tels quels** (à corriger à l'écran) : types des trois documents
+  fixes 2 · document partiel 2 · document sans mouvement 2 · partenaires 1 · quantités 1 · colonnes 3 · formule 1 · solde 2 · ce qu'elle paie 1 ·
+  conseil 1 · formule de fin 1 · questions 3 (= 20). Questions retenues : 1, 2, 3 notées ; 4 en réserve ; 5 et « Pour réfléchir » en réflexion.
+- **Vérifié / construit (18/10/2026)** : noms fictifs libres par recherche web (Endives du Ternois, Frais du Nord, Halles d'Artois, Hainaut
+  Primeurs, MarchéLys, Transports Lys-Escaut, Légumes de la Lys, Opale Frais) ; **« Distri Escaut » existe** (SAS à Caudry, SIREN 902223692,
+  grossiste) : à renommer avant ENT-9.2 (`contenus/chep.js` le dit, le nom n'y est pas) ; les trois articles du Code civil sont **confirmés mot
+  pour mot** (PDF du Code civil de codes.droit.org, tiré de Légifrance, édition du 14/10/2026 ; Légifrance même n'a pas été relu) ; la palette
+  CHEP **1 200 × 1 000, 28 kg à vide : vérifiés** sur chep.com/fr (fiche produit) ; que ce format soit « bleu » n'est écrit sur aucune fiche CHEP
+  (probable, notoriété) ; CHEP France présente le 1 200 × 800 comme sa « palette Europe » : ne pas dire que le 1 200 × 1 000 est le standard
+  européen. Prénoms déjà pris ailleurs sur le site : Sandrine (Sandrine Labat, Action) et Hélène (directrice, France Boissons), avec d'autres
+  noms de famille : gardés, à toi de dire. Géographie : Douai est dans le Douaisis, pas en Artois (« Halles d'Artois » reste un nom d'enseigne).
+- **Tests** : bloc `chep-91`, **17 cas**, 35 s (registre et poids ; données des deux témoins écrites à la main, 306 et 341 ; parcours juste des
+  deux témoins = 20/20 ; le parcours de l'un joué par l'autre ≠ 20 ; inaction 0, fiche vide et à moitié vide refusées, « Aucun » et 0 sont des
+  réponses, relevé incomplet refusé ; pièges un par un : total du camion → 2 ✗ avec relevé juste sur ses lignes, Europe déclarées → 3 ✗, commande
+  en émission → 3 ✗, transfert en entrées → 6 ✗, solde à la main → 7 ✗ 8 ✓, « palettes perdues » → 9 ✗ ; « Corriger » rouvre la fiche des
+  déclarations seule, note moyennée 19 ; tirage 200 graines : 40–60 %, 0 secours, 0 écart, ordres variés, jamais les trois fixes en tête ; confirmé
+  à l'écran : 7 documents, bonus jugés, standard `null` ; accompagné ; « Avant de commencer » 4 tirées, banque ≥ double, variante de d2 ; ergonomie
+  1366 × 768 et 1280 × 720 avec 7 cadres et un relevé de 7 lignes ; corrigé par élève ; pieds reconstitués ; aucune erreur JS). Sabotages éprouvés
+  pendant la construction : le jalon 8 jugé sur les déclarations (et non sur les cases) faisait tomber « transfert en entrées » et « Corriger » ;
+  le sélecteur des onglets faux faisait tomber « confirmé » ; le solde lu comme texte (et non calculé) faisait tomber la question n° 3. Suite
+  entière : voir « Commits ».
+- **Commits** : voir `git log` du 18/10/2026 (EN-COURS, séance, tests, compte rendu).
+- **Reste ouvert** (demandes au moteur, hors de cette séance) : 1. `ecran: 'fiche'` sans identifiant ne rouvre rien au bouton « Corriger »
+  (`core/types/entreprise.js` découpe l'écran sur « : ») : ENT-7.1, ENT-6.5, 6.6 et 6.10 le déclarent ainsi, à corriger en `fiche:<id>` (ou
+  à tolérer dans le moteur). 2. La barre « Étape suivante » (`suite`, 59 px) n'est pas retirée de la hauteur minimale de l'écran de travail
+  (`.ent-pastilles + .ent-shell { min-height: calc(100vh - 124px) }`, `styles/base.css`) : la page défile de 47 px à 1366 × 768, le bouton
+  d'envoi reste visible ; le test d'ergonomie de `chep-91` retire la barre de sa mesure en attendant (ENT-8.2 est dans le même cas). 3. Une fiche
+  `defile: true` calcule sa hauteur au dessin et sur `resize` seulement : quand les cartes de messages se ferment ensuite, elle reste plus courte
+  qu'elle ne pourrait (`borner`, `core/types/fiche.js`). 4. Trame courte (Cowork, après validation à l'écran). 5. Renommer « Distri Escaut »
+  avant ENT-9.2.
