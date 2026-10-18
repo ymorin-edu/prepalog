@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/chantiers.md, docs/briefs/COORDINATION-chep.md, docs/briefs/MOTEUR-vue-tournee-camion.md (§6) puis docs/briefs/MOTEUR-chep-ramasse-et-piles.md. Fais l'état des lieux du lot A en lecture seule, annonce la durée, construis le lot A avec sa page d'essai, et envoie-moi une capture avant le lot B.
 > ```
 
-**Statut** : **lot A livré** (18/10/2026, validé à l’écran sur captures) ; **lot B livré** (18/10/2026, à valider à l’écran)
+**Statut** : **lot A livré** (18/10/2026, validé à l’écran sur captures) ; **lot B livré et validé à l’écran par Tristan** (18/10/2026)
 **Date du brief** : 17/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de CHEP (décisions déléguées par Tristan, 17/10/2026). Séances servies : **ENT-9.2**
 (les deux lots), **ENT-9.4** (les deux lots), puis d'autres (§1).
@@ -276,7 +276,7 @@ l'étape ③. Le quai reste sans froid (`froid: false`), en iso (`rendu: 'iso'`)
   accords au féminin (et rien ne change sans `feminin`) ; pas de « Refuser », la réserve « d'un autre pool » chiffrée (« LPR » est faux, 1 est juste),
   « BC » partout et plus aucun « BL » ; la partie 5 jouée de bout en bout (17 jalons justes). **Douze sabotages éprouvés**, chacun fait tomber le cas visé : CHEP qui retire les abîmées, décision qui oublie l’autre pool, palette intruse et abîmée acceptée, dégât dessiné de toutes les vues, un `title` par palette, le dégât balisé à l’écran (ce sabotage a d’abord raté : « avarie » manquait aux mots interdits du test, ajouté), zoom toujours vu de face, `feminin` ignoré, autre pool en texte, « Refuser » remis, « BL » gardé dans la réserve, piles non dessinées au décor. Non-régression : les 95 cas existants du bloc `quai-iso` (référence Spartoo octet pour octet, fûts, ENT-8.7/8.8, dépose) verts sans modification ; suite entière **1780/1780** (`node outils/test-parallele.mjs`, 615 s), dont `picard`, `spartoo`, `fb-6.4`, `action-87` à `action-810`, sans modification.
 - **Commits** : voir `git log` du 18/10/2026 (EN-COURS, lot B, compte rendu).
-- **Reste ouvert** : validation à l'écran par Tristan (`outils/essai-quai-inspection.html#piles`, captures envoyées) ; zoom ramené à
+- **Reste ouvert** : *(validé à l'écran par Tristan le 18/10/2026, sur `outils/essai-quai-inspection.html#piles`)* ; zoom ramené à
   **« Palette 9 »** par Tristan (18/10/2026) : le brief disait « Palette 9 / 14 », qui donnait la hauteur réelle — donc les manquantes, avec « 15
   palettes annoncées » juste dessous — dès le premier clic ; la hauteur se lit maintenant en cliquant la palette du haut ;
   ENT-9.2 et 9.4 déclarent leurs piles (rien de déclaré dans une séance ici) ; les textes du support encore au masculin « palette » hors étape ③ et
