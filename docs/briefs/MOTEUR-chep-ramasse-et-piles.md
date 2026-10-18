@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/chantiers.md, docs/briefs/COORDINATION-chep.md, docs/briefs/MOTEUR-vue-tournee-camion.md (§6) puis docs/briefs/MOTEUR-chep-ramasse-et-piles.md. Fais l'état des lieux du lot A en lecture seule, annonce la durée, construis le lot A avec sa page d'essai, et envoie-moi une capture avant le lot B.
 > ```
 
-**Statut** : à implémenter
+**Statut** : **lot A livré** (18/10/2026, à valider à l’écran) ; lot B à implémenter
 **Date du brief** : 17/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de CHEP (décisions déléguées par Tristan, 17/10/2026). Séances servies : **ENT-9.2**
 (les deux lots), **ENT-9.4** (les deux lots), puis d'autres (§1).
@@ -180,7 +180,58 @@ l'étape ③. Le quai reste sans froid (`froid: false`), en iso (`rendu: 'iso'`)
 
 ---
 
-## Compte rendu *(rempli par Claude Code à la livraison)*
+## Compte rendu — lot A *(Claude Code, 18/10/2026 : session Fable, deux agents Sonnet — état des lieux, carte)*
+
+- **Fichiers créés** : `outils/carte/construire-ramasse.py` (générateur hybride : emprise régionale de Decathlon, format de la carte de la
+  côte, toutes les paires d’arrêts au profil porteur), `outils/carte/extraire-chep.mjs` (extraction Overpass propre, écrit
+  `outils/carte/sources/chep/`, hors git), `outils/carte/chep.json` (points, zones de zoom, fourchettes par paire, calage de la journée
+  d’essai), `contenus/chep-carte.js` (336 Ko, reproductible octet pour octet), `outils/essai-tournee-ramasse.html`, `outils/test/ramasse.mjs`.
+  **Modifiés** : `core/types/tournee.js` (profil, quai, gestes, `quand`, `service.unite`, `termine.toast`), `core/types/entreprise.js` (gestes
+  de la tournée connus, `api.signal`, `tourOuvert()`), `core/types/carte.js` (couche `frontiere`, `unite: 'zone'`), `styles/base.css` (profil
+  en marches), `styles/carte.css` (frontière), `outils/carte/calibrer.mjs` (profil de charge, mode `ramasse`), **`outils/test.mjs`** (bloc
+  `ramasse` dans `BLOCS` et au groupe 2 de `GROUPES`), `activites/FICHE-SEANCE.md` (ligne `tournee`, table des gestes).
+- **État des lieux (§2.1, vérifié dans le code)** : `construire-region.py` ne produisait pas le format que lit la tournée (`trajets`, `clients`,
+  `depart`…) et `construire-cote.py` avait l’emprise de la côte en dur : d’où le générateur neuf. Les routes secondaires n’étaient extraites
+  qu’autour de Valenciennes et de Dourges : extraction propre (≈ 10 min, serveur Overpass souvent en 502, relances automatiques). Le libellé du
+  bouton se déclare (`quai.libelle`). Les cellules `{ arret, champ }` du §2.2.6 n’ont rien demandé à `grille.js` : la feuille d’une séance lit
+  `bilan.charges[id]`, `bilan.profils[id]` et `bilan.troncons` dans `grille.lignes(bilan)`, rang par rang, comme ENT-6.9.
+- **Ce que la séance déclare (noms définitifs)** : `mesures: [{ id, libelle, unite, max, depart: 0 | 'somme', depose, reprend, libelleDepasse }]`
+  (le pic tient lieu de cumul ; `bilan.profils`, `pics`, `charges`), `quai: { libelle, titre, reprendre, vide, max }` (`bilan.reportes`,
+  `reportesTrop`), `id` (gestes), `quand(db)` (hors du menu tant que faux, l’enseignant la voit), `horaire.service: { base, parColis, champ, unite }`,
+  `termine.toast` ; gestes `tournee:<id>:envoyer` et `tournee:<id>:reporter`. Détail en tête de `core/types/tournee.js` et dans FICHE-SEANCE.
+- **Écarts par rapport au brief** (et pourquoi) : (a) `tournee:<id>:envoyer` part au report validé (juste ou faux, pas refusé) **ou** à
+  « J’ai terminé » confirmé (c’est le bouton « Envoyer la tournée à Yannick » d’ENT-9.2 : `termine`, avec `toast`) : pas d’écran d’envoi nouveau ;
+  (b) la jauge **parlante** montre les marches avec leurs valeurs (au survol, et le pic en tête) : c’est le guidage ; **muette**, rien de plus que
+  le repère d’aujourd’hui ; la pastille et le refus du report ne disent **jamais de combien** (`libelleDepasse`), même parlants ; (c) `quai.max`
+  refuse au report et à « J’ai terminé », pas au clic (l’élève essaie, l’écran le lui dit) ; (d) les km sont mesurés **sur la sphère** (comme
+  Decathlon), pas sur le plan ; (e) les villes repères ne s’affichent qu’au zoom (CSS existant des repères) ; (f) le thème sombre ne change rien :
+  CHEP est en `papier: true`, qui impose le clair — pas de capture sombre à juger ; (g) le quai n’est jamais borné au clic avec `departAQuai`
+  (tout part à quai) : la borne ne se lit qu’au report.
+- **La carte** (agent Sonnet, 18/10/2026) : dépôt **CHEP, route de Vendeville, Templemars** (centre vérifié, ouvert en 1984 ; **numéro de rue non
+  trouvé**, point de la rue à la BAN) ; plates-formes fictives sur des rues réelles de zones d’activité (Lesquin rue Henri Ghesquière, Mélantois ;
+  Douai rue Gustave Eiffel, Dorignies ; Prouvy avenue Marc Lefrancq ; Roubaix rue de Carihem — **zone à confirmer** ; Dourges rue du Delta,
+  Delta 3), BAN relevée le 18/10/2026. Distances dépôt → Lesquin 10,0 · Douai 26,6 · Prouvy 48,1 · Roubaix 19,5 · Dourges 19,0 km (aller ;
+  retour à 1-2 km près) ; fourchettes ±15 % par paire dans `chep.json`, contrôlées au build. Trois zones de zoom (Métropole lilloise, Douaisis
+  et Lens, Valenciennois), cadre 11 × 11 cases de 5 km, frontière belge, canaux, rail, mention OSM + BAN, aucune URL dans le module.
+  **« Distri Escaut » (vraie société) est encore le nom du point 5** : à renommer dans `chep.json`, puis rebâtir, avant ENT-9.2.
+- **Calage de la journée d’essai** (`node outils/carte/calibrer.mjs contenus/chep-carte.js outils/carte/chep.json`, valeurs médianes du §6.3
+  d’ENT-9.2) : tout prendre → 425 pour 390 ; sans Dourges → 355 ; 2 ordres sur 6 tiennent les créneaux ; meilleur Douai → Prouvy → Roubaix,
+  131,4 km, retour 13 h 45, **244 min d’attente**. **À dire à Cowork avant ENT-9.2** : MarchéLys n’ouvre qu’à 13 h, le camion attend plus de
+  3 h à Roubaix, et l’ordre le plus court tient tout (les horaires ne forcent rien sur ce jeu) : horaires du §6.3 à recaler.
+- **Tests** : bloc `ramasse`, **13 cas** (profils écrits à la main : 0 → 140 → 260 → 355 → 425, sans D 355, sans A 285 ; lot 4 : 14 → 16 → 12 → 10
+  et 14 → 10 → 8 → 10 ; écran : marches, pic, pastille, jamais de combien ; report, geste `reporter`, borne du quai, geste `envoyer` après un
+  report jugé seulement ; jauge muette ; `quand` ; gestes connus, inconnus, absents sans quai ; carte : 42 trajets, boucle, frontière, repères,
+  ordres de grandeur ; calage = vue sur km, arrivées, retour, profil). Sabotages éprouvés : pic = dernière valeur → le cas lot 4 tombe ;
+  pastille « de combien » → le cas écran tombe. Non-régression : `transport`, `boost`, `carte`, `carte-region`, `fb-6.9`, `chep-91` : 240/240
+  sans modification ; `geo.py` et `extraire-region.mjs` non touchés (modules de Nîmes, de la côte et de Decathlon intacts) ; suite entière :
+  voir « Commits ».
+- **Commits** : voir `git log` du 18/10/2026 (EN-COURS, lot A, compte rendu).
+- **Reste ouvert** : le **lot B** (§3) n’est pas commencé ; validation à l’écran par Tristan (`outils/essai-tournee-ramasse.html`, captures
+  envoyées) ; renommer Distri Escaut ; horaires d’ENT-9.2 §6.3 à recaler ; sur un autre poste, `node outils/carte/extraire-chep.mjs` avant de
+  rebâtir la carte ; en vue d’ensemble, le nom « CHEP Templemars » touche presque le rond 1 (Lesquin, à 10 km) ; question §5.1 : vitesse 55 km/h
+  gardée (à juger sur le calage).
+
+## Compte rendu — lot B *(à remplir à la livraison)*
 
 - **Fichiers créés / modifiés** :
 - **Écarts par rapport au brief** (et pourquoi) :
