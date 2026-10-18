@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/COORDINATION-chep.md, docs/briefs/MOTEUR-chep-ramasse-et-piles.md (compte rendu) puis docs/briefs/ENT-9.2-chep-ramasse-et-retours.md. État des lieux du §7, durée, puis construis.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (18/10/2026, `pret: true, ouverture: 'prof'`)
 **Date du brief** : 17/10/2026
 **Conversation d'origine** : Cowork (Opus), 17/10/2026, décisions déléguées par Tristan (seul le nombre de séances est de lui). Choix
 secondaires marqués **(Cowork)**. **À lire avec `COORDINATION-chep.md`** et le chantier moteur `MOTEUR-chep-ramasse-et-piles.md`.
@@ -252,6 +252,18 @@ vides ouvert de {h} à {h} ». Pied de reconstitution.
 5. Une tournée qui ne s'ouvre qu'après l'envoi d'une fiche (`quand`, comme une fiche ou une animation) : si la tournée ne l'accepte pas,
    `fermetures` avec `ouvertSi(db)`.
 
+**État des lieux (Claude Code, 18/10/2026, lu dans le code)** : 1 — lots A et B livrés ; 2 — un quai iso sans `securite` est accepté
+(`quaiPiles` de la page d'essai n'en a pas) ; 3 — `documents[].html(db)` existe (D-1 bis) : le bon de collecte montre les réserves de
+l'élève ; 4 — oui, `tournee:<id>:envoyer` part à « J'ai terminé » confirmé (« Envoyer la tournée à Yannick ») : la réflexion n° 5 est au
+fil ; 5 — oui, `tournee.quand(db)`.
+
+**Demande au moteur née de la construction (non faite, à un chantier moteur)** :
+6. **Des points de tournée qui se lisent dans la base de l'élève.** La vue Tournée est une déclaration fixe (créée une fois par
+   `creerTournee`) : les vides de chaque plate-forme ne peuvent pas être tirés par élève (§6.3 : « 135 à 145, pas de 5 »…). ENT-9.2 garde les
+   médianes (140, 120, 95, 70) pour tous ; seuls la pièce `dernier` (dates des avis, site à reporter) et V (Frais du Nord, hors tournée) sont
+   tirés. Ce qu'il faudrait : `tournee.points` (au moins `vides` et `zone`) en fonction `(db) => …`, comme `fiche.blocs`, relu à chaque dessin
+   et par `bilan`. Utile aussi à ENT-9.4 (évaluation, jeu tiré par élève).
+
 ## 7 bis. Séance déjà jouée ? Non.
 
 ## 8. Tests attendus
@@ -291,9 +303,55 @@ tient dans une heure.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+*(Claude Code, 18/10/2026, session Opus.)*
+
+- **Fichiers créés** : `activites/chep-ramasse-retours.js`, `contenus/chep-ent92-donnees.js` (tirage, piles, tournée, équité, ce que l'élève a
+  fait), `contenus/chep-ent92.js` (documents, quai, fiches, messages, jalons), `contenus/questions/ENT-9.2.js`, `contenus/corriges/ENT-9.2.js`,
+  `outils/test/chep-92.mjs`. **Modifiés** : `activites/index.js` (une ligne), **`outils/test.mjs`** (deux lignes ajoutées : `chep-92` dans
+  `BLOCS` et dans le groupe 4 de `GROUPES`). Rien dans `styles/` ni `outils/test/chep/commun.mjs` (aucune aide ajoutée). **Relecture du chef
+  (Fable), suite entière** : deux cas rouges corrigés — `reinitialisable: true` retiré de la séance (copié d'ENT-9.1 ; le bloc `transport` ne
+  l'admet qu'en séance X.1), et **une garde d'une ligne dans `core/theme.js`** (`typeof window !== 'undefined'`) parce que le corrigé d'ENT-9.2
+  passe par la vue Tournée, qui importe `ui.js` puis `theme.js`, et que le bloc `spartoo` charge tous les corrigés hors navigateur (même garde
+  que `document` dans `iso.js` ; aucun changement dans le navigateur).
+- **Poids codés (ceux du §5, tels quels)** : contrôler 8 — le compte de chaque pile 0,4 × 5 (`compte-P1` à `compte-P5`), les autres pools 2,
+  les abîmées 2, décisions et réserves 2 ; créditer 3 — à créditer 2, hors pool + réparation + sort 1 ; organiser 6 — capacité 1, Frais du
+  Nord 1, site reporté 1,5, la tournée tient 1, horaires 1,5 ; questions 3 (`autre-pool`, `contrat-type`, `camions-pleins`). Total 20.
+  Bonus du confirmé : `bonus-pile6` (+0,5).
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  1. **Les vides des quatre plates-formes ne sont pas tirés** (140, 120, 95, 70 pour tous) : la vue Tournée est une déclaration fixe
+     (demande au moteur n° 6 ci-dessus). Sont tirés : l'ordre des cinq histoires, m, i, a, pools et places, le n° du bon, la pièce `dernier`
+     (dates et heures des avis), V.
+  2. **Pas de tirage mémorisé** (`declarerTirage`) : une banque déclarée doit s'inscrire dans `BANQUES_FIGEES` d'`outils/test/tirage-niveaux.mjs`,
+     hors de mon périmètre. Le jeu se calcule de la graine (identifiant de l'élève), comme le quai d'ENT-8.8 : **changer le tirage changerait
+     les piles d'un élève déjà commencé**. La banque `dernier` reste figée par un cas du bloc `chep-92`. À basculer en `declarerTirage` si
+     Tristan veut le tirage rangé (une ligne dans `BANQUES_FIGEES`).
+  3. **Jalon 4 jugé sur SON comptage** : une pile comptée en dessous du bon est « sous réserve » avec « manquantes » = bon − son compte ; une
+     pile comptée juste n'a pas de « manquantes » ; la pile réellement juste est acceptée ; réserves écrites. Sinon une pile mal comptée ou un
+     intrus non vu (pile à une histoire, acceptée) aurait coûté aussi le jalon 4, contre les pièges du §8 (« 1 faux », « 2 faux »).
+  4. **Question n° 3** : l'énoncé reprend SA capacité (« 375 palettes vides à 25 kg, c'est environ 9,38 t ») ; « 390 palettes… » aurait donné
+     la case pendant que la fiche est ouverte. **Question n° 1** : la quantité ne se saisit qu'à l'étape ④ ; l'énoncé dit « tu as mis des
+     palettes de côté dans la pile P3 » (le nombre de sa fiche de contrôle s'il l'a noté).
+  5. « Pour réfléchir » nomme la plate-forme de SA pièce (pas toujours Primeurs du Delta) ; la réflexion n° 5 a trois choix.
+  6. Message de Grégory neutre (« des piles de 15 palettes CHEP »), sans « 75 en 5 piles » : un confirmé en a 6.
+  7. Quai `id: 'chep-retours'` (gestes `quai:chep-retours:…`) plutôt que `retours` ; `recommencer: false` (le porteur repart au bon signé).
+- **Décisions prises en route** : rubrique « image » gardée (le moteur accepte un nom libre) ; dessins = documents SVG tracés par
+  `palettePile` (le contenu ne fait que cadrer la palette) ; carte dans `tournee.plan` (pas d'entrée « Carte » au menu, comme le menu du §4) ;
+  fiche « crédit » en `defile: true` ; accompagné : rappel dans la consigne de Grégory ; lexique + « zone hors pool » et « contrat type »
+  (construits) ; document « Le contrat type » : la phrase citée par l'OTRE, l'article exact non relu (dit en pied) ; Yannick dit « ce qui ne
+  tient pas dedans attendra la semaine prochaine » sans nombre.
+- **Tests** : bloc `chep-92`, **22 cas, ≈ 95 s** ; `node outils/test.mjs chep-92 chep-91 dependances socle questions tirage-niveaux` :
+  **227/227** (aucun cas existant recalé). Sabotages (chacun fait tomber son cas, fichiers remis en place, empreintes vérifiées) : 71 en dur
+  dans les comptes → données + tirage ; 71 en dur au jalon 5 → pièges A, B ; jalon 5 sur le réel → pièges A, B, C ; décision sur le réel →
+  pièges A ; pool coché sur une pile juste accepté → pièges C ; Roubaix ouvert jusqu'à 12 h (le plus court tient partout) → ramasse, tirage,
+  données, socle ; Grégory reprend 71 → pièges C ; site reporté quelconque → voisin ; bonus chez un standard → confirmé ; jalon du quai vrai
+  avant clôture → inaction ; pool écrit dans la consigne → « que, jamais de combien » ; Frais du Nord « tournée » accepté, capacité
+  quelconque, horaires toujours tenus, question n° 3 qui dit 390 → pièges A ; tournée qui tient toujours → pièges B ; contrôle des bords
+  retiré → tirage ; rappel accompagné retiré → accompagné ; jalons sans écran → la séance refuse de se charger ; fiche crédit sans
+  `defile` → ergonomie. Le `title` sur une palette intruse relève du bloc `quai-iso` (lot B), non rejoué ici.
+  Ergonomie : fiches sans défilement de page à 1366 × 768 et 1280 × 720 ; **quai ③ ④ et tournée : sans défilement horizontal seulement**
+  (ils défilent en hauteur, comme ENT-8.8 et ENT-6.9).
+- **Commits** : voir `git log`.
+- **Reste ouvert** : validation à l'écran par Tristan (poids, questions, textes) ; demande au moteur n° 6 ; remarques sur le moteur, non
+  demandées : le chauffeur dit « Je recharge les palettes refusées » même sans refus ; la pastille d'un créneau dit « Créneau raté de 147
+  min » (le brief disait « le quai est fermé ») ; le menu ne montre « Crédit du retour » qu'au changement d'écran après « Clore » (la barre
+  « Étape suivante » et la carte du message y mènent) ; trame courte (Cowork).
