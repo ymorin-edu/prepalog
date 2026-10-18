@@ -1,0 +1,337 @@
+{
+ "sortie": "contenus/chep-carte.js",
+ "titre": "La carte de la tournée de ramasse de palettes vides (CHEP, ENT-9.2 et ENT-9.4) : la métropole lilloise et le bassin minier.",
+ "description": "le centre de service CHEP de Templemars et cinq plates-formes de distribution inventées (bâtiments non nommés, rues réelles de zones d'activité, adresses de la Base Adresse Nationale, relevées le 18/10/2026) ; profil porteur ; départ et retour au centre de service.",
+ "profil": "porteur",
+ "boucle": true,
+ "emprise": {
+  "lonlat": [
+   [
+    2.85,
+    50.75
+   ],
+   [
+    3.6,
+    50.3
+   ]
+  ],
+  "pas": 5000,
+  "marge": 1500
+ },
+ "depot": {
+  "id": "templemars",
+  "nom": "CHEP Templemars",
+  "ville": "Templemars",
+  "cp": "59175",
+  "adresse": "route de Vendeville (zone industrielle)",
+  "rue": "Route de Vendeville",
+  "lonlat": [
+   3.065014,
+   50.570638
+  ],
+  "source": "VÉRIFIÉ : centre de service CHEP France de Templemars, ouvert en 1984, le plus ancien et le plus gros du réseau (articles Réussir et Stratégies Logistique, relus le 18/10/2026) ; adresse publiée « Zone industrielle, parc d'activités A, route de Vendeville, 59175 Templemars » (PagesJaunes). Pas de numéro publié : le point est celui de la route de Vendeville dans la Base Adresse Nationale (route secondaire dans OSM, 150 m des bâtiments de la zone), à confirmer sur l'adresse que CHEP donne à ses clients."
+ },
+ "clients": [
+  {
+   "id": "lesquin",
+   "numero": 1,
+   "nom": "Frais du Nord",
+   "ville": "Lesquin",
+   "cp": "59810",
+   "adresse": "rue Henri Ghesquière",
+   "rue": "Rue Henri Ghesquière",
+   "lonlat": [
+    3.123992,
+    50.590801
+   ],
+   "source": "rue réelle du parc d'activités du Mélantois, à Lesquin (OSM : landuse « Parc du Mélantois Lesquin », proche de l'aéroport et des zones CRT) ; point de la rue à la Base Adresse Nationale (18/10/2026) ; plate-forme inventée, bâtiment non nommé"
+  },
+  {
+   "id": "douai",
+   "numero": 2,
+   "nom": "Halles d'Artois",
+   "ville": "Douai",
+   "cp": "59500",
+   "adresse": "rue Gustave Eiffel",
+   "rue": "Rue Gustave Eiffel",
+   "lonlat": [
+    3.096041,
+    50.38942
+   ],
+   "source": "rue réelle du parc d'activités de Douai-Dorignies (OSM : landuse « Parc d'Activités de Douai-Dorignies ») ; point de la rue à la Base Adresse Nationale (18/10/2026) ; plate-forme inventée, bâtiment non nommé"
+  },
+  {
+   "id": "prouvy",
+   "numero": 3,
+   "nom": "Hainaut Primeurs",
+   "ville": "Prouvy",
+   "cp": "59121",
+   "adresse": "avenue Marc Lefrancq",
+   "rue": "Avenue Marc Lefrancq",
+   "lonlat": [
+    3.458305,
+    50.333097
+   ],
+   "source": "avenue réelle de la zone d'activités de Prouvy-Rouvignies, près de l'aérodrome de Valenciennes ; point de la rue à la Base Adresse Nationale (18/10/2026) ; plate-forme inventée, bâtiment non nommé"
+  },
+  {
+   "id": "roubaix",
+   "numero": 4,
+   "nom": "MarchéLys",
+   "ville": "Roubaix",
+   "cp": "59100",
+   "adresse": "rue de Carihem",
+   "rue": "Rue de Carihem",
+   "lonlat": [
+    3.212034,
+    50.685505
+   ],
+   "source": "rue réelle du quartier d'activités du Carihem, à Roubaix (OSM : « Plateforme Colis de Roubaix-Carihem » à 400 m) ; point de la rue à la Base Adresse Nationale (18/10/2026) ; plate-forme inventée, bâtiment non nommé. CONSTRUIT : « zone d'activité » au sens d'un quartier mêlant entrepôts et plates-formes, non vérifiée par une source officielle de la MEL"
+  },
+  {
+   "id": "dourges",
+   "numero": 5,
+   "nom": "Distri Escaut",
+   "ville": "Dourges",
+   "cp": "62119",
+   "adresse": "rue du Delta",
+   "rue": "Rue du Delta",
+   "lonlat": [
+    2.996631,
+    50.442454
+   ],
+   "source": "rue réelle de la plate-forme multimodale Delta 3 (OSM : landuse « Plateforme multimodale Delta 3 ») ; point de la rue à la Base Adresse Nationale (18/10/2026) ; plate-forme inventée, bâtiment non nommé"
+  }
+ ],
+ "reperes": [
+  {
+   "nom": "Lille"
+  },
+  {
+   "nom": "Roubaix"
+  },
+  {
+   "nom": "Lens"
+  },
+  {
+   "nom": "Douai"
+  },
+  {
+   "nom": "Valenciennes"
+  },
+  {
+   "nom": "Seclin"
+  }
+ ],
+ "zones": {
+  "lille": {
+   "nom": "Métropole lilloise",
+   "lonlat": [
+    [
+     2.93,
+     50.75
+    ],
+    [
+     3.34,
+     50.52
+    ]
+   ]
+  },
+  "douaisis": {
+   "nom": "Douaisis et Lens",
+   "lonlat": [
+    [
+     2.85,
+     50.49
+    ],
+    [
+     3.22,
+     50.3
+    ]
+   ]
+  },
+  "valenciennois": {
+   "nom": "Valenciennois",
+   "lonlat": [
+    [
+     3.24,
+     50.49
+    ],
+    [
+     3.6,
+     50.3
+    ]
+   ]
+  }
+ },
+ "km": {
+  "depart|lesquin": [
+   7,
+   12
+  ],
+  "depart|douai": [
+   22,
+   31
+  ],
+  "depart|prouvy": [
+   40,
+   57
+  ],
+  "depart|roubaix": [
+   15,
+   23
+  ],
+  "depart|dourges": [
+   16,
+   22
+  ],
+  "lesquin|depart": [
+   7,
+   12
+  ],
+  "lesquin|douai": [
+   28,
+   40
+  ],
+  "lesquin|prouvy": [
+   40,
+   55
+  ],
+  "lesquin|roubaix": [
+   11,
+   17
+  ],
+  "lesquin|dourges": [
+   22,
+   31
+  ],
+  "douai|depart": [
+   22,
+   31
+  ],
+  "douai|lesquin": [
+   28,
+   40
+  ],
+  "douai|prouvy": [
+   27,
+   39
+  ],
+  "douai|roubaix": [
+   36,
+   50
+  ],
+  "douai|dourges": [
+   11,
+   16
+  ],
+  "prouvy|depart": [
+   40,
+   57
+  ],
+  "prouvy|lesquin": [
+   40,
+   55
+  ],
+  "prouvy|douai": [
+   27,
+   39
+  ],
+  "prouvy|roubaix": [
+   45,
+   62
+  ],
+  "prouvy|dourges": [
+   36,
+   52
+  ],
+  "roubaix|depart": [
+   15,
+   23
+  ],
+  "roubaix|lesquin": [
+   11,
+   17
+  ],
+  "roubaix|douai": [
+   36,
+   50
+  ],
+  "roubaix|prouvy": [
+   45,
+   62
+  ],
+  "roubaix|dourges": [
+   30,
+   42
+  ],
+  "dourges|depart": [
+   16,
+   22
+  ],
+  "dourges|lesquin": [
+   22,
+   31
+  ],
+  "dourges|douai": [
+   11,
+   16
+  ],
+  "dourges|prouvy": [
+   36,
+   52
+  ],
+  "dourges|roubaix": [
+   30,
+   42
+  ]
+ },
+ "calibrage": {
+  "_commentaire": "La journée d'essai (outils/essai-tournee-ramasse.html, ENT-9.2 §6.3, valeurs médianes) : node outils/carte/calibrer.mjs contenus/chep-carte.js outils/carte/chep.json. Mode ramasse : départ 6 h de Templemars, 55 km/h, 20 min + 0,05 min par palette à chaque arrêt ; on part à vide et on reprend les vides ; Distri Escaut (Dourges) a signalé le plus tard : c'est lui qu'on reporte. Frais du Nord (Lesquin) a son camion complet, hors tournée.",
+  "mode": "ramasse",
+  "depart": 360,
+  "vitesse": 55,
+  "service": {
+   "base": 20,
+   "parColis": 0.05,
+   "champ": "vides"
+  },
+  "mesure": {
+   "depart": 0,
+   "reprend": "vides",
+   "max": 390
+  },
+  "arrets": {
+   "douai": {
+    "vides": 140,
+    "creneau": {
+     "apres": 360,
+     "avant": 600
+    }
+   },
+   "prouvy": {
+    "vides": 120,
+    "creneau": {
+     "apres": 480,
+     "avant": 720
+    }
+   },
+   "roubaix": {
+    "vides": 95,
+    "creneau": {
+     "apres": 780,
+     "avant": 1020
+    }
+   },
+   "dourges": {
+    "vides": 70,
+    "creneau": {
+     "apres": 420,
+     "avant": 660
+    }
+   }
+  },
+  "reporte": "dourges",
+  "courtDoitRater": false
+ }
+}
