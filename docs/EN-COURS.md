@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| ENT-9.4 CHEP (évaluation : la semaine de Légumes de la Lys) — session Fable, séance construite par un sous-agent Opus | `activites/chep-evaluation.js (à créer)`, `contenus/chep-ent94*.js (à créer)`, `contenus/questions/ENT-9.4.js (à créer)`, `contenus/corriges/ENT-9.4.js (à créer)`, `outils/test/chep-94.mjs (à créer)`, `contenus/chep-ent91.js`, `contenus/chep-ent91-donnees.js`, `contenus/chep-ent92.js`, `contenus/chep-ent92-donnees.js` (fabriques paramétrées, comportement inchangé), `outils/test.mjs` (lignes BLOCS/GROUPES), `outils/test/tirage-niveaux.mjs` (BANQUES_FIGEES si besoin), `activites/index.js` (une ligne), `outils/test/chep/commun.mjs` (ajouts seulement), `docs/briefs/ENT-9.4-*.md`, `docs/decisions.md`, `docs/chantiers.md` | 18/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
