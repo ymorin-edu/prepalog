@@ -462,5 +462,31 @@ await v('ENT-9.2 : socle — aucune erreur JavaScript ; le corrigé se calcule p
   egal(erreursF, [], 'aucune erreur JS');
 });
 
+// Correctifs moteur du 18/10/2026 (remarques de la livraison d'ENT-9.2) : après « Clore », le menu montre « Crédit du retour » SANS changer
+// d'écran (la liste du menu suit chaque sauvegarde, `majMenu`) ; le chauffeur, qui n'a rien refusé, ne parle pas de « palettes refusées » ;
+// la tournée au plus court (Douai → Prouvy → Roubaix) arrive à Roubaix quai fermé : la pastille et le refus disent « quai fermé à l’arrivée »,
+// jamais « de N min ».
+await v('ENT-9.2 moteur : « Crédit du retour » apparaît au menu dès « Clore », sans navigation ; chauffeur sans « refusées » ; quai fermé sans « de combien »', async () => {
+  await monter();
+  await quai(JUSTE, { clore: false });
+  egal(await pg.$$eval(`${Z} .ent-nav`, (L) => L.filter((b) => /Crédit du retour/.test(b.textContent)).length), 0, 'avant « Clore », le crédit n’est pas au menu');
+  const parole = await pg.$eval(`${Z} [data-q-parole]`, (n) => n.textContent.replace(/\s+/g, ' ').trim());
+  vrai(/C’est signé\. J’y vais\./.test(parole) && !/refusées/.test(parole), 'le chauffeur : ' + parole);
+  await pg.click(`${Z} [data-q="clore"]`); await pause(); await qrep();
+  // Pas de `aller(...)` : la liste du menu doit déjà porter la fiche, et le bouton doit marcher.
+  egal(await pg.$$eval(`${Z} .ent-nav`, (L) => L.filter((b) => /Crédit du retour/.test(b.textContent)).length), 1, 'après « Clore », le crédit est au menu sans changer d’écran');
+  vrai(await present('[data-q-bilan]'), 'on est resté sur le quai');
+  await pg.click(`${Z} .ent-nav:has-text("Crédit du retour")`); await pause();
+  vrai(await present('[data-fiche-envoyer]'), 'le bouton du menu redessiné ouvre bien la fiche');
+  // La tournée : crédit et besoin envoyés (aides du bloc), puis l'ordre au plus court — Roubaix (ferme à 9 h) est atteint trop tard.
+  await crediter(); await besoin();
+  await aller('tournee');
+  for (const id of ['douai', 'prouvy', 'roubaix']) { await pg.click(`${Z} [data-reprendre="${id}"]`); await pause(60); }
+  const j = await pg.$eval(`${Z} [data-creneau="roubaix"]`, (e) => ({ texte: e.textContent.replace(/\s+/g, ' '), pastille: (e.querySelector('.pastille.crit') || {}).textContent || '' }));
+  egal(j.pastille.trim(), 'Quai fermé à l’arrivée', 'la pastille de Roubaix');
+  vrai(!/raté de|min de retard/.test(j.texte), 'la jauge dit de combien : ' + j.texte);
+  egal(erreursF, [], 'aucune erreur JS');
+});
+
 await F.fermer();
 }

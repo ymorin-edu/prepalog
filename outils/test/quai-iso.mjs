@@ -3397,6 +3397,23 @@ await v('Quai piles : jouable de bout en bout — ② le cariste sort cinq piles
   await p.close();
 });
 
+// Le chauffeur signe : il ne « recharge les palettes refusées » que s'il y en a (18/10/2026, vu sur ENT-9.2 : des piles de vides
+// acceptées sous réserve, rien de refusé). Ici le contrôle des cinq palettes n'en refuse aucune (P2 et P3 sous réserve).
+await v('Quai : à la signature, le chauffeur ne parle de « palettes refusées » que s’il y en a — sans refus, « C’est signé. J’y vais. »', async () => {
+  const p = await pageDeux(DEUX({ commence: 'controle' }));
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  await controlerCinq(p);
+  await p.click(`${HOTE} [data-q="ecrire"]`);
+  await p.click(`${HOTE} [data-q="signer"]`);
+  const parole = await p.$eval(`${HOTE} [data-q-parole]`, (n) => n.textContent.replace(/\s+/g, ' ').trim());
+  vrai(/C’est signé\. J’y vais\. Bonne journée !/.test(parole), 'la parole du chauffeur signé : ' + parole);
+  vrai(!/refusées/.test(parole), 'sans palette refusée, le chauffeur parle de « palettes refusées » : ' + parole);
+  // Ce qui reste : la décision de chaque palette est bien rangée, aucune n'est « refuser ».
+  const dec = await p.evaluate(() => Object.values(window.__qs.db.quais).map((q) => Object.values(q.palettes || {}).map((s) => s.decision)));
+  vrai(dec.flat().length >= 5 && !dec.flat().includes('refuser'), 'décisions rangées : ' + JSON.stringify(dec));
+  await p.close();
+});
+
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {
   const hors = await pe.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => !n.startsWith(location.origin)));
   egal(hors, [], 'ressources hors du site');

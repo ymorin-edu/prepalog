@@ -288,6 +288,56 @@ await v('carte du Nord : le calage (calibrer.mjs, mode ramasse) et la vue font l
   egal(r.depasse, [], 'un dépassement dans la vue');
 });
 
+// `horaire.libelleRate` (18/10/2026, vu sur ENT-9.2) : la pastille d'un créneau raté après l'heure et le refus du report disent le
+// libellé déclaré, jamais « de N min » ; sans lui, « Créneau raté de N min » (Boost, bloc `carte`) ne change pas. Deux montages sur la
+// carte du Nord, mêmes arrêts et créneaux que le calage, l'ordre au plus court (Roubaix ferme à 9 h, atteint trop tard).
+await v('ramasse à l’écran : `libelleRate` → « Quai fermé à l’arrivée » (pastille et refus du report) sans « de combien » ; sans lui, « Créneau raté de N min »', async () => {
+  await pg.evaluate(async () => {
+    const m = await import('/core/types/entreprise.js');
+    const { CARTE } = await import('/contenus/chep-carte.js');
+    const J = (await (await fetch('/outils/carte/chep.json')).json()).calibrage;
+    const points = CARTE.clients.filter((c) => J.arrets[c.id]).map((c) => Object.assign({}, c, J.arrets[c.id],
+      { creneau: Object.assign({ libelle: 'enlèvement des vides' }, J.arrets[c.id].creneau) }));
+    const commun = {
+      ENTREPRISE: { nom: 'Essai Ramasse', sousTitre: 'scénario d\'essai' }, VOCAB: { unit: 'pièce', unitPl: 'pièces', sizeLabel: 'Taille' },
+      CATALOGUE: { MODELS: [], MM: {}, VARIANTS: [], VM: {} }, SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [], CM: {}, THEME: {},
+      baseDeDepart: () => ({ v: 1, seq: 1, stock: {}, mails: [], orders: [], receptions: [], moves: [], customers: [], suppliers: [], _depart: [] }),
+    };
+    const tournee = (horaire) => ({ id: 'ess-ferme', libelle: 'Ramasse', titre: 'Ramasse', points, plan: { carte: CARTE, clients: points },
+      mesures: [Object.assign({ id: 'vides', libelle: 'Palettes vides à bord', unite: 'palettes' }, J.mesure)],
+      horaire: Object.assign({ depart: J.depart, vitesse: J.vitesse, service: J.service }, horaire), departAQuai: true, exigeConforme: true,
+      quai: { libelle: 'Reporter', titre: 'Reportés', reprendre: 'remettre', vide: 'Aucun.', max: 1 },
+      report: [{ id: 'pic', libelle: 'Au plus, à bord', unite: 'palettes', valeur: (b) => b.pics.vides }] });
+    const monter = (hoteId, T) => {
+      const hote = document.createElement('div'); hote.id = hoteId; document.body.appendChild(hote);
+      const act = m.creerEntreprise(Object.assign({}, commun, { etapes: [], tournee: T }));
+      const db = {};
+      act.rendre(hote, { meta: { id: hoteId, portee: 'eleve', code: 'ESS-R', titre: 'Essai' }, profil: { prenom: 'Léa', nom: 'Dupont', role: 'eleve' },
+        jeu: { etat: () => db, sauver: () => {} }, enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC' });
+    };
+    monter('ramFerme', tournee({ libelleRate: 'quai fermé à l’arrivée' }));
+    monter('ramRate', tournee({}));
+  });
+  for (const zone of ['#ramFerme', '#ramRate']) {
+    await ouvrir(zone);
+    for (const id of ['douai', 'prouvy', 'roubaix']) await charger(id, zone);
+    await pg.fill(`${zone} [data-report="pic"]`, '355');   // le pic est juste : seul le créneau refuse le report
+    await pg.click(`${zone} [data-tour-valider]`); await pg.waitForTimeout(80);
+  }
+  const lire = (zone) => pg.evaluate((zone) => {
+    const e = document.querySelector(`${zone} [data-creneau="roubaix"]`);
+    return { texte: e.textContent.replace(/\s+/g, ' '), pastille: ((e.querySelector('.pastille.crit') || {}).textContent || '').trim(),
+      refus: ((document.querySelector(`${zone} .tour-report .avis-err`) || {}).textContent || '').replace(/\s+/g, ' ') };
+  }, zone);
+  const f = await lire('#ramFerme');
+  egal(f.pastille, 'Quai fermé à l’arrivée', 'la pastille déclarée');
+  vrai(!/raté de|min de retard|réneau raté/.test(f.texte + ' ' + f.refus), 'de combien, ou « créneau raté », malgré le libellé : ' + f.texte + ' | ' + f.refus);
+  vrai(/quai fermé à l’arrivée chez MarchéLys/.test(f.refus), 'le refus du report avec le libellé : ' + f.refus);
+  const d = await lire('#ramRate');
+  vrai(/^Créneau raté de \d+ min$/.test(d.pastille), 'sans libellé, la pastille parlante : ' + d.pastille);
+  vrai(/créneau raté chez MarchéLys \(\d+ min de retard\)/.test(d.refus), 'sans libellé, le refus : ' + d.refus);
+});
+
 await v('ramasse : aucune erreur de console pendant tout le parcours', async () => {
   if (erreurs.length) throw new Error([...new Set(erreurs)].slice(0, 3).join(' | '));
 });

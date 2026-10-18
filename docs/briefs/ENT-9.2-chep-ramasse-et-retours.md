@@ -351,7 +351,12 @@ tient dans une heure.
   Ergonomie : fiches sans défilement de page à 1366 × 768 et 1280 × 720 ; **quai ③ ④ et tournée : sans défilement horizontal seulement**
   (ils défilent en hauteur, comme ENT-8.8 et ENT-6.9).
 - **Commits** : voir `git log`.
-- **Reste ouvert** : validation à l'écran par Tristan (poids, questions, textes) ; demande au moteur n° 6 ; remarques sur le moteur, non
-  demandées : le chauffeur dit « Je recharge les palettes refusées » même sans refus ; la pastille d'un créneau dit « Créneau raté de 147
-  min » (le brief disait « le quai est fermé ») ; le menu ne montre « Crédit du retour » qu'au changement d'écran après « Clore » (la barre
-  « Étape suivante » et la carte du message y mènent) ; trame courte (Cowork).
+- **Reste ouvert** : validation à l'écran par Tristan (poids, questions, textes) ; demande au moteur n° 6 ; trame courte (Cowork).
+- **Correctifs moteur du 18/10/2026 (soir, à la demande de Tristan)**, les trois remarques de la livraison : (1) le chauffeur ne dit « Je
+  recharge les palettes refusées » que s'il y a une palette refusée, sinon « C’est signé. J’y vais. » (`core/types/quai.js`) ; (2) la tournée
+  accepte `horaire.libelleRate` (« quai fermé à l’arrivée ») : la pastille d'un créneau raté après l'heure et le refus du report le disent, sans
+  « de N min », même parlants ; sans lui, rien ne change (Boost) — ENT-9.2 le déclare (`core/types/tournee.js`, `contenus/chep-ent92-donnees.js`,
+  FICHE-SEANCE) ; (3) la liste du menu de gauche se remet à jour à chaque sauvegarde (`listeMenu()` / `majMenu()` dans
+  `core/types/entreprise.js`) : « Crédit du retour » apparaît dès « Clore », sans changer d'écran. Tests : un cas dans `quai-iso`, un dans
+  `ramasse` (deux montages sur la carte du Nord, avec et sans libellé), un dans `chep-92` (les trois correctifs sur la séance), éprouvés par
+  sabotage (voir `docs/decisions.md`).

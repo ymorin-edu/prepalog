@@ -149,7 +149,8 @@ export const TOURNEE_BASE = {
   points: POINTS,
   mesures: [{ id: 'vides', libelle: 'Palettes vides à bord', unite: 'palettes', max: CAPACITE, depart: 0, reprend: 'vides',
     libelleDepasse: 'Le camion ne peut pas tout prendre' }],
-  horaire: { ...HORAIRE, libelleLimite: 'retour à Templemars' },
+  // `libelleRate` (18/10/2026) : un quai atteint après son heure d'enlèvement est « fermé », jamais « raté de N min ».
+  horaire: { ...HORAIRE, libelleLimite: 'retour à Templemars', libelleRate: 'quai fermé à l’arrivée' },
   quai: { libelle: 'Reporter à vendredi', titre: 'Reportés à la tournée de vendredi', reprendre: 'remettre dans la tournée',
     vide: 'Aucun : les quatre sites sont dans la tournée.', max: 1 },
   departAQuai: true,

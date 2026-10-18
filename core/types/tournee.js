@@ -35,7 +35,10 @@
 //     horaire: {                            // facultatif : la contrainte de temps
 //       depart: 13 * 60, limite: 16 * 60 + 10, vitesse: 12, service: 6,
 //       libelleLimite: 'départ du train',
-//       repere: '…',                        // facultatif : la note de la jauge muette quand les contraintes sont
+//       libelleRate: 'quai fermé à l’arrivée',   // facultatif (18/10/2026, vu sur ENT-9.2) : ce que disent la pastille d'un créneau
+//                                           //   raté après l'heure et le refus du report, à la place de « Créneau raté (de N min) » :
+//                                           //   jamais « de combien », même parlante. Sans lui, rien ne change (Boost).
+//       repere: '…',                      // facultatif : la note de la jauge muette quand les contraintes sont
 //                                           //   dans la feuille (défaut : celle du train d'ENT-3.1, « Il faut être à la gare… »)
 //     },                                    // `service` : un nombre de minutes par arrêt, OU
 //                                           //   { base: 4, parColis: 1, champ: 'colis' } (voir `serviceDe`)
@@ -780,6 +783,8 @@ export function creerTournee(T) {
   const retardMin = (c) => Math.max(1, Math.round(c.arrivee + (c.attente || 0) - c.avant));
   // L'avance sur l'ouverture, même règle (D-9) : jamais « 0 min » pour quelques secondes.
   const avanceMin = (c) => Math.max(1, Math.round(c.apres - c.arrivee));
+  // La pastille d'un créneau raté après l'heure : le libellé déclaré (`horaire.libelleRate`, majuscule en tête), sinon « Créneau raté ».
+  const texteRate = () => (H && H.libelleRate ? ech(String(H.libelleRate).replace(/^./, (x) => x.toUpperCase())) : 'Créneau raté');
 
   // Une jauge par client à créneau, sous celle du train : c'est une contrainte de plus, au même
   // rang que la charge et l'horaire. Muette (`jaugesRepere`), elle dit QUE le créneau est raté,
@@ -812,7 +817,7 @@ export function creerTournee(T) {
         ${tete}
         <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. ${regle}
           L’heure d’arrivée chez lui, c’est à vous de la calculer.</span>
-        ${sv ? '' : (c.rate ? `<span class="pastille crit">${tot ? 'Arrivée trop tôt : créneau raté' : 'Créneau raté'}</span>`
+        ${sv ? '' : (c.rate ? `<span class="pastille crit">${tot ? 'Arrivée trop tôt : créneau raté' : texteRate()}</span>`
           : (tot ? '<span class="pastille warn">Trop tôt : attente jusqu’à l’ouverture</span>'
             : (DANS_GRILLE && b.complete ? '<span class="pastille ok">créneau tenu</span>' : '')))}
       </div>`;
@@ -822,7 +827,7 @@ export function creerTournee(T) {
       <span class="note">${ech(c.nom)} : ${ech(c.libelle)}. Arrivée prévue à ${hhmm(c.arrivee)}.${c.attente > 0
         ? ` Attente jusqu’à l’ouverture : ${fr(c.attente, 0)} min.` : ''}</span>
       ${c.rate ? `<span class="pastille crit">${tot ? `Arrivée trop tôt de ${avanceMin(c)} min : créneau raté`
-        : `Créneau raté de ${retardMin(c)} min`}</span>`
+        : (H.libelleRate ? texteRate() : `Créneau raté de ${retardMin(c)} min`)}</span>`
         : (tot ? `<span class="pastille warn">Trop tôt : ${fr(c.attente, 0)} min d’attente</span>`
           : '<span class="pastille ok">créneau tenu</span>')}
     </div>`;
@@ -1503,9 +1508,10 @@ export function creerTournee(T) {
                 : `arrivée trop tôt chez ${c.nom} (${avanceMin(c)} min avant l’ouverture)`);
               return;
             }
-            maux.push(muetAuReport
+            // Un libellé déclaré (`horaire.libelleRate`) remplace « créneau raté » et ne dit jamais le retard.
+            maux.push(H.libelleRate ? `${H.libelleRate} chez ${c.nom}` : (muetAuReport
               ? `créneau raté chez ${c.nom}`
-              : `créneau raté chez ${c.nom} (${retardMin(c)} min de retard)`);
+              : `créneau raté chez ${c.nom} (${retardMin(c)} min de retard)`));
           });
           if (!b.retenus.length) maux.push('aucun arrêt chargé');
           // La chaîne incomplète est refusée au même titre qu'une charge dépassée. Sans ça,

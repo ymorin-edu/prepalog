@@ -3239,7 +3239,9 @@ export function creerQuai(Q, opts = {}) {
       }).join('');
     }
     const lignes = k.ecrit ? ((k.lignes.length ? k.lignes.map((l) => `<div>${ech(l.texte)}</div>`).join('') : '<div>Néant — marchandise reçue conforme.</div>') + (k.mentionEcrite ? '<div>Sous réserve de déballage.</div>' : '')) : '';
-    const parole = k.paroleChauffeur || (k.signe ? 'C’est signé. Je recharge les palettes refusées et j’y vais. Bonne journée !' : k.ecrit ? 'Faites voir ce que vous avez écrit… Je signe ?' : 'J’attends vos papiers pour signer. Mes autres clients m’attendent aussi.');
+    // Le chauffeur ne « recharge les palettes refusées » que s'il y en a (vu sur ENT-9.2, 18/10/2026 : des piles de vides, rien de refusé).
+    const refusees = P.some((p) => st(e, p).decision === 'refuser');
+    const parole = k.paroleChauffeur || (k.signe ? (refusees ? 'C’est signé. Je recharge les palettes refusées et j’y vais. Bonne journée !' : 'C’est signé. J’y vais. Bonne journée !') : k.ecrit ? 'Faites voir ce que vous avez écrit… Je signe ?' : 'J’attends vos papiers pour signer. Mes autres clients m’attendent aussi.');
     const prof = api.estProf;
     const ouvert = unDecharge(e, R);
     let clore;

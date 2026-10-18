@@ -1189,7 +1189,16 @@ export function creerEntreprise(U) {
       const SUITE_AU_BILAN = CORRECTION || PREMIER_ESSAI || !!(ctx.meta && ctx.meta.suiteAuBilan);
       const fini = (st) => bilanComplet(st) || (SUITE_AU_BILAN && typeof U.seanceFinie === 'function' && !!U.seanceFinie(db));
       // Copie rendue : plus rien ne s'écrit dans la base, même si un geste passait le verrou.
-      const sauver = () => { if (rendue()) return; declencher(); arriverQuestions(); ctx.jeu.sauver(); remonterEtapes(); };
+      // Le menu de gauche suit la base : voir `listeMenu()`. Seule la liste change, et seulement si son HTML diffère ; le focus et le
+      // bouton « Replier » ne bougent pas. Avant le premier dessin, rien à faire.
+      let menuDessine = '';
+      function majMenu() {
+        const l = hote.querySelector('#entMenuListe'); if (!l) return;
+        const h = listeMenu(); if (h === menuDessine) return;
+        menuDessine = h; l.innerHTML = h;
+        l.querySelectorAll('[data-vue]').forEach((b) => b.addEventListener('click', () => aller(b.dataset.vue)));
+      }
+      const sauver = () => { if (rendue()) return; declencher(); arriverQuestions(); ctx.jeu.sauver(); remonterEtapes(); majMenu(); };
       // LES GESTES (questions au fil, lot 3, 08/10/2026) : une vue dit « l'élève vient de faire ce geste » (`api.signal`),
       // juste avant sa sauvegarde. Le geste est rangé une fois, avec son heure, cloisonné par séance :
       // `db.gestes[<séance>][<nom>]`. Les conditions `apresGeste(nom)` le lisent. Rien pour l'enseignant ni après la remise.
@@ -1603,7 +1612,10 @@ export function creerEntreprise(U) {
       // `siPerdu` : une vue qui place le focus elle-même, après coup, garde la main.
       function dessiner() { garderFocus(hote, dessinerBrut, { siPerdu: true }); }
       function dessinerVue() { garderFocus(hote, dessinerVueBrut, { siPerdu: true }); }
-      function dessinerBrut() {
+      // LA LISTE DU MENU DE GAUCHE, à part (18/10/2026, vu sur ENT-9.2) : `majMenu()` la redessine seule à chaque sauvegarde quand elle
+      // change — une entrée dont la condition `quand` vient de devenir vraie (la fiche « Crédit du retour » après « Clore » au quai) apparaît
+      // sans changer d'écran. Même HTML qu'avant dans `dessinerBrut`, qui l'appelle aussi.
+      function listeMenu() {
         const nonLus = db.mails.filter((m) => m.folder === 'in' && !m.read).length;
         const aFaire = COM.aFaire();
         const aRecevoir = REC.aRecevoir();
@@ -1617,6 +1629,35 @@ export function creerEntreprise(U) {
           return `<button class="ent-nav ${actif ? 'on' : ''}" data-vue="${id}">
             <span>${ech(lbl)}</span>${n ? `<span class="ent-n">${n}</span>` : ''}</button>`;
         };
+        return `
+                ${MQ && MQ.ouverture ? item('ouverture', MQ.ouverture.titre || 'Avant de commencer') : ''}
+                ${item('accueil', 'Accueil')}
+                ${item('mail', 'Messagerie', nonLus)}
+                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VLOC && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', ordonnerPoste([
+                  VITI && item('itineraires', VITI.nav.libelle),
+                  VLOC && item('localiser', VLOC.nav.libelle),
+                  ...VANIMS.filter((VA) => !VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
+                  ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
+                  // Une animation qui vient APRÈS les fiches dans le déroulé (`menuApres`, ENT-6.10) : listée après elles.
+                  ...VANIMS.filter((VA) => VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
+                  // Le Téléphone : visible quand sa condition est vraie (l'enseignant le voit toujours) ; « en cours » tant qu'un appel l'est.
+                  VTEL && telOuvert() && item('telephone', VTEL.nav.libelle, appelEnCoursIci() ? 'en cours' : 0),
+                  VQUAI && item('quai', VQUAI.nav.libelle),
+                  VPL && plOuvert() && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
+                  VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && tourOuvert() && item('tournee', VTOUR.nav.libelle),
+                  VINV && item('inventaire', VINV.nav.libelle), ...itemsQuestions(item)]))}
+                ${groupe('Données', [
+                  montre('commandes') && item('commandes', 'Commandes', aFaire, ['commandes', 'commande']),
+                  montre('receptions') && item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception']),
+                  montre('stock') && item('stock', 'Stock'),
+                  montre('catalogue') && item('catalogue', 'Catalogue', 0, ['catalogue', 'produit']),
+                  montre('blocage') && item('blocage', 'Blocage qualité')])}
+                ${groupe('Tiers', [montre('clients') && item('clients', 'Clients'), montre('fournisseurs') && item('fournisseurs', 'Fournisseurs')])}
+                ${groupe('Outils', [montre('console') && item('console', 'Console'),
+                  VTAB && VTAB.navExtractions && item('extractions', VTAB.navExtractions.libelle), VTAB && item('fichiers', VTAB.nav.libelle)])}
+        `;
+      }
+      function dessinerBrut() {
         // Le mode hors connexion de la vue plan, remonté dans le BANDEAU le 03/10/2026.
         // Tristan : *« il ne faut pas mettre ça ici, la majorité des élèves va juste cliquer
         // dessus pour avoir les réponses »*. Sous la carte, au milieu du travail, il se lisait
@@ -1635,6 +1676,7 @@ export function creerEntreprise(U) {
         // planning », qui cache le menu entier (bande comprise) puis le rend dans l'état choisi ici.
         const replie = !!db.menuReplie;
 
+        menuDessine = listeMenu();
         hote.innerHTML = `
           <div class="ent-page${classeTheme(THEME) ? ' ' + classeTheme(THEME) : ''}${TRAVAIL_NEUTRE ? ' ent-travail-neutre' : ''}${TRAVAIL_NEUTRE_FOND ? ' ent-travail-neutre-fond' : ''}" style="${styleTheme(THEME)}${THEME.papier ? ';color:var(--encre);background:var(--fond)' : ''}">
             <header class="ent-bandeau">
@@ -1681,31 +1723,7 @@ export function creerEntreprise(U) {
               <aside class="ent-side">
                 ${boutonMenu(replie)}
                 <div class="ent-side-liste" id="entMenuListe"${replie ? ' hidden' : ''}>
-                ${MQ && MQ.ouverture ? item('ouverture', MQ.ouverture.titre || 'Avant de commencer') : ''}
-                ${item('accueil', 'Accueil')}
-                ${item('mail', 'Messagerie', nonLus)}
-                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VLOC && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', ordonnerPoste([
-                  VITI && item('itineraires', VITI.nav.libelle),
-                  VLOC && item('localiser', VLOC.nav.libelle),
-                  ...VANIMS.filter((VA) => !VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
-                  ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
-                  // Une animation qui vient APRÈS les fiches dans le déroulé (`menuApres`, ENT-6.10) : listée après elles.
-                  ...VANIMS.filter((VA) => VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
-                  // Le Téléphone : visible quand sa condition est vraie (l'enseignant le voit toujours) ; « en cours » tant qu'un appel l'est.
-                  VTEL && telOuvert() && item('telephone', VTEL.nav.libelle, appelEnCoursIci() ? 'en cours' : 0),
-                  VQUAI && item('quai', VQUAI.nav.libelle),
-                  VPL && plOuvert() && item('planning', VPL.nav.libelle), VENT && item('entrepot', VENT.nav.libelle),
-                  VPLAN && item('plan', VPLAN.nav.libelle), VTOUR && tourOuvert() && item('tournee', VTOUR.nav.libelle),
-                  VINV && item('inventaire', VINV.nav.libelle), ...itemsQuestions(item)]))}
-                ${groupe('Données', [
-                  montre('commandes') && item('commandes', 'Commandes', aFaire, ['commandes', 'commande']),
-                  montre('receptions') && item('receptions', 'Réceptions', aRecevoir, ['receptions', 'reception']),
-                  montre('stock') && item('stock', 'Stock'),
-                  montre('catalogue') && item('catalogue', 'Catalogue', 0, ['catalogue', 'produit']),
-                  montre('blocage') && item('blocage', 'Blocage qualité')])}
-                ${groupe('Tiers', [montre('clients') && item('clients', 'Clients'), montre('fournisseurs') && item('fournisseurs', 'Fournisseurs')])}
-                ${groupe('Outils', [montre('console') && item('console', 'Console'),
-                  VTAB && VTAB.navExtractions && item('extractions', VTAB.navExtractions.libelle), VTAB && item('fichiers', VTAB.nav.libelle)])}
+                ${menuDessine}
                 </div>
               </aside>
               <div class="ent-main" id="entMain"></div>
