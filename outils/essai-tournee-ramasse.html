@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — tournée de ramasse CHEP (Prepalog)</title>
+<!-- Page d'ESSAI du chantier MOTEUR-chep lot A (brief docs/briefs/MOTEUR-chep-ramasse-et-piles.md, §2.4), à valider
+     par Tristan AVANT ENT-9.2 : la vue Tournée du moteur avec une charge qui MONTE le long de la tournée (on part à vide
+     de Templemars et on reprend les palettes vides de chaque site), sur la carte réelle du Nord
+     (`contenus/chep-carte.js`), décor CHEP. Ce n'est PAS la séance : valeurs du §6.3 d'ENT-9.2 (quatre sites, un de
+     trop ; Frais du Nord, Lesquin, a son camion complet et n'est pas dans la tournée), textes provisoires.
+     Liée nulle part, rien n'est enregistré : un rechargement repart de zéro.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-tournee-ramasse.html
+     Ce qu'on doit y voir : tout prendre → la jauge « Palettes vides à bord » passe au rouge et dit « Le camion ne peut
+     pas tout prendre » (jamais de combien), avec son profil en marches ; reporter Distri Escaut (le site qui a signalé
+     le plus tard) → ça tient ; Roubaix avant les autres → attente jusqu'à 13 h, puis des quais fermés ; le bouton
+     « Envoyer la tournée à Yannick ». -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/inventaire.css">
+<link rel="stylesheet" href="./styles/plan.css">
+<link rel="stylesheet" href="./styles/grille.css">
+<link rel="stylesheet" href="./styles/quiz.css">
+<link rel="stylesheet" href="./styles/carte.css">
+</head>
+<body>
+<div id="hote"></div>
+<script type="module">
+import { creerEntreprise } from './core/types/entreprise.js';
+import * as CHEP from './contenus/chep.js';
+import { CARTE } from './contenus/chep-carte.js';
+
+const h = (hh, mm = 0) => hh * 60 + mm;
+// Les quatre sites de la ramasse du mercredi 20/01/2027 (ENT-9.2 §6.3, valeurs médianes ; Distri Escaut est le site
+// qui a signalé ses vides le plus tard : c'est lui qu'on reporte à vendredi). Les horaires d'enlèvement sont construits.
+const SITES = {
+  douai: { ville: 'Douai', vides: 140, signale: 'lun. 18/01, 9 h 10', creneau: { apres: h(6), avant: h(10), libelle: 'enlèvement des vides de 6 h à 10 h' } },
+  prouvy: { ville: 'Prouvy', vides: 120, signale: 'lun. 18/01, 14 h 25', creneau: { apres: h(8), avant: h(12), libelle: 'enlèvement des vides de 8 h à 12 h' } },
+  roubaix: { ville: 'Roubaix', vides: 95, signale: 'lun. 18/01, 16 h 50', creneau: { apres: h(13), avant: h(17), libelle: 'enlèvement des vides de 13 h à 17 h' } },
+  dourges: { ville: 'Dourges', vides: 70, signale: 'mar. 19/01, 10 h 40', creneau: { apres: h(7), avant: h(11), libelle: 'enlèvement des vides de 7 h à 11 h' } },
+};
+const POINTS = CARTE.clients.filter((c) => SITES[c.id]).map((c) => ({
+  ...c, ...SITES[c.id], zone: `${SITES[c.id].ville} · vides signalés ${SITES[c.id].signale}`,
+}));
+
+const moteur = creerEntreprise({
+  ENTREPRISE: CHEP.ENTREPRISE, VOCAB: CHEP.VOCAB, CATALOGUE: CHEP.CATALOGUE,
+  SUPPLIERS: CHEP.SUPPLIERS, SUP_BY_ID: CHEP.SUP_BY_ID, CUSTOMERS: CHEP.CUSTOMERS, CM: CHEP.CM,
+  baseDeDepart: CHEP.baseDeDepart, THEME: CHEP.THEME,
+  etapes: [], exercice: 'Essai — tournée de ramasse',
+  transportSection: 'Ramasse', transportId: 'essai-tournee-ramasse',
+  plan: { libelle: 'Carte du Nord', titre: 'La métropole lilloise et le bassin minier', consigne: '', carte: CARTE, clients: POINTS },
+  tournee: {
+    id: 'chep-ramasse', libelle: 'Tournée de ramasse (essai)', titre: 'Organiser la ramasse du mercredi (essai)',
+    consigne: 'Un camion complet est réservé pour Frais du Nord (Lesquin). Les quatre autres sites se regroupent en tournée : '
+      + 'cliquez-les dans l’ordre de passage. Le semi part de Templemars à 6 h et y revient ; il prend 26 piles de 15 palettes '
+      + 'vides, soit 390. Si tout ne tient pas, reportez à vendredi le site qui a signalé ses vides le plus tard. '
+      + 'Chaque quai a ses heures d’enlèvement : arrivé trop tôt, le camion attend ; trop tard, le quai est fermé.',
+    points: POINTS,
+    mesures: [{ id: 'vides', libelle: 'Palettes vides à bord', unite: 'palettes', max: 390, depart: 0, reprend: 'vides',
+      libelleDepasse: 'Le camion ne peut pas tout prendre' }],
+    horaire: {
+      depart: h(6), vitesse: 55, service: { base: 20, parColis: 0.05, champ: 'vides', unite: 'palette' },
+      libelleLimite: 'retour à Templemars',
+    },
+    quai: { libelle: 'Reporter à vendredi', titre: 'Reportés à la tournée de vendredi', reprendre: 'remettre dans la tournée',
+      vide: 'Aucun : les quatre sites sont dans la tournée.', max: 1 },
+    departAQuai: true,
+    termine: { libelle: 'Envoyer la tournée à Yannick', confirmer: 'Envoyer cette tournée ? Cliquez encore',
+      fait: 'Tournée envoyée à Yannick à {h}.', rouvrir: 'Reprendre la tournée', toast: 'Tournée envoyée.' },
+    rappel: ['Capacité : 390 palettes vides', 'Départ 6 h, retour à Templemars', '55 km/h, 20 min par arrêt + 3 min par 60 palettes'],
+  },
+});
+const db = {};
+moteur.rendre(document.getElementById('hote'), {
+  meta: { id: 'essai-tournee-ramasse', code: 'ESSAI', titre: 'CHEP — essai de la tournée de ramasse',
+    portee: 'eleve', immersif: true, jeuId: 'essai-tournee-ramasse' },
+  profil: { prenom: 'Essai', nom: 'Ramasse', role: 'eleve' },
+  jeu: { etat: () => db, sauver: () => {} },
+  enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: '',
+});
+window.__essai = { db };
+document.querySelector('.ent-nav[data-vue="tournee"]')?.click();
+</script>
+</body>
+</html>
