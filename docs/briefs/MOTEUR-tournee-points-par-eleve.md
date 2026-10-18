@@ -169,3 +169,5 @@ Tristan : il n'y a pas d'écran nouveau à juger, seulement un comportement ; la
 
 **Reste ouvert** : le commentaire de `contenus/chep-ent92-donnees.js` (ligne ~17) dit encore que les quantités de la tournée sont figées par le
 moteur : à corriger dans le chantier contenu « ENT-9.2 : tirer les vides » (décision de Tristan du 18/10 : « retouches 9.2 après »).
+**→ Fait le 18/10/2026 au soir** : ENT-9.2 tire ses vides par cette fonction (compte rendu dans le brief ENT-9.2, dernier point) ; c'est la
+première séance qui l'utilise, donc la première à essayer à l'écran (la tournée, sa liste et sa jauge, avec deux comptes d'élèves).

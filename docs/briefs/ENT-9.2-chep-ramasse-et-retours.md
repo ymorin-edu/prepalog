@@ -220,8 +220,8 @@ moteur).
 > (Prouvy ou Dourges reporté), attente la plus longue 1 h 27, retour au plus tard 10 h 27. **« Distri Escaut » (vraie société de
 > Caudry) est renommé « Primeurs du Delta »** (nom vérifié libre sur les registres d'entreprises le 18/10/2026).
 
-Bornes vérifiées à la main : total des quatre sites de 405 à 445 (toujours > 390) ; sans le plus petit possible (65), au plus 380 (toujours
-≤ 390). Quel que soit le site reporté, la tournée tient donc dans le camion.
+Bornes vérifiées à la main (recalculées le 18/10/2026 au soir) : total des quatre sites de 405 à 445 (toujours > 390) ; sans le site reporté,
+au plus 370 (Dourges reporté : 145 + 125 + 100), toujours ≤ 390. Quel que soit le site reporté, la tournée tient donc dans le camion.
 
 **Banque `dernier`** (une pièce au socle, `melange: { moyen: 1 }`, quatre pièces) : laquelle des quatre plates-formes a signalé **le plus tard**
 (dates et heures des quatre avis calculées pour que ce soit elle, les trois autres étant plus tôt, du lundi 18/01 au mardi 19/01 à 11 h).
@@ -264,8 +264,9 @@ fil ; 5 — oui, `tournee.quand(db)`.
    tirés. Ce qu'il faudrait : `tournee.points` (au moins `vides` et `zone`) en fonction `(db) => …`, comme `fiche.blocs`, relu à chaque dessin
    et par `bilan`. Utile aussi à ENT-9.4 (évaluation, jeu tiré par élève).
    **→ Livrée au moteur le 18/10/2026** (brief `MOTEUR-tournee-points-par-eleve.md`, option A validée par Tristan : mêmes sites pour tous,
-   valeurs par élève, `bilan(etat, db)`). ENT-9.2 garde ses médianes pour l'instant : les tirer est un chantier contenu à part, décidé par
-   Tristan « après » (« A et retouches 9.2 après »).
+   valeurs par élève, `bilan(etat, db)`).
+   **→ Utilisée par ENT-9.2 le 18/10/2026 au soir** (chantier contenu « retouches 9.2 après », décidé par Tristan avec l'option A) : les vides
+   des quatre plates-formes sont tirés par élève dans les bornes du §6.3 (compte rendu ci-dessous, dernier point). Demande close.
 
 ## 7 bis. Séance déjà jouée ? Non.
 
@@ -322,7 +323,7 @@ tient dans une heure.
   Bonus du confirmé : `bonus-pile6` (+0,5).
 - **Écarts par rapport au brief** (et pourquoi) :
   1. **Les vides des quatre plates-formes ne sont pas tirés** (140, 120, 95, 70 pour tous) : la vue Tournée est une déclaration fixe
-     (demande au moteur n° 6 ci-dessus). Sont tirés : l'ordre des cinq histoires, m, i, a, pools et places, le n° du bon, la pièce `dernier`
+     (demande au moteur n° 6 ci-dessus). **Écart levé le 18/10/2026 au soir** (dernier point de ce compte rendu). Sont tirés : l'ordre des cinq histoires, m, i, a, pools et places, le n° du bon, la pièce `dernier`
      (dates et heures des avis), V.
   2. **Pas de tirage mémorisé** (`declarerTirage`) : une banque déclarée doit s'inscrire dans `BANQUES_FIGEES` d'`outils/test/tirage-niveaux.mjs`,
      hors de mon périmètre. Le jeu se calcule de la graine (identifiant de l'élève), comme le quai d'ENT-8.8 : **changer le tirage changerait
@@ -354,7 +355,8 @@ tient dans une heure.
   Ergonomie : fiches sans défilement de page à 1366 × 768 et 1280 × 720 ; **quai ③ ④ et tournée : sans défilement horizontal seulement**
   (ils défilent en hauteur, comme ENT-8.8 et ENT-6.9).
 - **Commits** : voir `git log`.
-- **Reste ouvert** : validation à l'écran par Tristan (poids, questions, textes) ; demande au moteur n° 6 ; trame courte (Cowork).
+- **Reste ouvert** : validation à l'écran par Tristan (poids, questions, textes) ; trame courte (Cowork). (La demande au moteur n° 6 est
+  livrée et utilisée : voir le dernier point.)
 - **Correctifs moteur du 18/10/2026 (soir, à la demande de Tristan)**, les trois remarques de la livraison : (1) le chauffeur ne dit « Je
   recharge les palettes refusées » que s'il y a une palette refusée, sinon « C’est signé. J’y vais. » (`core/types/quai.js`) ; (2) la tournée
   accepte `horaire.libelleRate` (« quai fermé à l’arrivée ») : la pastille d'un créneau raté après l'heure et le refus du report le disent, sans
@@ -363,3 +365,36 @@ tient dans une heure.
   `core/types/entreprise.js`) : « Crédit du retour » apparaît dès « Clore », sans changer d'écran. Tests : un cas dans `quai-iso`, un dans
   `ramasse` (deux montages sur la carte du Nord, avec et sans libellé), un dans `chep-92` (les trois correctifs sur la séance), éprouvés par
   sabotage (voir `docs/decisions.md`).
+- **Vides des quatre plates-formes tirés par élève (18/10/2026, soir ; session Fable, écriture par un sous-agent Sonnet, relecture par
+  Fable)** : le chantier contenu « retouches 9.2 après » décidé par Tristan avec l'option A du moteur ; l'écart n° 1 ci-dessus est levé.
+  - **Ce qui change pour l'élève** : chaque élève voit SES quantités (liste des sites sous la carte, liste du quai « Reportés », jauge, avis de
+    palettes vides joints par Yannick, corrigé) dans les bornes du §6.3 : Douai 135 à 145, Prouvy 115 à 125, Roubaix 90 à 100, Dourges 65 à 75,
+    par pas de 5. Les sites, la carte, les horaires d'enlèvement, la capacité (390) et V (Frais du Nord) ne changent pas. Tiré **en dernier**
+    dans `tirer(hz)` (après V) : les autres tirages d'une graine (piles, pièce `dernier`, n° du bon) ne bougent pas.
+  - **Comment** (`contenus/chep-ent92-donnees.js`) : `BORNES_VIDES`, `MEDIANES` ; `SITES` et `POINTS` (le plan) sans quantité ;
+    `pointsDe(vides)` ; `TOURNEE_BASE.points = (db) => pointsDe(videsDeBase(db))` (mêmes sites pour tous, valeurs par élève : règle du moteur).
+    L'instance de calcul du fichier de données reçoit une petite base `{ vides }` (une fonction qui tirerait un jeu sur la base vide rappellerait
+    l'instance avant qu'elle existe, par `verifier` → `ordresDe`) ; `bilanTournee(etat, db)`, `bilanOrdre(ordre, vides)`, `ordresDe(jeu)` (mémo
+    par pièce et quantités), `equiteBanque(vides)` (mémo par combinaison), `verifier(jeu)` contrôle les bornes et le pas de 5 **puis** refait
+    le contrôle d'équité **pour ces quantités** (les quatre > 390 ; le plus court rate les horaires dans au moins deux pièces sur quatre ; chaque
+    pièce garde un ordre qui tient). `tourneeEnvoyee(db)` passe la base : les jalons `reporte`, `tient`, `horaires`, la réponse de Yannick et la
+    question « appel du site » suivent sans autre changement. `avisDe` lit les vides de l'élève ; `ADRESSE` se construit depuis `POINTS`. Corrigé :
+    la partie commune donne les bornes (405 à 445, toujours plus que 390), « Sa ramasse » écrit ses quatre quantités et leur total.
+  - **Témoin `@temoin…` = les médianes** (140, 120, 95, 70 : un tirage possible) : les valeurs écrites à la main du bloc `chep-92` (425, totaux
+    285 / 305 / 330 / 355, ordres justes et faux par pièce) restent vraies. **Témoin à la main recalculé** (§6.3) : total de 405 à 445 (> 390) ;
+    sans le site reporté, au plus 370 (Dourges reporté : 145 + 125 + 100), le brief disait « 380 ».
+  - **Vérifié par exécution** : 300 graines, 0 secours, 0 écart, chaque site prend ses trois valeurs (79 combinaisons différentes relevées) ; les
+    81 combinaisons possibles passent l'équité (pour toutes, le plus court rate dans exactement deux pièces sur quatre, comme avec les médianes).
+    **Supposé** : rien n'a été vu dans un vrai navigateur (tout est lu dans le DOM par les tests) ; cette tournée n'a pas de feuille de calcul
+    (rien à tester de ce côté). Le champ « total » de la fiche besoin n'est jugé par aucun jalon (déjà le cas).
+  - **Tests** : bloc `chep-92`, **25 cas**. Cas réécrits (dits à Tristan) : « données » (lit `TEMOIN.vides`, écrit les médianes et les bornes, les
+    refus de `verifier` hors bornes, les extrêmes permis) ; « la ramasse » (nouvelles signatures, calcul sur les médianes du témoin, mêmes
+    valeurs attendues) ; « tirage » (300 graines au lieu de 200, bornes, trois valeurs par site, ≥ 20 combinaisons). Ajoutés : « vides tirés par
+    élève » (deux élèves réels, graines `eleve-vides-69` : 145 + 125 + 100 + 75 = 445, pièce Prouvy ; `eleve-vides-189` : 135 + 115 + 90 + 65 =
+    405, pièce Dourges : liste du quai et des arrêts, tête de jauge « 445 / 390 » sans « de combien », cinq avis, corrigé, marqueurs du plan
+    identiques, aucun `[data-tournee-erreur]`, corrigé commun sans 425 ; retour du corrigé sur deux graines aux extrêmes) et « parcours juste de
+    l'élève A » (20 / 20, tournée jugée sur ses quantités : profil 0 → 100 → 245 → 320). Sabotages tombés : avis sur les médianes ; `tourneeEnvoyee`
+    sans `db` ; `points` remis en liste fixe ; `verifier` sans bornes ; mémo d'`ordresDe` sans les quantités ; corrigé sur les médianes ;
+    `bilanTournee` sur les médianes ; Douai tiré jusqu'à 150. Rien dans `core/`, `styles/`, `outils/test.mjs` ni les `commun.mjs`.
+  - **Depuis le dernier essai de Tristan** (qui n'a pas encore essayé la séance à l'écran) : tout ce qui précède, plus les trois correctifs moteur
+    du soir (point précédent).
