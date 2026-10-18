@@ -196,6 +196,38 @@ export function quaiEssai({ arret = false, securite = null, palettes = null, par
   };
 }
 
+/* ==================================================================================================================
+   PARTIE 5 (MOTEUR-chep, lot B, 18/10/2026) — les piles de palettes vides (`forme: 'pile'`) dans le VRAI moteur. Un camion de collecte
+   de cinq piles (brief §3.4) : P1 juste ; P2 à 14 palettes pour 15 annoncées ; P3 avec une palette LPR ; P4 avec deux palettes abîmées,
+   dont une sur la face arrière ; P5 avec une palette Europe et une manquante. Les quantités, le transporteur et les numéros sont construits.
+   ================================================================================================================== */
+const pile = (id, o = {}) => Object.assign({ id, forme: 'pile', ref: 'CHEP-1210', nom: 'Palettes CHEP 1 200 × 1 000 vides', bl: 15,
+  etiq: { ref: `BC-27-0119-${id}`, nom: `BON DE COLLECTE — PILE ${id.slice(1)}`, poids: '15 palettes annoncées' } }, o);
+export const PILES_ESSAI = [
+  pile('P1'),
+  pile('P2', { hauteur: 14 }),
+  pile('P3', { intrus: { 6: 'lpr' } }),
+  pile('P4', { abimee: { 4: 'S', 9: 'N' } }),
+  pile('P5', { hauteur: 14, intrus: { 11: 'epal' } }),
+];
+// Le quai de la collecte : unité au féminin, motifs et libellés d'une pile, pas de « Refuser », le bon de collecte (« BC »).
+export function quaiPiles({ piles = PILES_ESSAI, par = 'cariste' } = {}) {
+  return {
+    id: 'essai-piles', rendu: 'iso', froid: false,
+    unite: { un: 'palette', des: 'palettes', feminin: true },
+    motifs: ['manquant', 'avarie', 'produit'], deuxMotifs: true, decisions: ['accepter', 'reserves'],
+    libelles: { avarie: { nom: 'Palettes abîmées', precision: 'à réparer', adjectif: 'abîmé' }, manquant: { nom: 'Palettes manquantes' }, produit: { nom: 'Palettes d’un autre pool' } },
+    document: { nom: 'Bon de collecte', court: 'BC' },
+    titre: 'Centre de service — quai des retours (page d’essai)',
+    avertissement: 'Page d’essai du lot B de MOTEUR-chep : le transporteur, les piles et les numéros sont construits pour l’essai.',
+    lieu: { nom: 'Quai des retours', temp: 8, refrigere: false }, zone: { nom: 'Zone de réception' },
+    dechargement: { ouverture: 0.5, parPalette: 1, par }, aides: { consignes: true },
+    camions: [{ transporteur: 'Transports Lys-Escaut (fictif)', fournisseur: 'Halles d’Artois (fictif)', bl: 'BC-27-0119', arrivee: '13:40',
+      parole: 'Bonjour ! Retour des palettes vides des Halles d’Artois. Voilà le bon de collecte : cinq piles.',
+      palettes: JSON.parse(JSON.stringify(piles)) }],
+  };
+}
+
 // L'univers d'une séance d'essai : le moteur d'entreprise avec ce seul quai. `copie` : simule une évaluation (tests).
 export function universQuai(Q, { copie = false } = {}) {
   return Object.assign(univers(), { quai: Q, animations: [], etapes: etapesQuai(Q), copie,

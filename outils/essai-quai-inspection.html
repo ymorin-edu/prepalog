@@ -237,5 +237,62 @@ form.addEventListener('change', () => { if (hote.childElementCount) lancer(); })
 document.querySelector('[data-recommencer-depose]').addEventListener('click', () => { if (hote.childElementCount) lancer(); });
 if (location.hash === '#depose') { document.querySelector('[data-lancer-depose]').click(); document.getElementById('depose').scrollIntoView(); }
 </script>
+<section class="eqi eqi-partie2" id="piles">
+  <h2>Partie 5 — Les piles de palettes vides (CHEP, MOTEUR-chep lot B)</h2>
+  <p>Un camion de collecte rapporte <b>cinq piles de palettes vides</b> au quai des retours. Le cariste les sort au chariot ; à l'étape ③, tu fais le tour de chaque pile (« ⟲ Tourner / Tourner ⟳ ») et tu <b>cliques les palettes une à une</b> : chacune s'affiche de près avec son numéro, son marquage lisible et, si sa face abîmée est tournée vers toi, le dégât. <b>Rien n'est écrit</b> qui nommerait un pool ou un dégât : tout se voit sur le dessin (couleur <b>et</b> marquage, pour l'impression en noir et blanc). Il n'y a pas de bouton « Refuser » : on ne refuse pas des palettes vides qui appartiennent au pool.</p>
+  <p><b>Les cinq piles</b> (15 palettes annoncées chacune) : P1 conforme ; P2 n'en porte que 14 (la pile est un peu moins haute : il faut compter) ; P3 a une palette LPR (rouge, « LPR ») ; P4 a deux palettes abîmées, dont une qui ne se voit que de l'arrière ; P5 a une palette Europe (bois brut, plus étroite : elle fait un retrait) et il en manque une.</p>
+  <form class="eqi-reglages" data-reglages-piles aria-label="Réglages de l'essai des piles">
+    <fieldset><legend>Le mode</legend>
+      <label><input type="radio" name="pile-mode" value="guidage" checked> guidage</label>
+      <label><input type="radio" name="pile-mode" value="copie"> évaluation</label></fieldset>
+    <fieldset><legend>Le quai</legend>
+      <label><input type="checkbox" name="pile-controle" checked> commence au contrôle (piles déjà au sol)</label></fieldset>
+    <fieldset><legend>Essai</legend>
+      <button type="button" data-recommencer-piles>Tout remettre à zéro</button></fieldset>
+  </form>
+  <details class="eqi-declare"><summary>Ce que la vue calcule pour chaque pile (pour toi, jamais pour l'élève)</summary><div data-calcul-piles></div></details>
+  <p><button type="button" class="btn btn-p" data-lancer-piles>Lancer l'essai des piles</button></p>
+  <div data-hote-piles></div>
+</section>
+<script type="module">
+import { quaiPiles, universQuai, PILES_ESSAI } from './outils/essai-quai-inspection.js';
+import { creerEntreprise } from './core/types/entreprise.js';
+import { jalonsQuai, comptePile, decisionPile } from './core/types/quai.js';
+const hote = document.querySelector('[data-hote-piles]'), form = document.querySelector('[data-reglages-piles]');
+const LIB = { manquant: 'manquantes', avarie: 'abîmées', produit: 'd’un autre pool' };
+document.querySelector('[data-calcul-piles]').innerHTML = `<table class="quai-bilan"><thead><tr><th>Pile</th><th>Annoncées</th><th>Sur la pile</th><th>Manquantes</th><th>Autre pool</th><th>Abîmées</th><th>CHEP (à créditer)</th><th>À réparer</th><th>Décision juste</th></tr></thead><tbody>${PILES_ESSAI.map((p) => {
+  const c = comptePile(p), d = decisionPile(p);
+  return `<tr><td>${p.id}</td><td>${c.bl}</td><td>${c.hauteur}</td><td>${c.manquantes}</td><td>${c.intrus}${c.intrus ? ` (${Object.entries(c.parPool).filter(([, n]) => n).map(([k, n]) => `${n} ${k.toUpperCase()}`).join(', ')})` : ''}</td><td>${c.abimees}</td><td>${c.aCrediter}</td><td>${c.aReparer}</td><td>${d.attendu === 'accepter' ? 'accepter' : `sous réserve : ${d.motifs.map((m) => LIB[m]).join(' + ')}`}</td></tr>`; }).join('')}</tbody></table>`;
+let db = {};
+function lancer() {
+  db = {};
+  const copie = form.querySelector('input[name="pile-mode"]:checked').value === 'copie';
+  const Q = quaiPiles();
+  if (form.querySelector('input[name="pile-controle"]').checked) Q.commence = 'controle';
+  hote.innerHTML = '<div data-seance-piles></div><details class="eqi-jalons" open><summary>Les jalons, calculés maintenant (l’élève ne les voit qu’au bilan)</summary><div data-etat-piles></div></details>';
+  const etat = hote.querySelector('[data-etat-piles]');
+  const maj = () => {
+    const J = jalonsQuai(db, Q).L;
+    etat.innerHTML = `<table class="quai-bilan" data-jalons-piles><thead><tr><th>Jalon</th><th>Ce que tu as fait</th><th>Attendu</th><th></th></tr></thead><tbody>${J.map((l) =>
+      `<tr data-jalon-pile="${l.id}"><td>${l.lib}</td><td>${l.fait}</td><td>${l.attendu}</td><td class="${l.ok ? 'quai-ok' : 'quai-ko'}">${l.ok ? '✓' : '✗'}</td></tr>`).join('')}</tbody></table>`;
+  };
+  const h = document.createElement('div');
+  hote.querySelector('[data-seance-piles]').replaceChildren(h);
+  const ctx = {
+    meta: Object.assign({ id: 'essai-inspection', code: 'ESSAI', titre: 'Essai des piles de palettes vides', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 20 }, copie ? { copie: true, temps: 'evaluation' } : {}),
+    profil: { prenom: 'Essai', nom: 'Piles', role: 'eleve', uid: 'essai-eleve' },
+    jeu: { etat: () => db, sauver: maj },
+    enregistrer: () => {}, quitter: () => { lancer(); }, codeStock: 'ESSAI', lireScore: async () => null,
+  };
+  creerEntreprise(universQuai(Q, { copie })).rendre(h, ctx);
+  h.querySelector('.ent-nav[data-vue="quai"]')?.click();
+  maj();
+  window.__piles = { db: () => db, Q };
+}
+document.querySelector('[data-lancer-piles]').addEventListener('click', () => { document.querySelector('[data-lancer-piles]').hidden = true; lancer(); });
+form.addEventListener('change', () => { if (hote.childElementCount) lancer(); });
+document.querySelector('[data-recommencer-piles]').addEventListener('click', () => { if (hote.childElementCount) lancer(); });
+if (location.hash === '#piles') { document.querySelector('[data-lancer-piles]').click(); document.getElementById('piles').scrollIntoView(); }
+</script>
 </body>
 </html>

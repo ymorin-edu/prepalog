@@ -22,6 +22,10 @@
 // ÉTAPE 5 — LE DÉCHARGEMENT AU CHARIOT FRONTAL (`dechargement.par: 'cariste'` + `rendu: 'iso'`) : le plan du chariot (fonction pure : ordre de sortie, ouverture, aucune collision),
 // le dessin (gilet jaune, roues rondes, coupé au mur), les mêmes places qu'avec le chauffeur, le mouvement réduit. Sans `cariste`, rien ne change (référence de l'étape 0).
 //
+// MOTEUR-CHEP, LOT B — LES PILES DE PALETTES VIDES (`forme: 'pile'`, 18/10/2026) : `comptePile` et la décision calculée (valeurs écrites à la main),
+// les refus au chargement, le kit (dégât de deux vues seulement, pile moins haute, ni texte ni vert), l'écran ③ (rien ne nomme le pool ni le dégât),
+// les accords au féminin, la réserve chiffrée « d'un autre pool », pas de « Refuser », le bon de collecte (« BC »), la partie 5 de la page jouée de bout en bout.
+//
 // Pour régénérer la référence (seulement si le dessin de Spartoo doit vraiment changer, avec l'accord de
 // Tristan) : QUAI_ISO_REGENERER=1 node outils/test.mjs quai-iso
 
@@ -3110,6 +3114,283 @@ await v('Quai niveau : `etapesQuaiTire(quaiDe, graineDeBase, niveauDe)` juge sur
   vrai(R.memes, 'les étapes de référence diffèrent avec et sans niveauDe');
   egal([R.avecStd, R.avecConf], ['ok', 'attente'], 'avec niveauDe : « accepter » est juste au standard, pas au confirmé');
   egal([R.sansStd, R.sansConf], ['ok', 'ok'], 'sans niveauDe : le standard pour tous');
+});
+
+/* ------------------------------------------- MOTEUR-chep, lot B : les piles de palettes vides (`forme: 'pile'`) */
+// Brief `docs/briefs/MOTEUR-chep-ramasse-et-piles.md` §3. Les valeurs attendues sont ÉCRITES À LA MAIN (jamais recopiées du moteur).
+// Le quai de la page d'essai (partie 5, `quaiPiles`) : cinq piles de 15 annoncées — P1 juste ; P2 à 14 ; P3 une LPR (n° 6) ; P4 deux abîmées
+// (n° 4 face S, n° 9 face N) ; P5 une Europe (n° 11) et une manquante (14 sur la pile).
+const PP = (o = {}) => Object.assign({ id: 'P1', forme: 'pile', ref: 'CHEP-1210', nom: 'Palettes CHEP vides', bl: 15, etiq: { ref: 'BC-1', nom: 'PILE', poids: '15 annoncées' } }, o);
+const QPILE = (ps, m = {}) => Object.assign({ id: 'tp', rendu: 'iso', froid: false, unite: { un: 'palette', des: 'palettes', feminin: true },
+  motifs: ['manquant', 'avarie', 'produit'], deuxMotifs: true, decisions: ['accepter', 'reserves'],
+  libelles: { avarie: { nom: 'Palettes abîmées', precision: 'à réparer', adjectif: 'abîmé' }, manquant: { nom: 'Palettes manquantes' }, produit: { nom: 'Palettes d’un autre pool' } },
+  document: { nom: 'Bon de collecte', court: 'BC' },
+  camions: [{ transporteur: 'T', fournisseur: 'F', bl: 'BC-27', arrivee: '13:40', palettes: ps }] }, m);
+// Ce qui, dans le dessin ou le zoom, nommerait un pool ou un dégât (la règle du quai iso : l'élève le VOIT, rien ne l'écrit).
+const NOMME = /chep|lpr|logipal|epal|\beur\b|europe|ab[iî]m|avarie|cass|arrach|pool|intrus|d[ée]g[âa]t|r[ée]par/i;
+
+await v('Quai piles : comptePile écrit à la main sur trois piles (CHEP = sur la pile − autres pools, abîmées comprises ; à créditer = CHEP ; à réparer = abîmées)', async () => {
+  egal(quaiMod.comptePile(PP()), { bl: 15, hauteur: 15, manquantes: 0, intrus: 0, parPool: { lpr: 0, logipal: 0, epal: 0 }, abimees: 0, chep: 15, aCrediter: 15, aReparer: 0 }, 'une pile juste');
+  egal(quaiMod.comptePile(PP({ hauteur: 14, intrus: { 6: 'lpr', 11: 'epal' }, abimee: { 9: 'S' } })),
+    { bl: 15, hauteur: 14, manquantes: 1, intrus: 2, parPool: { lpr: 1, logipal: 0, epal: 1 }, abimees: 1, chep: 12, aCrediter: 12, aReparer: 1 }, '14 sur 15, une LPR, une Europe, une abîmée');
+  egal(quaiMod.comptePile(PP({ bl: 18, hauteur: 16, intrus: { 2: 'logipal', 3: 'logipal', 4: 'lpr' }, abimee: { 1: 'N', 16: 'W' } })),
+    { bl: 18, hauteur: 16, manquantes: 2, intrus: 3, parPool: { lpr: 1, logipal: 2, epal: 0 }, abimees: 2, chep: 13, aCrediter: 13, aReparer: 2 }, '16 sur 18, trois d’autres pools, deux abîmées');
+  // Le moteur s'en sert pour ses jalons : le comptage attendu est la hauteur, le bon de collecte dit 15.
+  const Q = QPILE([PP({ id: 'P2', hauteur: 14 })]);
+  egal(quaiMod.jalonsQuai({}, Q).L.find((l) => l.id === 'P2-comptage').attendu, '14 palettes (BC : 15)', 'le comptage attendu de P2');
+});
+
+await v('Quai piles : la décision attendue se calcule (aucune histoire → accepter ; sinon réserves, un motif par histoire) ; écrite fausse, elle est refusée', async () => {
+  const piles = [PP({ id: 'P1' }), PP({ id: 'P2', hauteur: 14 }), PP({ id: 'P3', intrus: { 6: 'lpr' } }), PP({ id: 'P4', abimee: { 4: 'S', 9: 'N' } }), PP({ id: 'P5', hauteur: 14, intrus: { 11: 'epal' } })];
+  egal(piles.map((p) => quaiMod.decisionPile(p)), [
+    { attendu: 'accepter', motifs: [] }, { attendu: 'reserves', motifs: ['manquant'] }, { attendu: 'reserves', motifs: ['produit'] },
+    { attendu: 'reserves', motifs: ['avarie'] }, { attendu: 'reserves', motifs: ['manquant', 'produit'] }], 'les cinq piles de la page d’essai');
+  const J = quaiMod.jalonsQuai({}, QPILE(piles)).L, at = (id) => (J.find((l) => l.id === id) || {}).attendu;
+  egal([at('P1-decision'), at('P2-decision'), at('P5-decision')], ['Accepter — aucun motif', 'Accepter avec réserves — Palettes manquantes', 'Accepter avec réserves — Palettes manquantes + Palettes d’un autre pool'], 'les décisions attendues au bilan');
+  egal([at('P2-reserve'), at('P3-reserve'), at('P4-reserve'), at('P5-reserve')], [
+    'P2 CHEP-1210 : acceptée sous réserve — manque 1 palette (BC 15, reçu 14).',
+    'P3 CHEP-1210 : acceptée sous réserve — 1 palette d’un autre pool.',
+    'P4 CHEP-1210 : acceptée sous réserve — 2 palettes abîmées (à réparer).',
+    'P5 CHEP-1210 : acceptée sous réserve — manque 1 palette (BC 15, reçu 14) ; 1 palette d’un autre pool.'], 'les réserves attendues, écrites à la main');
+  vrai(!J.find((l) => l.id === 'P1-reserve'), 'P1 est acceptée : pas de ligne de réserve');
+  egal(quaiMod.verifierQuai(QPILE(piles)), [], 'les cinq piles sont acceptées au chargement');
+  egal(await pg.evaluate(async () => { const Q = await import('/core/types/quai.js'), E = await import('/outils/essai-quai-inspection.js'); return Q.verifierQuai(E.quaiPiles()); }), [], 'le quai de la page d’essai est accepté au chargement');
+  const faux = quaiMod.verifierQuai(QPILE([PP({ attendu: 'reserves' })]));
+  vrai(faux.some((m) => /attendu « reserves » alors que la pile demande « accepter »/.test(m)), `attendu écrit faux : ${faux.join(' | ') || 'pas refusé'}`);
+  const mot = quaiMod.verifierQuai(QPILE([PP({ hauteur: 14, attendu: 'reserves', motifAttendu: 'avarie' })]));
+  vrai(mot.some((m) => /motifs écrits \(avarie\) alors que la pile demande manquant/.test(m)), `motif écrit faux : ${mot.join(' | ') || 'pas refusé'}`);
+  egal(quaiMod.verifierQuai(QPILE([PP({ hauteur: 14, attendu: 'reserves', motifAttendu: 'manquant' })])), [], 'une décision écrite juste est acceptée');
+});
+
+await v('Quai piles : verifierQuai refuse chaque déclaration fautive, avec un message clair', async () => {
+  const REFUS = [
+    ['n° hors de la pile (16 sur 15)', (Q) => { Q.camions[0].palettes[0].intrus = { 16: 'lpr' }; }, /palette n° « 16 » n’existe pas/],
+    ['n° 0', (Q) => { Q.camions[0].palettes[0].abimee = { 0: 'N' }; }, /palette n° « 0 » n’existe pas/],
+    ['n° non entier', (Q) => { Q.camions[0].palettes[0].intrus = { 2.5: 'lpr' }; }, /« 2\.5 »/],
+    ['n° écrit « 06 »', (Q) => { Q.camions[0].palettes[0].intrus = { '06': 'lpr' }; }, /« 06 »/],
+    ['n° au-dessus de la hauteur (15 sur une pile de 14)', (Q) => { Object.assign(Q.camions[0].palettes[0], { hauteur: 14, abimee: { 15: 'S' } }); }, /« 15 » n’existe pas/],
+    ['palette intruse et abîmée', (Q) => { Object.assign(Q.camions[0].palettes[0], { intrus: { 6: 'lpr' }, abimee: { 6: 'S' } }); }, /à la fois d’un autre pool et abîmée/],
+    ['pool inconnu', (Q) => { Q.camions[0].palettes[0].intrus = { 3: 'europe' }; }, /« europe »/],
+    ['« chep » comme intrus', (Q) => { Q.camions[0].palettes[0].intrus = { 3: 'chep' }; }, /« chep »/],
+    ['face inconnue', (Q) => { Q.camions[0].palettes[0].abimee = { 3: 'Z' }; }, /« Z »/],
+    ['hauteur > bl', (Q) => { Q.camions[0].palettes[0].hauteur = 16; }, /hauteur \(16\) plus grande que bl \(15\)/],
+    ['19 palettes', (Q) => { Q.camions[0].palettes[0].bl = 19; }, /19 palettes, 18 au plus/],
+    ['hauteur 0', (Q) => { Q.camions[0].palettes[0].hauteur = 0; }, /hauteur doit être/],
+    ['refs', (Q) => { Q.camions[0].palettes[0].refs = []; }, /« refs » n’a pas de sens pour une pile/],
+    ['etiqAvant', (Q) => { Q.camions[0].palettes[0].etiqAvant = 'dechiree'; }, /« etiqAvant »/],
+    ['W', (Q) => { Q.camions[0].palettes[0].W = 2; }, /« W »/],
+    ['manque (au lieu de hauteur)', (Q) => { Q.camions[0].palettes[0].manque = [3]; }, /« manque »/],
+    ['avarie (au lieu de abimee)', (Q) => { Q.camions[0].palettes[0].avarie = { 3: 'N' }; }, /« avarie »/],
+    ['clé inconnue', (Q) => { Q.camions[0].palettes[0].intruse = { 3: 'lpr' }; }, /« intruse » inconnu/],
+    ['unité absente', (Q) => { delete Q.unite; }, /une pile de palettes vides demande `unite`/],
+    ['decisions absentes', (Q) => { delete Q.decisions; }, /demande decisions: \['accepter', 'reserves'\]/],
+    ['« refuser » proposé', (Q) => { Q.decisions = ['accepter', 'reserves', 'refuser']; }, /« refuser » n’existe pas pour une pile/],
+    ['trois histoires', (Q) => { Object.assign(Q.camions[0].palettes[0], { hauteur: 14, intrus: { 2: 'lpr' }, abimee: { 3: 'S' } }); }, /trois histoires/],
+    ['deux histoires sans deuxMotifs', (Q) => { delete Q.deuxMotifs; Object.assign(Q.camions[0].palettes[0], { hauteur: 14, intrus: { 2: 'lpr' } }); }, /demandent deuxMotifs: true/],
+    ['motif absent de motifs', (Q) => { Q.motifs = ['manquant', 'avarie']; Q.camions[0].palettes[0].intrus = { 2: 'lpr' }; }, /le motif « produit », absent de motifs/],
+    ['aides de couches', (Q) => { Q.aides = { regleCouches: true }; }, /aides\.regleCouches .* pile/],
+    ['sans rendu iso', (Q) => { delete Q.rendu; }, /une pile de palettes vides se dessine sur le quai iso/],
+    ['unite.feminin pas un booléen', (Q) => { Q.unite.feminin = 'oui'; }, /unite\.feminin : true/],
+    ['libelles.avarie.adjectif vide', (Q) => { Q.libelles.avarie.adjectif = ' '; }, /libelles\.avarie\.adjectif : le texte est vide/],
+    ['document.court vide', (Q) => { Q.document = { nom: 'Bon de collecte', court: '' }; }, /document\.court : l’abréviation est vide/],
+    ['document : clé inconnue', (Q) => { Q.document = { nom: 'Bon de collecte', court: 'BC', abrege: 'BC' }; }, /document\.abrege : inconnu/],
+  ];
+  const fautes = [];
+  egal(quaiMod.verifierQuai(QPILE([PP()])), [], 'la pile de départ est acceptée');
+  for (const [nom, mute, motif] of REFUS) {
+    const Q = JSON.parse(JSON.stringify(QPILE([PP()]))); mute(Q);
+    const E = quaiMod.verifierQuai(Q);
+    if (!E.length) fautes.push(`« ${nom} » n’est pas refusé`);
+    else if (!E.some((m) => motif.test(m))) fautes.push(`« ${nom} » : message sans « ${motif} » (${E.join(' | ')})`);
+  }
+  // `decisions` sur un quai de cartons : permis (une partie des trois, « accepter » compris), contrôlé comme le reste.
+  const QC1 = (d, att = 'accepter') => ({ id: 'qc', camions: [{ palettes: [{ id: 'P1', ref: 'X', bl: 8, W: 2, D: 2, L: 2, manque: [], avarie: {}, attendu: att, motifAttendu: 'aucun', etiq: {} }] }], decisions: d });
+  egal(quaiMod.verifierQuai(QC1(['accepter', 'refuser'])), [], 'des cartons sans « reserves » : permis');
+  [[['accepter', 'garder'], /« garder » n’existe pas/], [['reserves'], /« accepter » doit être proposé/], [['accepter', 'accepter'], /en double/], [[], /la liste des décisions/],
+    [['accepter', 'reserves'], /attendu « refuser », absent de decisions/, 'refuser']].forEach(([d, re, att]) => {
+    const E = quaiMod.verifierQuai(QC1(d, att));
+    if (!E.some((m) => re.test(m))) fautes.push(`decisions ${JSON.stringify(d)} : ${E.join(' | ') || 'pas refusé'}`);
+  });
+  if (fautes.length) throw new Error(fautes.join(' ; '));
+});
+
+await v('Quai piles : le kit — un dégât se voit de DEUX vues consécutives seulement, la pile moins haute quand il en manque, aucun texte, aucun vert', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection({ unite: 100, origine: [400, 400] });
+    const pal = (n, o = {}) => Array.from({ length: n }, (_, k) => ({ no: k + 1, pool: (o.pool || {})[k + 1] || 'chep', abime: (o.ab || {})[k + 1] || null }));
+    const n = (s, re) => (s.match(re) || []).length;
+    const vues = (face, no, o = {}) => [0, 1, 2, 3].map((rot) => n(K.palettePile(I, { palettes: pal(no, { ab: { [no]: face } }) }, 0, 0, rot, Object.assign({ lisible: true }, o)), /data-iso-avarie/g)).join('');
+    const R = {};
+    ['N', 'S', 'E', 'W'].forEach((f) => { R[`${f}9`] = vues(f, 9); R[`${f}4`] = vues(f, 4); });
+    R.sansDents = vues('S', 9, { dents: false }); R.simple = vues('S', 9, { simple: true }); R.sansBalise = vues('S', 9, { balises: false });
+    const attrs = (q) => `data-n="${q.no}"`;
+    R.groupes15 = n(K.palettePile(I, { palettes: pal(15) }, 0, 0, 0, { attrs }), /data-n="/g);
+    R.groupes14 = n(K.palettePile(I, { palettes: pal(14) }, 0, 0, 0, { attrs }), /data-n="/g);
+    const bbox = (svg) => { const h = document.createElement('div'); h.innerHTML = `<svg viewBox="0 0 800 800" width="800" height="800"><g>${svg}</g></svg>`; document.body.append(h); const b = h.querySelector('g').getBBox(); h.remove(); return b.height; };
+    R.haut15 = bbox(K.palettePile(I, { palettes: pal(15) }, 0, 0, 0, {})); R.haut14 = bbox(K.palettePile(I, { palettes: pal(14) }, 0, 0, 0, {}));
+    const tout = K.palettePile(I, { palettes: pal(15, { pool: { 2: 'lpr', 3: 'logipal', 4: 'epal' }, ab: { 6: 'S', 7: 'E' } }) }, 0, 0, 0, { lisible: true, sel: 3 });
+    R.textes = n(tout, /<text/g); R.titres = n(tout, /<title|title=/g);
+    R.marquage = n(tout, /<path d="M/g); R.sansMarquage = n(K.palettePile(I, { palettes: pal(15) }, 0, 0, 0, { lisible: false }), /<path d="M/g);
+    // Le vert ne dit que « juste » : aucune teinte du dessin n'est verte (G plus fort que R et que B).
+    R.verts = [...new Set((tout.match(/#[0-9a-f]{6}/gi) || []))].filter((c) => { const [rr, gg, bb] = [1, 3, 5].map((i) => parseInt(c.slice(i, i + 2), 16)); return gg > rr + 12 && gg > bb + 12; });
+    // Une palette Europe (1 200 × 800) est plus étroite : vue de face, sa face avant est en retrait (dessinée plus haut à l'écran que celle d'une CHEP).
+    const ys = (pool) => { const s = K.palettePile(I, { palettes: [{ no: 1, pool, abime: null }] }, 0, 0, 0, {}); return Math.max(...[...s.matchAll(/points="([^"]+)"/g)].flatMap((m) => m[1].split(' ').map((q) => +q.split(',')[1]))); };
+    R.epalRetrait = ys('chep') - ys('epal');
+    return R;
+  });
+  // Écrit à la main : une face se voit de devant (rotation où elle est la face S) et de côté (où elle est la face E), comme la fuite d'un fût.
+  egal([r.S9, r.E9, r.N9, r.W9], ['1001', '1100', '0110', '0011'], 'planche cassée (n° impair) : S aux rotations 0 et 3, E 0 et 1, N 1 et 2, W 2 et 3');
+  egal([r.S4, r.E4, r.N4, r.W4], ['1001', '1100', '0110', '0011'], 'bloc arraché (n° pair) : mêmes rotations');
+  egal([r.sansDents, r.simple, r.sansBalise], ['0000', '0000', '0000'], 'dents: false, le décor (simple) et balises: false ne balisent aucun dégât');
+  egal([r.groupes15, r.groupes14], [15, 14], 'une palette dessinée par palette sur la pile (rien à la place d’une manquante)');
+  vrai(r.haut15 - r.haut14 > 14 && r.haut15 - r.haut14 < 16, `une pile de 14 est moins haute d’une palette (15 cm, 15 px ici) : ${(r.haut15 - r.haut14).toFixed(1)} px`);
+  egal([r.textes, r.titres], [0, 0], 'aucun <text> ni titre dans le dessin : le marquage est tracé');
+  vrai(r.marquage >= 15 && r.sansMarquage === 0, `le marquage n’existe que lisible (${r.marquage} tracés lisibles, ${r.sansMarquage} sinon)`);
+  egal(r.verts, [], 'aucune teinte verte');
+  // 10 cm de retrait sur la face avant, à 100 px le mètre : 0,10 × 0,5 × 100 = 5 px plus haut à l'écran (écrit à la main).
+  vrai(Math.abs(r.epalRetrait - 5) < 0.2, `la palette Europe ne fait pas son retrait de 10 cm (${r.epalRetrait.toFixed(1)} px au lieu de 5)`);
+});
+
+// La partie 5 de la page d'essai (les cinq piles), dans le vrai moteur. `controle` : commence au contrôle (piles déjà au sol).
+async function pagePiles({ controle = true, copie = false } = {}) {
+  const p = await ctxS.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
+  await p.goto(BASE + 'outils/essai-quai-inspection.html');
+  if (!controle) await p.uncheck('input[name="pile-controle"]');
+  if (copie) await p.check('input[name="pile-mode"][value="copie"]');
+  await p.click('[data-lancer-piles]');
+  await p.waitForSelector(`[data-hote-piles] ${controle ? '[data-q-palette]' : '[data-q="decharger"]'}`);
+  return p;
+}
+const HP = '[data-hote-piles]';
+const ongletPile = async (p, id) => { await p.click(`${HP} [data-q="sel"]:has-text("${id}")`); await p.waitForSelector(`${HP} [data-q-palette]`); };
+const cliquerPalette = (p, n) => p.$eval(`${HP} [data-q-palette] [data-q-carton="${n}"]`, (el) => el.dispatchEvent(new MouseEvent('click', { bubbles: true })));
+
+await v('Quai piles : à l’étape ③, aucun texte, titre ni attribut ne nomme un pool ou un dégât — dessin et zoom, cinq piles, quatre vues ; « Palette 9 / 14 »', async () => {
+  const p = await pagePiles();
+  const fautes = [];
+  for (const id of ['P1', 'P2', 'P3', 'P4', 'P5']) {
+    await ongletPile(p, id);
+    for (let rot = 0; rot < 4; rot++) {
+      await cliquerPalette(p, { P3: 6, P4: 9, P5: 11 }[id] || 9);
+      const t = await p.evaluate((H) => {
+        const zones = [document.querySelector(`${H} [data-q-palette]`), document.querySelector(`${H} .quai-zoom`)];
+        const L = [];
+        zones.forEach((z) => {
+          L.push(z.textContent);
+          z.querySelectorAll('*').forEach((el) => [...el.attributes].forEach((a) => {
+            if (a.name === 'title' || /^data-|^aria-|^class$|^id$/.test(a.name)) L.push(`${a.name}=${a.value}`);
+            if (a.name.startsWith('data-')) L.push(a.name);
+          }));
+          L.push(String(z.querySelectorAll('title').length ? 'TITLE' : ''));
+        });
+        return L.join(' | ');
+      }, HP);
+      const m = t.match(NOMME) || t.match(/TITLE/);
+      if (m) fautes.push(`${id}, vue ${rot} : « ${m[0]} » dans ${t.slice(Math.max(0, m.index - 60), m.index + 40)}`);
+      await p.click(`${HP} [data-q="tourner"]:not([data-sens])`);
+    }
+  }
+  egal(fautes, [], 'rien ne nomme le pool ni le dégât');
+  // Le zoom dit le numéro de la palette sur la hauteur réelle de la pile ; le dessin a une palette cliquable par palette sur la pile.
+  await ongletPile(p, 'P2');
+  egal(await p.$$eval(`${HP} [data-q-palette] [data-q-carton]`, (L) => L.length), 14, 'P2 : 14 palettes cliquables');
+  await cliquerPalette(p, 9);
+  egal(await p.$eval(`${HP} [data-q-etiquette] .quai-etiq-l1 span`, (s) => s.textContent.replace(/\s+/g, ' ').trim()), 'Palette 9 / 14', 'le zoom de P2');
+  vrai(await p.$(`${HP} [data-q-etiquette] svg[data-q-proche]`), 'la palette se voit de près dans le zoom');
+  await p.close();
+});
+
+await v('Quai piles : le dégât de P4 (n° 9, face arrière) se voit de près aux vues 1 et 2, jamais aux vues 0 et 3', async () => {
+  const p = await pagePiles();
+  await ongletPile(p, 'P4');
+  const vus = [];
+  for (let rot = 0; rot < 4; rot++) {
+    await cliquerPalette(p, 9);
+    // Le bois frais d'une cassure (#ecd7ac) n'est dessiné que pour un dégât visible : c'est ce que voit l'élève.
+    vus.push(await p.$eval(`${HP} svg[data-q-proche]`, (s) => (s.innerHTML.match(/#ecd7ac/g) || []).length > 0 ? 1 : 0));
+    await p.click(`${HP} [data-q="tourner"]:not([data-sens])`);
+  }
+  egal(vus.join(''), '0110', 'le dégât de la face N (arrière) : vues du côté droit et de l’arrière');
+  await p.close();
+});
+
+await v('Quai piles : accords au féminin partout (« palettes manquantes », « abîmées », « comptées », « cette pile ») ; sans feminin, rien ne change', async () => {
+  const L = quaiMod.libellesMotifs;
+  egal(L({ unite: { un: 'palette', des: 'palettes', feminin: true }, libelles: { avarie: { adjectif: 'abîmé' } } }).avarie, 'Palettes abîmées', 'le motif par défaut, au féminin, avec l’adjectif déclaré');
+  egal(L({ unite: { un: 'caisse', des: 'caisses', feminin: true } }).avarie, 'Caisses endommagées', 'au féminin sans adjectif déclaré');
+  egal(L({}).avarie, 'Cartons endommagés', 'sans unité : le texte d’aujourd’hui');
+  egal(L({ unite: 'fûts' }).avarie, 'Fûts endommagés', 'une unité masculine : inchangée');
+  egal(quaiMod.uniteQuai({ unite: { un: 'palette', des: 'palettes', feminin: true } }), { un: 'palette', des: 'palettes', fem: true }, 'l’unité féminine');
+  egal(quaiMod.uniteQuai({ unite: { un: 'fût', des: 'fûts' } }), { un: 'fût', des: 'fûts' }, 'sans feminin : l’unité d’avant, sans clé de plus');
+  const J = quaiMod.jalonsQuai({}, QPILE([PP({ id: 'P1', abimee: { 3: 'S' } }), PP({ id: 'P2', hauteur: 13 })])).L, at = (id) => J.find((l) => l.id === id).attendu;
+  egal(at('P1-reserve'), 'P1 CHEP-1210 : acceptée sous réserve — 1 palette abîmée (à réparer).', '1 palette abîmée');
+  egal(at('P2-reserve'), 'P2 CHEP-1210 : acceptée sous réserve — manque 2 palettes (BC 15, reçu 13).', 'manque 2 palettes');
+  // À l'écran : les étapes ③ et ④ du quai de la page d'essai ne disent jamais un accord masculin de l'unité.
+  const p = await pagePiles();
+  const t3 = await p.$eval(HP, (h) => h.innerText);
+  vrai(/Palettes abîmées/.test(t3) && /Palettes manquantes/.test(t3) && /Palettes d’un autre pool/.test(t3), 'la fiche de contrôle : abîmées, manquantes, d’un autre pool');
+  vrai(/palettes comptées sur cette pile/.test(t3), 'le comptage : « palettes comptées sur cette pile »');
+  await p.click(`${HP} #qDec-reserves`); await p.click(`${HP} #qMot-avarie`); await p.click(`${HP} #qMot-manquant`); await p.click(`${HP} [data-q="valider"]`);
+  for (const id of ['P2', 'P3', 'P4', 'P5']) { await ongletPile(p, id); await p.click(`${HP} #qDec-accepter`); await p.click(`${HP} [data-q="valider"]`); }
+  await p.click(`${HP} [data-q="vers4"]`); if (await p.$(`${HP} .quai-arme`)) await p.click(`${HP} [data-q="vers4"]`);
+  const t4 = await p.$eval(HP, (h) => h.innerText);
+  vrai(/Nombre de palettes abîmées/.test(t4) && /Nombre de palettes manquantes/.test(t4), 'les champs chiffrés de la réserve, au féminin');
+  // (Pas de \b après une lettre accentuée : en JavaScript, « é » n'est pas une lettre pour \b. On regarde la lettre qui suit.)
+  const masc = (t3 + t4).match(/palettes? (?:endommagés?|manquants?|comptés?|concernés?|repris|abîmés?)(?![\wàâçéèêëîïôûùüÿœ])|(?<![\wàâçéèêëîïôûùüÿœ])(?:un|ce|cet) palette/gi);
+  egal(masc, null, 'aucun accord masculin de l’unité');
+  await p.close();
+});
+
+await v('Quai piles : pas de « Refuser » ; la réserve « d’un autre pool » se chiffre (1 est juste, « LPR » ne l’est pas) ; le bon de collecte dit « BC »', async () => {
+  const p = await pagePiles();
+  egal(await p.$$eval(`${HP} [data-q="dec"]`, (L) => L.map((b) => b.dataset.v)), ['accepter', 'reserves'], 'deux décisions seulement');
+  const decider = async (id, mot) => { await ongletPile(p, id); await p.click(`${HP} #qDec-reserves`); for (const m of mot) await p.click(`${HP} #qMot-${m}`); await p.click(`${HP} [data-q="valider"]`); };
+  await ongletPile(p, 'P1'); await p.click(`${HP} #qDec-accepter`); await p.click(`${HP} [data-q="valider"]`);
+  await decider('P2', ['manquant']); await decider('P3', ['produit']); await decider('P4', ['avarie']); await decider('P5', ['manquant', 'produit']);
+  await p.click(`${HP} [data-q="vers4"]`); if (await p.$(`${HP} .quai-arme`)) await p.click(`${HP} [data-q="vers4"]`);
+  const lib = await p.$eval(`${HP} [data-q-res="P3"]`, (i) => ({ lib: i.closest('label').textContent.replace(/\s+/g, ' ').trim(), mode: i.getAttribute('inputmode') }));
+  egal(lib, { lib: 'Nombre de palettes d’un autre pool', mode: 'numeric' }, 'le champ de P3');
+  await p.fill(`${HP} [data-q-res="P2"]`, '1'); await p.fill(`${HP} [data-q-res="P3"]`, 'LPR'); await p.fill(`${HP} [data-q-res="P4"]`, '2');
+  await p.fill(`${HP} [data-q-res="P5"]`, '1'); await p.fill(`${HP} [data-q-res2="P5"]`, '1');
+  await p.click(`${HP} [data-q="ecrire"]`);
+  const ok = () => p.evaluate(async () => { const Q = await import('/core/types/quai.js'); return Object.fromEntries(Q.jalonsQuai(window.__piles.db(), window.__piles.Q).L.filter((l) => /-reserve$/.test(l.id)).map((l) => [l.id, l.ok])); });
+  egal(await ok(), { 'P2-reserve': true, 'P3-reserve': false, 'P4-reserve': true, 'P5-reserve': true }, '« LPR » n’est pas un nombre : la réserve de P3 est fausse');
+  await p.fill(`${HP} [data-q-res="P3"]`, '1'); await p.click(`${HP} [data-q="ecrire"]`);
+  egal(await ok(), { 'P2-reserve': true, 'P3-reserve': true, 'P4-reserve': true, 'P5-reserve': true }, 'avec 1 : les quatre réserves sont justes');
+  const t = await p.$eval(HP, (h) => h.innerText);
+  vrai(/P3 CHEP-1210 : acceptée sous réserve — 1 palette d’un autre pool\./.test(t), 'la ligne écrite sur le bon');
+  vrai(/Bon de collecte n° BC-27-0119/.test(t) && /Écrire les réserves sur le BC|Réécrire les réserves/.test(t) && /\(BC 15, reçu 14\)/.test(t), 'le document se nomme « Bon de collecte », abrégé « BC »');
+  vrai(!/\bBL\b/.test(t), 'plus aucun « BL » à l’écran');
+  await p.close();
+});
+
+await v('Quai piles : jouable de bout en bout — ② le cariste sort cinq piles, ③ ④ jusqu’à la signature, tous les jalons justes', async () => {
+  const p = await pagePiles({ controle: false });
+  await p.click(`${HP} [data-q="decharger"]`);
+  await p.waitForSelector(`${HP} [data-q="vers3"]:not([disabled])`);
+  // (Une pile qui passe le mur est dessinée en deux morceaux, dedans et dehors : d'où le Set.)
+  egal(await p.$$eval(`${HP} [data-q-scene2] [data-iso-pal]`, (L) => [...new Set(L.map((g) => g.getAttribute('data-iso-pal')))].sort()), ['P1', 'P2', 'P3', 'P4', 'P5'], '② : les cinq piles au décor');
+  vrai(/Les 5 piles sont en zone de réception/.test(await p.$eval(HP, (h) => h.innerText)), 'la légende parle de piles');
+  await p.click(`${HP} [data-q="vers3"]`);
+  const JUSTE = { P1: [15, 'accepter', []], P2: [14, 'reserves', ['manquant']], P3: [15, 'reserves', ['produit']], P4: [15, 'reserves', ['avarie']], P5: [14, 'reserves', ['manquant', 'produit']] };
+  for (const [id, [n, dec, mot]] of Object.entries(JUSTE)) {
+    await ongletPile(p, id);
+    await p.fill(`${HP} #qCompte`, String(n)); await p.press(`${HP} #qCompte`, 'Enter');
+    await p.click(`${HP} #qDec-${dec}`); for (const m of mot) await p.click(`${HP} #qMot-${m}`);
+    await p.click(`${HP} [data-q="valider"]`);
+  }
+  await p.click(`${HP} [data-q="vers4"]`); if (await p.$(`${HP} .quai-arme`)) await p.click(`${HP} [data-q="vers4"]`);
+  for (const [sel, v1] of [['[data-q-res="P2"]', '1'], ['[data-q-res="P3"]', '1'], ['[data-q-res="P4"]', '2'], ['[data-q-res="P5"]', '1'], ['[data-q-res2="P5"]', '1']]) await p.fill(`${HP} ${sel}`, v1);
+  await p.click(`${HP} [data-q="ecrire"]`);
+  await p.click(`${HP} [data-q="signer"]`);
+  const J = await p.evaluate(async () => { const Q = await import('/core/types/quai.js'); return Q.jalonsQuai(window.__piles.db(), window.__piles.Q).L.filter((l) => l.compte).map((l) => [l.id, l.ok]); });
+  egal(J.filter(([, ok]) => !ok), [], 'aucun jalon faux');
+  egal(J.length, 17, '17 jalons comptés : 5 comptages, 5 décisions, 4 réserves, la mention, la signature, la rentrée');
+  await p.close();
 });
 
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {
