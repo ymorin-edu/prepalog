@@ -112,7 +112,7 @@ peut en **reporter un** (« Reporter à la tournée de vendredi ») et regarde l
 les horaires (« trop tôt : le camion attend », « après l'heure : le quai est fermé »). Bouton : « Envoyer la tournée à Yannick ».
 **Fin** : Yannick reprend l'ordre **de l'élève** : « Je la passe à Lys-Escaut : {ordre}. {site reporté} vendredi. Merci ! » Bandeau de fin.
 
-**Pour réfléchir** (bilan, non noté) : « Si Distri Escaut avait signalé ses vides avant les autres, qu'est-ce qui aurait changé dans ta tournée ? »
+**Pour réfléchir** (bilan, non noté) : « Si Primeurs du Delta avait signalé ses vides avant les autres, qu'est-ce qui aurait changé dans ta tournée ? »
 
 ### Ergonomie
 - Quai iso et tournée : 1366 × 768 et 1280 × 720 sans défilement de page (règles des vues).
@@ -208,10 +208,17 @@ moteur).
 | Site (fictif) | Ville (réelle) | Vides signalés | Signalé le | Enlèvement des vides (construit) |
 |---|---|---|---|---|
 | **Frais du Nord** | Lesquin | **V** tiré de 390 à 400, par pas de 5 (le reste, 10 au plus, attend la semaine suivante : Yannick le dit) | lun. 18/01, 7 h 40 | 6 h – 14 h (camion complet, hors tournée) |
-| Halles d'Artois | Douai | 140 (135 à 145, pas de 5) | voir la banque | 6 h – 10 h |
+| Halles d'Artois | Douai | 140 (135 à 145, pas de 5) | voir la banque | 9 h – 12 h |
 | Hainaut Primeurs | Prouvy | 120 (115 à 125) | voir la banque | 8 h – 12 h |
-| MarchéLys | Roubaix | 95 (90 à 100) | voir la banque | 13 h – 17 h |
-| Distri Escaut | Dourges | 70 (65 à 75) | voir la banque | 7 h – 11 h |
+| MarchéLys | Roubaix | 95 (90 à 100) | voir la banque | 6 h – 9 h |
+| Primeurs du Delta | Dourges | 70 (65 à 75) | voir la banque | 9 h – 12 h |
+
+> **Recalé le 18/10/2026 (Claude Code, choix de Tristan : « jeu B »)**. Les horaires d'origine (Douai 6 h–10 h, Roubaix 13 h–17 h,
+> Dourges 7 h–11 h) ne tenaient pas le contrôle d'équité ci-dessous : l'ordre au plus court respectait tous les horaires dans trois
+> tirages sur quatre, et le camion attendait plus de 3 h devant MarchéLys. Avec le jeu B (calcul sur la carte réelle, 55 km/h, temps
+> d'enlèvement de la vue) : au moins un ordre tient dans chaque tirage, l'ordre au plus court rate dans deux tirages sur quatre
+> (Prouvy ou Dourges reporté), attente la plus longue 1 h 27, retour au plus tard 10 h 27. **« Distri Escaut » (vraie société de
+> Caudry) est renommé « Primeurs du Delta »** (nom vérifié libre sur les registres d'entreprises le 18/10/2026).
 
 Bornes vérifiées à la main : total des quatre sites de 405 à 445 (toujours > 390) ; sans le plus petit possible (65), au plus 380 (toujours
 ≤ 390). Quel que soit le site reporté, la tournée tient donc dans le camion.

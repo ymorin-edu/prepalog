@@ -62,7 +62,7 @@ Les trois temps, dans des séances distinctes : **9.1 et 9.2 guidage** (coeffici
   - les **émetteurs** : **Endives du Ternois**, coopérative d'endives à Saint-Pol-sur-Ternoise (62), avec sa responsable logistique **Hélène Caron**
     (séances 9.1 et 9.3) ; **Légumes de la Lys**, à Estaires (59), avec **M. Thomas Deroo** (séance 9.4) ;
   - les **distributeurs**, des plates-formes de produits frais aux enseignes fictives, dans des villes réelles : **Frais du Nord** (Lesquin),
-    **Halles d'Artois** (Douai), **Hainaut Primeurs** (Prouvy, près de Valenciennes), **MarchéLys** (Roubaix), **Distri Escaut** (Dourges),
+    **Halles d'Artois** (Douai), **Hainaut Primeurs** (Prouvy, près de Valenciennes), **MarchéLys** (Roubaix), **Primeurs du Delta** (Dourges ; « Distri Escaut » existait, renommé le 18/10/2026),
     **Opale Frais** (Dunkerque) ;
   - le **transporteur sous-traitant** de la collecte : **Transports Lys-Escaut** (Lomme).
   *(Recherche du 17/10 : « Endives du Ternois », « Transports Lys-Escaut » et « Maraîchers de la Deûle » n'ont donné aucune entreprise ; les

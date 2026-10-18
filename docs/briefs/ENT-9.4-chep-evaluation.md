@@ -114,7 +114,7 @@ recopier.
 
 ### 6.1 Partie A — compte LL-59-0233 (construit), semaine du 25 au 29/01
 - Solde au 25/01 : S0 tiré de 120 à 180 (pas de 5).
-- **Fixes** : bon d'émission du mar. 26/01 (E de 140 à 200, pas de 20) ; bordereau du mer. 27/01 → **Distri Escaut** (Dourges), T de 20 à 24
+- **Fixes** : bon d'émission du mar. 26/01 (E de 140 à 200, pas de 20) ; bordereau du mer. 27/01 → **Primeurs du Delta** (Dourges), T de 20 à 24
   palettes CHEP.
 - **Banque `partiel`** : `pa-europe` → Hainaut Primeurs (N de 18 à 22, dont 2 à 5 Europe) ; `pa-lpr` → MarchéLys (mêmes bornes, LPR).
 - **Banque `nonMouvement`** : `nm-europe` → Frais du Nord, 16 à 20 palettes Europe ; `nm-commande` → commande de 200 palettes à livrer le
@@ -133,7 +133,7 @@ en haut ni en bas), `abimees` (a 1 à 2, au moins une visible seulement de l'arr
 | Frais du Nord (Lesquin) | 130 (125 à 135) | 13 h – 17 h |
 | Halles d'Artois (Douai) | 110 (105 à 115) | 6 h – 9 h 30 |
 | Hainaut Primeurs (Prouvy) | 100 (95 à 105) | 9 h – 13 h |
-| Distri Escaut (Dourges) | 75 (70 à 80) | 7 h – 12 h |
+| Primeurs du Delta (Dourges) | 75 (70 à 80) | 7 h – 12 h |
 
 Bornes vérifiées à la main : total des quatre de 395 à 435 (> 390) ; sans le plus petit possible (70), au plus 365 (≤ 390).
 **Banque `dernier`** (4 pièces) et **contrôle d'équité** comme ENT-9.2 §6.3 : pour chaque pièce, un ordre au moins tient les horaires ; l'ordre

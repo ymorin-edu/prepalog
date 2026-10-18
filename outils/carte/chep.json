@@ -91,7 +91,7 @@
   {
    "id": "dourges",
    "numero": 5,
-   "nom": "Distri Escaut",
+   "nom": "Primeurs du Delta",
    "ville": "Dourges",
    "cp": "62119",
    "adresse": "rue du Delta",
@@ -287,7 +287,7 @@
   ]
  },
  "calibrage": {
-  "_commentaire": "La journée d'essai (outils/essai-tournee-ramasse.html, ENT-9.2 §6.3, valeurs médianes) : node outils/carte/calibrer.mjs contenus/chep-carte.js outils/carte/chep.json. Mode ramasse : départ 6 h de Templemars, 55 km/h, 20 min + 0,05 min par palette à chaque arrêt ; on part à vide et on reprend les vides ; Distri Escaut (Dourges) a signalé le plus tard : c'est lui qu'on reporte. Frais du Nord (Lesquin) a son camion complet, hors tournée.",
+  "_commentaire": "La journée d'essai (outils/essai-tournee-ramasse.html, ENT-9.2 §6.3, valeurs médianes) : node outils/carte/calibrer.mjs contenus/chep-carte.js outils/carte/chep.json. Mode ramasse : départ 6 h de Templemars, 55 km/h, 20 min + 0,05 min par palette à chaque arrêt ; on part à vide et on reprend les vides ; Primeurs du Delta (Dourges) a signalé le plus tard : c'est lui qu'on reporte. Horaires d'enlèvement du jeu B (choisi par Tristan le 18/10/2026 : Roubaix 6 h-9 h, Prouvy 8 h-12 h, Douai 9 h-12 h, Dourges 9 h-12 h) : l'ordre au plus court rate Roubaix, le meilleur passe à Roubaix d'abord. Frais du Nord (Lesquin) a son camion complet, hors tournée.",
   "mode": "ramasse",
   "depart": 360,
   "vitesse": 55,
@@ -305,8 +305,8 @@
    "douai": {
     "vides": 140,
     "creneau": {
-     "apres": 360,
-     "avant": 600
+     "apres": 540,
+     "avant": 720
     }
    },
    "prouvy": {
@@ -319,19 +319,19 @@
    "roubaix": {
     "vides": 95,
     "creneau": {
-     "apres": 780,
-     "avant": 1020
+     "apres": 360,
+     "avant": 540
     }
    },
    "dourges": {
     "vides": 70,
     "creneau": {
-     "apres": 420,
-     "avant": 660
+     "apres": 540,
+     "avant": 720
     }
    }
   },
   "reporte": "dourges",
-  "courtDoitRater": false
+  "courtDoitRater": true
  }
 }

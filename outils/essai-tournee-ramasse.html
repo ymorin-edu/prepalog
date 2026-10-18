@@ -12,8 +12,8 @@
      Liée nulle part, rien n'est enregistré : un rechargement repart de zéro.
      Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-tournee-ramasse.html
      Ce qu'on doit y voir : tout prendre → la jauge « Palettes vides à bord » passe au rouge et dit « Le camion ne peut
-     pas tout prendre » (jamais de combien), avec son profil en marches ; reporter Distri Escaut (le site qui a signalé
-     le plus tard) → ça tient ; Roubaix avant les autres → attente jusqu'à 13 h, puis des quais fermés ; le bouton
+     pas tout prendre » (jamais de combien), avec son profil en marches ; reporter Primeurs du Delta (le site qui a signalé
+     le plus tard) → ça tient ; Douai d'abord → attente jusqu'à 9 h, puis le quai de Roubaix fermé (il ferme à 9 h) ; le bouton
      « Envoyer la tournée à Yannick ». -->
 <base href="../">
 <link rel="icon" href="./styles/logo.png">
@@ -33,13 +33,13 @@ import * as CHEP from './contenus/chep.js';
 import { CARTE } from './contenus/chep-carte.js';
 
 const h = (hh, mm = 0) => hh * 60 + mm;
-// Les quatre sites de la ramasse du mercredi 20/01/2027 (ENT-9.2 §6.3, valeurs médianes ; Distri Escaut est le site
+// Les quatre sites de la ramasse du mercredi 20/01/2027 (ENT-9.2 §6.3, valeurs médianes ; Primeurs du Delta est le site
 // qui a signalé ses vides le plus tard : c'est lui qu'on reporte à vendredi). Les horaires d'enlèvement sont construits.
 const SITES = {
-  douai: { ville: 'Douai', vides: 140, signale: 'lun. 18/01, 9 h 10', creneau: { apres: h(6), avant: h(10), libelle: 'enlèvement des vides de 6 h à 10 h' } },
+  douai: { ville: 'Douai', vides: 140, signale: 'lun. 18/01, 9 h 10', creneau: { apres: h(9), avant: h(12), libelle: 'enlèvement des vides de 9 h à 12 h' } },
   prouvy: { ville: 'Prouvy', vides: 120, signale: 'lun. 18/01, 14 h 25', creneau: { apres: h(8), avant: h(12), libelle: 'enlèvement des vides de 8 h à 12 h' } },
-  roubaix: { ville: 'Roubaix', vides: 95, signale: 'lun. 18/01, 16 h 50', creneau: { apres: h(13), avant: h(17), libelle: 'enlèvement des vides de 13 h à 17 h' } },
-  dourges: { ville: 'Dourges', vides: 70, signale: 'mar. 19/01, 10 h 40', creneau: { apres: h(7), avant: h(11), libelle: 'enlèvement des vides de 7 h à 11 h' } },
+  roubaix: { ville: 'Roubaix', vides: 95, signale: 'lun. 18/01, 16 h 50', creneau: { apres: h(6), avant: h(9), libelle: 'enlèvement des vides de 6 h à 9 h' } },
+  dourges: { ville: 'Dourges', vides: 70, signale: 'mar. 19/01, 10 h 40', creneau: { apres: h(9), avant: h(12), libelle: 'enlèvement des vides de 9 h à 12 h' } },
 };
 const POINTS = CARTE.clients.filter((c) => SITES[c.id]).map((c) => ({
   ...c, ...SITES[c.id], zone: `${SITES[c.id].ville} · vides signalés ${SITES[c.id].signale}`,

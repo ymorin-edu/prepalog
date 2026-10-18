@@ -71,13 +71,15 @@ export const EMETTEURS = {
     produit: 'légumes', contact: { nom: 'Thomas Deroo', civ: 'Monsieur Deroo', role: 'Responsable expéditions', mail: 't.deroo@legumes-de-la-lys.example' } },
 };
 // Les distributeurs : des plates-formes de produits frais, enseignes fictives dans des villes réelles. Tous sous contrat CHEP (coordination §4,
-// règle 3). Vérifiés libres le 18/10/2026. « Distri Escaut » (Dourges), prévu par la coordination pour 9.2 et 9.4, désigne une vraie
-// société de Caudry (SIREN 902223692) : la séance qui en aura besoin le renomme après vérification (le compte rendu de 9.1 le dit).
+// règle 3). Vérifiés libres le 18/10/2026. « Distri Escaut » (Dourges), prévu par la coordination pour 9.2 et 9.4, désignait une vraie
+// société de Caudry (SIREN 902223692) : renommé « Primeurs du Delta » le 18/10/2026 pour ENT-9.2 (nom vérifié libre sur les registres
+// d’entreprises ; la plate-forme Delta 3 de Dourges est réelle, l’enseigne est inventée).
 export const DISTRIBUTEURS = {
   'frais-nord': { id: 'frais-nord', nom: 'Frais du Nord', ville: 'Lesquin (59)', lib: 'Frais du Nord (Lesquin)' },
   'halles-artois': { id: 'halles-artois', nom: 'Halles d’Artois', ville: 'Douai (59)', lib: 'Halles d’Artois (Douai)' },
   'hainaut-primeurs': { id: 'hainaut-primeurs', nom: 'Hainaut Primeurs', ville: 'Prouvy (59)', lib: 'Hainaut Primeurs (Prouvy)' },
   marchelys: { id: 'marchelys', nom: 'MarchéLys', ville: 'Roubaix (59)', lib: 'MarchéLys (Roubaix)' },
+  dourges: { id: 'dourges', nom: 'Primeurs du Delta', ville: 'Dourges (62)', lib: 'Primeurs du Delta (Dourges)' },
   'opale-frais': { id: 'opale-frais', nom: 'Opale Frais', ville: 'Dunkerque (59)', lib: 'Opale Frais (Dunkerque)' },
 };
 // Le transporteur sous-traitant de la collecte (9.2, 9.4) : fictif.
