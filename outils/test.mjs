@@ -40,6 +40,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'decathlon-74',
   'dialogue',
   'localiser',
+  'inspection',
   'courriel',
   'action',
   'action-81',
@@ -56,6 +57,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'chep-93',
   'chep-94',
   'pelleau-101',
+  'pelleau-105',
   'ramasse'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
@@ -80,12 +82,14 @@ const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], qu
 // Une séance France Boissons nouvelle (`fb-6.7`…) va dans le groupe le plus léger.
 const GROUPES = {
   1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps', 'tirage-niveaux', 'fb-6.1', 'quai-iso', 'fb-6.9', 'decathlon-74', 'localiser', 'action-81',
+    'pelleau-105',
     'action-87', 'chep-91'],
   2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite', 'questions', 'fb-6.3', 'fb-6.10',
     'action-83',
     'pelleau-101',
     'action-88', 'ramasse'],
   3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements', 'fb-6.6', 'fb-6.8', 'action-84',
+    'inspection',
     'action-89', 'chep-93'],
   4: ['fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.7', 'carte-region', 'decathlon', 'dialogue', 'courriel', 'action',
     'action-85', 'action-86',

@@ -187,3 +187,54 @@ export async function ouvrirPelleau({ nav, BASE, vrai, activite, id }) {
     cliquerCarte, carteJuste, carteFaux, boutonCarte, jouerCarte, ouvrirParMessage, remplirEnvoyer, ordonnerEnvoyer,
     fermer: () => ctxP.close() };
 }
+
+// ── Ajouté le 19/10/2026 avec ENT-10.5 (par ajout : rien de ce qui précède ne change) : les aides du QUAI ISO, reprises du bloc `action-87`.
+// `aidesQuai(P, { donnees, quai, id })` : `P` = ce que rend `ouvrirPelleau` ; `donnees` = le module qui exporte la déclaration du quai
+// (`'/contenus/pelleau-ent105-donnees.js'`), `quai` = le nom de cet export (un objet, ou une fonction sans argument qui le rend), `id` = l'id du
+// quai. L'inspection se joue À LA SOURIS (zones du moteur lues dans `zonesScene`, clic au centre de la zone dans le <svg>) ; la dépose, par
+// un clic sur la case.
+export function aidesQuai(P, { donnees, quai = 'QUAI', id }) {
+  const { pg, Z, pause, present } = P;
+  const SVG = `${Z} [data-q-inspection]`;
+  const zones = () => pg.evaluate(async ({ donnees, quai, id }) => {
+    const Q = await import('/core/types/quai.js');
+    const D = await import(donnees);
+    const decl = typeof D[quai] === 'function' ? D[quai]() : D[quai];
+    const S = decl.securite, q = window.__f.db.quais && window.__f.db.quais[id];
+    return Q.zonesScene(S, Q.etatsScene(S, q && q.securite));
+  }, { donnees, quai, id });
+  async function cliquerVB(x, y) {
+    const loc = pg.locator(SVG);
+    await loc.scrollIntoViewIfNeeded();
+    const bb = await loc.boundingBox();
+    const [vx, vy, vw, vh] = await loc.evaluate((s) => s.getAttribute('viewBox').split(' ').map(Number));
+    const k = Math.min(bb.width / vw, bb.height / vh);
+    await pg.mouse.click(bb.x + (bb.width - vw * k) / 2 + (x - vx) * k, bb.y + (bb.height - vh * k) / 2 + (y - vy) * k);
+    await pause(40);
+  }
+  async function vueScene(vue) {
+    if ((await pg.$eval(SVG, (s) => s.dataset.vue)) === vue) return;
+    if (vue === 'dedans' && !(await present('[data-q="sc-vue"]'))) await pg.click(`${Z} [data-q="sc-ouvrir"]`);
+    else await pg.click(`${Z} [data-q="sc-vue"]`);
+    await pg.waitForFunction(({ Z, v }) => document.querySelector(`${Z} [data-q-inspection]`).dataset.vue === v, { Z, v: vue });
+  }
+  // Une marque sur l'objet `objet` (un point déclaré), dans sa vue.
+  async function marquer(objet) {
+    const z = (await zones()).find((q) => q.id === objet);
+    if (!z) throw new Error(`aucune zone « ${objet} » sur la scène`);
+    await vueScene(z.vue);
+    const r = z.rects[0];
+    await cliquerVB(r.x + r.w / 2, r.y + r.h / 2);
+  }
+  const signaler = async () => { await pg.click(`${Z} [data-q="sc-signaler"]`); await pause(); };
+  const cestBon = async () => { await pg.click(`${Z} [data-q="sc-decharger"]`); await pg.click(`${Z} [data-q="sc-decharger"]`); await pause(); };
+  const chef = () => pg.$eval(`${Z} [data-q-secu-chef]`, (n) => n.textContent.trim()).catch(() => '');
+  const annonce = () => pg.$eval(`${Z} [data-q-annonce]`, (n) => n.textContent.trim()).catch(() => '');
+  const legende = () => pg.$eval(`${Z} [data-q-leg]`, (n) => n.textContent.trim()).catch(() => '');
+  const posees = () => pg.$$eval(`${Z} [data-iso-posee]`, (L) => L.length);
+  const proposees = () => pg.$$eval(`${Z} [data-q="depose"]`, (L) => L.map((x) => x.dataset.c));
+  // « Oui, vous pouvez décharger » : la porte s'ouvre, le cariste attend avec la première palette.
+  const decharger = async () => { await pg.click(`${Z} [data-q="decharger"]`); await pg.waitForSelector(`${Z} [data-q-phase="choix"]`); };
+  const deposer = async (c) => { await pg.click(`${Z} [data-q="depose"][data-c="${c}"]`); await pause(); };
+  return { SVG, zones, cliquerVB, vueScene, marquer, signaler, cestBon, chef, annonce, legende, posees, proposees, decharger, deposer };
+}

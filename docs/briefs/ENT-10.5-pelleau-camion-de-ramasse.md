@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, docs/briefs/MOTEUR-depose-par-client.md, docs/briefs/ENT-8.7-action-decharger.md (§4 à §7 : le modèle du quai) puis docs/briefs/ENT-10.5-pelleau-camion-de-ramasse.md en entier. L'option « dépose par client » doit être livrée. Les poids du §5 sont validés par Tristan ; fais l'état des lieux du §7, annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : à implémenter · **Date** : 18/10/2026
+**Statut** : livré (19/10/2026, non commité : le chef commite) · **Date** : 18/10/2026
 **Conversation d'origine** : Cowork, 18/10/2026, sur délégation. Décision de cadrage n° 4 de Tristan : **« un camion, plusieurs clients »** — le
 camion Pelleau rentre de ramasse avec les palettes de 2 ou 3 clients mélangées ; l'élève les sépare par client et les rapproche de l'**annonce** de
 chaque client. Vue : « étendre la dépose » (Tristan, 21 h 50).
@@ -207,3 +207,42 @@ L'étiquette se lit à la pause du chariot au vidéoprojecteur ; les zones des d
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**19/10/2026, phase 3 du chantier Pelleau (Opus, sous-agent du chef ; non commité, le chef commite).** Fichiers : `activites/pelleau-camion-de-ramasse.js`,
+`contenus/pelleau-ent105.js`, `contenus/pelleau-ent105-donnees.js` (données pures, chargées aussi sous Node par le corrigé), `contenus/questions/ENT-10.5.js`,
+`contenus/corriges/ENT-10.5.js`, `outils/test/pelleau-105.mjs` (15 cas) ; lignes AJOUTÉES dans `activites/index.js`, `outils/test.mjs` (`BLOCS`, `GROUPES` groupe 1),
+`outils/test/socle.mjs` (`ATTENDU_CAP`), `outils/test/pelleau/commun.mjs` (`aidesQuai` : inspection et dépose, pour 10.6 à 10.8) et `contenus/pelleau.js`
+(`AU_SOL`, `clientsDepose`, voir écart 4). Pas de `declarerTirage` (pièces fixes) : rien dans `BANQUES_FIGEES`.
+
+**Vérifié (tests lancés).** `pelleau-105` 16/16 ; `socle dependances tirage-niveaux questions pelleau-101` 206/206. Sabotages joués puis remis : jalon vrai par
+inaction (fiche non envoyée = ✓) → 3 cas ; cases des deux clients mélangées (une palette Ar Vag acceptée en AK1) → 9 cas ; « ce mardi » dans le message de
+Maëlys → 2 cas ; « Les 4 palettes » écrit en dur → 1 cas. Captures 1366 × 768 regardées (accueil, « Avant de commencer », quai à la pause « choix » avec la
+légende de l'étiquette, bilan).
+
+**Poids codés (brief §5, tels quels).** Préparer 1 + 1 · Accueillir Loïc 1 × 3 (première réponse) · lampe signalée avant de décharger 2, aucun faux 1 ·
+Trier par client 1 × 4 (groupe « Trier par client ») · Rapprocher 0,75 × 4 · Rendre compte : écart 0,5, salutation 0,25, fin 0,25 · questions A 1, B 1,5,
+C 1,5 (`part: 4`, ligne « Les questions »), D réflexion. Confirmé : « Combien de palettes Ar Vag ? » en bonus caché.
+
+**Écarts avec le brief (décisions prises en route).**
+1. Bloc de tests `pelleau-105` (un bloc par séance, COORDINATION §2 n° 21), pas `pelleau-recep`. Aucun jour de la semaine (« 12 mai », décision 9).
+2. Tous les chiffres se calculent (décision 13) : 4 palettes, 2 clients, « 3e palette pas prête », résultats du rapprochement, phrase de l'écart, texte de
+   l'arrêt, retour de C (« 2 palettes, pas 3 »). La feuille de ramasse ne donne pas de total (sinon « Combien de palettes ? » se lirait tout fait).
+3. La dernière réponse de Maëlys reprend l'écart que l'élève a écrit (« je préviens Agri-Kerlann » / « Ar Vag » / « tout est conforme »), règle du 10/10/2026.
+4. **Nom au sol** : « AGRI-KERLANN » ne se lisait pas (deux lignes en petit) ; `AU_SOL` de l'univers donne **« AGRI 1 / AGRI 2 »** (proposition à valider ;
+   « KERLANN » possible, mais trop proche de « KERVÉGUEN » d'ENT-10.11). `CLIENTS` d'ENT-10.1 inchangé.
+5. Ajoutés (construits) : messages d'Erwan « Loïc arrive » et « Yann est prêt » entre les étapes ; documents « Les règles du quai » (dit construit),
+   « Ta matinée », « Une étiquette de palette » ; réactions de Loïc ; pièges des phrases et retours d'« Avant de commencer » (à relire).
+6. « Avant de commencer » : pas d'image « rendu iso » au dépôt → photos d'Action déjà présentes (quai, palettes au sol).
+7. La fiche « Rapprocher » est en deux cadres côte à côte (un par client : reçues, résultat), pas un tableau. D se déclenche à l'envoi du mail à Maëlys
+   (aucune vue ne publie de geste « phrases envoyées »).
+8. `precedente: 'pelleau-evaluation-prise-de-poste'` : ENT-10.4 n'existe pas encore, l'élève reste fermé tant qu'elle n'a pas son bilan (l'enseignant peut
+   débloquer).
+
+**Défauts du moteur vus (questions pour le chef, rien touché dans `core/`).** (a) Après « C'est bon », la légende de ① dit « Le chauffeur te remet **le**
+feuille de ramasse. » (`core/types/quai.js:1930`, article masculin écrit en dur pour `document: { nom, court }`) et appelle Loïc « le chauffeur ». (b) Le
+bouton « Oui, **vous** pouvez décharger » vouvoie un collègue. (c) Déployées (8 s), les cartes des messages couvrent le haut du panneau d'une question au fil
+(le premier choix peut être caché ; le test les ferme comme le ferait l'élève).
+
+**À vérifier à l'écran par Tristan.** La lisibilité de « AGRI 1 » et « AR VAG 1 » au sol ; la légende « Yann attend avec la palette P4 — étiquette :
+« Expéditeur : Biscuiterie Ar Vag » (1 sur 4) » au vidéoprojecteur ; le défaut (a) à ① ; les textes construits (règles du quai, réactions de Loïc, phrases) ;
+la scène (lampe éteinte, cale posée). Clavier non pris en charge pour l'inspection (comme ENT-8.7).

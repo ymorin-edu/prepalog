@@ -93,6 +93,7 @@ export const ACTIVITES = [
   () => import('./chep-evaluation.js'),
   // Transports Pelleau (entrepôt neuf de Gouesnou) — ENT-10.x. CAP OL, C1.1 à C1.4.
   () => import('./pelleau-se-situer.js'),
+  () => import('./pelleau-camion-de-ramasse.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
