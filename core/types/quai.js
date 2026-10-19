@@ -182,6 +182,8 @@ export const MOTIFS = {
 // journal, jalons, aides, zoom) : `R.u` est posée par `reglages`. Elle doit être MASCULINE (« endommagés », « manquants »).
 export const UNITE_DEFAUT = { un: 'carton', des: 'cartons' };
 const texteNet = (t) => (typeof t === 'string' ? t.trim() : '');
+// La ligne « Conservation » de l'étiquette au zoom (facultative : `conservation` sur la palette ; rien n'est écrit sans elle).
+const ligneConservation = (p) => (p && typeof p.conservation === 'string' && p.conservation.trim() ? `<div data-q-conservation>Conservation : ${ech(p.conservation)}</div>` : '');
 // UNITÉ AU FÉMININ (MOTEUR-chep, lot B, 18/10/2026) : `{ un: 'palette', des: 'palettes', feminin: true }` accorde tout ce qui suit
 // l'unité (« endommagées », « manquantes », « comptées », « une palette », « cette palette »). L'unité rendue ne porte `fem` que
 // lorsqu'elle est féminine : sans `feminin`, elle est celle d'avant, et les textes aussi.
@@ -925,7 +927,7 @@ export function palettesDePile(p) {
   const c = comptePile(p), I = p.intrus || {}, A = p.abimee || {};
   return Array.from({ length: Math.max(0, c.hauteur) }, (_, k) => ({ no: k + 1, pool: I[k + 1] || 'chep', abime: A[k + 1] || null }));
 }
-const CLES_PILE = ['id', 'forme', 'ref', 'nom', 'bl', 'hauteur', 'intrus', 'abimee', 'attendu', 'motifAttendu', 'motif2Attendu', 'etiq'];
+const CLES_PILE = ['id', 'forme', 'ref', 'nom', 'bl', 'hauteur', 'intrus', 'abimee', 'attendu', 'motifAttendu', 'motif2Attendu', 'etiq', 'conservation'];
 function verifierPile(Q, p, nom, E) {
   if (Q.rendu !== 'iso') E.push(`${nom} : une pile de palettes vides se dessine sur le quai iso (\`rendu: 'iso'\`)`);
   ['W', 'D', 'L', 'refs', 'etiqAvant', 'manque', 'avarie'].forEach((k) => { if (p[k] !== undefined) E.push(`${nom} : « ${k} » n’a pas de sens pour une pile (déclarer hauteur, intrus, abimee : le reste se calcule)`); });
@@ -964,8 +966,11 @@ function verifierPalettes(Q, E) {
   const A = (Q && Q.aides) || {};
   let futs = 0, piles = 0, sacs = 0;
   ((Q && Q.camions) || []).forEach((c, ci) => ((c && c.palettes) || []).forEach((p, pi) => {
-    if (!p || typeof p !== 'object' || p.forme === undefined) return;
+    if (!p || typeof p !== 'object') return;
     const nom = `camions[${ci}].palettes[${pi}]${typeof p.id === 'string' && p.id ? ` (« ${p.id} »)` : ''}`;
+    // La conservation lue sur l'étiquette (19/10/2026, demande d'ENT-10.11) : un texte court, pour toutes les formes. Rien d'autre ne la lit.
+    if (p.conservation !== undefined && (!texteNet(p.conservation) || p.conservation.length > 60)) E.push(`${nom} : « conservation » doit être un texte de 60 signes au plus, non vide (par exemple « 4 à 8 °C, jamais au gel »)`);
+    if (p.forme === undefined) return;
     if (p.forme === 'pile') { piles++; verifierPile(Q, p, nom, E); return; }
     // Une palette de sacs (19/10/2026) : la palette de cartons, dessinée en sacs. Le quai iso, et des dimensions entières.
     if (p.forme === 'sacs') {
@@ -2385,7 +2390,7 @@ export function creerQuai(Q, opts = {}) {
         ${Q.destinataire ? `<div class="quai-etiq-dest">→ ${ech(Q.destinataire)}</div>` : ''}
         <div class="quai-etiq-ref">${ech(et.ref)}</div><div>${ech(et.nom)}</div><div>${ech(et.poids)}</div>
         <div>${et.commande ? `Cde ${ech(et.commande)} · ` : ''}Lot ${ech(et.lot)}</div>
-        <div class="quai-code">||| |||| || ||||| | ||| ${ech(String(et.ref).replace(/-/g, ''))}</div></div>
+        ${ligneConservation(p)}<div class="quai-code">||| |||| || ||||| | ||| ${ech(String(et.ref).replace(/-/g, ''))}</div></div>
       <div class="quai-etat-carton" data-q-etat-carton>${vu ? '<b class="quai-depasse">⚠ Fuite</b> sur cette face.' : `Ce que tu vois de ${ceUnite(R.u)} ${ech(R.u.un)} depuis ici : <b>intact</b>.`}</div>
       <div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
   }
@@ -2398,7 +2403,7 @@ export function creerQuai(Q, opts = {}) {
     return `<div class="quai-etiq quai-etiq-carton" data-q-etiquette data-q-carton-vu="${q.no}">
         <div class="quai-etiq-l1"><b>${ech(expediteur(p, cm))}</b><span>${ech(maj(R.u.un))} <b>${q.no}</b></span></div>
         ${procheDePile(p, q.no, s.vue)}
-        ${et.ref ? `<div class="quai-etiq-ref">${ech(et.ref)}</div>` : ''}${et.nom ? `<div>${ech(et.nom)}</div>` : ''}${et.poids ? `<div>${ech(et.poids)}</div>` : ''}</div>
+        ${et.ref ? `<div class="quai-etiq-ref">${ech(et.ref)}</div>` : ''}${et.nom ? `<div>${ech(et.nom)}</div>` : ''}${et.poids ? `<div>${ech(et.poids)}</div>` : ''}${ligneConservation(p)}</div>
       <div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
   }
   function zoomCarton(p, s, cm) {
@@ -2413,7 +2418,7 @@ export function creerQuai(Q, opts = {}) {
         ${Q.destinataire ? `<div class="quai-etiq-dest">→ ${ech(Q.destinataire)}</div>` : ''}
         <div class="quai-etiq-ref">${ech(et.ref)}</div><div>${ech(et.nom)}</div><div>${ech(et.poids)}</div>
         <div>${et.commande ? `Cde ${ech(et.commande)} · ` : ''}Lot ${ech(et.lot)}</div>
-        <div class="quai-code">||| |||| || ||||| | ||| ${ech(String(et.ref).replace(/-/g, ''))}</div></div>
+        ${ligneConservation(p)}<div class="quai-code">||| |||| || ||||| | ||| ${ech(String(et.ref).replace(/-/g, ''))}</div></div>
       <div class="quai-etat-carton" data-q-etat-carton>${vu ? `<b class="quai-depasse">⚠ ${maj(ceUnite(R.u))} ${ech(R.u.un)} est ${estSacs(p) ? ac(R.u, 'percé') : 'enfoncé'}</b> sur cette face.` : `Ce que tu vois de ${ceUnite(R.u)} ${ech(R.u.un)} depuis ici : <b>intact</b>.`}<br><span class="note">Couche ${c.k + 1} en partant du bas.</span></div>
       <div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
   }

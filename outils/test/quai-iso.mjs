@@ -3973,6 +3973,74 @@ await v('Quai sacs : la dépose par client avec sacs et cartons mêlés (page d�
   await p.close();
 });
 
+/* ---- la conservation lue sur l'étiquette (`conservation` sur une palette, 19/10/2026, demande d'ENT-10.11) */
+const CONS = '4 à 8 °C, jamais au gel';
+// Le zoom d'une palette de l'étape ③ : clic sur l'unité n, puis les lignes « Conservation » de l'étiquette affichée.
+async function lignesConservation(p, n) {
+  await p.locator(`${HOTE} [data-q-palette] [data-q-carton="${n}"]`).dispatchEvent('click');
+  await p.waitForSelector(`${HOTE} [data-q-etiquette]`);
+  return p.$$eval(`${HOTE} [data-q-etiquette] [data-q-conservation]`, (L) => L.map((x) => x.textContent.trim()));
+}
+await v('Quai conservation : la ligne « Conservation » de l’étiquette au zoom (sacs, cartons, fûts, pile), absente sans le champ', async () => {
+  const p = await pageAvec({ palettes: [Object.assign({}, PSAC, { conservation: CONS }), PCAR, Object.assign({}, PCAR, { id: 'P3', conservation: 'À conserver au sec' })], extra: EXTRA_SACS });
+  await jusquaEtape2(p);
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  egal(await lignesConservation(p, 13), ['Conservation : 4 à 8 °C, jamais au gel'], 'P1 (sacs) : la ligne, sur sa propre ligne de l’étiquette');
+  const etiq = await p.$eval(`${HOTE} [data-q-etiquette]`, (n) => ({ div: n.querySelector('[data-q-conservation]').tagName, suite: n.querySelector('[data-q-conservation]').nextElementSibling.className, lot: /Lot AK-26-0512/.test(n.textContent) }));
+  egal(etiq, { div: 'DIV', suite: 'quai-code', lot: true }, 'la ligne est un bloc à part, avant le code-barres, et le lot est toujours là');
+  await p.click(`${HOTE} [data-q="sel"][data-n="1"]`);
+  egal(await lignesConservation(p, 1), [], 'P2 (cartons, sans le champ) : pas de ligne');
+  vrai(/Cde|Lot AV-1/.test(await p.$eval(`${HOTE} [data-q-etiquette]`, (n) => n.textContent)), 'P2 : l’étiquette est bien affichée (le test ne passe pas par défaut)');
+  await p.click(`${HOTE} [data-q="sel"][data-n="2"]`);
+  egal(await lignesConservation(p, 1), ['Conservation : À conserver au sec'], 'P3 (cartons, avec le champ) : la ligne');
+  await p.close();
+  // Fûts : P1 avec le champ, P2 sans.
+  const f = await pageAvec({ palettes: [Object.assign({}, PALS[0], { conservation: CONS }), PALS[1]] });
+  await jusquaEtape2(f);
+  await f.click(`${HOTE} [data-q="vers3"]`);
+  await f.waitForSelector(`${HOTE} [data-q-palette]`);
+  egal(await lignesConservation(f, 2), ['Conservation : 4 à 8 °C, jamais au gel'], 'fûts : la ligne');
+  await f.click(`${HOTE} [data-q="sel"][data-n="1"]`);
+  egal(await lignesConservation(f, 2), [], 'fûts sans le champ : pas de ligne');
+  await f.close();
+  // Pile de palettes vides : P1 avec le champ.
+  const pl = await pageAvec({ palettes: [PP({ conservation: CONS })], extra: { unite: { un: 'palette', des: 'palettes', feminin: true }, decisions: ['accepter', 'reserves'], motifs: ['manquant', 'avarie', 'produit'] } });
+  await jusquaEtape2(pl);
+  await pl.click(`${HOTE} [data-q="vers3"]`);
+  await pl.waitForSelector(`${HOTE} [data-q-palette]`);
+  egal(await lignesConservation(pl, 3), ['Conservation : 4 à 8 °C, jamais au gel'], 'pile : la ligne');
+  await pl.close();
+});
+
+await v('Quai conservation : verifierQuai — un texte de 60 signes au plus, sur toute forme ; un nombre, un texte vide ou trop long sont refusés ; sans le champ, rien ne change', async () => {
+  const PCx = (o = {}) => Object.assign({}, PCAR, o);
+  const QC = (ps, m = {}) => QFUT(ps, m);
+  const soixante = 'x'.repeat(60);
+  egal(quaiMod.verifierQuai(QC([PCx({ conservation: CONS })])), [], 'cartons avec le champ');
+  egal(quaiMod.verifierQuai(QC([PCx({ conservation: soixante })])), [], 'exactement 60 signes : accepté');
+  egal(quaiMod.verifierQuai(QC([PCx()])), [], 'sans le champ : accepté');
+  egal(quaiMod.verifierQuai(QC([PF({ conservation: CONS })], { unite: 'fûts' })), [], 'fût avec le champ');
+  egal(quaiMod.verifierQuai(QC([PSAC, Object.assign({}, PSAC, { id: 'P2', conservation: CONS })], { unite: { un: 'colis', des: 'colis' } })), [], 'sacs avec le champ');
+  egal(quaiMod.verifierQuai(QPILE([PP({ conservation: CONS })])), [], 'pile avec le champ');
+  const fautes = [];
+  for (const [nom, p] of [
+    ['cartons, un nombre', PCx({ conservation: 5 })],
+    ['cartons, 61 signes', PCx({ conservation: soixante + 'x' })],
+    ['cartons, vide', PCx({ conservation: '' })],
+    ['cartons, espaces', PCx({ conservation: '   ' })],
+    ['cartons, null', PCx({ conservation: null })],
+    ['fût, un objet', PF({ conservation: { t: 4 } })],
+    ['sacs, trop long', Object.assign({}, PSAC, { conservation: soixante + 'x' })],
+  ]) {
+    const E = quaiMod.verifierQuai(QC([p], { unite: { un: 'colis', des: 'colis' } }));
+    if (!E.some((m) => /« conservation » doit être un texte de 60 signes au plus/.test(m))) fautes.push(`« ${nom} » : ${E.join(' | ') || 'pas refusé'}`);
+  }
+  const Ep = quaiMod.verifierQuai(QPILE([PP({ conservation: 7 })]));
+  if (!Ep.some((m) => /« conservation » doit être/.test(m))) fautes.push(`pile, un nombre : ${Ep.join(' | ') || 'pas refusé'}`);
+  if (fautes.length) throw new Error(fautes.join(' ; '));
+});
+
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {
   const hors = await pe.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => !n.startsWith(location.origin)));
   egal(hors, [], 'ressources hors du site');
