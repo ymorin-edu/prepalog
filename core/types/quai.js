@@ -328,7 +328,14 @@ function reglages(Q) {
 function deposeDe(Q) {
   const D = Q && Q.depose;
   if (!D || typeof D !== 'object' || !Array.isArray(D.cases) || !D.cases.length || !D.cases.every((c) => c && typeof c === 'object')) return null;
-  return { cases: normaliserCases(D), passage: Number.isInteger(D.passage) ? D.passage : Math.floor(D.cases.length / 2), grise: D.grise === 'palette' ? 'palette' : 'garde' };
+  const r = { cases: normaliserCases(D), passage: Number.isInteger(D.passage) ? D.passage : Math.floor(D.cases.length / 2), grise: D.grise === 'palette' ? 'palette' : 'garde' };
+  // Dépose par client : `grise: 'palette'` imposé, les clients et le client de chaque palette du premier camion (`clientDe`).
+  if (parClient(D)) {
+    const P = (Q.camions && Q.camions[0] && Array.isArray(Q.camions[0].palettes)) ? Q.camions[0].palettes : [];
+    Object.assign(r, { grise: 'palette', clients: (D.clients && typeof D.clients === 'object') ? D.clients : {},
+      clientDe: Object.fromEntries(P.filter((p) => p && p.id).map((p) => [p.id, p.client])) });
+  }
+  return r;
 }
 // `arret: 'dechargement'` ou `arret: { etape: 'dechargement', texte }` : le texte du bandeau de fin (défaut : les palettes sont en zone). Une valeur
 // fautive rend null ici ; c'est `verifierQuai` qui la refuse en clair.
@@ -519,12 +526,28 @@ export const nomDefaut = (c) => (c.sol === 'pieton' ? `Case ${c.id}, allée pié
 const CLES_DEPOSE = ['cases', 'passage', 'grise'];
 const CLES_CASE = ['id', 'nom', 'juste', 'reaction', 'sol', 'legende', 'peinte'];
 export const MAX_CASES = 8;
+// LA DÉPOSE PAR CLIENT (chantier Pelleau, 19/10/2026, `docs/briefs/MOTEUR-depose-par-client.md`) : une case porte `client` (elle n'est
+// juste que pour les palettes de ce client), chaque palette du camion porte `client`, `depose.clients` = { id: { nom, court } } (nom long :
+// bulle, bilan, étiquette ; `court` : écrit au sol, « AR VAG 1 »). `depose.reactionClient` : ce que dit le cariste devant la case d'un autre
+// client (`{client}` = le nom de ce client). Sous une dépose par client, `grise: 'palette'` est imposé (une case refusée pour P4 reste juste
+// pour la palette suivante de l'autre client). Sans aucune case `client`, rien de ce qui suit ne s'applique : le quai d'avant, octet pour octet.
+const CLES_DEPOSE_CLIENT = ['clients', 'reactionClient'];
+const CLES_CLIENT = ['nom', 'court'];
+const voyelle = (t) => /^[aeiouyàâäéèêëîïôöûüh]/i.test(String(t));
+const deNom = (nom) => (voyelle(nom) ? `d’${nom}` : `de ${nom}`);
+export const reactionClientDefaut = (nom) => `Ça, c’est la zone ${deNom(nom)}. Regarde l’étiquette.`;
+// Une dépose est « par client » dès qu'une case déclare `client`.
+export const parClient = (D) => !!(D && Array.isArray(D.cases) && D.cases.some((c) => c && typeof c === 'object' && c.client !== undefined));
+// La case `c` (complétée) est-elle juste pour la palette `palette` ? Case de client : seulement pour les palettes de ce client
+// (`opts.clientDe` = { palette: client }) ; sinon, sa règle de toujours (`juste`).
+export const justePour = (c, palette, opts = {}) => (c.client ? !!(opts.clientDe && opts.clientDe[palette] === c.client) : c.juste);
 
 // Les écarts de la déclaration `depose` elle-même (la maquette, sans la clé `consigne`) ; [] = rien à redire.
 function ecartsDeclarationDepose(D, nbPalettes) {
   const E = [];
   if (!D || typeof D !== 'object' || Array.isArray(D)) return ['depose doit être un objet { cases, passage }'];
-  Object.keys(D).forEach((k) => { if (!CLES_DEPOSE.includes(k)) E.push(`depose : clé « ${k} » inconnue (${CLES_DEPOSE.join(', ')})`); });
+  const PC = parClient(D);
+  Object.keys(D).forEach((k) => { if (!CLES_DEPOSE.includes(k) && !(PC && CLES_DEPOSE_CLIENT.includes(k))) E.push(`depose : clé « ${k} » inconnue (${CLES_DEPOSE.join(', ')})${CLES_DEPOSE_CLIENT.includes(k) ? ' : aucune case ne déclare de client' : ''}`); });
   const C = D.cases;
   if (!Array.isArray(C) || !C.length) return E.concat(['depose.cases doit être une liste non vide']);
   if (C.length > MAX_CASES) E.push(`depose.cases : ${C.length} cases, ${MAX_CASES} au plus (plan non éprouvé au-delà)`);
@@ -532,7 +555,7 @@ function ecartsDeclarationDepose(D, nbPalettes) {
   C.forEach((c, i) => {
     const nom = `depose.cases[${i}]${c && typeof c.id === 'string' && c.id ? ` (« ${c.id} »)` : ''}`;
     if (!c || typeof c !== 'object') { E.push(`${nom} : une case est un objet`); return; }
-    Object.keys(c).forEach((k) => { if (!CLES_CASE.includes(k)) E.push(`${nom} : clé « ${k} » inconnue (${CLES_CASE.join(', ')})`); });
+    Object.keys(c).forEach((k) => { if (!CLES_CASE.includes(k) && k !== 'client') E.push(`${nom} : clé « ${k} » inconnue (${CLES_CASE.join(', ')})`); });
     if (typeof c.id !== 'string' || !c.id.trim()) E.push(`${nom} : id vide`);
     else if (vus.has(c.id)) E.push(`${nom} : id en double`);
     else vus.add(c.id);
@@ -555,6 +578,47 @@ function ecartsDeclarationDepose(D, nbPalettes) {
   if (Number.isInteger(nbPalettes) && justes < nbPalettes) E.push(`depose : ${nbPalettes} palettes et ${justes} case${justes > 1 ? 's' : ''} juste${justes > 1 ? 's' : ''} : il faut au moins une case juste par palette (une case occupée ne se propose plus, pas de gerbage à la réception)`);
   return E;
 }
+// Les écarts propres à la dépose par client (`MOTEUR-depose-par-client.md` §2) ; [] hors dépose par client. `palettes` = celles du premier camion.
+function ecartsDeposeClient(D, palettes) {
+  if (!D || typeof D !== 'object' || Array.isArray(D) || !Array.isArray(D.cases) || !parClient(D)) return [];
+  const E = [], C = D.cases.filter((c) => c && typeof c === 'object'), K = D.clients;
+  let ids = [];
+  if (!K || typeof K !== 'object' || Array.isArray(K) || !Object.keys(K).length) E.push('depose.clients : une case déclare un client, il faut la liste des clients { id: { nom, court } }');
+  else {
+    ids = Object.keys(K);
+    ids.forEach((id) => {
+      const k = K[id], nom = `depose.clients « ${id} »`;
+      if (!k || typeof k !== 'object' || Array.isArray(k)) { E.push(`${nom} : un client est un objet { nom, court }`); return; }
+      Object.keys(k).forEach((x) => { if (!CLES_CLIENT.includes(x)) E.push(`${nom} : clé « ${x} » inconnue (${CLES_CLIENT.join(', ')})`); });
+      CLES_CLIENT.forEach((x) => { if (typeof k[x] !== 'string' || !k[x].trim()) E.push(`${nom} : ${x} vide (${x === 'nom' ? 'le nom long, « Biscuiterie Ar Vag »' : 'ce qui est écrit au sol, « AR VAG »'})`); });
+    });
+  }
+  if (D.reactionClient !== undefined && (typeof D.reactionClient !== 'string' || !D.reactionClient.trim())) E.push('depose.reactionClient : vide');
+  if (D.grise !== undefined && D.grise !== 'palette') E.push(`depose.grise : « ${D.grise} » sous une dépose par client (seul 'palette' convient : la case d’un client reste juste pour la palette suivante de ce client)`);
+  C.forEach((c, i) => {
+    const nom = `depose.cases[${i}]${typeof c.id === 'string' && c.id ? ` (« ${c.id} »)` : ''}`;
+    if (c.client === undefined) {
+      if (!c.sol) E.push(`${nom} : une case sans client ni sol dans une dépose par client (case ambiguë : pour quel client est-elle juste ?)`);
+      return;
+    }
+    if (typeof c.client !== 'string' || !c.client.trim()) { E.push(`${nom} : client vide`); return; }
+    if (c.sol !== undefined) E.push(`${nom} : client et sol à la fois (incohérent : une case de client n’est pas un piège)`);
+    if (c.juste !== undefined) E.push(`${nom} : client et juste à la fois (une case de client est juste pour les palettes de ce client, et seulement elles)`);
+    if (ids.length && !ids.includes(c.client)) E.push(`${nom} : client « ${c.client} » inconnu de depose.clients (${ids.join(', ')})`);
+  });
+  (palettes || []).forEach((p, i) => {
+    if (!p || typeof p !== 'object') return;
+    const nom = `camions[0].palettes[${i}]${typeof p.id === 'string' && p.id ? ` (« ${p.id} »)` : ''}`;
+    if (p.client === undefined || p.client === null || p.client === '') E.push(`${nom} : client manque (dans une dépose par client, chaque palette dit son client)`);
+    else if (ids.length && !ids.includes(p.client)) E.push(`${nom} : client « ${p.client} » inconnu de depose.clients (${ids.join(', ')})`);
+  });
+  ids.forEach((id) => {
+    const nP = (palettes || []).filter((p) => p && p.client === id).length, nC = C.filter((c) => c.client === id).length;
+    const n = (K[id] && K[id].nom) || id;
+    if (nP > nC) E.push(`depose : ${nP} palettes ${n} et ${nC} case${nC > 1 ? 's' : ''} ${n} : il faut au moins une case par palette de ce client`);
+  });
+  return E;
+}
 // Le contrôle de `depose` dans `verifierQuai` (décision 1) : la déclaration, puis ce avec quoi elle se combine. `depose` va avec
 // `securite`, `arret: 'dechargement'` et `commence: 'controle'` (la dépose n'y est pas jouée, les palettes sont dans les cases justes).
 // Appelée seule (`verifierDepose(Q)`), elle rend la liste de ses écarts.
@@ -563,6 +627,7 @@ export function verifierDepose(Q, E = []) {
   const cams = Array.isArray(Q.camions) ? Q.camions : [];
   const n = cams[0] && Array.isArray(cams[0].palettes) ? cams[0].palettes.length : undefined;
   ecartsDeclarationDepose(Q.depose, n).forEach((x) => E.push(x));
+  ecartsDeposeClient(Q.depose, cams[0] && Array.isArray(cams[0].palettes) ? cams[0].palettes : []).forEach((x) => E.push(x));
   if (Q.rendu !== 'iso') E.push('depose demande `rendu: \'iso\'` (les cases se dessinent sur le quai iso)');
   if (!Q.dechargement || Q.dechargement.par !== 'cariste') E.push('depose demande `dechargement: { par: \'cariste\' }` (c’est le cariste, au chariot frontal, qui attend où poser)');
   if (Q.froid !== false) E.push('depose demande un quai sans froid (`froid: false`), comme tout le rendu iso');
@@ -572,10 +637,23 @@ export function verifierDepose(Q, E = []) {
 }
 
 // Les cases complétées : sol, légende, peinte, juste, nom (l'étiquette lue au clavier) et réaction du cariste.
+// Dépose par client : `client` (son id), `client`, `sol` au nom `court` + numéro dans ce client (« AR VAG 1 », écrit au sol), nom par défaut
+// « Case AR VAG 1 », réaction par défaut celle de `reactionClient` (« Ça, c'est la zone d'Agri-Kerlann. Regarde l'étiquette. »). Une case de
+// client est toujours peinte et `juste` (elle est de la zone de réception) : `justePour` dit pour quelle palette.
 export function normaliserCases(D) {
+  const K = parClient(D) && D.clients && typeof D.clients === 'object' ? D.clients : null, rang = {};
   return D.cases.map((c) => {
     const k = { id: c.id, sol: c.sol || null, legende: c.legende || null, peinte: c.peinte !== false };
     k.juste = c.juste !== undefined ? c.juste : !c.sol;
+    if (K && c.client) {
+      const cl = K[c.client] || {}, nomC = cl.nom || c.client;
+      rang[c.client] = (rang[c.client] || 0) + 1;
+      k.client = c.client;
+      k.auSol = `${String(cl.court || c.client).toUpperCase()} ${rang[c.client]}`;
+      k.nom = c.nom || `Case ${k.auSol}`;
+      k.reaction = c.reaction || (typeof D.reactionClient === 'string' && D.reactionClient.trim() ? D.reactionClient.split('{client}').join(nomC) : reactionClientDefaut(nomC));
+      return k;
+    }
     k.nom = c.nom || nomDefaut(k);
     k.reaction = c.reaction || reactionDefaut(k);
     return k;
@@ -585,12 +663,14 @@ export function etatDeposeNeuf() { return { depose: {} }; }
 const caseDe = (cases, id) => cases.find((c) => c.id === id) || null;
 export const casesOccupees = (etat) => new Set(Object.values(etat.depose).map((d) => d.pose).filter(Boolean));
 // Les cases grisées pour la palette en cours : les pièges déjà essayés (toutes palettes avec 'garde', celle-ci avec 'palette') ; aucune en copie.
-export function casesGrisees(etat, cases, palette, { copie = false, grise = 'garde' } = {}) {
+// Dépose par client (`opts.clientDe`) : une case est « piège » pour la palette qui l'a essayée si elle n'est pas juste POUR ELLE.
+export function casesGrisees(etat, cases, palette, opts = {}) {
+  const { copie = false, grise = 'garde' } = opts;
   const G = new Set();
   if (copie) return G;
   Object.entries(etat.depose).forEach(([p, d]) => {
     if (grise === 'palette' && p !== palette) return;
-    d.essais.forEach((id) => { const c = caseDe(cases, id); if (c && !c.juste) G.add(id); });
+    d.essais.forEach((id) => { const c = caseDe(cases, id); if (c && !justePour(c, p, opts)) G.add(id); });
   });
   return G;
 }
@@ -606,7 +686,7 @@ export function choisirCase(etat, cases, palette, id, opts = {}) {
   if (d.pose) return etat;
   const c = caseDe(cases, id);
   if (!c || !casesProposees(etat, cases, palette, opts).includes(id)) return etat;
-  const n = { premier: d.premier || id, essais: d.essais.concat([id]), pose: opts.copie || c.juste ? id : null };
+  const n = { premier: d.premier || id, essais: d.essais.concat([id]), pose: opts.copie || justePour(c, palette, opts) ? id : null };
   return { depose: Object.assign({}, etat.depose, { [palette]: n }) };
 }
 export function issueDernierChoix(etat, cases, palette) {
@@ -619,13 +699,21 @@ export const paletteEnAttente = (etat, ordre) => ordre.find((p) => !(etat.depose
 export const deposeFinie = (etat, ordre) => paletteEnAttente(etat, ordre) === null;
 // Les jalons de la dépose (décision 11) : `ok` = tout posé ET premier choix juste ; rien posé = tous faux (pas de récompense de
 // l'inaction) ; `lib` ne dit pas la bonne case, `attendu` la dit (lu au bilan).
-export function jalonsDepose(etat, cases, palettes) {
+// Dépose par client (`opts.clientDe`, `opts.clients`) : `ok` = tout posé ET premier clic dans une case DE SON CLIENT ; `attendu` nomme la zone
+// du client (« une case de la zone Biscuiterie Ar Vag (AV1, AV2) ») ; `client` = l'id du client de la palette.
+export function jalonsDepose(etat, cases, palettes, opts = {}) {
   const fini = palettes.every((p) => etat.depose[p] && etat.depose[p].pose);
   const justes = cases.filter((c) => c.juste).map((c) => c.id).join(', ');
   return palettes.map((p) => {
     const d = etat.depose[p], c = d && d.premier ? caseDe(cases, d.premier) : null;
-    return { id: `depose-${p}`, palette: p, lib: `Dépose de la palette ${p}`, ok: !!(fini && c && c.juste),
+    const j = { id: `depose-${p}`, palette: p, lib: `Dépose de la palette ${p}`, ok: !!(fini && c && justePour(c, p, opts)),
       premier: d ? d.premier : null, attendu: `une case de la zone de réception (${justes})` };
+    if (opts.clientDe) {
+      const cl = opts.clientDe[p], nomC = (opts.clients && opts.clients[cl] && opts.clients[cl].nom) || cl;
+      j.client = cl;
+      j.attendu = `une case de la zone ${nomC} (${cases.filter((x) => x.client === cl).map((x) => x.id).join(', ')})`;
+    }
+    return j;
   });
 }
 
@@ -738,6 +826,29 @@ function matriceSolDe(I) {
   return `matrix(${(ax - ox).toFixed(3)},${(ay - oy).toFixed(3)},${(bx - ox).toFixed(3)},${(by - oy).toFixed(3)},${ox.toFixed(1)},${oy.toFixed(1)})`;
 }
 const surSolDe = (I, contenu) => `<g transform="${matriceSolDe(I)}">${contenu}</g>`;
+// Le nom au sol d'une case de client (« AR VAG 1 », dépose par client) : le nom court en une à trois lignes (coupé aux espaces ou après un
+// trait d'union, le découpage qui donne les plus grandes lettres), la taille réglée pour tenir dans la largeur de la case, puis le numéro en
+// grand ; le bloc est centré dans la profondeur de la case. En mètres, à poser par `surSolDe`. Un `court` à mots longs (« KERLANN ») donne de
+// petites lettres : sept signes par mot au plus restent lisibles à 1366 × 768.
+function texteAuSolClient(auSol, g) {
+  const m = /^(.*\S)\s+(\d+)$/.exec(auSol), court = m ? m[1] : auSol, no = m ? m[2] : '';
+  const mots = court.split(/(?<=-)|\s+/).filter(Boolean);
+  const larg = (g.x1 - g.x0) - 0.16, prof = (g.y1 - g.y0) - 0.3, hNo = no ? 0.5 : 0, FS_MAX = 0.32, LH = 1.12;
+  const taille = (L) => Math.min(FS_MAX, larg / (Math.max(...L.map((l) => l.length)) * 0.76), (prof - hNo) / (L.length * LH));
+  // Tous les découpages en 1 à 3 lignes (les mots gardent leur ordre) ; on garde celui aux plus grandes lettres.
+  const decoupages = [[court]];
+  const ligne = (ms) => ms.join(' ').replace(/- /g, '-');
+  for (let a = 1; a < mots.length; a++) {
+    decoupages.push([ligne(mots.slice(0, a)), ligne(mots.slice(a))]);
+    for (let b = a + 1; b < mots.length; b++) decoupages.push([ligne(mots.slice(0, a)), ligne(mots.slice(a, b)), ligne(mots.slice(b))]);
+  }
+  const lignes = decoupages.reduce((mieux, L) => (taille(L) > taille(mieux) + 1e-9 ? L : mieux), decoupages[0]);
+  const fs = taille(lignes), x = (g.x0 + g.x1) / 2, H = lignes.length * fs * LH + hNo;
+  let y = g.y0 + (g.y1 - g.y0 - H) / 2 + fs * 0.92, s = '';
+  lignes.forEach((l) => { s += `<text x="${x}" y="${y.toFixed(3)}" text-anchor="middle" font-size="${fs.toFixed(3)}" font-weight="800" fill="#6d675b" font-family="${POLICE_ISO}">${ech(l)}</text>`; y += fs * LH; });
+  if (no) s += `<text x="${x}" y="${(y - fs * LH + fs * 0.1 + hNo).toFixed(3)}" text-anchor="middle" font-size="0.44" font-weight="800" fill="#6d675b" font-family="${POLICE_ISO}">${ech(no)}</text>`;
+  return `<g data-iso-case-client>${s}</g>`;
+}
 const rectSolDe = (I, x0, y0, x1, y1, z = 0) => I.pts([[x0, y0, z], [x1, y0, z], [x1, y1, z], [x0, y1, z]]);
 const n1 = (v) => v.toFixed(1);
 // Un pictogramme piéton peint au sol (centré en (x, y), 0,7 m de côté) : carré jaune, silhouette qui marche.
@@ -1211,10 +1322,17 @@ export function jalonsQuai(db, Q) {
   // La dépose dirigée (lot 2) : un jalon par palette, présents dès la base vide (tous faux), absents quand la dépose n'est pas jouée (`commence`).
   if (R.depose && !R.commence) {
     const ED = { depose: (E && E.depose) || {} }, ids = R.palettes.filter((p) => p.camion === 0).map((p) => p.id);
-    jalonsDepose(ED, R.depose.cases, ids).forEach((l) => {
+    const PC = R.depose.clientDe ? { clientDe: R.depose.clientDe, clients: R.depose.clients } : {};
+    jalonsDepose(ED, R.depose.cases, ids, PC).forEach((l) => {
       const c = l.premier ? R.depose.cases.find((x) => x.id === l.premier) : null, d = ED.depose[l.palette];
       const fait = c ? `premier choix : ${c.nom}${d && d.pose && d.pose !== l.premier ? ` (posée ensuite en ${d.pose})` : ''}` : 'pas posée';
       j(l.id, l.lib, fait, l.attendu, l.ok);
+      // Dépose par client : la ligne du bilan détaillé (« P3, Agri-Kerlann : posée en AK1 », le ✓ / ✗ est celui du bandeau de fin).
+      if (PC.clientDe) {
+        const nomC = (R.depose.clients[l.client] && R.depose.clients[l.client].nom) || l.client;
+        L[L.length - 1].bilan = `${l.palette}, ${nomC} : ${!d || !d.premier ? 'pas posée' : d.pose === d.premier ? `posée en ${d.pose}`
+          : d.pose ? `d’abord en ${d.premier}, posée ensuite en ${d.pose}` : `d’abord en ${d.premier}, pas posée`}`;
+      }
     });
   }
   // `arret: 'dechargement'` : ③ et ④ ne sont pas jouées (ni comptage, ni décision, ni réserve, ni signature, ni rentrée) : on s'arrête aux étapes jouées.
@@ -1354,6 +1472,8 @@ export function etapesQuai(Q) {
     // Les jalons de la dépose dirigée font UNE ligne du bandeau de fin (jamais « P3 ✗ » : la case nommée fausse donnerait la réponse).
     // `ponderer` (contenus/ponderation.js) garde ce groupe tant que le barème ne donne pas de bloc à ces jalons.
     ...(/^depose-/.test(id) ? { groupe: GROUPE_DEPOSE } : {}),
+    // Dépose par client : une ligne par palette au bilan détaillé (`meta.bilanDetail`), « P3, Agri-Kerlann : posée en AK1 ».
+    ...(/^depose-/.test(id) && parClient(Q.depose) ? { titreBilan: (db) => { const l = jalonsQuai(db, Q).L.find((x) => x.id === id); return l ? l.bilan : null; } } : {}),
     verifier(db) {
       const l = jalonsQuai(db, Q).L.find((x) => x.id === id);
       return { status: l && l.ok ? 'ok' : 'attente' };
@@ -1590,7 +1710,11 @@ export function creerQuai(Q, opts = {}) {
   const DEPOSE = R.depose, GEO = DEPOSE ? geometrieDepose(DEPOSE.cases, DEPOSE.passage) : null;
   const JOUEE = !!DEPOSE && !COMMENCE;
   const ORDRE_DEP = DEPOSE ? PAL[0].map((p) => p.id).reverse() : [];
-  const OPTS_DEP = { copie: EVAL, grise: DEPOSE ? DEPOSE.grise : 'garde' };
+  const OPTS_DEP = Object.assign({ copie: EVAL, grise: DEPOSE ? DEPOSE.grise : 'garde' }, DEPOSE && DEPOSE.clientDe ? { clientDe: DEPOSE.clientDe } : {});
+  // Dépose par client : le client d'une palette (`{ nom, court }`) ou null ; ce que dit son étiquette (« Expéditeur : Biscuiterie Ar Vag »).
+  const CLIENTS_DEP = DEPOSE && DEPOSE.clientDe ? DEPOSE.clients : null;
+  const clientPal = (p) => (CLIENTS_DEP && p && p.client && CLIENTS_DEP[p.client] ? CLIENTS_DEP[p.client] : null);
+  const expediteur = (p, cm) => (clientPal(p) ? `Expéditeur : ${clientPal(p).nom}` : cm.fournisseur);
   const secuFaite = (e) => !SEC || !!(e.securite && e.securite.fait);
   const accepte = (s) => s.decision === 'accepter' || s.decision === 'reserves';
   const st = (e, p) => e.palettes[p.id];
@@ -1973,7 +2097,14 @@ export function creerQuai(Q, opts = {}) {
   function casesDesPalettes(e, toutes) {
     const D = (e && e.depose) || {}, posees = {}, occ = new Set();
     PAL[0].forEach((p) => { const d = D[p.id]; if (d && d.pose && GEO.cases.some((g) => g.id === d.pose) && !occ.has(d.pose)) { posees[p.id] = d.pose; occ.add(d.pose); } });
-    if (toutes) {
+    if (toutes && CLIENTS_DEP) {
+      // Dépose par client : chaque palette sans pose dans la première case libre de SON client.
+      PAL[0].forEach((p) => {
+        if (posees[p.id]) return;
+        const c = DEPOSE.cases.find((x) => x.client && x.client === p.client && !occ.has(x.id));
+        if (c) { posees[p.id] = c.id; occ.add(c.id); }
+      });
+    } else if (toutes) {
       const libres = DEPOSE.cases.filter((c) => c.juste && !occ.has(c.id)).map((c) => c.id);
       PAL[0].forEach((p) => { if (!posees[p.id] && libres.length) posees[p.id] = libres.shift(); });
     }
@@ -2034,10 +2165,12 @@ export function creerQuai(Q, opts = {}) {
       s += surSolDe(I, `<text x="${a.x0 - 0.05}" y="${GD.Y0 + GD.PROF + 0.42}" font-size="0.3" font-weight="800" fill="#555047" font-family="${POLICE_ISO}">${ech(String(a.legende).toUpperCase())}</text>`) + '</g>';
       s += seuilPorte(I, a.xPorte - 0.6);
     });
-    GEO.cases.forEach((g) => {
+    GEO.cases.forEach((g, i) => {
       if (!g.peinte) return;
       s += `<g data-iso-case-peinte="${ech(g.id)}"><polygon points="${rectSolDe(I, g.x0, g.y0, g.x1, g.y1, 0.002)}" fill="none" stroke="#6d675b" stroke-width="1.6"/>`;
-      s += surSolDe(I, `<text x="${(g.x0 + g.x1) / 2}" y="${g.y0 + 0.62}" text-anchor="middle" font-size="0.4" font-weight="800" fill="#6d675b" font-family="${POLICE_ISO}">${ech(g.id)}</text>`) + '</g>';
+      const auSol = DEPOSE.cases[i].auSol;
+      if (auSol) s += surSolDe(I, texteAuSolClient(auSol, g)) + '</g>';
+      else s += surSolDe(I, `<text x="${(g.x0 + g.x1) / 2}" y="${g.y0 + 0.62}" text-anchor="middle" font-size="0.4" font-weight="800" fill="#6d675b" font-family="${POLICE_ISO}">${ech(g.id)}</text>`) + '</g>';
     });
     return (solDepMemo = s);
   }
@@ -2108,8 +2241,11 @@ export function creerQuai(Q, opts = {}) {
     return { iso: s, leg, nb, pastilles: P.map((p) => `<i class="${vis.posees[p.id] ? 'sur' : ''}">${ech(p.id)}</i>`).join('') };
   }
   // « Kevin attend avec la palette P4 (Torchons…, 1 sur 4). Où la pose-t-il ? »
+  // Dépose par client : la légende cite ce que dit l'étiquette, jamais la zone (lire l'étiquette est le geste à apprendre) :
+  // « Yann attend avec la palette P4 — étiquette : « Expéditeur : Biscuiterie Ar Vag » (1 sur 4). Où la pose-t-il ? »
   function texteAttente(id) {
     const p = PAL[0].find((x) => x.id === id), rang = ORDRE_DEP.indexOf(id) + 1;
+    if (clientPal(p)) return `${quiSort} attend avec la palette ${id} — étiquette : « ${expediteur(p)} » (${rang} sur ${ORDRE_DEP.length}). Où la pose-t-il ?`;
     return `${quiSort} attend avec la palette ${id} (${p && p.nom ? `${p.nom}, ` : ''}${rang} sur ${ORDRE_DEP.length}). Où la pose-t-il ?`;
   }
   const texteFinDep = () => (ARRET ? ARRET.texte : `Les ${PAL[0].length} palettes sont en ${zoneMin}.`);
@@ -2206,7 +2342,7 @@ export function creerQuai(Q, opts = {}) {
     if (!f) return `<span class="note">🔍 Clique sur un ${R.u.un} de la palette : son étiquette s’affiche ici (${fmtMin(C.etiquette)} la première fois).</span>`;
     const et = p.etiq || {}, vu = f.fuite && faceVisible(s.vue, f.fuite);
     return `<div class="quai-etiq quai-etiq-carton" data-q-etiquette data-q-carton-vu="${f.no}">
-        <div class="quai-etiq-l1"><b>${ech(cm.fournisseur)}</b><span>${ech(maj(R.u.un))} <b>${f.no}</b> / ${P.total}</span></div>
+        <div class="quai-etiq-l1"><b>${ech(expediteur(p, cm))}</b><span>${ech(maj(R.u.un))} <b>${f.no}</b> / ${P.total}</span></div>
         ${Q.destinataire ? `<div class="quai-etiq-dest">→ ${ech(Q.destinataire)}</div>` : ''}
         <div class="quai-etiq-ref">${ech(et.ref)}</div><div>${ech(et.nom)}</div><div>${ech(et.poids)}</div>
         <div>${et.commande ? `Cde ${ech(et.commande)} · ` : ''}Lot ${ech(et.lot)}</div>
@@ -2221,7 +2357,7 @@ export function creerQuai(Q, opts = {}) {
     if (!q) return `<span class="note">🔍 Clique sur une palette de la pile : tu la vois ici de près, avec son numéro (${fmtMin(C.etiquette)} la première fois).</span>`;
     const et = p.etiq || {};
     return `<div class="quai-etiq quai-etiq-carton" data-q-etiquette data-q-carton-vu="${q.no}">
-        <div class="quai-etiq-l1"><b>${ech(cm.fournisseur)}</b><span>${ech(maj(R.u.un))} <b>${q.no}</b></span></div>
+        <div class="quai-etiq-l1"><b>${ech(expediteur(p, cm))}</b><span>${ech(maj(R.u.un))} <b>${q.no}</b></span></div>
         ${procheDePile(p, q.no, s.vue)}
         ${et.ref ? `<div class="quai-etiq-ref">${ech(et.ref)}</div>` : ''}${et.nom ? `<div>${ech(et.nom)}</div>` : ''}${et.poids ? `<div>${ech(et.poids)}</div>` : ''}</div>
       <div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
@@ -2234,7 +2370,7 @@ export function creerQuai(Q, opts = {}) {
     const rf = refDeCouche(p, c.k), et = (rf ? rf.etiq : p.etiq) || {};
     const vu = c.abime && facesExterieures(c, p.W, p.D).includes(c.abime) && faceVisible(s.vue, c.abime);
     return `<div class="quai-etiq quai-etiq-carton" data-q-etiquette data-q-carton-vu="${c.no}">
-        <div class="quai-etiq-l1"><b>${ech(cm.fournisseur)}</b><span>${ech(maj(R.u.un))} <b>${c.no}</b> / ${P.total}</span></div>
+        <div class="quai-etiq-l1"><b>${ech(expediteur(p, cm))}</b><span>${ech(maj(R.u.un))} <b>${c.no}</b> / ${P.total}</span></div>
         ${Q.destinataire ? `<div class="quai-etiq-dest">→ ${ech(Q.destinataire)}</div>` : ''}
         <div class="quai-etiq-ref">${ech(et.ref)}</div><div>${ech(et.nom)}</div><div>${ech(et.poids)}</div>
         <div>${et.commande ? `Cde ${ech(et.commande)} · ` : ''}Lot ${ech(et.lot)}</div>

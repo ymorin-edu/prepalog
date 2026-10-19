@@ -237,6 +237,88 @@ form.addEventListener('change', () => { if (hote.childElementCount) lancer(); })
 document.querySelector('[data-recommencer-depose]').addEventListener('click', () => { if (hote.childElementCount) lancer(); });
 if (location.hash === '#depose') { document.querySelector('[data-lancer-depose]').click(); document.getElementById('depose').scrollIntoView(); }
 </script>
+<section class="eqi eqi-partie2" id="depose-client">
+  <h2>Partie 4 bis — La dépose par client (Transports Pelleau, ENT-10.5 à 10.8)</h2>
+  <p>Le camion de ramasse rapporte les palettes de <b>deux clients</b>, mélangées. Chaque palette va dans la <b>zone de son client</b> : AR VAG 1 et 2 (Biscuiterie Ar Vag), AGRI-KERLANN 1 et 2 (Agri-Kerlann). La légende ne dit jamais la zone : elle dit ce qu'on lit sur <b>l'étiquette</b> de la palette (l'expéditeur). <b>Guidage</b> : si tu cliques la zone de l'autre client, le cariste réagit, la case se grise <b>pour cette palette seulement</b> (elle reste juste pour la palette suivante de l'autre client). L'allée piétonne et le devant du quai B restent des pièges. <b>Évaluation</b> : ton premier clic pose, sans réaction. Le bilan de fin descend à la palette (« P3, Agri-Kerlann : posée en AK1 ») sous un bloc faux. Clients, produits et quantités : construits pour l'essai (entreprises fictives).</p>
+  <form class="eqi-reglages" data-reglages-client aria-label="Réglages de l'essai de la dépose par client">
+    <fieldset><legend>Le mode</legend>
+      <label><input type="radio" name="cli-mode" value="guidage" checked> guidage (le cariste réagit)</label>
+      <label><input type="radio" name="cli-mode" value="copie"> évaluation (premier clic posé)</label></fieldset>
+    <fieldset><legend>Essai</legend>
+      <button type="button" data-recommencer-client>Tout remettre à zéro</button></fieldset>
+  </form>
+  <details class="eqi-declare"><summary>Ce que la séance déclare</summary><pre data-declare-client></pre></details>
+  <p><button type="button" class="btn btn-p" data-lancer-client>Lancer l'essai de la dépose par client</button></p>
+  <div data-hote-client></div>
+</section>
+<script type="module">
+import { quaiEssai, universQuai } from './outils/essai-quai-inspection.js';
+import { creerEntreprise } from './core/types/entreprise.js';
+import { jalonsQuai, etapesQuai, deposeFinie } from './core/types/quai.js';
+// Deux clients, six cases : l'allée piétonne, AR VAG 1 et 2, AGRI-KERLANN 1 et 2, devant le quai B (pièges non peints).
+export const DEPOSE_CLIENT = { passage: 3, cases: [
+  { id: 'allee-1', sol: 'pieton', peinte: false, nom: 'Allée piétonne' },
+  { id: 'AV1', client: 'ar-vag' }, { id: 'AV2', client: 'ar-vag' },
+  { id: 'AK1', client: 'agri-kerlann' }, { id: 'AK2', client: 'agri-kerlann' },
+  { id: 'quaiB-1', sol: 'autre-quai', legende: 'Quai B', peinte: false, nom: 'Devant le quai B' }],
+  clients: { 'ar-vag': { nom: 'Biscuiterie Ar Vag', court: 'AR VAG' }, 'agri-kerlann': { nom: 'Agri-Kerlann', court: 'AGRI-KERLANN' } } };
+const carton = (id, client, nom, W, D, L) => ({ id, client, ref: `ESS-${id}`, nom, bl: W * D * L, W, D, L, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+  etiq: { ref: `ESS-${id}`, nom: nom.toUpperCase(), poids: '1 colis', lot: `ESS-26-000${id.slice(1)}` } });
+// Ordre de sortie : P4, P3, P2, P1 (inverse du chargement).
+const PALETTES = [carton('P1', 'agri-kerlann', 'Granulés pour volailles, sacs de 25 kg', 4, 2, 4), carton('P2', 'ar-vag', 'Galettes au beurre, boîtes métal', 4, 2, 5),
+  carton('P3', 'agri-kerlann', 'Semences de maïs, sacs de 10 kg', 4, 2, 3), carton('P4', 'ar-vag', 'Palets bretons, cartons de 12 paquets', 4, 2, 6)];
+const hote = document.querySelector('[data-hote-client]'), form = document.querySelector('[data-reglages-client]');
+document.querySelector('[data-declare-client]').textContent = JSON.stringify({ depose: DEPOSE_CLIENT, palettes: PALETTES.map((p) => ({ id: p.id, client: p.client })) }, null, 1);
+let db = {};
+function lancer() {
+  db = {};
+  const copie = form.querySelector('input[name="cli-mode"]:checked').value === 'copie';
+  const Q = quaiEssai({ palettes: PALETTES, par: 'cariste' });
+  Q.securite = null;
+  Q.dechargement.nom = 'Yann';
+  Q.camions[0].fournisseur = 'Ramasse Transports Pelleau (essai)';
+  Q.depose = JSON.parse(JSON.stringify(DEPOSE_CLIENT));
+  Q.arret = { etape: 'dechargement', texte: 'Les 4 palettes sont dans leurs zones. Le contrôle, c’est la prochaine fois.' };
+  delete Q.unite; delete Q.libelles;
+  hote.innerHTML = '<div data-seance-client></div><details class="eqi-jalons" open><summary>Ce que la vue sait, calculé maintenant (pour toi, jamais pour l’élève)</summary><div data-etat-client></div></details>';
+  const etat = hote.querySelector('[data-etat-client]');
+  const ORDRE = Q.camions[0].palettes.map((p) => p.id).reverse();
+  const maj = () => {
+    const e = db.quais && db.quais[Q.id], D = (e && e.depose) || {};
+    const J = jalonsQuai(db, Q).L.filter((l) => /^depose-/.test(l.id));
+    etat.innerHTML = `<table class="quai-bilan eqi-depose-etat" data-etat-client-table><thead><tr><th>Palette</th><th>Client</th><th>Premier clic</th><th>Essais</th><th>Posée en</th><th>Jalon</th><th>Attendu</th><th>Ligne du bilan</th></tr></thead><tbody>${ORDRE.map((id) => {
+      const d = D[id], j = J.find((x) => x.id === `depose-${id}`);
+      return `<tr><td>${id}</td><td>${PALETTES.find((p) => p.id === id).client}</td><td>${d ? d.premier : '—'}</td><td>${d ? d.essais.join(', ') : '—'}</td><td>${d && d.pose ? d.pose : '—'}</td><td>${j && j.ok ? '✓' : '✗'}</td><td>${j.attendu}</td><td>${j.bilan}</td></tr>`; }).join('')}</tbody></table>
+      <p class="note">Dépose finie : ${deposeFinie({ depose: D }, ORDRE) ? 'oui' : 'non'}. Journal : ${e && e.journal ? e.journal.slice().reverse().join(' · ') : '—'}</p>`;
+  };
+  // Les jalons de la séance d'essai : ceux de la dépose, jugés quand la dernière palette est posée (comme une séance Pelleau), avec la ligne du bilan.
+  const etapes = etapesQuai(Q).filter((x) => /^depose-/.test(x.id)).map((x) => Object.assign({}, x, { ecran: null, verifier(dbx) {
+    const e = dbx.quais && dbx.quais[Q.id];
+    if (!e || !deposeFinie({ depose: e.depose || {} }, ORDRE)) return { status: 'attente' };
+    const l = jalonsQuai(dbx, Q).L.find((y) => y.id === x.id);
+    return { status: l && l.ok ? 'ok' : 'ko' };
+  } }));
+  const h = document.createElement('div');
+  hote.querySelector('[data-seance-client]').replaceChildren(h);
+  const ctx = {
+    meta: Object.assign({ id: 'essai-depose-client', code: 'ESSAI', titre: 'Essai de la dépose par client', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 20,
+      parcours: true, correction: true, bilanDetail: true }, copie ? { copie: true, temps: 'evaluation' } : {}),
+    profil: { prenom: 'Essai', nom: 'Dépose', role: 'eleve', uid: 'essai-eleve' },
+    jeu: { etat: () => db, sauver: maj },
+    enregistrer: () => {}, quitter: () => { lancer(); }, codeStock: 'ESSAI', lireScore: async () => null,
+  };
+  const U = Object.assign(universQuai(Q, { copie }), { etapes });
+  U.ENTREPRISE = Object.assign({}, U.ENTREPRISE, { nom: 'Transports Pelleau — essai de la dépose par client', sousTitre: 'Entrepôt — quai de ramasse' });
+  creerEntreprise(U).rendre(h, ctx);
+  h.querySelector('.ent-nav[data-vue="quai"]')?.click();
+  maj();
+  window.__deposeClient = { db: () => db, Q };
+}
+document.querySelector('[data-lancer-client]').addEventListener('click', () => { document.querySelector('[data-lancer-client]').hidden = true; lancer(); });
+form.addEventListener('change', () => { if (hote.childElementCount) lancer(); });
+document.querySelector('[data-recommencer-client]').addEventListener('click', () => { if (hote.childElementCount) lancer(); });
+if (location.hash === '#depose-client') { document.querySelector('[data-lancer-client]').click(); document.getElementById('depose-client').scrollIntoView(); }
+</script>
 <section class="eqi eqi-partie2" id="piles">
   <h2>Partie 5 — Les piles de palettes vides (CHEP, MOTEUR-chep lot B)</h2>
   <p>Un camion de collecte rapporte <b>cinq piles de palettes vides</b> au quai des retours. Le cariste les sort au chariot ; à l'étape ③, tu fais le tour de chaque pile (« ⟲ Tourner / Tourner ⟳ ») et tu <b>cliques les palettes une à une</b> : chacune s'affiche de près avec son numéro, son marquage lisible et, si sa face abîmée est tournée vers toi, le dégât. <b>Rien n'est écrit</b> qui nommerait un pool ou un dégât : tout se voit sur le dessin (couleur <b>et</b> marquage, pour l'impression en noir et blanc). Il n'y a pas de bouton « Refuser » : on ne refuse pas des palettes vides qui appartiennent au pool.</p>

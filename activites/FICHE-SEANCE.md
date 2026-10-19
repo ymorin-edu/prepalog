@@ -875,6 +875,47 @@ cases justes**, dans l'ordre du contenu (P1 dans la première case juste, P2 dan
 comme à ②. Aucun jalon `depose-*`, aucune couche de cases, aucun geste. De même à ④ : les palettes sont dans leurs cases **réelles** (celles
 de l'état), les éventuelles autres dans les cases justes libres.
 
+##### La dépose par client (chantier Transports Pelleau, lot D, 19/10/2026)
+
+Cadrage : `docs/briefs/MOTEUR-depose-par-client.md`, `docs/briefs/COORDINATION-pelleau.md` §2 point 7. Le camion rapporte les palettes de **plusieurs
+clients**, mélangées ; chaque palette va dans la **zone de son client**, qu'on lit sur son étiquette. **Option facultative : un quai dont aucune case ne
+déclare `client` reste exactement celui d'avant** (dessin, textes, jalons, état). Page d'essai : `outils/essai-quai-inspection.html#depose-client`
+(partie 4 bis : deux clients, six cases, guidage ou évaluation, bilan de fin détaillé). Tests : bloc `quai-iso`, cas « Dépose par client : … ».
+
+```js
+depose: { passage: 3, cases: [
+  { id: 'allee-1', sol: 'pieton', peinte: false, nom: 'Allée piétonne' },
+  { id: 'AV1', client: 'ar-vag' }, { id: 'AV2', client: 'ar-vag' },
+  { id: 'AK1', client: 'agri-kerlann' }, { id: 'AK2', client: 'agri-kerlann' },
+  { id: 'quaiB-1', sol: 'autre-quai', legende: 'Quai B', peinte: false } ],
+  clients: { 'ar-vag': { nom: 'Biscuiterie Ar Vag', court: 'AR VAG' }, 'agri-kerlann': { nom: 'Agri-Kerlann', court: 'AGRI-KERLANN' } },
+  reactionClient: 'Ça, c’est la zone {client}. Regarde l’étiquette.' },   // facultatif
+camions: [{ palettes: [ { id: 'P1', client: 'agri-kerlann', /* … */ }, { id: 'P2', client: 'ar-vag' }, … ] }]
+```
+
+| Clé | Valeur | Refusé si |
+|---|---|---|
+| `client` d'une case | l'id d'un client de `depose.clients` : la case n'est juste **que pour les palettes de ce client** (toujours peinte, nom au sol `court` + numéro dans ce client : « AR VAG 1 », « AR VAG 2 » ; nom au clavier par défaut « Case AR VAG 1 ») | avec `sol` ; avec `juste` ; vide ; inconnu de `depose.clients` ; `peinte: false` |
+| `client` d'une palette (premier camion) | l'id de son client : **obligatoire pour toutes** dès qu'une case déclare `client` ; l'étiquette de la palette à ③ dit alors « Expéditeur : *nom* » à la place du fournisseur du camion | absent ; inconnu de `depose.clients` |
+| `depose.clients` | `{ id: { nom, court } }` : `nom` (bulle, légende, bilan, étiquette), `court` (écrit au sol, en capitales). Un client sans case ni palette est permis (la liste commune de l'univers) | absent ou vide ; `nom` ou `court` vide ; autre clé ; **déclaré sans aucune case de client** (clé inconnue) |
+| `depose.reactionClient` | ce que dit le cariste devant la case d'un autre client, `{client}` = le nom de ce client. Défaut : « Ça, c'est la zone d'*Agri-Kerlann*. Regarde l'étiquette. » (« de » devant une consonne : « la zone de Biscuiterie Ar Vag »). La `reaction` d'une case de client, si elle est écrite, passe avant | vide ; déclaré sans case de client |
+| `depose.grise` | **`'palette'` imposé** sous une dépose par client (écrit ou non) : une case refusée pour P4 reste juste pour la palette suivante de l'autre client ; un piège `sol` aussi n'est grisé que pour la palette qui l'a essayé | `'garde'` |
+| autres contrôles | pour chaque client, **au moins autant de cases que de palettes** de ce client ; 8 cases au plus (inchangé) ; **une case sans `client` ni `sol`** (case ambiguë : pour qui est-elle juste ?) | — |
+
+**Ce que voit l'élève.** La légende de la pause cite **ce que dit l'étiquette**, jamais la zone : « Yann attend avec la palette P4 — étiquette : « Expéditeur :
+Biscuiterie Ar Vag » (1 sur 4). Où la pose-t-il ? » (c'est le geste à apprendre : lire l'étiquette). **Guidage** : la case d'un autre client fait réagir
+le cariste (`reactionClient`, dans la bulle et la région `aria-live`), se grise **pour cette palette seulement**, l'élève rechoisit ; les pièges `sol`
+réagissent comme avant. **Évaluation** (`copie`) : le premier clic pose, même chez l'autre client, sans réaction. À ③ et à ④, chaque palette est dans sa
+case réelle ; sous `commence: 'controle'`, chaque palette est dans la **première case libre de son client** (dans l'ordre du contenu). Le nom au sol se
+coupe en une à trois lignes pour tenir dans la case : un `court` à mots courts (sept signes au plus par mot) reste lisible à 1366 × 768.
+
+**Jalons et bilan.** `depose-P1`… inchangés dans leur forme et leur groupe (`Diriger le déchargement`, renommable par le barème) ; `ok` = tout posé **et**
+premier clic dans une case **de son client** ; `attendu` « une case de la zone Biscuiterie Ar Vag (AV1, AV2) » ; `fait` « premier choix : Case AGRI-KERLANN 1
+(posée ensuite en AV1) ». Chaque ligne de `jalonsQuai` porte en plus `bilan` (« P3, Agri-Kerlann : posée en AK1 » ; « P4, Biscuiterie Ar Vag : d'abord en
+AK1, posée ensuite en AV1 » ; « … : pas posée ») et `etapesQuai` donne aux jalons `depose-*` un **`titreBilan`** qui le lit : avec `meta.bilanDetail`, le
+bloc faux du bandeau de fin descend à **une ligne par palette** (au bilan seulement, jamais pendant la dépose). Une séance qui écrit ses propres jalons
+à partir des lignes du quai (comme ENT-8.10) reprend `titreBilan: (db) => ligneQuai(db, 'depose-P3').bilan`.
+
 #### Plusieurs palettes sur le quai iso
 
 Avant ce chantier, le quai iso déchargeait une palette (Spartoo). Il en décharge maintenant plusieurs (joué et testé avec les

@@ -2848,6 +2848,288 @@ await v('Dépose : un quai sans `depose` ne change pas — pas de phase, pas de 
   await p.close();
 });
 
+/* ---- dépose PAR CLIENT (chantier Transports Pelleau, lot D, 19/10/2026) : `client` sur les cases et les palettes, `depose.clients` */
+// Cadrage : `docs/briefs/MOTEUR-depose-par-client.md` (§2 à §6), `docs/briefs/COORDINATION-pelleau.md` §2 point 7. Cas AJOUTÉS (aucun cas existant
+// touché). Deux clients, six cases : l'allée piétonne, AV1 et AV2 (Biscuiterie Ar Vag), AK1 et AK2 (Agri-Kerlann), devant le quai B. Quatre palettes
+// de cartons : P1 et P3 d'Agri-Kerlann, P2 et P4 d'Ar Vag ; elles sortent dans l'ordre P4 (Ar Vag), P3 (Agri), P2 (Ar Vag), P1 (Agri). Tout ce qui
+// est attendu est écrit à la main.
+const DEP_CLI = () => ({ passage: 3, cases: [
+  { id: 'allee-1', sol: 'pieton', peinte: false, nom: 'Allée piétonne' },
+  { id: 'AV1', client: 'ar-vag' }, { id: 'AV2', client: 'ar-vag' },
+  { id: 'AK1', client: 'agri-kerlann' }, { id: 'AK2', client: 'agri-kerlann' },
+  { id: 'quaiB-1', sol: 'autre-quai', legende: 'Quai B', peinte: false, nom: 'Devant le quai B' }],
+  clients: { 'ar-vag': { nom: 'Biscuiterie Ar Vag', court: 'AR VAG' }, 'agri-kerlann': { nom: 'Agri-Kerlann', court: 'AGRI-KERLANN' } } });
+const PCL = (id, client) => ({ id, client, ref: `REF-${id}`, nom: `Désignation ${id}`, W: 2, D: 2, L: 2, bl: 8, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+  etiq: { ref: `REF-${id}`, nom: `PRODUIT ${id}`, poids: '1 colis', lot: `L-${id}` } });
+const PALS_CLI = () => [PCL('P1', 'agri-kerlann'), PCL('P2', 'ar-vag'), PCL('P3', 'agri-kerlann'), PCL('P4', 'ar-vag')];
+const CLI = (extra = {}) => Object.assign({ securite: null, dechargement: { ouverture: 0.5, parPalette: 1, par: 'cariste', nom: 'Yann' }, depose: DEP_CLI() }, extra);
+const QCLI = (m) => { const Q = QC(PALS_CLI(), { rendu: 'iso', froid: false, dechargement: { par: 'cariste' }, depose: DEP_CLI() }); if (m) m(Q); return Q; };
+const EXPEDITEUR = { P4: 'Biscuiterie Ar Vag', P3: 'Agri-Kerlann', P2: 'Biscuiterie Ar Vag', P1: 'Agri-Kerlann' };
+const monterCli = (p, extra, db, copie = false) => p.evaluate(async ([extra, db0, palettes, copie]) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-quai-inspection.js');
+  document.querySelector('#qiScene')?.remove();
+  const hote = document.createElement('div'); hote.id = 'qiScene'; document.body.prepend(hote);
+  const Q = Object.assign(E.quaiEssai({ palettes }), extra);
+  delete Q.unite; delete Q.libelles;   // des cartons
+  const db = db0 ? JSON.parse(JSON.stringify(db0)) : {};
+  window.__qs = { db, Q, enregistres: [] };
+  const meta = Object.assign({ id: 'essai-inspection', code: 'ESSAI', titre: 'Essai de la dépose par client', portee: 'eleve', immersif: true, temps: 'guidage', bareme: 20 }, copie ? { copie: true, temps: 'evaluation' } : {});
+  const ctx = {
+    meta, profil: { prenom: 'Lea', nom: 'Test', role: 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => { window.__qs.enregistres.push(JSON.parse(JSON.stringify(r))); }, quitter: () => {}, codeStock: 'ABC', lireScore: async () => null,
+  };
+  creerEntreprise(E.universQuai(Q, { copie })).rendre(hote, ctx);
+  document.querySelector('#qiScene .ent-nav[data-vue="quai"]').click();
+}, [extra, db, PALS_CLI(), copie]);
+async function pageCli(extra, { db = null, copie = false } = {}) {
+  const p = await ctxS.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE: ' + m.text()); });
+  await p.goto(BASE);
+  await p.waitForSelector('#btnProf', { timeout: 8000 });
+  await monterCli(p, extra, db, copie);
+  await p.waitForSelector(`${HOTE} .quai-stepper`);
+  if (await p.locator(`${HOTE} [data-q="passer1"]`).isVisible()) await p.click(`${HOTE} [data-q="passer1"]`);
+  return p;
+}
+const grisees = (p) => p.$$eval(`${HOTE} .quai-case-grisee`, (L) => L.map((g) => g.dataset.caseGrisee));
+const casesProp = (p) => p.$$eval(`${HOTE} [data-q="depose"]`, (L) => L.map((g) => g.dataset.c));
+const lignesQuai = (p) => p.evaluate(async () => {
+  const Q = await import('/core/types/quai.js');
+  return Object.fromEntries(Q.jalonsQuai(window.__qs.db, window.__qs.Q).L.filter((l) => /^depose-/.test(l.id)).map((l) => [l.id, { ok: l.ok, fait: l.fait, attendu: l.attendu, bilan: l.bilan }]));
+});
+
+await v('Dépose par client : verifierQuai refuse ce qui n’a pas de sens (client avec sol, palette sans client, client inconnu, pas assez de cases pour un client, case ambiguë…) et accepte la déclaration de référence', async () => {
+  egal(quaiMod.verifierQuai(QCLI()), [], 'deux clients, deux cases chacun, deux palettes chacun : accepté');
+  egal(quaiMod.verifierQuai(QCLI((Q) => { Q.arret = 'dechargement'; })), [], 'avec arret : permis');
+  egal(quaiMod.verifierQuai(QCLI((Q) => { Q.commence = 'controle'; })), [], 'avec commence : permis');
+  egal(quaiMod.verifierQuai(QCLI((Q) => { Q.depose.grise = 'palette'; Q.depose.reactionClient = 'Pas là : c’est chez {client}.'; })), [], 'grise: \'palette\' écrit et reactionClient : permis');
+  const REFUS = [
+    ['case avec client et sol', (Q) => { Q.depose.cases[1].sol = 'pieton'; }, /« AV1 »\) : client et sol à la fois/],
+    ['case avec client et juste', (Q) => { Q.depose.cases[1].juste = true; }, /« AV1 »\) : client et juste à la fois/],
+    ['palette sans client', (Q) => { delete Q.camions[0].palettes[2].client; }, /palettes\[2\] \(« P3 »\) : client manque/],
+    ['palette d’un client inconnu', (Q) => { Q.camions[0].palettes[0].client = 'kerveguen'; }, /« P1 »\) : client « kerveguen » inconnu de depose\.clients/],
+    ['case d’un client inconnu', (Q) => { Q.depose.cases[4].client = 'kerveguen'; }, /« AK2 »\) : client « kerveguen » inconnu de depose\.clients/],
+    ['trois palettes Ar Vag pour deux cases Ar Vag', (Q) => { Q.camions[0].palettes[2].client = 'ar-vag'; }, /3 palettes Biscuiterie Ar Vag et 2 cases Biscuiterie Ar Vag : il faut au moins une case par palette de ce client/],
+    ['case ambiguë (ni client ni sol)', (Q) => { Q.depose.cases.push({ id: 'R9' }); }, /« R9 »\) : une case sans client ni sol dans une dépose par client/],
+    ['clients absents', (Q) => { delete Q.depose.clients; }, /depose\.clients : une case déclare un client/],
+    ['client sans court', (Q) => { delete Q.depose.clients['ar-vag'].court; }, /depose\.clients « ar-vag » : court vide/],
+    ['clé inconnue dans un client', (Q) => { Q.depose.clients['ar-vag'].couleur = 'bleu'; }, /depose\.clients « ar-vag » : clé « couleur » inconnue/],
+    ['grise: \'garde\' sous une dépose par client', (Q) => { Q.depose.grise = 'garde'; }, /depose\.grise : « garde » sous une dépose par client/],
+    ['reactionClient vide', (Q) => { Q.depose.reactionClient = ' '; }, /depose\.reactionClient : vide/],
+    ['neuf cases (8 au plus, inchangé)', (Q) => { Q.depose.cases.push({ id: 'AV3', client: 'ar-vag' }, { id: 'AV4', client: 'ar-vag' }, { id: 'AV5', client: 'ar-vag' }); }, /depose\.cases : 9 cases, 8 au plus/],
+    ['peinte: false sur une case de client', (Q) => { Q.depose.cases[3].peinte = false; }, /« AK1 »\) : peinte: false sur une case sans sol/],
+  ];
+  const fautes = [];
+  for (const [nom, mute, motif] of REFUS) {
+    const Q = QCLI(mute);
+    const E = quaiMod.verifierQuai(Q);
+    if (!E.length) fautes.push(`« ${nom} » n’est pas refusé`);
+    else if (!E.some((m) => motif.test(m))) fautes.push(`« ${nom} » : message sans ${motif} (${E.join(' | ')})`);
+  }
+  // Sans aucune case `client`, `clients` et `reactionClient` restent des clés inconnues (le quai d'avant).
+  const Qv = QC([PC({ id: 'P1' }), PC({ id: 'P2' }), PC({ id: 'P3' }), PC({ id: 'P4' })], { rendu: 'iso', froid: false, dechargement: { par: 'cariste' }, depose: Object.assign(DEP_A(), { clients: DEP_CLI().clients }) });
+  if (!quaiMod.verifierQuai(Qv).some((m) => /depose : clé « clients » inconnue.*aucune case ne déclare de client/.test(m))) fautes.push(`clients sans case de client : pas refusé (${quaiMod.verifierQuai(Qv).join(' | ')})`);
+  if (fautes.length) throw new Error(fautes.join(' ; '));
+  let levee = '';
+  try { quaiMod.creerQuai(QCLI((Q) => { delete Q.camions[0].palettes[0].client; })); } catch (x) { levee = x.message; }
+  vrai(/« P1 »\) : client manque/.test(levee), `creerQuai devrait lever l’erreur : ${levee}`);
+});
+
+await v('Dépose par client : fonctions pures (hors navigateur) — nom au sol « AR VAG 1 », réaction « zone d’Agri-Kerlann », case refusée pour P4 et juste pour P3, jalons et attendu par client, ligne du bilan, titreBilan', async () => {
+  const cases = quaiMod.normaliserCases(DEP_CLI());
+  egal(cases.filter((c) => c.client).map((c) => [c.id, c.client, c.auSol, c.nom, c.juste]),
+    [['AV1', 'ar-vag', 'AR VAG 1', 'Case AR VAG 1', true], ['AV2', 'ar-vag', 'AR VAG 2', 'Case AR VAG 2', true], ['AK1', 'agri-kerlann', 'AGRI-KERLANN 1', 'Case AGRI-KERLANN 1', true], ['AK2', 'agri-kerlann', 'AGRI-KERLANN 2', 'Case AGRI-KERLANN 2', true]], 'les cases de client complétées');
+  egal([cases[1].reaction, cases[3].reaction], ['Ça, c’est la zone de Biscuiterie Ar Vag. Regarde l’étiquette.', 'Ça, c’est la zone d’Agri-Kerlann. Regarde l’étiquette.'], 'la réaction par défaut nomme le client de la case cliquée');
+  egal(quaiMod.normaliserCases(Object.assign(DEP_CLI(), { reactionClient: 'Non, ici c’est {client}.' }))[3].reaction, 'Non, ici c’est Agri-Kerlann.', 'reactionClient de la séance');
+  egal([cases[0].reaction, cases[0].client], ['Là, c’est l’allée piétonne : je ne pose pas ici.', undefined], 'le piège « pieton » est inchangé');
+  const O = { grise: 'palette', clientDe: { P1: 'agri-kerlann', P2: 'ar-vag', P3: 'agri-kerlann', P4: 'ar-vag' } };
+  let e = quaiMod.choisirCase({ depose: {} }, cases, 'P4', 'AK1', O);
+  egal(e.depose.P4, { premier: 'AK1', essais: ['AK1'], pose: null }, 'P4 (Ar Vag) en AK1 : refusée');
+  egal([...quaiMod.casesGrisees(e, cases, 'P4', O)], ['AK1'], 'AK1 grisée pour P4');
+  egal(quaiMod.issueDernierChoix(e, cases, 'P4').reaction, 'Ça, c’est la zone d’Agri-Kerlann. Regarde l’étiquette.', 'la réaction');
+  e = quaiMod.choisirCase(e, cases, 'P4', 'AV2', O);
+  egal(e.depose.P4.pose, 'AV2', 'P4 posée en AV2');
+  egal([...quaiMod.casesGrisees(e, cases, 'P3', O)], [], 'pour P3, rien n’est grisé');
+  egal(quaiMod.casesProposees(e, cases, 'P3', O), ['allee-1', 'AV1', 'AK1', 'AK2', 'quaiB-1'], 'pour P3, AK1 est proposée (AV2 occupée)');
+  e = quaiMod.choisirCase(e, cases, 'P3', 'AK1', O);
+  egal(e.depose.P3, { premier: 'AK1', essais: ['AK1'], pose: 'AK1' }, 'P3 (Agri-Kerlann) posée en AK1');
+  e = quaiMod.choisirCase(e, cases, 'P2', 'AV1', O); e = quaiMod.choisirCase(e, cases, 'P1', 'AK2', O);
+  const J = quaiMod.jalonsDepose(e, cases, ['P1', 'P2', 'P3', 'P4'], Object.assign({ clients: DEP_CLI().clients }, O));
+  egal(J.map((l) => [l.id, l.ok, l.attendu]), [
+    ['depose-P1', true, 'une case de la zone Agri-Kerlann (AK1, AK2)'], ['depose-P2', true, 'une case de la zone Biscuiterie Ar Vag (AV1, AV2)'],
+    ['depose-P3', true, 'une case de la zone Agri-Kerlann (AK1, AK2)'], ['depose-P4', false, 'une case de la zone Biscuiterie Ar Vag (AV1, AV2)']], 'jalons : P4 faux (premier clic chez l’autre client), attendu par client');
+  vrai(J.every((l) => !/AV|AK|Ar Vag|Kerlann/.test(l.lib)), `un libellé de jalon dit la zone : ${J.map((l) => l.lib)}`);
+  // Par jalonsQuai et etapesQuai : la ligne du bilan, le groupe inchangé, le titre de bilan.
+  const Q = QCLI();
+  const db = { quais: { [Q.id]: Object.assign(quaiMod.etatNeuf(Q), { depose: e.depose }) } };
+  const L = quaiMod.jalonsQuai(db, Q).L.filter((l) => /^depose-/.test(l.id));
+  egal(L.map((l) => l.bilan), ['P1, Agri-Kerlann : posée en AK2', 'P2, Biscuiterie Ar Vag : posée en AV1', 'P3, Agri-Kerlann : posée en AK1', 'P4, Biscuiterie Ar Vag : d’abord en AK1, posée ensuite en AV2'], 'les lignes du bilan détaillé');
+  egal(L.find((l) => l.id === 'depose-P4').fait, 'premier choix : Case AGRI-KERLANN 1 (posée ensuite en AV2)', 'fait de P4');
+  const ET = quaiMod.etapesQuai(Q).filter((x) => /^depose-/.test(x.id));
+  egal(ET.map((x) => [x.groupe, x.titreBilan(db)]), [['Diriger le déchargement', 'P1, Agri-Kerlann : posée en AK2'], ['Diriger le déchargement', 'P2, Biscuiterie Ar Vag : posée en AV1'],
+    ['Diriger le déchargement', 'P3, Agri-Kerlann : posée en AK1'], ['Diriger le déchargement', 'P4, Biscuiterie Ar Vag : d’abord en AK1, posée ensuite en AV2']], 'etapesQuai : groupe inchangé, titre de bilan par palette');
+  egal(ET[0].titreBilan({}), 'P1, Agri-Kerlann : pas posée', 'base vide : « pas posée »');
+  // Sans client : ni `bilan` sur les lignes, ni `titreBilan` (le quai d'avant).
+  const Qv = QC([PC({ id: 'P1' }), PC({ id: 'P2' }), PC({ id: 'P3' }), PC({ id: 'P4' })], { rendu: 'iso', froid: false, dechargement: { par: 'cariste' }, depose: DEP_A() });
+  egal([quaiMod.jalonsQuai({}, Qv).L.some((l) => 'bilan' in l), quaiMod.etapesQuai(Qv).some((x) => 'titreBilan' in x)], [false, false], 'sans client : aucun champ nouveau');
+});
+
+await v('Dépose par client : la légende de chaque pause cite l’étiquette de la palette (« Expéditeur : … ») et ne nomme jamais une zone ; les cases de client sont peintes « AR VAG 1 »…', async () => {
+  const p = await pageCli(CLI({ arret: { etape: 'dechargement', texte: TEXTE_DEP } }));
+  await departDep(p);
+  const choix = { P4: 'AV1', P3: 'AK1', P2: 'AV2', P1: 'AK2' };
+  for (const pal of SORTIE) {
+    const leg = await legende(p);
+    egal(await enAttente(p), pal, `la palette attendue (${leg})`);
+    vrai(leg.includes(`attend avec la palette ${pal} — étiquette : « Expéditeur : ${EXPEDITEUR[pal]} » (`), `la légende de ${pal} cite l’étiquette : ${leg}`);
+    vrai(!/zone/i.test(leg), `la légende de ${pal} nomme une zone : ${leg}`);
+    const ann = await lireAnnonce(p);
+    vrai(!/zone/i.test(ann), `l’annonce de ${pal} nomme une zone : ${ann}`);
+    await poserEn(p, choix[pal]);
+  }
+  await p.waitForSelector(BANDEAU);
+  egal(await p.$$eval(`${HOTE} [data-iso-case-peinte] [data-iso-case-client]`, (L) => L.map((g) => g.textContent.replace(/\s+/g, ''))), ['ARVAG1', 'ARVAG2', 'AGRI-KERLANN1', 'AGRI-KERLANN2'], 'le nom au sol de chaque case de client');
+  egal(await lignesQuai(p).then((L) => Object.values(L).map((l) => l.ok)), [true, true, true, true], 'tout juste au premier clic : quatre jalons vrais');
+  await p.close();
+});
+
+await v('Dépose par client : guidage — P4 (Ar Vag) cliquée en AK1 : le cariste réagit, AK1 grisée pour P4 seulement ; P3 (Agri-Kerlann) va en AK1 ; un piège sol reste un piège ; jalons de P4 et P3 faux, les autres vrais', async () => {
+  const p = await pageCli(CLI());
+  await departDep(p);
+  egal(await enAttente(p), 'P4', 'P4 attend');
+  vrai(/gerbage/.test(await p.$eval(`${HOTE} [data-q-bulle-cariste]`, (n) => n.textContent)), 'la consigne de la première pause');
+  await p.click(caseSel('AK1'));
+  egal(await phaseDe(p), 'choix', 'toujours en pause après le refus');
+  egal(await enAttente(p), 'P4', 'P4 attend toujours');
+  egal((await eDep(p)).depose.P4, { premier: 'AK1', essais: ['AK1'], pose: null }, 'P4 : premier clic noté, pas posée');
+  const bulleTxt = await p.$eval(`${HOTE} [data-q-bulle-cariste]`, (n) => [...n.querySelectorAll('text, tspan')].filter((t) => !t.querySelector('tspan')).map((t) => t.textContent.trim()).join(' '));
+  egal(bulleTxt, 'Ça, c’est la zone d’Agri-Kerlann. Regarde l’étiquette.', 'la bulle du cariste (ses lignes, mises bout à bout)');
+  vrai(/Agri-Kerlann\. Regarde l’étiquette\./.test(await lireAnnonce(p)), 'la région aria-live dit la réaction');
+  egal(await grisees(p), ['AK1'], 'AK1 est grisée');
+  egal(await casesProp(p), ['allee-1', 'AV1', 'AV2', 'AK2', 'quaiB-1'], 'pour P4, restent à choisir les autres cases');
+  await poserEn(p, 'AV1');
+  egal(await enAttente(p), 'P3', 'la pause de P3');
+  egal(await grisees(p), [], 'pour P3, AK1 n’est plus grisée (grisée pour P4 seulement)');
+  egal(await casesProp(p), ['allee-1', 'AV2', 'AK1', 'AK2', 'quaiB-1'], 'pour P3, AK1 est proposée');
+  // Un piège sol reste un piège (réaction de l'allée), grisé pour la palette en cours.
+  await p.click(caseSel('allee-1'));
+  vrai(/allée piétonne/.test(await p.$eval(`${HOTE} [data-q-bulle-cariste]`, (n) => n.textContent)), 'l’allée : la réaction de toujours');
+  egal(await grisees(p), ['allee-1'], 'l’allée grisée pour P3');
+  await poserEn(p, 'AK1');
+  egal(await posees(p), { P3: 'AK1', P4: 'AV1' }, 'P3 posée en AK1, la case refusée à P4');
+  egal(await grisees(p), [], 'pour P2, rien n’est grisé (grise: \'palette\' imposé)');
+  await poserEn(p, 'AV2'); await poserEn(p, 'AK2');
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+  const L = await lignesQuai(p);
+  egal(Object.fromEntries(Object.entries(L).map(([k, l]) => [k, l.ok])), { 'depose-P1': true, 'depose-P2': true, 'depose-P3': false, 'depose-P4': false }, 'P4 (zone) et P3 (allée) faux, les autres vrais');
+  egal([L['depose-P4'].attendu, L['depose-P4'].fait], ['une case de la zone Biscuiterie Ar Vag (AV1, AV2)', 'premier choix : Case AGRI-KERLANN 1 (posée ensuite en AV1)'], 'attendu et fait de P4');
+  egal([L['depose-P1'].attendu, L['depose-P1'].fait], ['une case de la zone Agri-Kerlann (AK1, AK2)', 'premier choix : Case AGRI-KERLANN 2'], 'attendu et fait de P1');
+  const e = await eDep(p);
+  egal(e.journal.length, 5, 'journal : l’ouverture et quatre poses (les refus n’y sont pas)');
+  await p.close();
+});
+
+await v('Dépose par client : l’inaction ne donne rien ; une erreur de zone rectifiée rend ce jalon faux et les autres vrais ; tout juste au premier clic, tout vrai', async () => {
+  const p = await pageCli(CLI());
+  await departDep(p);
+  egal(Object.values(await lignesQuai(p)).map((l) => l.ok), [false, false, false, false], 'rien posé : tous faux');
+  await p.click(caseSel('AV1'));                            // P4 (Ar Vag) : juste
+  await p.waitForFunction((s) => document.querySelectorAll(s).length === 1, `${HOTE} [data-iso-posee]`);
+  await p.click(caseSel('AV2'));                            // P3 (Agri-Kerlann) dans la zone Ar Vag : refusée
+  egal((await eDep(p)).depose.P3.pose, null, 'P3 refusée en AV2');
+  egal(Object.values(await lignesQuai(p)).map((l) => l.ok), [false, false, false, false], 'tant que tout n’est pas posé : tous faux');
+  await poserEn(p, 'AK2'); await poserEn(p, 'AV2'); await poserEn(p, 'AK1');
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+  egal(Object.fromEntries(Object.entries(await lignesQuai(p)).map(([k, l]) => [k, l.ok])), { 'depose-P1': true, 'depose-P2': true, 'depose-P3': false, 'depose-P4': true }, 'seul le jalon de P3 est faux');
+  await p.close();
+});
+
+await v('Dépose par client : en évaluation (copie) le premier clic pose, même dans la zone de l’autre client — aucune réaction, aucune case grisée ; jalon faux ; la palette est dessinée là, à ② et à ④', async () => {
+  const p = await pageCli(CLI(), { copie: true });
+  await departDep(p);
+  await poserEn(p, 'AK1');                                  // P4 (Ar Vag) chez Agri-Kerlann
+  egal((await eDep(p)).depose.P4, { premier: 'AK1', essais: ['AK1'], pose: 'AK1' }, 'P4 posée en AK1 dès le premier clic');
+  egal(await p.locator(`${HOTE} [data-q-bulle-cariste]`).count(), 0, 'aucune bulle de réaction');
+  egal(await grisees(p), [], 'aucune case grisée');
+  vrai(!/Regarde l’étiquette/.test(await lireAnnonce(p)), 'la région aria-live ne dit aucune réaction');
+  await poserEn(p, 'AK2'); await poserEn(p, 'AV1'); await poserEn(p, 'AV2');   // P3 juste, P2 juste, P1 (Agri) en AV2 : faux
+  await p.waitForSelector(`${HOTE} [data-q="vers3"]:not([disabled])`);
+  egal(await posees(p), { P1: 'AV2', P2: 'AV1', P3: 'AK2', P4: 'AK1' }, '② : chaque palette là où l’élève l’a posée');
+  egal(Object.fromEntries(Object.entries(await lignesQuai(p)).map(([k, l]) => [k, l.ok])), { 'depose-P1': false, 'depose-P2': true, 'depose-P3': true, 'depose-P4': false }, 'P4 et P1 faux');
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  await p.click(`${HOTE} [data-q="etape"][data-n="4"]`);
+  await p.waitForSelector(`${HOTE} [data-q-cf]`);
+  egal(await posees(p), { P1: 'AV2', P2: 'AV1', P3: 'AK2', P4: 'AK1' }, '④ : les palettes dans leurs cases réelles');
+  await p.close();
+});
+
+await v('Dépose par client : sous `commence: \'controle\'`, chaque palette dans la première case libre de son client ; à ③ l’étiquette dit « Expéditeur : … »', async () => {
+  const p = await pageCli(CLI({ commence: 'controle' }));
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  await p.click(`${HOTE} [data-q="sel"][data-n="1"]`);     // P2 : Ar Vag
+  await p.dispatchEvent(`${HOTE} svg[data-q-palette] [data-q-carton="1"]`, 'click');
+  await p.waitForSelector(`${HOTE} [data-q-etiquette]`);
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 b`, (n) => n.textContent.trim()), 'Expéditeur : Biscuiterie Ar Vag', 'l’étiquette de P2 dit son expéditeur');
+  await p.click(`${HOTE} [data-q="sel"][data-n="0"]`);     // P1 : Agri-Kerlann
+  await p.dispatchEvent(`${HOTE} svg[data-q-palette] [data-q-carton="2"]`, 'click');
+  await p.waitForFunction((s) => /Agri-Kerlann/.test(document.querySelector(s)?.textContent || ''), `${HOTE} [data-q-etiquette] .quai-etiq-l1 b`);
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 b`, (n) => n.textContent.trim()), 'Expéditeur : Agri-Kerlann', 'l’étiquette de P1 dit son expéditeur');
+  await p.click(`${HOTE} [data-q="etape"][data-n="4"]`);
+  await p.waitForSelector(`${HOTE} [data-q-cf]`);
+  egal(await posees(p), { P1: 'AK1', P2: 'AV1', P3: 'AK2', P4: 'AV2' }, '④ : P1 et P3 chez Agri-Kerlann, P2 et P4 chez Ar Vag, dans l’ordre du contenu');
+  egal(await nbCases(p), 0, 'aucune case à choisir');
+  await p.close();
+});
+
+await v('Dépose par client : page rechargée en pause — palettes dans les mêmes cases, la case refusée à P3 toujours grisée pour P3 et seulement elle, la légende de P3', async () => {
+  const extra = CLI();
+  const p = await pageCli(extra);
+  await departDep(p);
+  await p.click(caseSel('AK1'));                            // P4 : refus
+  await poserEn(p, 'AV1');                                  // P4 posée
+  await p.click(caseSel('AV2'));                            // P3 : refus
+  const avant = await eDep(p), b = await baseDe(p);
+  await monterCli(p, extra, b);
+  await p.waitForSelector(`${HOTE} [data-q-phase="choix"]`);
+  egal(await posees(p), { P4: 'AV1' }, 'rechargé : P4 dans AV1');
+  egal(await enAttente(p), 'P3', 'rechargé : P3 attend');
+  vrai((await legende(p)).includes('« Expéditeur : Agri-Kerlann »'), `rechargé : la légende de P3 (${await legende(p)})`);
+  egal(await grisees(p), ['AV2'], 'rechargé : AV2 grisée (refusée à P3), AK1 ne l’est pas (refusée à P4)');
+  egal(await casesProp(p), ['allee-1', 'AK1', 'AK2', 'quaiB-1'], 'rechargé : les cases à choisir');
+  const apres = await eDep(p);
+  egal([apres.evts, apres.journal, apres.depose, apres.minute], [avant.evts, avant.journal, avant.depose, avant.minute], 'evts, journal, état et minute inchangés');
+  await p.close();
+});
+
+await v('Dépose par client : la page d’essai (partie 4 bis) — le bilan de fin descend à la palette sous le bloc faux (« P4, Biscuiterie Ar Vag : d’abord en AK1, posée ensuite en AV1 »)', async () => {
+  const p = await ctxS.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  await p.goto(`${BASE}outils/essai-quai-inspection.html#depose-client`);
+  const H = '[data-hote-client]';
+  await p.waitForSelector(`${H} .quai-stepper`);
+  if (await p.locator(`${H} [data-q="passer1"]`).isVisible()) await p.click(`${H} [data-q="passer1"]`);
+  await p.click(`${H} [data-q="decharger"]`);
+  await p.waitForSelector(`${H} [data-q-phase="choix"]`);
+  egal(await p.locator(`${H} .ent-fin`).count(), 0, 'pas de bilan avant la fin');
+  const clic = async (c, pose = true) => {
+    const n = await p.locator(`${H} [data-iso-posee]`).count();
+    await p.click(`${H} [data-q="depose"][data-c="${c}"]`);
+    if (pose) await p.waitForFunction(([s, n]) => document.querySelectorAll(s).length === n + 1, [`${H} [data-iso-posee]`, n]);
+  };
+  await clic('AK1', false); await clic('AV1'); await clic('AK1'); await clic('AV2'); await clic('AK2');
+  await p.waitForSelector(`${H} [data-fin-detail]`);
+  const lignes = await p.$$eval(`${H} [data-fin-detail] li`, (L) => L.map((li) => [li.dataset.finCaseEtat, li.querySelector('span:nth-child(2)').textContent.trim()]));
+  egal(lignes, [['ok', 'P1, Agri-Kerlann : posée en AK2'], ['ok', 'P2, Biscuiterie Ar Vag : posée en AV2'], ['ok', 'P3, Agri-Kerlann : posée en AK1'], ['ko', 'P4, Biscuiterie Ar Vag : d’abord en AK1, posée ensuite en AV1']], 'une ligne par palette au bilan');
+  egal(await p.$$eval(`${H} .ent-fin [data-fin-jalon]`, (L) => L.map((n) => n.dataset.finEtat)), ['ko'], 'le bloc « Diriger le déchargement » : une seule ligne de groupe, fausse');
+  await p.close();
+});
+
 /* ================================================= note pondérée et `rendCopie: false` du quai (17/10/2026, trouvé en construisant ENT-8.10) */
 // Cas ajoutés (aucun cas existant touché). Le quai d'essai d'ENT-6.4, joué en ÉVALUATION (copie) dans un moteur dont `rendreCopie` est
 // enregistré (`window.__cq.remis`). `o.rendCopie` : l'option du quai ; `o.poids` : deux jalons pondérés hors quai (12 + 8 = 20) à la place
