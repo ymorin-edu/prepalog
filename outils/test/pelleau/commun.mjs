@@ -281,3 +281,22 @@ export function aidesInspection(P) {
   const nbMarques = () => pg.$$eval(`${R} [data-i-marque]`, (L) => L.length);
   return { R, bouton, vue, vueActuelle, cliquerPoint, essai, signaler, valider, texteDe, nbMarques };
 }
+
+// ── Ajouté le 19/10/2026 avec ENT-10.3 (par ajout : rien de ce qui précède ne change) : `qFilSelecteur(P, vrai)` rend une `qFil(R)` qui répond aux questions
+// au fil par le SÉLECTEUR (comme le bloc `action`, repris d'`outils/test/pelleau-102.mjs`) : les cartes « Nouveau message » qui s'empilent au-dessus de
+// l'écran font échouer un clic à la souris sur le panneau, alors que Playwright attend que rien ne recouvre la cible quand il clique par sélecteur.
+export function qFilSelecteur(P, vrai) {
+  const { pg, Z, pause } = P;
+  return async function qFil(R) {
+    for (let i = 0; i < 6; i++) {
+      const q = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null);
+      if (!q) return;
+      vrai(R[q], `question au fil « ${q} » sans réponse prévue`);
+      await pg.click(`${Z} [data-q-choix="${R[q]}"][data-q="${q}"]`);
+      await pg.click(`${Z} [data-q-repondre="${q}"]`);
+      await pause();
+      await pg.click(`${Z} [data-q-reprendre]`);
+      await pause();
+    }
+  };
+}

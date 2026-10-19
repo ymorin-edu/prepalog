@@ -57,7 +57,13 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'chep-93',
   'chep-94',
   'pelleau-101',
+  'pelleau-102',
+  'pelleau-103',
+  'pelleau-104',
   'pelleau-105',
+  'pelleau-106',
+  'pelleau-107',
+  'pelleau-108',
   'ramasse'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
@@ -83,18 +89,24 @@ const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], qu
 const GROUPES = {
   1: ['quiz', 'carte', 'picard', 'demi-groupes', 'temps', 'tirage-niveaux', 'fb-6.1', 'quai-iso', 'fb-6.9', 'decathlon-74', 'localiser', 'action-81',
     'pelleau-105',
+    'pelleau-103',
     'action-87', 'chep-91'],
   2: ['socle', 'spartoo', 'groupes', 'tableur-export', 'smoby', 'animation', 'visibilite', 'questions', 'fb-6.3', 'fb-6.10',
     'action-83',
     'pelleau-101',
+    'pelleau-104',
     'action-88', 'ramasse'],
   3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements', 'fb-6.6', 'fb-6.8', 'action-84',
     'inspection',
+    'pelleau-106',
     'action-89', 'chep-93'],
   4: ['fb-6.2', 'fb-6.4', 'fb-6.5', 'fb-6.7', 'carte-region', 'decathlon', 'dialogue', 'courriel', 'action',
     'action-85', 'action-86',
+    'pelleau-102',
     'chep-92',
     'chep-94',
+    'pelleau-107',
+    'pelleau-108',
     'action-810'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne

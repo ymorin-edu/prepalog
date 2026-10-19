@@ -542,6 +542,15 @@ const BANQUES_FIGEES = {
     travaux: ['m-rungis', 'm-concession', 'm-racks', 'm-plants', 'm-accidente', 'm-preparer'],
     situations: ['s-compter', 's-adresse', 's-signaler', 's-engin'],
   },
+  // ENT-10.2 Transports Pelleau (19/10/2026) : les lectures du planning des quais (la difficile est le bonus du confirmé).
+  'contenus/pelleau-ent102-donnees.js': {
+    lectures: ['l-loic-heure', 'l-loic-quai', 'l-premier-libre', 'l-combien', 'l-fin-agri'],
+  },
+  // ENT-10.4 Transports Pelleau (19/10/2026) : les six questions de « Où est-ce ? » (3 tirées) et les lectures du planning (2 tirées), ni bonus ni niveau.
+  'contenus/pelleau-ent104-donnees.js': {
+    lieux: ['l-reception', 'l-vestiaire', 'l-charge', 'l-bureau', 'l-controle', 'l-litiges'],
+    lectures: ['l-loic-heure', 'l-loic-quai', 'l-premier-libre', 'l-combien', 'l-fin-arvag'],
+  },
   'contenus/chep-ent93-donnees.js': {
     client: ['a2-frais-nord', 'a3-halles-artois'],
   },
