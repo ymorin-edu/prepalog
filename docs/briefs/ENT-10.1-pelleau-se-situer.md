@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md puis docs/briefs/ENT-10.1-pelleau-se-situer.md en entier. ENT-10.1 crée l'univers commun contenus/pelleau.js et l'entreprise n° 10. Fais valider les poids du §5 par Tristan avant de les coder, demande-lui l'accord pour le logo (§2), annonce la durée et dis-moi si un point du brief contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (19/10/2026, `pret: true, ouverture: 'prof'` ; à essayer à l’écran par Tristan)
 **Date du brief** : 18/10/2026
 **Conversation d'origine** : Cowork (Opus), 18/10/2026 au soir : cadrage de Pelleau (5 décisions de Tristan, fiche du projet
 `claude/prepalog-cap-pelleau-cadrage.md`), puis briefs **sur délégation** (« construis les briefs en prenant les décisions »). Toutes les décisions
@@ -289,3 +289,41 @@ Bloc **`pelleau`** (nouveau : `outils/test/pelleau.mjs`, lignes `BLOCS` et `GROU
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+*(19/10/2026, lot C du chantier Pelleau, sous-agent Opus ; rien commité par le sous-agent : le chef relit et commite.)*
+
+- **Fichiers créés** : `contenus/pelleau.js` (univers 10.x : identité, charte, `MENTION`, `heureScenario` (mai 2026), `LIEUX` du site, `PLAN_ENTREPOT`,
+  `EQUIPE`, `mailDe`, `CLIENTS` au format de `MOTEUR-depose-par-client.md` §2, `PALETTE_AR_VAG` / `PALETTE_AGRI` / `PALETTE_KERVEGUEN`, `PHOTOS`,
+  `LEXIQUE`, les cinq clés exigées, `STYLE_DOCUMENTS`, `PIED` (texte imposé), `pied`, `entete`, pictogrammes, `DOC_EQUIPE`, `DOC_PELLEAU`,
+  `DOC_DROIT_DEPOT`, `DOC_DROIT_JEUNES`), `contenus/pelleau-ent101-donnees.js` (données pures : lieux de la carte, banques, tirage, équité — fichier
+  en plus de la liste : le corrigé est chargé sous Node et ne peut pas importer le moteur, comme Action), `contenus/pelleau-ent101.js`,
+  `activites/pelleau-se-situer.js`, `contenus/questions/ENT-10.1.js`, `contenus/corriges/ENT-10.1.js`, `outils/test/pelleau-101.mjs` (16 cas),
+  `outils/test/pelleau/commun.mjs`. **Lignes ajoutées** : `activites/index.js` (commentaire, import, ligne `ENTREPRISES` n° 10, logo **PNG**),
+  `outils/test.mjs` (`BLOCS`, `GROUPES` groupe 2), `outils/test/socle.mjs` (`ATTENDU_CAP`), `outils/test/tirage-niveaux.mjs` (`BANQUES_FIGEES`, et
+  colonne « 10 / Transports Pelleau » des niveaux, deux listes allongées).
+- **Poids codés** (ceux du §5) : Qui est qui ? 3 × 1 · carte 6 × 1 (région, département) · histoire 4 × 0,75 · ce que fait Pelleau 3 × 2/3 ·
+  ce que je change 2 × 1 · questions `part: 4` (A 1, B 1,5, D 1,5 ; C réflexion). 18 jalons, 16 points + 4 = 20. Confirmé : 5 cas bonus cachés
+  (Saint-Pol région et département, une tâche, un travail, une situation).
+- **Écarts avec le brief** : (1) histoire notée **une étape à son rang** (§6 bis) et non « paires consécutives » (§5 se contredit) ; le départ ne
+  place **aucune** étape à son rang (sinon envoyer sans rien toucher rapportait des points) ; le départ est tiré par élève (`blocs(db)` le permet,
+  question du §7 : oui). (2) Rungis : Créteil (7,3 km du MIN) et Champigny (6,4 km de Vincennes) ne tiennent pas les 8 km → **Le Plessis-Trévise
+  et Mandres-les-Roses** ; repère de Saint-Pol = Morlaix (Brest est un de ses « autres »). (3) **Photos** : pas de porteur ni de porte-voitures au
+  dépôt (télécharger demande l'accord) : `img-semi` et `img-chariot` (photos d'Action) remplacent `img-porteur` et `img-porte-voitures`, ids gardés
+  libres. (4) Situations sans difficulté dans le brief : toutes `facile` (socle 2, bonus 1). Travaux : socle 2 faciles + 1 moyen, bonus le difficile.
+  (5) 200 essais de tirage (trois règles à tenir à la fois : 40 essais laissaient ~6 % d'élèves au jeu de secours). (6) Messages datés de **mai
+  2026** (l'ouverture réelle), sans jour de la semaine. (7) `competences: []` (comme ENT-8.1), `reinitialisable: true` (règle des X.1).
+- **Vérifié** : textes du Code civil 1927, 1928, 1932 et du Code du travail D4153-27, R4153-40, R4153-51 relus sur Légifrance le 19/10/2026
+  (identifiants dans `contenus/pelleau.js`) ; positions OSM (Nominatim, 19/10/2026) ; couleur du logo #242d5b (pixels du PNG), contraste 11,63 sur le
+  papier. **Approché** : l'entrepôt n'est pas dans OSM (point = lieu-dit Kergaradec), Plabennec et Saint-Pol = centres de commune. **Construit** : tout
+  ce que dit `MENTION` ; distance « près de 600 km » non recoupée par Mappy.
+- **Tests** : `pelleau-101` 16/16 (+ requêtes externes) ; `dependances`, `tirage-niveaux`, `questions` verts ; **`socle` : 1 cas tombe**
+  (`socle.mjs:818`, « CAP-C1.1 : 10/20 (1/6) » attendu, 1/7 lu : ENT-10.1 est la septième séance CAP-C1.1). Recalage à faire par le chef (cas
+  existant, interdit au lot) : `(1/6)` → `(1/7)` ligne 818 et `1 sur 6` → `1 sur 7` ligne 826, comme ENT-8.3 et 8.5 l'ont fait.
+- **Sabotages joués** (et remis, fichiers comparés octet pour octet) : jalon « vrai par inaction » → cas inaction (7/20) et questions tombent ;
+  `apres: 'bilan'` de D retiré → cas questions ; un « lundi » dans le message d'accueil → cas ouverture et parcours juste ; `finFige` retiré → pire
+  cas ; jalon d'histoire toujours vrai → cas histoire, bilan détaillé, pire cas ; garde « départ sans étape à sa place » retirée → cas équité
+  (et 4 autres, les graines changent) ; garde « 3 personnes » retirée → cas équité (et 2 autres). `pret: false` → cas déclaration.
+- **À vérifier à l'écran par Tristan** : le bleu nuit du bandeau à côté du bleu « client » de Rungis sur la carte ; sur la carte de fin, Gouesnou
+  et Plabennec (8 km) se recouvrent à l'échelle de la France (le point de l'entrepôt est sous celui de Plabennec ; la légende dit « magasin » pour le
+  MIN, type du brief) ; les textes de Cowork (messages, banques, retours) ; « Pelleau en bref » au vidéoprojecteur ; le document « Le droit » (long
+  pour un CAP : 1928 entier) ; la question D gardée (§11) ; les deux photos de remplacement.

@@ -91,6 +91,8 @@ export const ACTIVITES = [
   () => import('./chep-ramasse-retours.js'),
   () => import('./chep-releve-conteste.js'),
   () => import('./chep-evaluation.js'),
+  // Transports Pelleau (entrepôt neuf de Gouesnou) — ENT-10.x. CAP OL, C1.1 à C1.4.
+  () => import('./pelleau-se-situer.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -176,6 +178,8 @@ export const ENTREPRISES = [
   { n: 8, nom: 'Action', metier: 'Commerce à petits prix — entrepôts Geodis (Ensuès-la-Redonne) et GXO (Labastide-Saint-Pierre)', logo: './contenus/trames/logos/action.svg' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu du site chep.com ; charte : `contenus/chep.js`.
   { n: 9, nom: 'CHEP', metier: 'Location-gestion de palettes — Templemars', logo: './contenus/trames/logos/chep-texte.svg' },
+  // Logo officiel du site (PNG, le site n'offre pas de SVG ; accord de Tristan du 18/10/2026, lot A) ; charte : `contenus/pelleau.js`.
+  { n: 10, nom: 'Transports Pelleau', metier: 'Transporteur devenu entreposeur — entrepôt neuf de Gouesnou', logo: './contenus/trames/logos/pelleau.png' },
 ];
 
 // ------------------------------------------------------------------- l'ordre

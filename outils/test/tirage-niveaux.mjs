@@ -137,9 +137,9 @@ await v('Niveaux : l’onglet montre élèves × entreprises (Cdiscount, plus ce
   vrai(picardDeclare, 'activites/picard-ent42.js n’a plus la ligne « id » attendue : la déclaration d’essai est à revoir');
   const cols = await pg.$$eval('[data-col-scenario]', (L) => L.map((x) => x.dataset.colScenario));
   // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026), Action (8) depuis ENT-8.1 (15/10/2026), CHEP (9) depuis ENT-9.1 (18/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
-  egal(cols, ['2', '4', '6', '7', '8', '9'], 'colonnes');
+  egal(cols, ['2', '4', '6', '7', '8', '9', '10'], 'colonnes');
   const noms = await pg.$$eval('[data-col-scenario] strong', (L) => L.map((x) => x.textContent.trim()));
-  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon', 'Action', 'CHEP'], 'en-têtes');
+  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon', 'Action', 'CHEP', 'Transports Pelleau'], 'en-têtes');
   const valeurs = await pg.$$eval('[data-niveau-eleve]', (L) => [...new Set(L.map((s) => s.value))]);
   egal(valeurs, ['standard'], 'valeurs');
   egal(await pg.$$eval('[data-niveau-eleve]', (L) => L.length), cols.length * Object.keys(EL).length, 'cases');   // une case par élève et par colonne
@@ -535,6 +535,13 @@ const BANQUES_FIGEES = {
     bonus: ['bo-doublon', 'bo-lundi'],
   },
   // ENT-9.3 CHEP (18/10/2026) : le document de la cliente qui explique l'écart (transfert absent ou quantité déclarée fausse ; l'autre en bonus du confirmé).
+  // ENT-10.1 Transports Pelleau (19/10/2026) : tâches de « Qui est qui ? », étapes de l'histoire, travaux, situations de « Ce que je change ».
+  'contenus/pelleau-ent101-donnees.js': {
+    taches: ['t-tournee', 't-chariot', 't-tuteur', 't-planning', 't-saisie', 't-decider', 't-ouvrir'],
+    etapes: ['e1930', 'e1945', 'e1989', 'e1993', 'e2013', 'e2026'],
+    travaux: ['m-rungis', 'm-concession', 'm-racks', 'm-plants', 'm-accidente', 'm-preparer'],
+    situations: ['s-compter', 's-adresse', 's-signaler', 's-engin'],
+  },
   'contenus/chep-ent93-donnees.js': {
     client: ['a2-frais-nord', 'a3-halles-artois'],
   },
