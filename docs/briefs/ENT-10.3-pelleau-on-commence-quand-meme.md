@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, docs/briefs/ENT-10.2-pelleau-premier-jour.md (§0, §6) puis docs/briefs/ENT-10.3-pelleau-on-commence-quand-meme.md en entier. Les poids du §5 sont validés par Tristan ; annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (19/10/2026, sous-agent Sonnet, chantier Pelleau ; rien commité par le sous-agent)
 **Date du brief** : 18/10/2026
 **Conversation d'origine** : Cowork, 18/10/2026, sur délégation. Décision de cadrage n° 5 de Tristan : **en entraînement, l'un des deux pièges tiré au
 sort** (« le site n'est pas fini » ou « l'engin n'a pas été contrôlé »).
@@ -187,3 +187,31 @@ Yann sonne juste (pressé, pas méchant) ; les deux variantes se jouent en 45 mi
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**19/10/2026 — sous-agent Sonnet, chantier Pelleau.** Rien n'est commité (le chef relit, commite et pousse).
+
+- **Fichiers** : `activites/pelleau-on-commence-quand-meme.js` (`pret: true, ouverture: 'prof'`), `contenus/pelleau-ent103.js` (messages, documents, dialogues, fiche, jalons), `contenus/pelleau-ent103-donnees.js` (données pures : tirage, inspection, dialogues, fiche, phrases ; chargé aussi sous Node par le corrigé), `contenus/questions/ENT-10.3.js`, `contenus/corriges/ENT-10.3.js`, `outils/test/pelleau-103.mjs` (21 cas + 1 de captures sous `CAPTURES_ENT103`). Lignes ajoutées : `activites/index.js` (sous ENT-10.2), `outils/test.mjs` (`BLOCS`, `GROUPES` 1), `outils/test/socle.mjs` (`'ENT-10.3': 'CAP-C1.2'`) ; `qFilSelecteur` ajoutée à la fin de `outils/test/pelleau/commun.mjs`. Pas de `declarerTirage` : le tirage est une fonction pure de la graine (rien à ajouter à `BANQUES_FIGEES`).
+- **Poids codés** (ceux du §5) : avant le premier geste 1,5 · mon poste 6 (défaut signalé 3,5 · avertisseur n° 1 0,5 · avertisseur n° 2 0,5 · aucun faux 1,5) · ne pas céder 3 · signaler par écrit 3 (1 × 3) · rendre compte 2,5 (vu 0,75 · fait 0,75 · salutation 0,5 · fin 0,5) · questions 4 (A 1,5 · B 1 · C 1,5 ; D réflexion). Inaction : 0/20 (testé, y compris un poste « pris » sans signal ni essai). Aucun bonus ; confirmé : « Ma prise de poste » non jointe.
+- **Écarts avec le brief** (à valider) :
+  1. **Quai A / quai B inversés** : la vue d'inspection dessine « QUAI B » sur sa porte (aucun réglage de nom). Le site manque de l'extincteur / du plan DU QUAI B et l'élève travaille au quai A (comme ENT-10.2).
+  2. **Pas d'arrêt** (`arret: false`, le brief le dit) : le défaut oublié n'est pas relevé par Erwan ; le jalon est faux, l'élève continue. La consigne du chef citait « arrêt sans nommer le point » : non applicable ici (le test vérifie qu'aucun arrêt n'existe).
+  3. **Juste au 2e tour** : repli de la feuille : seule la première réponse compte (« Tu l'as contrôlé, toi ? » fait dire à Yann « Euh… non. Fais-le, alors. » sans racheter).
+  4. **Erwan en réunion répond la même chose à tout signalement** (« Reçu. Je lis ça à ma sortie de réunion. », défaut ou point en ordre) : réglé par `signaler.rien/deja: ''` et `repare: ' '` (ruse : la vue n'a pas d'option « même réponse »).
+  5. **Quatre points déclarés pour toutes les graines** (n° 1, n° 2, extincteur, plan ; exactement un en défaut ; ids `tp1`, `defaut`, `ordre-1`, `ordre-2`) au lieu d'« un point en ordre » ; deux essais (n° 1 et n° 2), 0,5 chacun. Le n° 2 est déclaré avec son défaut (décision du chef sur la question d'ENT-10.2).
+  6. **Réactions de Yann (2e rencontre) communes aux trois variantes** (le moteur ne calcule pas les réactions) : « Et si Erwan nous demande pourquoi on n'a rien dit ? » · « Tout seul ? Ce n'est pas notre boulot, ça. » · « Hé, pas si vite ! Il y a quand même un camion qui arrive. ». Son texte et les quatre réponses suivent le défaut (`selon`).
+  7. **Dernier message d'Erwan neutre** : « Merci {prénom}, j'ai lu ta fiche. On en reparle tout à l'heure, avec Yann. » à la place de « Bien fait de ne pas commencer comme ça » (faux pour l'élève qui a cédé).
+  8. **Question A** : `fil` avec `apres: 'bilan'` au lieu d'un « point d'étape » (même effet, pas d'écran de transition). B se déclenche sur le geste de la première ligne de la fiche (`fiche:signalement-103:quoi`).
+  9. **Dessins d'« Avant de commencer »** : engin et local de charge tracés par le kit iso (aucune photo libre au dépôt). « Ma prise de poste » est recopiée dans la séance (une séance n'importe jamais le fichier d'une autre). Deux messages guidés non prévus au brief : « Alors ? » de Yann après l'inspection, « Ta fiche » d'Erwan (ouvre la fiche).
+  10. L4122-1 (1er alinéa) : début confirmé sur code.travail.gouv.fr (19/10/2026), **reste non relu mot à mot sur Légifrance** (dit en pied du document « Le droit »).
+- **Tests** : `pelleau-103` 22/22 (21 + captures) ; `socle dependances tirage-niveaux questions inspection dialogue pelleau-102 pelleau-103` 278/278. Sabotages joués puis remis (empreintes vérifiées) :
+
+  | Sabotage | Cas tombés |
+  |---|---|
+  | jalon du compte rendu vrai sans envoi (inaction) | inaction |
+  | variante toujours S (piège E jamais tiré) | tirage 300 graines, parcours E (f, a), Yann 2, inspection E, compte rendu, pire cas, socle |
+  | arrêt qui nomme le point | inspection « aucun arrêt », tirage, pire cas |
+  | Erwan dit « rien qui cloche » sur un point en ordre | inspection « même réponse défaut ou non » |
+  | fiche juste calculée sur une autre graine | parcours juste (g, f, a), Yann 2, inspection E, fiche, confirmé |
+
+- **Écran** : 1366 × 768, la page ne défile pas sur l'inspection (messages lus) ; captures (accueil, Yann, inspection après signalement, bilan) regardées. 1280 × 720 non mesuré ici.
+- **À vérifier par Tristan à l'écran** : le ton de Yann (pressé, pas méchant ; ses 3 réactions, sa réplique selon la variante) ; que « Reçu. Je lis ça à ma sortie de réunion. » ne trahit rien ; les deux transpalettes et le défaut tiré visibles au vidéoprojecteur (l'avertisseur muet est invisible : seul l'essai le montre, difficile pour un CAP, classé difficile) ; les deux messages ajoutés ; le menu « Avec Yann » à deux contacts ; le texte final d'Erwan (écart 7).
