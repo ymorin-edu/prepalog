@@ -193,16 +193,17 @@ export async function ouvrirPelleau({ nav, BASE, vrai, activite, id }) {
 // (`'/contenus/pelleau-ent105-donnees.js'`), `quai` = le nom de cet export (un objet, ou une fonction sans argument qui le rend), `id` = l'id du
 // quai. L'inspection se joue À LA SOURIS (zones du moteur lues dans `zonesScene`, clic au centre de la zone dans le <svg>) ; la dépose, par
 // un clic sur la case.
-export function aidesQuai(P, { donnees, quai = 'QUAI', id }) {
+// Ajouté par ENT-10.6 (quai TIRÉ par élève) : `parBase` = le nom d'un export `(db) => déclaration du quai de CET élève` (`quaiDeBase`), lu sur la base de la page.
+export function aidesQuai(P, { donnees, quai = 'QUAI', id, parBase = null }) {
   const { pg, Z, pause, present } = P;
   const SVG = `${Z} [data-q-inspection]`;
-  const zones = () => pg.evaluate(async ({ donnees, quai, id }) => {
+  const zones = () => pg.evaluate(async ({ donnees, quai, id, parBase }) => {
     const Q = await import('/core/types/quai.js');
     const D = await import(donnees);
-    const decl = typeof D[quai] === 'function' ? D[quai]() : D[quai];
+    const decl = parBase ? D[parBase](window.__f.db) : typeof D[quai] === 'function' ? D[quai]() : D[quai];
     const S = decl.securite, q = window.__f.db.quais && window.__f.db.quais[id];
     return Q.zonesScene(S, Q.etatsScene(S, q && q.securite));
-  }, { donnees, quai, id });
+  }, { donnees, quai, id, parBase });
   async function cliquerVB(x, y) {
     const loc = pg.locator(SVG);
     await loc.scrollIntoViewIfNeeded();
@@ -237,4 +238,46 @@ export function aidesQuai(P, { donnees, quai = 'QUAI', id }) {
   const decharger = async () => { await pg.click(`${Z} [data-q="decharger"]`); await pg.waitForSelector(`${Z} [data-q-phase="choix"]`); };
   const deposer = async (c) => { await pg.click(`${Z} [data-q="depose"][data-c="${c}"]`); await pause(); };
   return { SVG, zones, cliquerVB, vueScene, marquer, signaler, cestBon, chef, annonce, legende, posees, proposees, decharger, deposer };
+}
+
+// ── Ajouté le 19/10/2026 avec ENT-10.2 (par ajout : rien de ce qui précède ne change) : les aides de la vue « Inspection du poste »
+// (`core/types/inspection.js`), reprises du bloc `inspection`, pour les séances 10.2 à 10.4. `aidesInspection(P)` : `P` = ce que rend
+// `ouvrirPelleau`. Les marques se posent À LA SOURIS, au milieu d'une zone de clic du point (`racine.__insp.zones()`) que `elementFromPoint`
+// confirme dans la scène ; la vue regardée est basculée d'abord si le point n'y est pas.
+export function aidesInspection(P) {
+  const { pg, Z, pause, vrai } = P;
+  const R = `${Z} [data-i-inspection]`;
+  const bouton = async (i, extra = '') => { await pg.click(`${R} button[data-i="${i}"]${extra}`); await pause(40); };
+  const vueActuelle = () => pg.$eval(`${R} [data-i-scene]`, (s) => s.dataset.vue);
+  const vue = async (v) => { if ((await vueActuelle()) !== v) await bouton('vue', `[data-v="${v}"]`); };
+  async function cliquerPoint(id) {
+    const z = await pg.evaluate(({ R, id }) => (document.querySelector(R).__insp.zones().find((q) => q.id === id) || {}).vue || null, { R, id });
+    vrai(z, `aucune zone de clic pour « ${id} »`);
+    await vue(z);
+    await pg.$eval(`${R} [data-i-scene]`, (s) => s.scrollIntoView({ block: 'nearest' }));
+    const p = await pg.evaluate(({ R, id }) => {
+      const racine = document.querySelector(R), svg = racine.querySelector('[data-i-scene]');
+      const z = racine.__insp.zones().find((q) => q.id === id && q.vue === svg.dataset.vue);
+      if (!z) return { rate: `pas de zone dans la vue ${svg.dataset.vue}` };
+      const M = svg.getScreenCTM(), q = svg.createSVGPoint();
+      const fr = [[.5, .5], [.3, .3], [.7, .7], [.3, .7], [.7, .3], [.5, .25], [.5, .75]];
+      for (const r of z.rects.slice().sort((a, b) => b.w * b.h - a.w * a.h)) for (const [fx, fy] of fr) {
+        q.x = r.x + r.w * fx; q.y = r.y + r.h * fy;
+        const e = q.matrixTransform(M);
+        const t = document.elementFromPoint(e.x, e.y);
+        if (t && svg.contains(t) && !t.closest('[data-i-marque]')) return { x: e.x, y: e.y };
+      }
+      return { rate: `rects ${JSON.stringify(z.rects)}` };
+    }, { R, id });
+    vrai(!p.rate, `aucun point cliquable pour « ${id} » : ${p.rate}`);
+    await pg.mouse.click(p.x, p.y);
+    await pause(40);
+  }
+  const essai = (n = 1) => bouton('essai', `[data-n="${n}"]`);
+  const signaler = () => bouton('signaler');
+  // « C'est bon, je prends mon poste » : deux clics (le second confirme).
+  const valider = async () => { await bouton('valider'); await bouton('valider'); };
+  const texteDe = (sel) => pg.evaluate((s) => { const e = document.querySelector(s); return e ? e.textContent.replace(/\s+/g, ' ').trim() : null; }, `${R} ${sel}`);
+  const nbMarques = () => pg.$$eval(`${R} [data-i-marque]`, (L) => L.length);
+  return { R, bouton, vue, vueActuelle, cliquerPoint, essai, signaler, valider, texteDe, nbMarques };
 }

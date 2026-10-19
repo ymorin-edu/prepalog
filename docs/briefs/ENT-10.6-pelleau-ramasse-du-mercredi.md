@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, docs/briefs/ENT-10.5-pelleau-camion-de-ramasse.md puis docs/briefs/ENT-10.6-pelleau-ramasse-du-mercredi.md en entier. Les poids du §5 sont validés par Tristan ; annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : à implémenter · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 3 h (même structure
+**Statut** : livré (19/10/2026, non commité : le chef commite) · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 3 h (même structure
 qu'ENT-10.5, tirage en plus).
 
 ---
@@ -106,3 +106,37 @@ ENT-10.3 ; la note le dit).
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**19/10/2026, phase 3 du chantier Pelleau (Sonnet, sous-agent du chef ; non commité, le chef commite).** Fichiers : `activites/pelleau-ramasse-du-mercredi.js`,
+`contenus/pelleau-ent106.js`, `contenus/pelleau-ent106-donnees.js` (données pures et tirage, chargées aussi sous Node par le corrigé), `contenus/questions/ENT-10.6.js`,
+`contenus/corriges/ENT-10.6.js`, `outils/test/pelleau-106.mjs` (20 cas) ; lignes AJOUTÉES dans `activites/index.js`, `outils/test.mjs` (`BLOCS`, `GROUPES` groupe 3),
+`outils/test/socle.mjs` (`ATTENDU_CAP`) ; `outils/test/pelleau/commun.mjs` : option `parBase` de `aidesQuai` (quai tiré par élève), par ajout. Pas de `declarerTirage`
+(le tirage est par graine, comme ENT-8.7 : `quai: quaiDe`) : rien dans `BANQUES_FIGEES` ni dans `tirage-niveaux.mjs` (colonne 10 déjà là).
+
+**Le tirage** (`jeuDe(graine)`, `tirerJeu`, jeu de secours jamais donné sur 300 graines) : répartition 2+2 ou 3+1 (client majoritaire tiré), ordre de sortie tiré (jamais
+les blocs « Ar Vag d'abord » d'ENT-10.5), un défaut parmi cabine · cale · niveleur · lampe et UN autre point en ordre, écart aucun / moins / plus (au plus un ; « plus »
+seulement sur un client qui a au moins 2 palettes, pour qu'aucune annonce ne tombe à 0). Mesuré sur 300 graines : 2+2 165 / 3+1 135 ; écart 91 / 101 / 108 ; défauts 63 à 81.
+Le quai a 8 cases (3 par client) ; `verifierQuai` passe sur 300 graines × 3 niveaux.
+
+**Poids codés (brief §5, tels quels).** Préparer 3 × 2/3 · Accueillir Loïc 1 × 2 · défaut tiré signalé 2,5, aucun faux 1 · Trier par client 1 × 4 · Rapprocher 0,75 × 4 ·
+Rendre compte : écart (contenu) 1, salutation 0,25, fin 0,25 (forme 0,5) · questions A 1,5, B 1, C 1,5 (`part: 4`). Total 20 (2/3 × 3 = 2 exactement à l'arrondi près).
+Confirmé : « Combien de sacs Agri-Kerlann ? » en bonus caché (lu sur la feuille), « Règles du quai » non jointes, aides du quai éteintes ; accompagné = standard.
+
+**Écarts avec le brief (décisions prises en route).**
+1. Bloc `pelleau-106` (un bloc par séance, COORDINATION §2 n° 21), pas `pelleau-recep`. Aucun jour de la semaine dans un document (« 13 mai », décision 9).
+2. Question B `ecart-qui-dit` : énoncé calculé sur l'écart de l'élève (`selon`). Pour « aucun écart », le brief ne dit rien : posée en « Tout correspond aux annonces.
+   Imagine qu'il manque une palette d'un client. » (**choix de Claude Code, à relire**). Pour « il y en a trop », les pièges sont écrits par moi (« Je mets la palette en trop avec
+   celles d'un autre client », « Rien, l'annonce sera mise à jour »). C ne cite plus « Le droit » (le document n'est pas sous les yeux sur le quai).
+3. Entraînement : `securite.arret: false` (le brief §8 et §11 : Yann n'arrête pas l'élève qui dit « C'est bon » sans rien signaler, le jalon est ✗). Une question A (au 1er
+   signalement) qui ne part jamais faute de signalement arrive au rattrapage, en fin de séance.
+4. « Règles du quai » non jointes au confirmé : ni au message de Maëlys ni à la fiche ; elles restent dans « Avant de commencer » (la banque d'ENT-10.5, mêmes ids, les cite
+   pour `cale` et `gerber`). Dire si Tristan veut les retirer aussi de l'ouverture.
+5. Loïc « au volant, moteur allumé » peut s'afficher alors que l'élève vient de lui dire de couper le moteur (le défaut est tiré, comme chez Action ENT-8.7) ; à voir à l'écran.
+6. J'ai repris les trois champs que la session moteur vient d'ajouter dans `core/types/quai.js` (non commités au moment d'écrire : `document.article: 'la'`,
+   `camions[].tutoiement`, `prenomChauffeur`) pour que la légende dise « Loïc te remet la feuille de ramasse » et le bouton « Oui, tu peux décharger » : **ENT-10.6 ne se charge
+   pas sans ce commit moteur** (le cas de légende le garde).
+7. « Aucun écart » : la phrase juste est « Tout est conforme aux annonces. » ; les 3 mauvaises sont des écarts qui n'existent pas.
+
+**À vérifier à l'écran par Tristan.** La lisibilité des 8 cases (« AR VAG 1 à 3 », « AGRI 1 à 3 ») à 1366 × 768 et au vidéoprojecteur ; que les deux zones se distinguent sans
+couleur ; le tirage vécu (se faire ouvrir la séance par 3 ou 4 comptes de test) ; la question B pour chaque écart ; les textes construits (réactions de Loïc, pièges des
+phrases) ; que Loïc moins bavard ne paraisse pas sec ; le confirmé (consigne courte, quatre lignes).
