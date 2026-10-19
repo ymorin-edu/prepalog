@@ -1740,3 +1740,278 @@ export function dessinerTrajet(I, sc) {
   sc.lieux.slice().sort((a, b) => (a.x + a.y) - (b.x + b.y)).forEach((l) => { g += batiment(I, l.type, l.x, l.y, { nom: l.nom }); });
   return g;
 }
+
+/* ============================== l'inspection du poste (chantier « Inspection du poste », lot B, 19/10/2026) */
+// Brief `docs/briefs/MOTEUR-inspection-poste.md`, feuille `docs/briefs/COORDINATION-pelleau.md` §2 point 2. Quatre objets SANS
+// CAMION pour la prise de poste : le transpalette électrique (six états dessinés), l'extincteur (deux), l'affichage du plan de
+// circulation (deux) et la borne de charge (décor). Chacun rend aussi ses BOÎTES MONDE (`boitesTranspalette`, `boitesExtincteur`,
+// `boitesAffichage`) : la zone où l'élève clique, calculée par les mêmes constantes que le dessin. Unité : le mètre.
+// Teintes : la scène est une image. L'engin est jaune ou gris, JAMAIS vert ; le rouge (extincteur, voyant, bouton d'arrêt
+// d'urgence, panneau) n'est qu'un petit objet dessiné, jamais un aplat d'interface ni un verdict.
+// Ces ajouts ne touchent aucun dessin existant (fonctions nouvelles, ajoutées en fin de fichier).
+
+const fx1 = (v) => v.toFixed(1);
+// Repères posés À PLAT : (u, v) en mètres, origine en (x0, y, z0).
+// Sur un mur parallèle à x (plan y constant) : u vers +x, v vers le BAS.
+function surMurX(I, x0, y, z0) {
+  const [ox, oy] = I.P(x0, y, z0), u = I.unite;
+  return `matrix(${(C30 * u).toFixed(3)},${(S30 * u).toFixed(3)},0,${u.toFixed(3)},${fx1(ox)},${fx1(oy)})`;
+}
+// Sur une face parallèle à y (plan x constant : la face droite d'une boîte) : u vers −y (de gauche à droite à l'écran), v vers le bas.
+function surFaceX(I, x, y0, z0) {
+  const [ox, oy] = I.P(x, y0, z0), u = I.unite;
+  return `matrix(${(C30 * u).toFixed(3)},${(-S30 * u).toFixed(3)},0,${u.toFixed(3)},${fx1(ox)},${fx1(oy)})`;
+}
+// Au sol ou sur un dessus (plan z constant) : u vers +x, v vers +y.
+function surSol(I, x0, y0, z) {
+  const [ox, oy] = I.P(x0, y0, z), u = I.unite;
+  return `matrix(${(C30 * u).toFixed(3)},${(S30 * u).toFixed(3)},${(-C30 * u).toFixed(3)},${(S30 * u).toFixed(3)},${fx1(ox)},${fx1(oy)})`;
+}
+// Un cylindre debout (centre du pied en (cx, cy, z), rayon r, hauteur h) : le flanc, un reflet, le dessus.
+function cylindreDebout(I, cx, cy, z, r, h, flanc, reflet, dessus) {
+  const [bx, by] = I.P(cx, cy, z), [tx, ty] = I.P(cx, cy, z + h), rx = r * I.unite * K1, ry = r * I.unite * K2;
+  let g = `<path d="M${fx1(bx - rx)},${fx1(by)} L${fx1(tx - rx)},${fx1(ty)} L${fx1(tx + rx)},${fx1(ty)} L${fx1(bx + rx)},${fx1(by)} A${fx1(rx)},${fx1(ry)} 0 0 1 ${fx1(bx - rx)},${fx1(by)} Z" fill="${flanc}" stroke="rgba(0,0,0,.35)" stroke-width=".8"/>`;
+  if (reflet) g += `<polygon points="${fx1(bx - rx * .62)},${fx1(by + ry * .55)} ${fx1(tx - rx * .62)},${fx1(ty + ry * .55)} ${fx1(tx - rx * .3)},${fx1(ty + ry * .9)} ${fx1(bx - rx * .3)},${fx1(by + ry * .9)}" fill="${reflet}"/>`;
+  return g + `<ellipse cx="${fx1(tx)}" cy="${fx1(ty)}" rx="${fx1(rx)}" ry="${fx1(ry)}" fill="${dessus}" stroke="rgba(0,0,0,.35)" stroke-width=".8"/>`;
+}
+// Une poutre de section w (selon x) × h (selon z), de a à b (le bout b est tourné vers l'élève) : côté droit, dessus, bout.
+function poutre(I, a, b, w, h, c) {
+  const A = (dx, dz) => [a[0] + dx, a[1], a[2] + dz], B = (dx, dz) => [b[0] + dx, b[1], b[2] + dz];
+  return I.face([A(w, 0), B(w, 0), B(w, h), A(w, h)], c[2]) + I.face([A(0, h), A(w, h), B(w, h), B(0, h)], c[0])
+    + I.face([B(0, 0), B(w, 0), B(w, h), B(0, h)], c[1]);
+}
+
+/* ---------------------------------------------------------------- le transpalette électrique */
+// Transpalette électrique à conducteur accompagnant. (x, y) = le coin arrière gauche du châssis ; les FOURCHES vont vers +y
+// (vers l'élève), le TIMON est dressé à l'arrière (rangé, comme au local de charge). Mesures (m) : châssis 0,72 × 0,57,
+// capot jusqu'à 0,74 m, fourches de 1,15 m, tête de timon à 1,2 m. La roue visible (bandage beige) est sur le flanc droit.
+export const ETATS_TRANSPALETTE = ['ok', 'fourcheTordue', 'roueAbimee', 'batterie', 'arretUrgence', 'fuite'];
+export const TEINTES_TRANSPALETTE = { jaune: ['#f2c21b', '#dcaa0b', '#be9206'], gris: ['#c3c8cb', '#a9b0b4', '#8f979c'] };
+const TPE = { L: .72, D: .57, fy: .57, fl: 1.15, fh: .075, fw: .17, fx: [.08, .47], roue: { y: .3, z: .13, r: .13, x: .7, l: .06 },
+  tete: [.11, .1, 1.16, .5, .22, .09], timon: [.33, .2, .72, .08, .07, .46] };
+const NOIR_TPE = ['#4a4f52', '#33373a', '#2a2e30'], FOURCHE_TPE = ['#5c6266', '#43484b', '#33373a'];
+// Le point du connecteur de charge sur le capot : à l'arrière, du côté de la prise murale `prise` (s'il y en a une).
+function connecteurTpe(x, y, prise) {
+  return prise && prise[0] < x + TPE.L / 2 ? [x + .14, y + .06, .74] : [x + .58, y + .06, .74];
+}
+// Où tombe la fiche d'un câble débranché : au sol, à côté du capot, du même côté que le connecteur.
+function ficheAuSol(x, y, prise) {
+  return prise && prise[0] < x + TPE.L / 2 ? [x - .3, y + .16, 0] : [x + 1.0, y + .16, 0];
+}
+// La roue du flanc droit (dans le plan x constant, comme `roue`) : bandage beige, jante grise. `abime` : un morceau du bandage
+// arraché (une encoche sombre en haut à l'avant, des fissures) et trois éclats beiges au sol, à droite de l'engin.
+function roueTpe(I, x, y, abime) {
+  const { r, l } = TPE.roue, yc = y + TPE.roue.y, zc = TPE.roue.z, u = I.unite, x0 = x + TPE.roue.x;
+  const M = (xx) => { const [ex, ey] = I.P(xx, yc, zc); return `matrix(${(-C30 * u).toFixed(3)},${(S30 * u).toFixed(3)},0,${(-u).toFixed(3)},${fx1(ex)},${fx1(ey)})`; };
+  const sw = (v) => (v / u).toFixed(4);
+  let g = '';
+  for (let k = 0; k < 4; k++) g += `<circle r="${r}" transform="${M(x0 + l * k / 3)}" fill="#8a6d45" stroke="#5b4020" stroke-width="${sw(.6)}"/>`;
+  let f = `<circle r="${r}" fill="#d9b98a" stroke="#6b5232" stroke-width="${sw(1.2)}"/><circle r="${(r * .58).toFixed(3)}" fill="#8d9397" stroke="#5c6266" stroke-width="${sw(1)}"/><circle r="${(r * .2).toFixed(3)}" fill="#3a3e41"/>`;
+  if (abime) {
+    // L'encoche : du bord du bandage jusqu'à la jante, bords déchiquetés (coordonnées locales : (Δy, Δz) en mètres).
+    const pt = (a, k) => `${(r * k * Math.cos(a)).toFixed(3)},${(r * k * Math.sin(a)).toFixed(3)}`, d = Math.PI / 180;
+    f += `<polygon points="${[pt(15 * d, 1.08), pt(22 * d, .78), pt(30 * d, .62), pt(42 * d, .7), pt(55 * d, .6), pt(68 * d, .74), pt(80 * d, .64), pt(92 * d, 1.08)].join(' ')}" fill="#2a2622" stroke="#1a1714" stroke-width="${sw(1)}"/>`;
+    f += `<polyline points="${pt(100 * d, 1)} ${pt(112 * d, .82)} ${pt(118 * d, .7)}" fill="none" stroke="#3a2a1a" stroke-width="${sw(1.4)}"/>`;
+    f += `<polyline points="${pt(5 * d, 1)} ${pt(-6 * d, .8)}" fill="none" stroke="#3a2a1a" stroke-width="${sw(1.4)}"/>`;
+  }
+  g += `<g transform="${M(x0 + l)}">${f}</g>`;
+  if (abime) {
+    [[.9, .3, .07], [1.02, .5, .05], [.86, .6, .045]].forEach(([dx, dy, s], k) => {
+      const cx = x + dx, cy = y + dy;
+      g += I.face([[cx - s, cy - s * .4, .004], [cx + s * .3, cy - s, .004], [cx + s, cy + s * (k ? .2 : .5), .004], [cx - s * .2, cy + s, .004]], '#d9b98a', '#6b5232');
+    });
+  }
+  return g;
+}
+// Le transpalette électrique. `etat` (le sûr en premier) : 'ok' | 'fourcheTordue' (la fourche droite relevée de travers à
+// partir de son milieu) | 'roueAbimee' (bandage de la roue éclaté, éclats au sol) | 'batterie' (voyant rouge allumé sur la
+// tête de timon, jauge vide, câble de charge DÉBRANCHÉ, fiche au sol) | 'arretUrgence' (le bouton d'arrêt d'urgence de la
+// tête manque : un trou noir dans sa platine jaune) | 'fuite' (une flaque sombre sous le groupe hydraulique, à l'avant du capot).
+// Options (`o`) : `n` (le numéro peint en grand sur le flanc du capot), `teinte` ('jaune', défaut, ou 'gris'), `prise` (le
+// point [x, y, z] de la prise murale où il se charge : le câble y est branché, sauf en 'batterie'), `essai` (voir `objetEssai`).
+export function transpaletteElectrique(I, pos, etat = 'ok', o = {}) {
+  const { boite, face, P } = I, u = I.unite;
+  const [x, y] = pos;
+  const T = TEINTES_TRANSPALETTE[o.teinte] || TEINTES_TRANSPALETTE.jaune;
+  let g = face([[x - .05, y - .02, 0], [x + .79, y - .02, 0], [x + .79, y + 1.78, 0], [x - .05, y + 1.78, 0]], 'rgba(0,0,0,.1)', 'none');
+  if (etat === 'fuite') {
+    // La flaque : sous l'avant du capot, elle s'étale vers la droite, entre et à droite des fourches ; un reflet et deux gouttes.
+    const cx = x + .78, cy = y + .93, L = [[-.34, -.24], [-.04, -.36], [.26, -.31], [.42, -.1], [.39, .15], [.17, .34], [-.1, .31], [-.31, .14], [-.39, -.07]];
+    g += `<g data-iso-fuite>${face(L.map(([a, b]) => [cx + a, cy + b, .003]), 'rgba(28,24,20,.88)', 'rgba(0,0,0,.5)')}`
+      + `<polyline points="${I.pts([[cx - .18, cy - .2, .004], [cx + .12, cy - .25, .004], [cx + .3, cy - .08, .004]])}" fill="none" stroke="rgba(255,255,255,.4)" stroke-width="${fx1(u * .025)}" stroke-linecap="round"/>`
+      + face([[x + .5, y + .5, .003], [x + .62, y + .48, .003], [x + .6, y + .62, .003]], 'rgba(28,24,20,.88)', 'none') + '</g>';
+  }
+  // Châssis, capot, couvercle, plaque porte-fourches à l'avant.
+  g += boite(x, y, .04, TPE.L, TPE.D - .07, .14, NOIR_TPE);
+  g += boite(x + .02, y + .02, .18, .68, .46, .52, T);
+  g += boite(x + .06, y + .05, .7, .6, .38, .04, NOIR_TPE);
+  g += boite(x, y + .5, .02, TPE.L, .07, .3, NOIR_TPE);
+  // Le numéro peint sur le flanc droit du capot : une plaque claire, le chiffre en noir.
+  if (o.n != null) {
+    g += `<g transform="${surFaceX(I, x + .701, y + .43, .64)}"><rect width=".32" height=".34" rx=".03" fill="#f4f1ea" stroke="#1a1915" stroke-width=".012"/>`
+      + `<text x=".16" y=".29" text-anchor="middle" font-size=".3" font-weight="800" font-family="Arial, sans-serif" fill="#1a1915">${ech(String(o.n))}</text></g>`;
+  }
+  g += roueTpe(I, x, y, etat === 'roueAbimee');
+  // Les fourches : la gauche, puis la droite (devant à l'écran). Tordue : la moitié avant se relève de travers.
+  const [xa, xb] = TPE.fx, y0 = y + TPE.fy;
+  g += boite(x + xa, y0, .01, TPE.fw, TPE.fl, TPE.fh, FOURCHE_TPE);
+  if (etat === 'fourcheTordue') {
+    g += boite(x + xb, y0, .01, TPE.fw, .46, TPE.fh, FOURCHE_TPE);
+    g += `<g data-iso-fourche-tordue>${poutre(I, [x + xb, y0 + .46, .01], [x + xb + .16, y0 + 1.1, .36], TPE.fw, TPE.fh, FOURCHE_TPE)}</g>`;
+  } else g += boite(x + xb, y0, .01, TPE.fw, TPE.fl, TPE.fh, FOURCHE_TPE);
+  // Le timon dressé et sa tête (poignées de chaque côté).
+  g += boite(...[x + TPE.timon[0], y + TPE.timon[1], ...TPE.timon.slice(2)], NOIR_TPE);
+  const [tx, ty, tz, tw, td, th] = TPE.tete, X0 = x + tx, Y0 = y + ty, Z1 = tz + th;
+  g += boite(x + .03, y + .14, tz + .01, .09, .14, .07, ['#2a2e30', '#1f2224', '#17191a']);
+  g += boite(X0, Y0, tz, tw, td, th, NOIR_TPE);
+  g += boite(X0 + tw, y + .14, tz + .01, .09, .14, .07, ['#2a2e30', '#1f2224', '#17191a']);
+  // Sur le dessus de la tête : la platine jaune du bouton d'arrêt d'urgence (le bouton rouge, ou un trou noir), la jauge et le voyant.
+  const [bx, by] = P(X0 + .11, Y0 + .11, Z1);
+  g += `<ellipse cx="${fx1(bx)}" cy="${fx1(by)}" rx="${fx1(.095 * u * K1)}" ry="${fx1(.095 * u * K2)}" fill="#f2c21b" stroke="#6d5400" stroke-width="1"/>`;
+  if (etat === 'arretUrgence') {
+    g += `<g data-iso-arret-absent><ellipse cx="${fx1(bx)}" cy="${fx1(by)}" rx="${fx1(.06 * u * K1)}" ry="${fx1(.06 * u * K2)}" fill="#0b0c0d" stroke="#5c6266" stroke-width="1.5"/>`
+      + `<ellipse cx="${fx1(bx + .012 * u)}" cy="${fx1(by + .006 * u)}" rx="${fx1(.035 * u * K1)}" ry="${fx1(.035 * u * K2)}" fill="#000"/></g>`;
+  } else g += cylindreDebout(I, X0 + .11, Y0 + .11, Z1, .06, .05, '#b3241b', 'rgba(255,255,255,.25)', '#e0392b');
+  const vide = etat === 'batterie';
+  let jauge = '<rect x=".225" y=".05" width=".15" height=".12" rx=".012" fill="#15181a"/>';
+  for (let k = 0; k < 4; k++) jauge += `<rect x="${(.235 + k * .033).toFixed(3)}" y=".07" width=".025" height=".08" fill="${vide ? (k === 0 ? '#e0392b' : '#2f3437') : '#f3e3a0'}"/>`;
+  g += `<g transform="${surSol(I, X0, Y0, Z1 + .001)}">${jauge}</g>`;
+  const [lx, ly] = P(X0 + .43, Y0 + .11, Z1 + .002);
+  if (vide) {
+    g += `<g data-iso-voyant><circle cx="${fx1(lx)}" cy="${fx1(ly)}" r="${fx1(u * .09)}" fill="rgba(240,70,50,.32)"/>`
+      + `<ellipse cx="${fx1(lx)}" cy="${fx1(ly)}" rx="${fx1(.035 * u * K1)}" ry="${fx1(.035 * u * K2)}" fill="#ff4a36" stroke="#8f160d" stroke-width="1"/></g>`;
+  } else g += `<ellipse cx="${fx1(lx)}" cy="${fx1(ly)}" rx="${fx1(.035 * u * K1)}" ry="${fx1(.035 * u * K2)}" fill="#3a3f43" stroke="#15181a" stroke-width="1"/>`;
+  // Le câble de charge : du connecteur du capot à la prise murale (branché), ou jusqu'à sa fiche posée au sol (débranché).
+  const K = connecteurTpe(x, y, o.prise);
+  g += boite(K[0] - .05, K[1] - .03, .7, .1, .08, .06, ['#2a2e30', '#1f2224', '#17191a']);
+  const [kx, ky] = P(K[0], K[1], K[2] + .03), ep = fx1(Math.max(2.5, u * .03));
+  if (vide) {
+    const F = ficheAuSol(x, y, o.prise), [qx, qy] = P(F[0], F[1], .03);
+    g += `<g data-iso-cable-debranche><path d="M${fx1(kx)},${fx1(ky)} C${fx1(kx + (qx - kx) * .2)},${fx1(ky + u * .55)} ${fx1(qx - (qx - kx) * .35)},${fx1(qy + u * .05)} ${fx1(qx)},${fx1(qy)}" fill="none" stroke="#1b1d1f" stroke-width="${ep}" stroke-linecap="round"/>`
+      + boite(F[0] - .06, F[1] - .045, 0, .12, .09, .07, ['#4a4f52', '#2a2e30', '#1f2224']);
+    const [p1x, p1y] = P(F[0] + (F[0] > x ? .08 : -.08), F[1] - .02, .035), [p0x, p0y] = P(F[0] + (F[0] > x ? .06 : -.06), F[1] - .02, .035);
+    g += `<line x1="${fx1(p0x)}" y1="${fx1(p0y)}" x2="${fx1(p1x)}" y2="${fx1(p1y)}" stroke="#c3c8cb" stroke-width="2"/></g>`;
+  } else if (o.prise) {
+    const [px, py] = P(...o.prise);
+    g += `<path d="M${fx1(kx)},${fx1(ky)} C${fx1(kx)},${fx1(ky + u * .4)} ${fx1(px)},${fx1(py + u * .4)} ${fx1(px)},${fx1(py)}" fill="none" stroke="#1b1d1f" stroke-width="${ep}" stroke-linecap="round"/>`
+      + boite(o.prise[0] - .045, o.prise[1] - .02, o.prise[2] - .045, .09, .07, .09, ['#4a4f52', '#2a2e30', '#1f2224']);
+  }
+  return objetEssai(o, 'transpalette', ETATS_TRANSPALETTE.includes(etat) ? etat : 'ok', g);
+}
+// Les boîtes monde du transpalette en (x, y) dans l'état `etat` : le châssis et le capot, le timon et sa tête, les fourches en
+// trois tronçons (une zone par tronçon : deux engins côte à côte ne se recouvrent pas), et ce que l'état ajoute au sol
+// (flaque, éclats, fiche débranchée) ou en l'air (la fourche relevée). `prise` : comme pour le dessin (côté de la fiche).
+export function boitesTranspalette(etat = 'ok', pos = [0, 0], prise = null) {
+  const [x, y] = pos, y0 = y + TPE.fy, X0 = x + TPE.fx[0], X1 = x + TPE.fx[1] + TPE.fw;
+  const L = [[x, y, 0, x + TPE.L, y + TPE.D, .76], [x + .03, y + .1, .72, x + .7, y + .32, 1.26]];
+  // Tordue : la fourche gauche reste à plat ; la droite, relevée de travers, a ses propres boîtes (plus hautes, décalées vers +x).
+  if (etat === 'fourcheTordue') {
+    const XG = x + TPE.fx[0] + TPE.fw, XD = x + TPE.fx[1];
+    L.push([X0, y0, 0, X1, y0 + .4, .09], [X0, y0 + .4, 0, XG, y0 + .8, .09], [X0, y0 + .8, 0, XG, y0 + TPE.fl, .09],
+      [XD, y0 + .4, 0, X1 + .1, y0 + .8, .28], [XD + .06, y0 + .8, .1, X1 + .16, y0 + TPE.fl, .44]);
+  } else L.push([X0, y0, 0, X1, y0 + .4, .09], [X0, y0 + .4, 0, X1, y0 + .8, .09], [X0, y0 + .8, 0, X1, y0 + TPE.fl, .09]);
+  if (etat === 'fuite') L.push([x + .39, y + .55, 0, x + 1.2, y + 1.27, .01]);
+  if (etat === 'roueAbimee') L.push([x + .78, y + .22, 0, x + 1.09, y + .68, .02]);
+  if (etat === 'batterie') { const F = ficheAuSol(x, y, prise); L.push([F[0] - .08, F[1] - .06, 0, F[0] + .08, F[1] + .06, .1]); }
+  return L;
+}
+
+/* ---------------------------------------------------------------- l'extincteur */
+// L'extincteur sur son support mural et le panneau rouge au-dessus. (x, y) = le milieu du support, sur le plan du mur (y).
+// `etat` : 'present' (l'extincteur rouge accroché, sa sangle, son flexible) | 'absent' (le support vide, la sangle qui pend :
+// le panneau reste). Le rouge est celui de l'objet (et du panneau), jamais un aplat d'interface. `o.essai` : voir `objetEssai`.
+export const ETATS_EXTINCTEUR = ['present', 'absent'];
+export function extincteur(I, pos, etat = 'present', o = {}) {
+  const { boite, P } = I, u = I.unite;
+  const [x, y] = pos;
+  let g = `<g transform="${surMurX(I, x - .11, y + .002, 1.3)}"><rect width=".22" height=".72" rx=".02" fill="#3a3f43" stroke="#1f2224" stroke-width=".01"/>`
+    + '<rect x=".03" y=".03" width=".16" height=".06" rx=".01" fill="#5c6266"/></g>';
+  // Le panneau : carré rouge, pictogramme blanc (l'extincteur et sa flamme).
+  g += `<g transform="${surMurX(I, x - .17, y + .002, 1.82)}"><rect width=".34" height=".34" rx=".02" fill="#c8281e" stroke="#8f160d" stroke-width=".01"/>`
+    + '<rect x=".07" y=".12" width=".085" height=".17" rx=".025" fill="#fff"/><rect x=".09" y=".08" width=".045" height=".045" fill="#fff"/>'
+    + '<path d="M.13,.09 L.2,.07 L.23,.13" fill="none" stroke="#fff" stroke-width=".016"/>'
+    + '<path d="M.225,.29 C.2,.24 .25,.22 .245,.16 C.29,.2 .31,.25 .28,.29 Z" fill="#fff"/></g>';
+  g += boite(x - .045, y, 1.17, .09, .1, .05, ['#5c6266', '#3a3f43', '#2a2e30']);
+  if (etat === 'absent') {
+    // La sangle ouverte qui pend du support, et rien d'autre.
+    g += `<g transform="${surMurX(I, x - .11, y + .004, 1.3)}"><path d="M.19,.42 C.25,.46 .24,.56 .2,.62" fill="none" stroke="#15181a" stroke-width=".022" stroke-linecap="round"/>`
+      + '<path d="M.03,.42 C-.02,.47 -.01,.53 .02,.58" fill="none" stroke="#15181a" stroke-width=".022" stroke-linecap="round"/></g>';
+    return objetEssai(o, 'extincteur', 'absent', g);
+  }
+  const cx = x, cy = y + .12, z0 = .6, h = .52, r = .1;
+  g += cylindreDebout(I, cx, cy, z0, r, h, '#c8281e', 'rgba(255,170,160,.45)', '#a8201a');
+  // L'étiquette blanche et la sangle noire, sur la face tournée vers l'élève.
+  const [bx, by] = P(cx, cy, z0), rx = r * u * K1, ry = r * u * K2;
+  const yz = (z) => by - (z - z0) * u;
+  g += `<rect x="${fx1(bx - rx * .55)}" y="${fx1(yz(1.0) + ry * .8)}" width="${fx1(rx * 1.05)}" height="${fx1(u * .2)}" fill="#f4f1ea" stroke="rgba(0,0,0,.3)" stroke-width=".8"/>`;
+  g += `<rect x="${fx1(bx - rx * .4)}" y="${fx1(yz(.96) + ry * .8)}" width="${fx1(rx * .75)}" height="${fx1(u * .025)}" fill="#3a3f43"/>`;
+  g += `<rect x="${fx1(bx - rx * .4)}" y="${fx1(yz(.88) + ry * .8)}" width="${fx1(rx * .6)}" height="${fx1(u * .02)}" fill="#3a3f43"/>`;
+  g += `<rect x="${fx1(bx - rx)}" y="${fx1(yz(.74) + ry * .85)}" width="${fx1(rx * 2)}" height="${fx1(u * .035)}" fill="#1b1d1f"/>`;
+  // La tête : robinet noir, poignée, flexible qui redescend le long du corps.
+  g += boite(cx - .03, cy - .03, z0 + h, .06, .06, .07, ['#2a2e30', '#1f2224', '#17191a']);
+  const [h0x, h0y] = P(cx, cy, z0 + h + .09), [h1x, h1y] = P(cx + .1, cy, z0 + h + .05);
+  g += `<line x1="${fx1(h0x)}" y1="${fx1(h0y)}" x2="${fx1(h1x)}" y2="${fx1(h1y)}" stroke="#1b1d1f" stroke-width="${fx1(Math.max(2, u * .022))}" stroke-linecap="round"/>`;
+  const [f0x, f0y] = P(cx + .02, cy + .03, z0 + h + .05), [f1x, f1y] = P(cx + .11, cy + .06, z0 + .25);
+  g += `<path d="M${fx1(f0x)},${fx1(f0y)} C${fx1(f0x + u * .14)},${fx1(f0y + u * .02)} ${fx1(f1x + u * .05)},${fx1(f1y - u * .2)} ${fx1(f1x)},${fx1(f1y)}" fill="none" stroke="#1b1d1f" stroke-width="${fx1(Math.max(2, u * .02))}" stroke-linecap="round"/>`;
+  return objetEssai(o, 'extincteur', 'present', g);
+}
+// La zone de l'extincteur : le support (avec ou sans l'appareil) et le panneau.
+export function boitesExtincteur(pos = [0, 0]) {
+  const [x, y] = pos;
+  return [[x - .19, y, .56, x + .19, y + .24, 1.84]];
+}
+
+/* ---------------------------------------------------------------- l'affichage (plan de circulation) */
+// Le cadre d'affichage au mur, 1,30 × 0,92 m, bas à 0,92 m. (x, y) = son bord gauche, sur le plan du mur (y).
+// `etat` : 'affiche' (le plan de circulation : bandeau titre, rayonnages, voie des engins en jaune avec ses flèches, passage
+// piéton en tirets, le point « vous êtes ici ») | 'absent' (le liège vide, quatre punaises et des coins de feuille arrachés).
+export const ETATS_AFFICHAGE = ['affiche', 'absent'];
+export const AFFICHAGE = { W: 1.3, H: .92, haut: 1.84 };
+export function affichage(I, pos, etat = 'affiche', o = {}) {
+  const [x0, y] = pos, { W, H, haut } = AFFICHAGE;
+  const absent = etat === 'absent';
+  let s = `<rect width="${W}" height="${H}" rx=".02" fill="#9aa1a6" stroke="#5c6266" stroke-width=".01"/>`
+    + `<rect x=".035" y=".035" width="${W - .07}" height="${H - .07}" fill="${absent ? '#c7b48f' : '#f6f3ec'}"/>`;
+  if (absent) {
+    [[.09, .09], [W - .09, .09], [.09, H - .09], [W - .09, H - .09]].forEach(([a, b], k) => {
+      if (k < 2) s += `<polygon points="${a - .05},${b - .05} ${a + (k ? .03 : .07)},${b - .05} ${a + (k ? .04 : -.04)},${b + .06}" fill="#f6f3ec" stroke="rgba(0,0,0,.25)" stroke-width=".004"/>`;
+      s += `<circle cx="${a}" cy="${b}" r=".018" fill="#4a4f52"/>`;
+    });
+  } else {
+    s += '<rect x=".035" y=".035" width="1.23" height=".14" fill="#2b3a46"/>'
+      + '<text x=".65" y=".135" text-anchor="middle" font-size=".085" font-weight="800" font-family="Arial, sans-serif" fill="#fff">PLAN DE CIRCULATION</text>'
+      + '<rect x=".1" y=".23" width="1.1" height=".6" fill="none" stroke="#1a1915" stroke-width=".012"/>';
+    [.3, .44, .58].forEach((b) => { s += `<rect x=".18" y="${b}" width=".58" height=".065" fill="#9aa1a6"/>`; });
+    [.3, .48, .66].forEach((b) => { s += `<rect x="1.13" y="${b}" width=".06" height=".1" fill="#4a4f52"/>`; });
+    s += '<polyline points=".14,.77 1.02,.77 1.02,.28" fill="none" stroke="#e5b800" stroke-width=".05"/>';
+    [[.35, .77, 0], [.7, .77, 0], [1.02, .55, -90]].forEach(([a, b, r]) => { s += `<polygon points="-.035,-.03 .035,0 -.035,.03" transform="translate(${a} ${b}) rotate(${r})" fill="#1a1915"/>`; });
+    s += '<polyline points=".86,.29 .86,.68 .14,.68" fill="none" stroke="#1a1915" stroke-width=".014" stroke-dasharray=".03 .02"/>';
+    s += '<circle cx=".94" cy=".72" r=".028" fill="#c8281e" stroke="#fff" stroke-width=".01"/>';
+  }
+  return objetEssai(o, 'affichage', absent ? 'absent' : 'affiche', `<g transform="${surMurX(I, x0, y + .002, haut)}">${s}</g>`);
+}
+// La zone de l'affichage : le cadre entier.
+export function boitesAffichage(pos = [0, 0]) {
+  const [x0, y] = pos, { W, H, haut } = AFFICHAGE;
+  return [[x0 - .02, y, haut - H - .02, x0 + W + .02, y + .05, haut + .02]];
+}
+
+/* ---------------------------------------------------------------- la borne de charge (décor) */
+// La borne de charge murale : un coffret gris (écran, pictogramme de batterie, « CHARGE »), sa gaine vers le plafond et deux
+// prises en dessous, une par place. (x, y) = le milieu du coffret, sur le plan du mur (y). Décor : jamais un point d'inspection.
+export const prisesBorne = (pos = [0, 0]) => [[pos[0] - .2, pos[1] + .1, .79], [pos[0] + .2, pos[1] + .1, .79]];
+export function borneCharge(I, pos, o = {}) {
+  const { boite } = I, [x, y] = pos;
+  let g = boite(x - .035, y, 1.6, .07, .05, 1.3, ['#9aa1a6', '#8a9196', '#7d858a']);
+  g += boite(x - .28, y, 1.0, .56, .16, .62, ['#d5d8da', '#c3c8cb', '#aab1b5']);
+  g += `<g transform="${surMurX(I, x - .2, y + .161, 1.54)}"><rect width=".4" height=".18" rx=".015" fill="#1d2a35"/>`
+    + '<rect x=".13" y=".05" width=".13" height=".08" rx=".008" fill="none" stroke="#e6e9eb" stroke-width=".012"/><rect x=".26" y=".075" width=".015" height=".03" fill="#e6e9eb"/>'
+    + '<rect x=".145" y=".065" width=".03" height=".05" fill="#e6e9eb"/><rect x=".185" y=".065" width=".03" height=".05" fill="#e6e9eb"/>'
+    + '<text x=".2" y=".31" text-anchor="middle" font-size=".085" font-weight="800" font-family="Arial, sans-serif" fill="#2b3a46">CHARGE</text></g>';
+  prisesBorne(pos).forEach(([sx]) => {
+    g += boite(sx - .015, y, .86, .03, .03, .14, ['#9aa1a6', '#8a9196', '#7d858a']);
+    g += boite(sx - .07, y, .72, .14, .1, .14, ['#5c6266', '#4a4f52', '#3a3f43']);
+    g += `<g transform="${surMurX(I, sx - .07, y + .101, .86)}"><circle cx=".07" cy=".07" r=".04" fill="#15181a" stroke="#8a9196" stroke-width=".008"/></g>`;
+  });
+  return objetEssai(o, 'borne', 'decor', g);
+}
