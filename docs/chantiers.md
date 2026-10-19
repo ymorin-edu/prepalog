@@ -83,7 +83,7 @@
 | G-5 | **Vue « Inspection du poste » branchée** (`core/types/inspection.js`, option `inspection`, menu « Mon poste », `db.inspections[séance][id]`, gestes `inspection:<id>:*`, déclencheur `inspectionFinie`, jalons `securite-*` et `essai-<n>`, bloc `inspection`) | brief `MOTEUR-inspection-poste`, coordination §2 points 1-6 | ≈ 1 jour | Fable (chef), Opus | oui | G-2 validée par Tristan | à faire |
 | G-6 | **ENT-10.2, 10.3, 10.4** (prise de poste C1.2 : guidage, entraînement à erreur induite tirée, évaluation) | briefs | ≈ 6 h + 4 h + 4 h | Opus (10.2), Sonnet (10.3, 10.4) | non | G-3, G-5 | à faire |
 | G-7 | **ENT-10.5 à 10.8** (réception du camion de ramasse C1.3 : « un camion, plusieurs clients ») | briefs | ≈ 5 h + 3 h + 4 h + 4 h | Opus (10.5), Sonnet (10.6 à 10.8) | non | G-3, G-4 | à faire |
-| G-8 | **ENT-10.9 à 10.12** (contrôle C1.4, le piège du froid) ; dessin des sacs à trancher par Tristan (cartons + « sacs » dans le texte en repli) | briefs | ≈ 4 h + 3 h + 4 h + 4 h | Opus (10.9), Sonnet (10.10 à 10.12) | non (ou `iso.js` si sacs dessinés) | G-7 | à faire |
+| G-8 | **ENT-10.9 à 10.12** (contrôle C1.4, le piège du froid) ; sacs dessinés (choix de Tristan du 19/10/2026 : objet `paletteSacs` dans `core/iso.js`) | briefs | ≈ 1 h + 4 h + 3 h + 4 h + 4 h | Opus (sacs, 10.9), Sonnet (10.10 à 10.12) | oui (`core/iso.js`, ajout) | G-7 | à faire |
 
 ## Le détail, dans l'ordre
 

@@ -109,8 +109,8 @@ les 12 briefs `docs/briefs/ENT-10.*.md`, `docs/briefs/MOTEUR-inspection-poste.md
     fiche `ordre` à départ tiré (10.1) → départ fixe, jamais déjà juste ; planning dont `occupe` dépendrait de la graine (10.2, 10.4) →
     **une grille fixe** par séance (pas de tirage du planning) ; texte de fiche calculé (10.2 `selon`) → `blocs` de fiche en fonctions
     (fiche.js:211, existe) ; « visite et inspection au premier essai » (10.2) → jalons avec `ecran` comme ENT-8.2, rien de plus ;
-    10.10 Q2 → énoncé qui ne nomme pas le produit (il est tiré) ; **dessin des sacs** (10.9) → cartons pour les deux clients et « sacs » dans
-    le texte seulement **tant que Tristan n'a pas choisi** (question posée après la phase 1).
+    10.10 Q2 → énoncé qui ne nomme pas le produit (il est tiré) ; **dessin des sacs** (10.9) → **Tristan a choisi (19/10/2026) : les sacs sont dessinés** (objet de kit `paletteSacs` dans
+    `core/iso.js`, livré avant ENT-10.9, états et étiquette comme `paletteCartons`).
 13. **Chiffres jamais écrits à la main** dans le contenu quand ils se déduisent des données (10.5:66 « 4 palettes ») : la réponse attendue se
     calcule depuis la feuille de ramasse et les annonces, qui doivent se correspondre ; dans les **tests**, c'est l'inverse (valeurs à la main).
 14. **Sens de l'erreur induite d'ENT-10.7** : tiré par la graine (10.7:86), le texte de 10.7:42 n'est qu'un exemple.
@@ -161,3 +161,4 @@ doit vérifier à l'écran.
 ## 4. Suivi (tenu par le chef)
 
 - 19/10/2026 : feuille écrite après trois états des lieux ; inscription dans `docs/EN-COURS.md` ; phase 1 lancée (A, B, C, D en parallèle).
+- 19/10/2026 : maquette validée par Tristan (après deux retours : prises de la borne, aucune marque dans le vide) ; G-5 lancé ; ENT-10.5 lancée pendant l'arrêt ; sacs : dessinés ; photos Pelleau : accordées (script).
