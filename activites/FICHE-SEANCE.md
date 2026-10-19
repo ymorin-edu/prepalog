@@ -672,6 +672,38 @@ séance **déclare ce qui est sur la pile**, le moteur **calcule** les comptes, 
   une à une, en cliquant dessus : chacune s’affiche de près, avec son numéro. Fais le tour de la pile : regarde le marquage et l’état de
   chaque palette. »
 
+#### Palette de sacs : `forme: 'sacs'` (Transports Pelleau, 19/10/2026)
+
+Décision de Tristan du 19/10/2026 : « dessiner les sacs » (`docs/briefs/COORDINATION-pelleau.md` §2 point 12 ; ENT-10.9 à 10.12, terreau,
+engrais, plants). **Une palette de sacs est une palette de cartons dessinée autrement** : mêmes champs (`W`, `D`, `L`, `bl`, `manque: ['i,j,k']`,
+`avarie: { 'i,j,k': direction }`, `refs`, `etiqAvant`, `etiq`, `client`), mêmes comptes, mêmes jalons, même motif `produit` (la référence lue
+sur l'étiquette d'un sac), mêmes aides de couches, même feuille de calcul. Seul le dessin change (`paletteSacs`, `core/iso.js`).
+
+```js
+{ id: 'P2', client: 'agri-kerlann', forme: 'sacs', ref: 'AK-31205', nom: 'Terreau universel, sacs de 40 L', W: 5, D: 2, L: 4, bl: 40,
+  manque: [], avarie: { '4,1,2': [0, 1] },            // le sac 30 (i 4, j 1, couche 3) percé sur sa face avant
+  attendu: 'reserves', motifAttendu: 'avarie', etiq: { ref: 'AK-31205', nom: 'TERREAU UNIVERSEL — SAC DE 40 L', poids: '1 sac', lot: '…' } }
+```
+
+- **Le quai déclare `unite`** : `'sacs'`, ou `{ un: 'colis', des: 'colis' }` sur un quai mêlé de sacs et de cartons (écrit `'colis'`, le
+  singulier deviendrait « coli ») ; sans `unite`, refus : « une palette de sacs demande `unite` ». `rendu: 'iso'` obligatoire ; `W`, `D`, `L` entiers ≥ 1. Une `forme` autre que `'fut'`, `'pile'` ou `'sacs'` reste refusée.
+- **Le dessin** : sacs souples (coussins aux arêtes bombées), teinte sable, jamais de vert ; en noir et blanc ils se distinguent des cartons
+  par la **forme** et le **marquage** : une bande imprimée sombre qui fait le tour du sac, la couture de fermeture (trait + pointillé) à ses
+  deux bouts. Sur les flancs, bande et coutures échangent leurs faces d'une couche à l'autre (les couches se croisent à l'œil ; la grille de
+  comptage reste W × D). Un sac fait 20 cm de haut (`HAUT_SAC`) : une palette de 4 couches est bien plus basse qu'une palette de cartons.
+  L'étiquette blanche est sur les faces avant et arrière de chaque sac, comme sur un carton (sur un sac étroit, elle n'est lisible qu'au zoom).
+- **Une avarie = un sac percé** : déchirure dentelée sombre et terreau qui coule, sur sa face seulement (deux rotations consécutives sur
+  quatre, comme l'enfoncement d'un carton). Le zoom dit « ⚠ Ce sac est percé sur cette face » (« Ce colis est percé » sur un quai de colis).
+  À l'écran, la déchirure n'est pas balisée dans la page (rien ne nomme un dégât).
+- **À l'écran** : ② et ④, dépose (pause « choix » comprise, palette sur les fourches) et `commence: 'controle'` : la palette de sacs à la place
+  de la palette de cartons, enveloppée de `data-iso-pal` ; ③ : chaque sac cliquable (`data-q-carton`), son étiquette au zoom. Le dessus de
+  chaque sac porte `data-iso-sac` (il nomme la forme, jamais un état). Un sac bas et profond : le sac d'au-dessus couvre son dessus, on le
+  clique par sa face avant.
+- **L'étiquette du zoom** dit expéditeur, n° du sac, référence, désignation, `poids`, commande, lot : **il n'y a pas de ligne de conservation**.
+  Une mention comme « Conserver entre 4 et 8 °C — craint le gel » (ENT-10.11) ne s'affiche aujourd'hui que dans `nom` ou `poids`.
+- Page d'essai : `outils/essai-kit-iso.html` (trois planches en bas : quatre vues, sacs et cartons en noir et blanc, sacs de près) et
+  `outils/essai-quai-inspection.html#depose-client` (P3 est une palette de sacs). Tests : bloc `quai-iso`, cas « Quai sacs ».
+
 #### Unité et libellés des motifs : `unite`, `libelles`, `motifs` (tous les quais)
 
 | Champ | Contenu | Défaut | Refusé si |
@@ -2171,7 +2203,7 @@ panneau, flèches et textes au sol, repères de profondeur ; `zone` au sol et `q
 `texte`, texte au sol, pastille « ! », `fuite`) ; palettes **gerbées** (`z` en multiples de `HAUT_NIVEAU`) ; acteur
 `chariotFrontal` (gestes `poser`, `reprendre`, cariste en silhouette sans visage). Il sert aussi au mode « stockage de
 masse » du Plan d'entrepôt (ci-dessus). `core/iso.js` porte aussi les objets du **quai iso** (façade, camion porteur, cabine, cale, butoirs,
-niveleur, lampe, bac de rétention à huit fûts, `boiteEcran` pour les zones de clic) : ils sont décrits dans « Le quai iso » ;
+niveleur, lampe, bac de rétention à huit fûts, palette de sacs `paletteSacs`, `boiteEcran` pour les zones de clic) : ils sont décrits dans « Le quai iso » ;
 `dessinerChariotFrontal` y sert aussi, à l'échelle du quai (options `chargeSvg`, `coupe`, `gilet`).
 Depuis le chantier D-7 (lot 2, 12/10/2026), la section « l'allée de picking » (unité : le mètre) : `futDebout` (20 L ou
 30 L, 39,5 cm de diamètre, bande de marque, `abime` = cabossé, marqué `data-iso-avarie`), `casier` (12 bouteilles d'un

@@ -893,6 +893,113 @@ export function paletteCartons(I, pal, ox, oy, r, o = {}) {
   return g;
 }
 
+/* ==================================== palette EUR chargée de sacs (Transports Pelleau, ENT-10.9 à 10.12, 19/10/2026) */
+// Décision de Tristan du 19/10/2026 : « dessiner les sacs » (`docs/briefs/COORDINATION-pelleau.md` §2 point 12). Les MÊMES données que
+// `paletteCartons` (`pal` = { nW, nD, nL, cartons: [{ i, j, k, no, absent, abime, etiq }] } : grille de comptage W × D × L, manques et
+// avaries inchangés), dessinées en SACS SOUPLES : chaque sac est un coussin (arêtes bombées), teinte sable (jamais de vert), et se
+// reconnaît en noir et blanc par sa FORME et son MARQUAGE : une bande imprimée sombre qui fait le tour du sac (dessus et flancs) et la
+// couture de fermeture (trait et pointillé) à ses deux bouts. Sur les flancs de la palette, d'une couche à l'autre, bande et coutures
+// échangent leurs faces : les couches se croisent à l'œil, la grille de comptage reste celle des cartons (le dessus suit toujours la forme
+// de la case : une bande en long ressemblerait au ruban d'un carton). L'étiquette blanche
+// est sur les faces N et S, comme celle d'un carton. Un sac `abime` (la face) est PERCÉ : une déchirure sombre et le terreau qui coule,
+// sur cette face seulement (donc vue de deux rotations sur quatre, comme l'enfoncement d'un carton).
+// Options : celles de `paletteCartons` (`yMin` / `yMax`, `labels`, `lisible`, `dents`, `sel`, `attrs`), plus `hauteurSac` (défaut
+// `HAUT_SAC`) et `balises` (false : la déchirure n'est pas balisée `data-iso-avarie` ; l'écran du quai le demande, les tests du kit lisent
+// la balise). Le dessus de chaque sac porte `data-iso-sac` (il nomme la forme, jamais un état). Un sac coupé au plan du mur (il passe la
+// porte) est dessiné en simple boîte, sans marquage, le temps de passer.
+export const HAUT_SAC = 0.2;
+const SAC = ['#ddd0ae', '#c8b78f', '#ab9a73'], SAC_SEL = ['#f0e6c8', '#e2d4ad', '#cbbb92'];
+const BANDE_SAC = '#5e4526', COUTURE_SAC = '#4f3a20', TERREAU = '#3a2817', TRAIT_SAC = 'rgba(60,42,20,.55)';
+// Un point d'une face visible d'un sac : `u` le long de la face (0 = à gauche à l'écran), `zf` la part de la hauteur `h`.
+const ptSac = (b, v, u, zf, h) => (v === 'front' ? [b.x + b.w * u, b.y + b.d, b.z + zf * h] : [b.x + b.w, b.y + b.d * (1 - u), b.z + zf * h]);
+// Un coussin : les quatre coins d'une face (monde), chaque arête bombée vers l'extérieur de la face, d'une même part du petit côté.
+function coussin(I, c, fill, attr = '') {
+  const S = c.map((p) => I.P(...p)), cx = (S[0][0] + S[1][0] + S[2][0] + S[3][0]) / 4, cy = (S[0][1] + S[1][1] + S[2][1] + S[3][1]) / 4;
+  const M = S.map((a, n) => { const b = S[(n + 1) % 4]; return [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]; });
+  const dist = M.map(([mx, my]) => Math.hypot(mx - cx, my - cy)), k = 0.3 * Math.min(...dist);
+  let d = `M${S[0][0].toFixed(1)},${S[0][1].toFixed(1)}`;
+  M.forEach(([mx, my], n) => {
+    const b = S[(n + 1) % 4], q = dist[n] > 1e-6 ? k / dist[n] : 0;
+    d += ` Q${(mx + (mx - cx) * q).toFixed(1)},${(my + (my - cy) * q).toFixed(1)} ${b[0].toFixed(1)},${b[1].toFixed(1)}`;
+  });
+  return `<path${attr} d="${d}Z" fill="${fill}" stroke="${TRAIT_SAC}" stroke-width="1"/>`;
+}
+// L'étiquette d'un sac, sur une face N ou S : un rectangle blanc ; lisible, la référence si elle tient à 6 px au moins, sinon deux lignes
+// de texte simulées, et le code-barres.
+function etiquetteSac(I, b, v, h, lisible) {
+  const p = [ptSac(b, v, 0.08, 0.2, h), ptSac(b, v, 0.4, 0.2, h), ptSac(b, v, 0.4, 0.68, h), ptSac(b, v, 0.08, 0.68, h)];
+  let s = I.face(p, '#fbfbf8', 'rgba(0,0,0,.4)');
+  if (!lisible) return s;
+  const [ax, ay] = I.P(...p[0]), [bx, by] = I.P(...p[1]), [dx, dy] = I.P(...p[3]);
+  const lw = Math.hypot(bx - ax, by - ay), lh = Math.hypot(dx - ax, dy - ay), m = v === 'front' ? S30 : -S30;
+  const ref = String((b.c.etiq && b.c.etiq.ref) || ''), fs = Math.min(lh * 0.34, (lw - 3) / Math.max(1, ref.length * 0.6));
+  // Le repère local de la face (x le long de la face, y vers le bas), en pixels, avec pour origine le coin haut gauche de l'étiquette.
+  s += `<g transform="matrix(${C30.toFixed(4)},${m.toFixed(4)},0,1,${dx.toFixed(1)},${dy.toFixed(1)})" fill="#111">`;
+  if (ref && fs >= 6) s += `<text x="${(lw / 2).toFixed(1)}" y="${(fs + 1).toFixed(1)}" text-anchor="middle" font-size="${fs.toFixed(1)}" font-weight="800" font-family="Arial, sans-serif">${ech(ref)}</text>`;
+  else s += `<rect x="${(lw * 0.12).toFixed(1)}" y="${(lh * 0.14).toFixed(1)}" width="${(lw * 0.76).toFixed(1)}" height="${Math.max(1, lh * 0.1).toFixed(1)}"/><rect x="${(lw * 0.12).toFixed(1)}" y="${(lh * 0.32).toFixed(1)}" width="${(lw * 0.5).toFixed(1)}" height="${Math.max(1, lh * 0.08).toFixed(1)}"/>`;
+  s += [0.12, 0.2, 0.25, 0.34, 0.4, 0.47, 0.55, 0.6, 0.68, 0.76, 0.82].map((t, n) => `<rect x="${(lw * t).toFixed(1)}" y="${(lh * 0.56).toFixed(1)}" width="${(n % 3 ? 0.6 : 1.2)}" height="${(lh * 0.32).toFixed(1)}"/>`).join('');
+  return s + '</g>';
+}
+// Le sac percé : une déchirure dentelée, sombre, et le terreau qui coule jusqu'au pied du sac.
+function sacPerce(I, b, v, h, balise) {
+  const F = (L) => L.map(([u, z]) => ptSac(b, v, u, z, h));
+  // La déchirure couvre plus de la moitié de la face (elle passe sur l'étiquette) : elle doit se voir à 1366 × 768, sur un sac étroit.
+  const bord = [[0.3, 0.74], [0.42, 0.56], [0.5, 0.78], [0.62, 0.52], [0.72, 0.8], [0.84, 0.55], [0.95, 0.7]];
+  const d = I.face(F([[0.5, 0.02], [0.82, 0.02], [0.78, 0.3], [0.56, 0.3]]), TERREAU, 'none')
+    + I.face(F(bord.concat([[0.92, 0.4], [0.83, 0.22], [0.72, 0.34], [0.6, 0.18], [0.48, 0.32], [0.36, 0.24]])), TERREAU, '#1f150b')
+    + `<polyline points="${I.pts(F(bord))}" fill="none" stroke="#f3ead2" stroke-width="1.5"/>`;
+  return balise ? `<g data-iso-avarie>${d}</g>` : d;
+}
+export function paletteSacs(I, pal, ox, oy, r, o = {}) {
+  const [W, D] = dimsPalette(r), yMin = o.yMin ?? -99, yMax = o.yMax ?? 99;
+  const CW = PAL_EUR.W / pal.nW, CD = PAL_EUR.D / pal.nD, H = o.hauteurSac || HAUT_SAC, PH = PAL_EUR.plancher;
+  const loc2monde = (lx, ly) => { const [a, b] = rot(r, lx - PAL_EUR.W / 2, ly - PAL_EUR.D / 2); return [ox + W / 2 + a, oy + D / 2 + b]; };
+  const pc = ['#c9a273', '#b48a5b', '#9c7549'];
+  let g = '';
+  (r % 2 === 0 ? [0, 0.56, 1.1] : [0, 0.35, 0.7]).forEach((dx) => { g += boiteY(I, ox + dx, oy, 0, 0.1, D, 0.1, pc, yMin, yMax); });
+  g += boiteY(I, ox, oy, 0.1, W, D, PH - 0.1, pc, yMin, yMax);
+  // Le sens long d'un sac, en local : le plus grand côté de sa case (le dessus) ; sur les flancs, échangé une couche sur deux (couches croisées).
+  const longX = (k) => (CW >= CD) !== (k % 2 === 1);
+  const L = pal.cartons.filter((c) => !c.absent).map((c) => {
+    const [x0, y0] = loc2monde(c.i * CW, c.j * CD), [x1, y1] = loc2monde((c.i + 1) * CW, (c.j + 1) * CD);
+    return { c, x: Math.min(x0, x1), y: Math.min(y0, y1), w: Math.abs(x1 - x0), d: Math.abs(y1 - y0), z: PH + c.k * H };
+  }).sort((a, b) => (a.z - b.z) || ((a.x + a.y) - (b.x + b.y)));
+  for (const b of L) {
+    const sel = o.sel != null && o.sel === b.c.no, C = sel ? SAC_SEL : SAC, h = H - 0.004;
+    let s;
+    if (b.y < yMin - 1e-6 || b.y + b.d > yMax + 1e-6) s = boiteY(I, b.x, b.y, b.z, b.w, b.d, h, C, yMin, yMax);
+    else {
+      const e = Math.min(0.014, b.w * 0.06, b.d * 0.06), x0 = b.x + e, x1 = b.x + b.w - e, y0 = b.y + e, y1 = b.y + b.d - e, z0 = b.z, z1 = b.z + h;
+      // Sens long dans le monde : x si le sens long local suit x et que la palette n'est pas tournée d'un quart de tour (ou l'inverse).
+      const longWX = (CW >= CD) === (r % 2 === 0), flancWX = longX(b.c.k) === (r % 2 === 0);
+      s = coussin(I, [[x0, y1, z0], [x1, y1, z0], [x1, y1, z1], [x0, y1, z1]], C[1]) + coussin(I, [[x1, y1, z0], [x1, y0, z0], [x1, y0, z1], [x1, y1, z1]], C[2]);
+      s += coussin(I, [[x0, y0, z1], [x1, y0, z1], [x1, y1, z1], [x0, y1, z1]], C[0], ' data-iso-sac');
+      // Le dessus : la bande imprimée en travers, et le pli de fermeture à chaque bout.
+      const t = (a0, a1, f) => a0 + (a1 - a0) * f, zt = z1 + 0.002;
+      s += longWX
+        ? I.face([[t(x0, x1, 0.43), t(y0, y1, 0.14), zt], [t(x0, x1, 0.57), t(y0, y1, 0.14), zt], [t(x0, x1, 0.57), t(y0, y1, 0.86), zt], [t(x0, x1, 0.43), t(y0, y1, 0.86), zt]], BANDE_SAC, 'none')
+          + [0.07, 0.93].map((f) => `<polyline points="${I.pts([[t(x0, x1, f), t(y0, y1, 0.1), zt], [t(x0, x1, f), t(y0, y1, 0.9), zt]])}" fill="none" stroke="${COUTURE_SAC}" stroke-width="1.2"/>`).join('')
+        : I.face([[t(x0, x1, 0.14), t(y0, y1, 0.43), zt], [t(x0, x1, 0.86), t(y0, y1, 0.43), zt], [t(x0, x1, 0.86), t(y0, y1, 0.57), zt], [t(x0, x1, 0.14), t(y0, y1, 0.57), zt]], BANDE_SAC, 'none')
+          + [0.07, 0.93].map((f) => `<polyline points="${I.pts([[t(x0, x1, 0.1), t(y0, y1, f), zt], [t(x0, x1, 0.9), t(y0, y1, f), zt]])}" fill="none" stroke="${COUTURE_SAC}" stroke-width="1.2"/>`).join('');
+      const bb = { c: b.c, x: x0, y: y0, z: z0, w: x1 - x0, d: y1 - y0 };
+      facesExterieures(b.c, pal.nW, pal.nD).forEach((nf) => {
+        const v = faceVisible(r, nf);
+        if (!v) return;
+        // Une face « bout » (perpendiculaire au sens long) porte la couture ; une face « flanc », la bande.
+        const bout = (v === 'front') === !flancWX;
+        if (bout) {
+          s += `<polyline points="${I.pts([ptSac(bb, v, 0.05, 0.86, h), ptSac(bb, v, 0.95, 0.86, h)])}" fill="none" stroke="${COUTURE_SAC}" stroke-width="1.2"/>`
+            + `<polyline points="${I.pts([ptSac(bb, v, 0.06, 0.76, h), ptSac(bb, v, 0.94, 0.76, h)])}" fill="none" stroke="${COUTURE_SAC}" stroke-width="1.2" stroke-dasharray="3 2"/>`;
+        } else s += I.face([ptSac(bb, v, 0.43, 0.04, h), ptSac(bb, v, 0.57, 0.04, h), ptSac(bb, v, 0.57, 0.96, h), ptSac(bb, v, 0.43, 0.96, h)], BANDE_SAC, 'none');
+        if ((nf === 'S' || nf === 'N') && o.labels !== false) s += etiquetteSac(I, bb, v, h, o.lisible);
+        if (b.c.abime === nf && o.dents !== false) s += sacPerce(I, bb, v, h, o.balises !== false);
+      });
+    }
+    g += o.attrs && s ? `<g ${o.attrs(b.c)}>${s}</g>` : s;
+  }
+  return g;
+}
+
 /* ============================ palette de rétention chargée de fûts (chantier D-4, étape 3) */
 // Une palette de rétention NOIRE en plastique (pieds, bac, caillebotis : jamais de bois) portant 8 fûts DEBOUT, en une
 // seule couche, en quinconce 3-2-3 (brief `docs/briefs/MOTEUR-quai-inspection.md` §2.3 ; modèle dessiné validé :

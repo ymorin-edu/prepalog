@@ -3802,6 +3802,177 @@ await v('Quai : à la signature, le chauffeur ne parle de « palettes refusées 
   await p.close();
 });
 
+/* ------------------------------------------- la palette de SACS (`forme: 'sacs'`, Transports Pelleau, 19/10/2026) */
+// Décision de Tristan du 19/10/2026 (« dessiner les sacs ») : une palette de cartons (mêmes champs, mêmes comptes) dessinée en sacs par
+// `paletteSacs`. Cas AJOUTÉS (aucun cas existant touché). Ce qui vaut son prix : le quai dessine bien des SACS partout où il dessinait la
+// palette (② ③ ④, dépose), le motif `produit` lit l'étiquette d'un sac, un sac percé ne se voit que de deux vues, la page ne balise aucun
+// dégât, et un quai mêlé de sacs et de cartons se dépose par client. Les sacs se reconnaissent dans le DOM par `data-iso-sac` (la forme,
+// jamais un état). Valeurs attendues écrites à la main.
+
+// Le kit : une palette de 5 × 2 × 4 sacs (comme Agri-Kerlann), sa grille au format de `paletteCartons`.
+await v('Quai sacs : paletteSacs — un coussin par sac présent (data-iso-sac), sable sans vert ni teinte de carton, sac percé vu de deux rotations, coupe au mur', async () => {
+  const r = await pg.evaluate(async () => {
+    const K = await import('/core/iso.js');
+    const I = K.projection({ unite: 150, origine: [470, 190] });
+    const pal = (manque = [], ab = {}) => {
+      const cartons = [];
+      for (let k = 0; k < 4; k++) for (let j = 0; j < 2; j++) for (let i = 0; i < 5; i++) {
+        const c = `${i},${j},${k}`;
+        cartons.push({ i, j, k, no: 1 + k * 10 + j * 5 + i, absent: manque.includes(c), abime: ab[c] || null, etiq: { ref: 'AK-31205' } });
+      }
+      return { nW: 5, nD: 2, nL: 4, cartons };
+    };
+    const n = (s, re) => (s.match(re) || []).length;
+    const S = K.paletteSacs(I, pal(), 0, 0, 0, {});
+    const couleurs = [...new Set(S.match(/#[0-9a-f]{6}\b/gi) || [])];
+    const vert = couleurs.filter((c) => { const [R, G, B] = [1, 3, 5].map((k) => parseInt(c.slice(k, k + 2), 16)); return G > R + 8 && G > B + 8; });
+    const perce = (o) => [0, 1, 2, 3].map((rot) => { const s = K.paletteSacs(I, pal([], { '4,1,2': 'S' }), 0, 0, rot, o); return [n(s, /data-iso-avarie/g), n(s, /#3a2817/g) > 0]; });
+    return {
+      haut: K.HAUT_SAC, sacs: n(S, /data-iso-sac/g), sacsManque: n(K.paletteSacs(I, pal(['4,0,3', '0,1,3']), 0, 0, 0, {}), /data-iso-sac/g),
+      courbes: n(S, / Q\d/g) > 0, carton: ['#d9b27a', '#c99c5f', '#b48549', '#c79b62'].filter((c) => S.includes(c)), bois: S.includes('#c9a273'), vert,
+      pasCarton: S !== K.paletteCartons(I, pal(), 0, 0, 0, {}),
+      perce: perce({}), perceSansBalise: perce({ balises: false }), sansDents: perce({ dents: false }),
+      etiquettes: [n(S, /#fbfbf8/g) > 0, n(K.paletteSacs(I, pal(), 0, 0, 0, { labels: false }), /#fbfbf8/g)],
+      eclaire: [n(K.paletteSacs(I, pal(), 0, 0, 0, { sel: 6 }), /#f0e6c8/g) > 0, n(S, /#f0e6c8/g)],
+      derriereMur: K.paletteSacs(I, pal(), 0, 1, 0, { yMax: 0 }), clicables: n(K.paletteSacs(I, pal(['0,0,0']), 0, 0, 0, { attrs: (c) => `data-s="${c.no}"` }), /data-s="/g),
+    };
+  });
+  egal(r.haut, 0.2, 'un sac fait 20 cm de haut');
+  egal([r.sacs, r.sacsManque], [40, 38], 'un dessus de sac par sac présent : 40, puis 38 avec deux manquants');
+  vrai(r.courbes, 'les arêtes des sacs sont bombées (courbes)');
+  egal(r.carton, [], 'aucune teinte de carton ni de ruban adhésif');
+  vrai(r.bois, 'la palette de bois est celle des cartons');
+  egal(r.vert, [], 'aucun vert');
+  vrai(r.pasCarton, 'le dessin n’est pas celui de paletteCartons');
+  // La face S se voit de l'avant (rotation 0) et, palette tournée de trois quarts de tour, sur le côté droit (rotation 3).
+  egal(r.perce, [[1, true], [0, false], [0, false], [1, true]], 'le sac percé (face S) : rotations 0 et 3, balisé');
+  egal(r.perceSansBalise, [[0, true], [0, false], [0, false], [0, true]], 'balises: false : la déchirure est dessinée, jamais balisée');
+  egal(r.sansDents, [[0, false], [0, false], [0, false], [0, false]], 'dents: false : pas de déchirure');
+  egal(r.etiquettes, [true, 0], 'les étiquettes blanches, et aucune avec labels: false');
+  egal(r.eclaire, [true, 0], 'le sac éclairé est plus clair, aucun sans sel');
+  egal(r.derriereMur, '', 'une palette entièrement derrière le plan du mur : rien n’est dessiné');
+  egal(r.clicables, 39, 'chaque sac présent a son groupe cliquable');
+});
+
+await v('Quai sacs : verifierQuai — `forme: \'sacs\'` acceptée avec unite et rendu iso ; sans unite, hors iso, dimensions fausses : refusé ; une forme inconnue l’est toujours', async () => {
+  const PS = (o = {}) => Object.assign({ id: 'P1', forme: 'sacs', ref: 'AK-31205', nom: 'Terreau', W: 5, D: 2, L: 4, bl: 40, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+    etiq: { ref: 'AK-31205', nom: 'TERREAU', poids: '1 sac', lot: 'L-1' } }, o);
+  const QS = (ps, m = {}) => QFUT(ps, Object.assign({ unite: 'sacs' }, m));
+  egal(quaiMod.verifierQuai(QS([PS()])), [], 'une palette de sacs');
+  egal(quaiMod.verifierQuai(QS([PS(), { id: 'P2', ref: 'X', bl: 8, W: 2, D: 2, L: 2, manque: [], avarie: {}, etiq: {} }], { unite: { un: 'colis', des: 'colis' } })), [], 'sacs et cartons mêlés, unite « colis »');
+  egal(quaiMod.verifierQuai(QS([PS({ manque: ['4,0,3'], avarie: { '0,1,0': [0, 1] }, bl: 40, attendu: 'reserves', motifAttendu: 'avarie' })], { aides: { regleCouches: true, detailComptage: true } })), [],
+    'manques, sac percé et aides de couches : comme pour des cartons');
+  const fautes = [];
+  for (const [nom, mute, motif] of [
+    ['sans unité', (Q) => { delete Q.unite; }, /une palette de sacs demande `unite`/],
+    ['sans rendu iso', (Q) => { delete Q.rendu; }, /palette de sacs se dessine sur le quai iso/],
+    ['W à 0', (Q) => { Q.camions[0].palettes[0].W = 0; }, /« W » doit être un nombre entier/],
+    ['L décimal', (Q) => { Q.camions[0].palettes[0].L = 2.5; }, /« L » doit être un nombre entier/],
+    ['D absent', (Q) => { delete Q.camions[0].palettes[0].D; }, /« D » doit être un nombre entier/],
+    ['forme « sac » (au singulier)', (Q) => { Q.camions[0].palettes[0].forme = 'sac'; }, /forme « sac » inconnue \(les valeurs sont 'fut', 'pile' et 'sacs'/],
+  ]) {
+    const Q = QS([PS()]); mute(Q);
+    const E = quaiMod.verifierQuai(Q);
+    if (!E.some((m) => motif.test(m))) fautes.push(`« ${nom} » : ${E.join(' | ') || 'pas refusé'}`);
+  }
+  if (fautes.length) throw new Error(fautes.join(' ; '));
+});
+
+// Un quai mêlé : P1 une palette de sacs (terreau commandé, ENGRAIS sur l'étiquette : motif produit), P2 une palette de cartons conforme.
+const PSAC = { id: 'P1', forme: 'sacs', ref: 'AK-31205', nom: 'Terreau universel, sacs de 40 L', W: 5, D: 2, L: 2, bl: 20, manque: [], avarie: {}, attendu: 'reserves', motifAttendu: 'produit',
+  etiq: { ref: 'AK-40210', nom: 'ENGRAIS GRANULÉ — SACS DE 25 KG', poids: '1 sac de 25 kg', lot: 'AK-26-0512' } };
+const PCAR = { id: 'P2', ref: 'AV-20418', nom: 'Biscuits au beurre', W: 2, D: 2, L: 2, bl: 8, manque: [], avarie: {}, attendu: 'accepter', motifAttendu: 'aucun',
+  etiq: { ref: 'AV-20418', nom: 'BISCUITS AU BEURRE', poids: '1 carton', lot: 'AV-1' } };
+const EXTRA_SACS = { unite: { un: 'colis', des: 'colis' }, libelles: { avarie: { nom: 'Colis endommagés' } } };
+
+await v('Quai sacs : ② ③ ④ — les sacs dessinés partout, cliquables, l’étiquette du sac lue au zoom ; le motif produit (référence lue sur l’étiquette) juste jusqu’au bilan', async () => {
+  const p = await pageAvec({ palettes: [PSAC, PCAR], extra: EXTRA_SACS });
+  await jusquaEtape2(p);
+  const sc2 = await p.$eval(`${HOTE} [data-q-scene2]`, (s) => ({ p1: s.querySelectorAll('[data-iso-pal="P1"] [data-iso-sac]').length, tous: s.querySelectorAll('[data-iso-sac]').length }));
+  egal(sc2, { p1: 20, tous: 20 }, '② : les 20 sacs de P1, et aucun sac ailleurs (P2 reste en cartons)');
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  const PAL3 = `${HOTE} [data-q-palette]`;
+  const compte = (sel) => p.$$eval(`${PAL3} ${sel}`, (L) => L.length);
+  egal([await compte('[data-q-carton]'), await compte('[data-iso-sac]')], [20, 20], '③ P1 : vingt sacs, chacun cliquable');
+  egal(await p.$eval(PAL3, (s) => s.getAttribute('aria-label')), 'Palette P1 : clique sur un colis pour lire son étiquette', 'l’étiquette lue par un lecteur d’écran');
+  // Un sac bas : celui d'au-dessus couvre son dessus, on le clique par sa face avant (ici, le clic est envoyé au sac lui-même).
+  await p.locator(`${PAL3} [data-q-carton="13"]`).dispatchEvent('click');
+  await p.waitForSelector(`${HOTE} [data-q-etiquette]`);
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-ref`, (n) => n.textContent.trim()), 'AK-40210', 'l’étiquette du sac dit la référence livrée (engrais)');
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim()), 'Colis 13 / 20', 'le numéro du sac');
+  vrai(/ENGRAIS GRANULÉ/.test(await p.$eval(`${HOTE} [data-q-etiquette]`, (n) => n.textContent)), 'la désignation de l’étiquette');
+  await p.click(`${HOTE} [data-q="sel"][data-n="1"]`);
+  egal([await compte('[data-q-carton]'), await compte('[data-iso-sac]')], [8, 0], '③ P2 : huit cartons, aucun sac');
+  const valide = async (n, nb, decision, motif) => {
+    await p.click(`${HOTE} [data-q="sel"][data-n="${n}"]`);
+    await p.fill(`${HOTE} #qCompte`, String(nb)); await p.press(`${HOTE} #qCompte`, 'Enter');
+    await p.click(`${HOTE} #qDec-${decision}`);
+    if (motif) await p.click(`${HOTE} #qMot-${motif}`);
+    await p.click(`${HOTE} [data-q="valider"]`);
+  };
+  await valide(0, 20, 'reserves', 'produit');
+  await valide(1, 8, 'accepter');
+  await p.click(`${HOTE} [data-q="vers4"]`); await p.click(`${HOTE} [data-q="vers4"]`);
+  egal(await p.$eval(`${HOTE} [data-q-cf]`, (s) => s.querySelectorAll('[data-iso-sac]').length), 20, '④ : les 20 sacs de P1 en zone de réception');
+  await p.fill(`${HOTE} #qRes-P1`, 'AK-40210');
+  await p.click(`${HOTE} [data-q="ecrire"]`);
+  await p.click(`${HOTE} [data-q="signer"]`);
+  await p.click(`${HOTE} [data-q="clore"]`);
+  await p.waitForSelector(`${HOTE} [data-q-bilan]`);
+  egal(await jalonsPalettes(p), { 'P1-comptage': true, 'P1-decision': true, 'P2-comptage': true, 'P2-decision': true, 'P1-reserve': true }, 'comptage, décision et réserve « produit » justes');
+  const ligne = await p.evaluate(async () => { const Q = await import('/core/types/quai.js'); return Q.jalonsQuai(window.__qs.db, window.__qs.Q).L.find((l) => l.id === 'P1-reserve').fait; });
+  vrai(/AK-40210/.test(ligne), `la réserve écrite nomme la référence lue sur le sac : ${ligne}`);
+  egal(await p.$$eval(`${HOTE} [data-iso-avarie]`, (L) => L.length), 0, 'aucun dégât balisé dans la page');
+  await p.close();
+});
+
+await v('Quai sacs : ③ — un sac percé se voit devant et à droite (face S), jamais aux deux autres vues ; le zoom dit « percé », sans balise de dégât', async () => {
+  const perce = Object.assign({}, PSAC, { etiq: Object.assign({}, PSAC.etiq, { ref: 'AK-31205' }), avarie: { '4,1,1': [0, 1] }, motifAttendu: 'avarie' });
+  const p = await pageAvec({ palettes: [perce], extra: EXTRA_SACS });
+  await jusquaEtape2(p);
+  await p.click(`${HOTE} [data-q="vers3"]`);
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  const PAL3 = `${HOTE} [data-q-palette]`;
+  const vues = [];
+  for (let k = 0; k < 4; k++) {
+    vues.push([await p.$eval(PAL3, (s) => s.innerHTML.includes('#3a2817')), await p.$$eval(`${HOTE} [data-iso-avarie]`, (L) => L.length)]);
+    await p.click(`${HOTE} [data-q="tourner"]:not([data-sens])`);
+  }
+  egal(vues, [[true, 0], [false, 0], [false, 0], [true, 0]], 'la déchirure (terreau) : avant, côté droit, arrière, côté gauche ; jamais balisée');
+  await p.locator(`${PAL3} [data-q-carton="20"]`).dispatchEvent('click');
+  vrai(/Ce colis est percé sur cette face/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent)), 'vu de l’avant : « Ce colis est percé »');
+  await p.click(`${HOTE} [data-q="tourner"]:not([data-sens])`);
+  vrai(/intact/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent)), 'tourné d’un quart : intact');
+  await p.close();
+});
+
+await v('Quai sacs : la dépose par client avec sacs et cartons mêlés (page d’essai, partie 4 bis) — P3 en sacs, posée en AK1 avec ses sacs ; les autres en cartons ; tout juste', async () => {
+  const p = await ctxS.newPage();
+  p.setDefaultTimeout(8000);
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  await p.goto(`${BASE}outils/essai-quai-inspection.html#depose-client`);
+  const H = '[data-hote-client]';
+  await p.waitForSelector(`${H} .quai-stepper`);
+  if (await p.locator(`${H} [data-q="passer1"]`).isVisible()) await p.click(`${H} [data-q="passer1"]`);
+  await p.click(`${H} [data-q="decharger"]`);
+  await p.waitForSelector(`${H} [data-q-phase="choix"]`);
+  const clic = async (c) => {
+    const n = await p.locator(`${H} [data-iso-posee]`).count();
+    await p.click(`${H} [data-q="depose"][data-c="${c}"]`);
+    await p.waitForFunction(([s, n]) => document.querySelectorAll(s).length === n + 1, [`${H} [data-iso-posee]`, n]);
+  };
+  await clic('AV1');
+  await p.waitForSelector(`${H} [data-q-phase="choix"]`);
+  vrai(await p.$$eval(`${H} [data-iso-pal="P3"] [data-iso-sac]`, (L) => L.length) > 0, 'pause « choix » : la palette P3 qui attend est dessinée en sacs');
+  await clic('AK1'); await clic('AV2'); await clic('AK2');
+  const parCase = await p.$$eval(`${H} [data-iso-posee]`, (L) => Object.fromEntries(L.map((g) => [g.dataset.isoCase, g.querySelectorAll('[data-iso-sac]').length])));
+  egal(parCase, { AV1: 0, AV2: 0, AK1: 24, AK2: 0 }, 'P3 posée en AK1 avec ses 24 sacs (4 × 2 × 3) ; les trois autres en cartons');
+  const J = await p.evaluate(async () => { const Q = await import('/core/types/quai.js'); return Q.jalonsQuai(window.__deposeClient.db(), window.__deposeClient.Q).L.filter((l) => /^depose-/.test(l.id)).map((l) => [l.id, l.ok]); });
+  egal(Object.fromEntries(J), { 'depose-P1': true, 'depose-P2': true, 'depose-P3': true, 'depose-P4': true }, 'les quatre jalons de dépose sont justes');
+  await p.close();
+});
+
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {
   const hors = await pe.evaluate(() => performance.getEntriesByType('resource').map((e) => e.name).filter((n) => !n.startsWith(location.origin)));
   egal(hors, [], 'ressources hors du site');

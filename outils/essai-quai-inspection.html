@@ -239,7 +239,7 @@ if (location.hash === '#depose') { document.querySelector('[data-lancer-depose]'
 </script>
 <section class="eqi eqi-partie2" id="depose-client">
   <h2>Partie 4 bis — La dépose par client (Transports Pelleau, ENT-10.5 à 10.8)</h2>
-  <p>Le camion de ramasse rapporte les palettes de <b>deux clients</b>, mélangées. Chaque palette va dans la <b>zone de son client</b> : AR VAG 1 et 2 (Biscuiterie Ar Vag), AGRI-KERLANN 1 et 2 (Agri-Kerlann). La légende ne dit jamais la zone : elle dit ce qu'on lit sur <b>l'étiquette</b> de la palette (l'expéditeur). <b>Guidage</b> : si tu cliques la zone de l'autre client, le cariste réagit, la case se grise <b>pour cette palette seulement</b> (elle reste juste pour la palette suivante de l'autre client). L'allée piétonne et le devant du quai B restent des pièges. <b>Évaluation</b> : ton premier clic pose, sans réaction. Le bilan de fin descend à la palette (« P3, Agri-Kerlann : posée en AK1 ») sous un bloc faux. Clients, produits et quantités : construits pour l'essai (entreprises fictives).</p>
+  <p>Le camion de ramasse rapporte les palettes de <b>deux clients</b>, mélangées. Chaque palette va dans la <b>zone de son client</b> : AR VAG 1 et 2 (Biscuiterie Ar Vag), AGRI-KERLANN 1 et 2 (Agri-Kerlann). La légende ne dit jamais la zone : elle dit ce qu'on lit sur <b>l'étiquette</b> de la palette (l'expéditeur). <b>Guidage</b> : si tu cliques la zone de l'autre client, le cariste réagit, la case se grise <b>pour cette palette seulement</b> (elle reste juste pour la palette suivante de l'autre client). L'allée piétonne et le devant du quai B restent des pièges. <b>Évaluation</b> : ton premier clic pose, sans réaction. Le bilan de fin descend à la palette (« P3, Agri-Kerlann : posée en AK1 ») sous un bloc faux. P3 est une palette de <b>sacs</b> (engrais), les trois autres portent des cartons : le quai compte des « colis ». Clients, produits et quantités : construits pour l'essai (entreprises fictives).</p>
   <form class="eqi-reglages" data-reglages-client aria-label="Réglages de l'essai de la dépose par client">
     <fieldset><legend>Le mode</legend>
       <label><input type="radio" name="cli-mode" value="guidage" checked> guidage (le cariste réagit)</label>
@@ -266,7 +266,7 @@ const carton = (id, client, nom, W, D, L) => ({ id, client, ref: `ESS-${id}`, no
   etiq: { ref: `ESS-${id}`, nom: nom.toUpperCase(), poids: '1 colis', lot: `ESS-26-000${id.slice(1)}` } });
 // Ordre de sortie : P4, P3, P2, P1 (inverse du chargement).
 const PALETTES = [carton('P1', 'agri-kerlann', 'Granulés pour volailles, sacs de 25 kg', 4, 2, 4), carton('P2', 'ar-vag', 'Galettes au beurre, boîtes métal', 4, 2, 5),
-  carton('P3', 'agri-kerlann', 'Semences de maïs, sacs de 10 kg', 4, 2, 3), carton('P4', 'ar-vag', 'Palets bretons, cartons de 12 paquets', 4, 2, 6)];
+  Object.assign(carton('P3', 'agri-kerlann', 'Engrais granulé, sacs de 25 kg', 4, 2, 3), { forme: 'sacs' }), carton('P4', 'ar-vag', 'Palets bretons, cartons de 12 paquets', 4, 2, 6)];
 const hote = document.querySelector('[data-hote-client]'), form = document.querySelector('[data-reglages-client]');
 document.querySelector('[data-declare-client]').textContent = JSON.stringify({ depose: DEPOSE_CLIENT, palettes: PALETTES.map((p) => ({ id: p.id, client: p.client })) }, null, 1);
 let db = {};
@@ -279,7 +279,8 @@ function lancer() {
   Q.camions[0].fournisseur = 'Ramasse Transports Pelleau (essai)';
   Q.depose = JSON.parse(JSON.stringify(DEPOSE_CLIENT));
   Q.arret = { etape: 'dechargement', texte: 'Les 4 palettes sont dans leurs zones. Le contrôle, c’est la prochaine fois.' };
-  delete Q.unite; delete Q.libelles;
+  // P3 est une palette de SACS (`forme: 'sacs'`, 19/10/2026) : le quai mêlé de sacs et de cartons compte des « colis ».
+  Q.unite = { un: 'colis', des: 'colis' }; delete Q.libelles;
   hote.innerHTML = '<div data-seance-client></div><details class="eqi-jalons" open><summary>Ce que la vue sait, calculé maintenant (pour toi, jamais pour l’élève)</summary><div data-etat-client></div></details>';
   const etat = hote.querySelector('[data-etat-client]');
   const ORDRE = Q.camions[0].palettes.map((p) => p.id).reverse();

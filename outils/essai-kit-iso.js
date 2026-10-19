@@ -63,4 +63,31 @@ export function monter(hote) {
     [1, 2, 3, 4].forEach((t) => { s += K.traveePicking(I, x(t), 3.2, { cote: 'B', contenu: contenu(EMPL[`B-T0${t}`]), voile: .28 }); });
     return s;
   }, 70);
+  monterSacs(hote);
+}
+
+// La palette de SACS (Transports Pelleau, 19/10/2026, `paletteSacs`) : les mêmes données qu'une palette de cartons (la grille W × D × L
+// du quai), dessinées en sacs. `abime` : { « i,j,k »: face } (le sac percé). Palettes construites pour l'essai (Agri-Kerlann, Kervéguen :
+// fictives).
+const palGrille = (W, D, L, { manque = [], abime = {}, ref = 'AK-31205' } = {}) => {
+  const cartons = [];
+  for (let k = 0; k < L; k++) for (let j = 0; j < D; j++) for (let i = 0; i < W; i++) {
+    const cle = `${i},${j},${k}`, no = 1 + k * W * D + j * W + i;
+    cartons.push({ i, j, k, no, absent: manque.includes(cle), abime: abime[cle] || null, etiq: { haut: 'AGRI', no: `${no}/${W * D * L}`, ref, bas: '' } });
+  }
+  return { nW: W, nD: D, nL: L, cartons };
+};
+const NOIR_ET_BLANC = '<defs><filter id="kitNB"><feColorMatrix type="saturate" values="0"/></filter></defs>';
+function monterSacs(hote) {
+  const ak = palGrille(5, 2, 4, { abime: { '4,1,2': 'S' } });
+  planche(hote, 'Palette de sacs, quatre vues', 'Agri-Kerlann, 4 couches × 10 sacs (5 × 2) ; un sac percé sur sa face S (couche 3, à droite) : il se voit à la 1re vue (devant) et à la 4e (à droite), pas aux deux autres',
+    (I) => [[0, 0], [1.5, -1.5], [2.3, 2.3], [3.8, 0.8]].map(([x, y], r) => K.paletteSacs(I, ak, x, y, r, { lisible: true })).join(''), 110);
+  planche(hote, 'Sacs et cartons, en couleur puis en noir et blanc', 'à gauche des cartons (5 × 2 × 4), à droite des sacs (même grille) ; dessous, la même chose sans couleur',
+    (I) => {
+      const deux = (dy) => K.paletteCartons(I, palGrille(5, 2, 4), 0, dy, 0, { lisible: true }) + K.paletteSacs(I, palGrille(5, 2, 4), 1.6, dy - 1.6, 0, { lisible: true });
+      return NOIR_ET_BLANC + deux(0) + `<g filter="url(#kitNB)" transform="translate(0 260)">${deux(0)}</g>`;
+    }, 110);
+  planche(hote, 'Sacs de près (étape ③)', 'Kervéguen, 4 couches × 8 sacs (4 × 2), étiquettes lisibles, un sac manquant en haut et le sac 6 éclairé ; à droite, grands sacs (2 × 2 × 6)',
+    (I) => K.paletteSacs(I, palGrille(4, 2, 4, { manque: ['3,1,3'], ref: 'KG-10633' }), 0, 0, 0, { lisible: true, sel: 6 })
+      + K.paletteSacs(I, palGrille(2, 2, 6, { ref: 'AK-40210' }), 1.7, -1.7, 0, { lisible: true }), 150);
 }

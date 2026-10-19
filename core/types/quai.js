@@ -56,6 +56,11 @@
 // calculent ; le quai déclare une unité au féminin (`feminin: true`), `decisions: ['accepter', 'reserves']` (pas de « Refuser » pour une pile),
 // et de préférence `libelles.avarie.adjectif: 'abîmé'` et `document: { nom: 'Bon de collecte', court: 'BC' }`. Le motif `produit` s'y chiffre
 // (« d'un autre pool »). À l'étape ③, rien n'écrit le pool ni le dégât : l'élève les voit sur le dessin (`palettePile`, `core/iso.js`).
+// PALETTE DE SACS (Transports Pelleau, 19/10/2026, décision de Tristan « dessiner les sacs » ; `rendu: 'iso'` seulement) : `forme: 'sacs'`.
+// Tout est celui d'une palette de cartons (W, D, L, manque « i,j,k », avarie { « i,j,k »: direction }, refs, etiqAvant, étiquette, motif
+// `produit`, aides de couches, feuille de calcul) ; seul le DESSIN change (`paletteSacs`, `core/iso.js` : sacs souples en couches croisées,
+// une avarie = un sac percé). Le quai doit déclarer `unite` (`{ un: 'colis', des: 'colis' }` sur un quai mêlé de sacs et de cartons,
+// `'sacs'` sinon).
 //
 // LA FICHE DE CONTRÔLE (04/10/2026, brief `docs/briefs/MOTEUR-quai-fiche-controle.md`, ergonomie arrêtée avec
 // Tristan sur `docs/briefs/picard/essai-fiche-controle.html`). À l'étape ③, sous la palette, l'élève note ses
@@ -161,7 +166,8 @@ import { evaluerGrille, afficher, estFormule } from '../formules.js';
 import { projection, facadeQuai, X_PORTE_FACADE, camionPorteur, personne, HAUT_PERSONNE, bulle, horlogeQuai,
   solQuai, niveleur, remorqueInterieur, murQuai, ouvertureQuai, transpaletteManuel, paletteCartons, dimsPalette,
   faceVisible, facesExterieures, lampeQuai, boitesCamion, boitesButoirs, boitesNiveleur, boitesLampe, boiteEcran,
-  paletteFuts, facesExterieuresFut, COTE_BAC, dessinerChariotFrontal, DEFS as DEFS_ISO, palettePile, PAL_VIDE, PILE_MAX, POOLS_PILE } from '../iso.js';
+  paletteFuts, facesExterieuresFut, COTE_BAC, dessinerChariotFrontal, DEFS as DEFS_ISO, palettePile, PAL_VIDE, PILE_MAX, POOLS_PILE,
+  paletteSacs } from '../iso.js';
 import { ech } from '../texte.js';
 import { retrouverFocus, secondClic } from '../gestes.js';
 
@@ -956,12 +962,19 @@ function verifierPile(Q, p, nom, E) {
 
 function verifierPalettes(Q, E) {
   const A = (Q && Q.aides) || {};
-  let futs = 0, piles = 0;
+  let futs = 0, piles = 0, sacs = 0;
   ((Q && Q.camions) || []).forEach((c, ci) => ((c && c.palettes) || []).forEach((p, pi) => {
     if (!p || typeof p !== 'object' || p.forme === undefined) return;
     const nom = `camions[${ci}].palettes[${pi}]${typeof p.id === 'string' && p.id ? ` (« ${p.id} »)` : ''}`;
     if (p.forme === 'pile') { piles++; verifierPile(Q, p, nom, E); return; }
-    if (p.forme !== 'fut') { E.push(`${nom} : forme « ${p.forme} » inconnue (les valeurs sont 'fut' et 'pile' ; sans forme, la palette est chargée de cartons)`); return; }
+    // Une palette de sacs (19/10/2026) : la palette de cartons, dessinée en sacs. Le quai iso, et des dimensions entières.
+    if (p.forme === 'sacs') {
+      sacs++;
+      if (Q.rendu !== 'iso') E.push(`${nom} : une palette de sacs se dessine sur le quai iso (\`rendu: 'iso'\`)`);
+      ['W', 'D', 'L'].forEach((k) => { if (!Number.isInteger(p[k]) || p[k] < 1) E.push(`${nom} : « ${k} » doit être un nombre entier de sacs (au moins 1), comme pour des cartons`); });
+      return;
+    }
+    if (p.forme !== 'fut') { E.push(`${nom} : forme « ${p.forme} » inconnue (les valeurs sont 'fut', 'pile' et 'sacs' ; sans forme, la palette est chargée de cartons)`); return; }
     futs++;
     if (Q.rendu !== 'iso') E.push(`${nom} : une palette de fûts se dessine sur le quai iso (\`rendu: 'iso'\`)`);
     ['W', 'D', 'L', 'refs', 'etiqAvant'].forEach((k) => { if (p[k] !== undefined) E.push(`${nom} : « ${k} » n’a pas de sens pour une palette de fûts (huit places en quinconce 3-2-3 : le total se calcule)`); });
@@ -984,6 +997,7 @@ function verifierPalettes(Q, E) {
   }));
   // Sans unité déclarée, le quai parlerait de « cartons » devant des fûts (garde-fou du 10/10/2026, fin du chantier D-4).
   if (futs && Q.unite === undefined) E.push('une palette de fûts demande `unite` (par exemple `\'fûts\'`) : sans elle, le quai parlerait de cartons');
+  if (sacs && Q.unite === undefined) E.push('une palette de sacs demande `unite` (`\'sacs\'`, ou `{ un: \'colis\', des: \'colis\' }` sur un quai mêlé de sacs et de cartons) : sans elle, le quai parlerait de cartons');
   if (futs) ['regleCouches', 'detailComptage'].forEach((k) => { if (A[k]) E.push(`aides.${k} parle de couches de cartons : sans objet pour une palette de fûts`); });
   // Une pile : l'unité (au féminin : « palettes »), pas d'aide de couches, et des décisions déclarées sans « refuser ».
   if (piles && Q.unite === undefined) E.push('une pile de palettes vides demande `unite` (par exemple { un: \'palette\', des: \'palettes\', feminin: true }) : sans elle, le quai parlerait de cartons');
@@ -1981,8 +1995,11 @@ export function creerQuai(Q, opts = {}) {
   const estPile = (p) => p.forme === 'pile';
   const K_PILE_DECOR = 0.7;
   // (Une palette de fûts est enveloppée d'un groupe `data-iso-pal` : les tests y lisent où elle est ; les cartons de Spartoo ne changent pas.)
+  // Une palette de sacs (19/10/2026) : la palette de cartons (`palIso`), dessinée en sacs ; la déchirure d'un sac percé n'est jamais balisée.
+  const estSacs = (p) => p.forme === 'sacs';
   const palSvg = (I, p, x, y, r, o) => (estPile(p) ? `<g data-iso-pal="${ech(p.id)}">${palettePile(I, { palettes: palettesDePile(p) }, x, y, r, Object.assign({ echelle: K_PILE_DECOR, simple: true }, o, { lisible: false }))}</g>`
-    : estFut(p) ? `<g data-iso-pal="${ech(p.id)}">${paletteFuts(I, palFutsIso(p), x, y, r, Object.assign({ cote: COTE_DECOR }, o))}</g>` : paletteCartons(I, palIso(p), x, y, r, o));
+    : estFut(p) ? `<g data-iso-pal="${ech(p.id)}">${paletteFuts(I, palFutsIso(p), x, y, r, Object.assign({ cote: COTE_DECOR }, o))}</g>`
+      : estSacs(p) ? `<g data-iso-pal="${ech(p.id)}">${paletteSacs(I, palIso(p), x, y, r, Object.assign({}, o, { balises: false }))}</g>` : paletteCartons(I, palIso(p), x, y, r, o));
   // L'emprise au sol d'une palette tournée d'un quart de tour dans la remorque : [largeur en x, profondeur en y].
   const gabarit = (p) => (estPile(p) ? [PAL_VIDE.D * K_PILE_DECOR, PAL_VIDE.L * K_PILE_DECOR] : estFut(p) ? [COTE_DECOR, COTE_DECOR] : dimsPalette(3));
   // ② et ④ : l'intérieur du quai. Les palettes du camion : dans la remorque, en route (le chauffeur la tire,
@@ -2350,8 +2367,10 @@ export function creerQuai(Q, opts = {}) {
     // Chaque carton (ou chaque fût) présent est cliquable : un clic lit son étiquette.
     o += estFut(p)
       ? paletteFuts(I, palFutsIso(p), ox, oy, r, { cote: COTE_BAC, lisible: true, sel: s.carton, attrs: (f) => `class="quai-etiq-clic" data-q-etiq data-k="avant" data-q-carton="${f.no}"` })
-      : paletteCartons(I, palIso(p), ox, oy, r, { lisible: true, sel: s.carton,
-        attrs: (c) => `class="quai-etiq-clic" data-q-etiq data-k="${ech(p.refs ? c.ref : 'avant')}" data-q-carton="${c.no}"` });
+      : estSacs(p) ? paletteSacs(I, palIso(p), ox, oy, r, { lisible: true, balises: false, sel: s.carton,
+        attrs: (c) => `class="quai-etiq-clic" data-q-etiq data-k="${ech(p.refs ? c.ref : 'avant')}" data-q-carton="${c.no}"` })
+        : paletteCartons(I, palIso(p), ox, oy, r, { lisible: true, sel: s.carton,
+          attrs: (c) => `class="quai-etiq-clic" data-q-etiq data-k="${ech(p.refs ? c.ref : 'avant')}" data-q-carton="${c.no}"` });
     const [fx, fy] = I.P(ox + W / 2, oy + D + 0.55, 0);
     o += `<text x="${fx.toFixed(1)}" y="${fy.toFixed(1)}" text-anchor="middle" font-size="14" font-weight="700" fill="#555047" transform="rotate(30 ${fx.toFixed(1)} ${fy.toFixed(1)})">face ${NOMS_FACES[r]} de la palette</text>`;
     return o;
@@ -2395,7 +2414,7 @@ export function creerQuai(Q, opts = {}) {
         <div class="quai-etiq-ref">${ech(et.ref)}</div><div>${ech(et.nom)}</div><div>${ech(et.poids)}</div>
         <div>${et.commande ? `Cde ${ech(et.commande)} · ` : ''}Lot ${ech(et.lot)}</div>
         <div class="quai-code">||| |||| || ||||| | ||| ${ech(String(et.ref).replace(/-/g, ''))}</div></div>
-      <div class="quai-etat-carton" data-q-etat-carton>${vu ? `<b class="quai-depasse">⚠ ${maj(ceUnite(R.u))} ${ech(R.u.un)} est enfoncé</b> sur cette face.` : `Ce que tu vois de ${ceUnite(R.u)} ${ech(R.u.un)} depuis ici : <b>intact</b>.`}<br><span class="note">Couche ${c.k + 1} en partant du bas.</span></div>
+      <div class="quai-etat-carton" data-q-etat-carton>${vu ? `<b class="quai-depasse">⚠ ${maj(ceUnite(R.u))} ${ech(R.u.un)} est ${estSacs(p) ? ac(R.u, 'percé') : 'enfoncé'}</b> sur cette face.` : `Ce que tu vois de ${ceUnite(R.u)} ${ech(R.u.un)} depuis ici : <b>intact</b>.`}<br><span class="note">Couche ${c.k + 1} en partant du bas.</span></div>
       <div class="quai-reconst">Étiquette reconstituée, non contractuelle.</div>`;
   }
 
