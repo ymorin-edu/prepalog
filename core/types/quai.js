@@ -319,7 +319,7 @@ function reglages(Q) {
     calcul: Q.calcul && Q.calcul.forme ? { forme: Q.calcul.forme === 'brouillon' ? 'brouillon' : 'feuille', rappel: !!Q.calcul.rappel } : null,
     depart: minutesDe(Q.debut || (camions[0] && camions[0].arrivee)),
     // Un quai en deux séances (lot 1) : la fin après le déchargement (`{ texte }` ou null), le départ au contrôle, le nom du document.
-    arretDech: arretDechargement(Q), commence: Q.commence === 'controle', document: documentDe(Q).nom,
+    arretDech: arretDechargement(Q), commence: Q.commence === 'controle', document: documentDe(Q).nom, docArt: documentDe(Q).article,
     // La dépose dirigée (lot 2) : les cases complétées, le passage et la règle de grisage ; null sans `depose` (ou si elle est mal
     // formée : c'est `verifierQuai` qui la refuse en clair).
     depose: deposeDe(Q),
@@ -345,9 +345,16 @@ const DOCUMENT_DEFAUT = 'Bon de livraison';
 // la légende d'arrivée nomment alors le document ; le texte seul ne les change pas, pour qu'ENT-8.8 reste tel quel).
 function documentDe(Q) {
   const d = Q && Q.document;
-  if (d && typeof d === 'object' && !Array.isArray(d)) return { nom: texteNet(d.nom) || DOCUMENT_DEFAUT, court: texteNet(d.court) || 'BL', objet: true };
-  return { nom: texteNet(d) || DOCUMENT_DEFAUT, court: 'BL', objet: false };
+  if (d && typeof d === 'object' && !Array.isArray(d)) return { nom: texteNet(d.nom) || DOCUMENT_DEFAUT, court: texteNet(d.court) || 'BL', objet: true, article: Object.prototype.hasOwnProperty.call(ARTICLES, d.article) ? d.article : 'le' };
+  return { nom: texteNet(d) || DOCUMENT_DEFAUT, court: 'BL', objet: false, article: 'le' };
 }
+// `document.article` ('le' par défaut, 'la' ou 'l’') : l'article qui précède le nom du document dans les phrases du quai. `def` : « le / la / l’ » ;
+// `poss` : « mon / ma » (« Voilà mon bon de livraison », « Voilà ma feuille de ramasse ») ; `court` : devant l'abréviation (« sur le BL », « sur la FR »).
+const ARTICLES = { 'le': { def: 'le ', poss: 'mon', court: 'le ' }, 'la': { def: 'la ', poss: 'ma', court: 'la ' }, 'l’': { def: 'l’', poss: 'mon', court: 'le ' } };
+// `camions[i].tutoiement: true` : le chauffeur est un collègue, tutoyé (« Oui, tu peux décharger », « Fais voir ce que tu as écrit »). `camions[i].prenomChauffeur` :
+// son prénom à la place de « le chauffeur » (« Loïc te remet la feuille de ramasse »). (Pas `chauffeur` : ENT-8.10 y range déjà un prénom pour son dialogue.)
+// Sans ces deux clés, les textes d'avant, au vous, d'un octet à l'autre.
+const chauffeurDe = (c) => ({ nom: texteNet(c && c.prenomChauffeur), tu: !!c && c.tutoiement === true });
 const TEXTE_ARRET_DEFAUT = 'Les palettes sont en zone de réception.';
 function arretDechargement(Q) {
   const a = Q && Q.arret;
@@ -1047,10 +1054,16 @@ function verifierDeuxSeances(Q, E) {
   if (commence && Q.commence !== 'controle') E.push(`commence : « ${Q.commence} » n’existe pas (la seule valeur est 'controle' : la vue s’ouvre à l’étape ③, le déchargement est déjà fait)`);
   const D = Q.document;
   if (D && typeof D === 'object' && !Array.isArray(D)) {
-    Object.keys(D).filter((k) => k !== 'nom' && k !== 'court').forEach((k) => E.push(`document.${k} : inconnu (nom, court)`));
+    Object.keys(D).filter((k) => k !== 'nom' && k !== 'court' && k !== 'article').forEach((k) => E.push(`document.${k} : inconnu (nom, court, article)`));
+    if (D.article !== undefined && !Object.prototype.hasOwnProperty.call(ARTICLES, D.article)) E.push(`document.article : « ${D.article} » n’existe pas (les seules valeurs sont 'le', 'la' et 'l’')`);
     if (!texteNet(D.nom)) E.push('document.nom : le nom du document est vide (par exemple \'Bon de collecte\')');
     if (!texteNet(D.court)) E.push('document.court : l’abréviation est vide (par exemple \'BC\' : elle remplace « BL » dans les textes du quai)');
   } else if (D !== undefined && !texteNet(D)) E.push('document : le nom du document de transport est vide (par exemple \'Bon de livraison — lettre de voiture\')');
+  (Array.isArray(Q.camions) ? Q.camions : []).forEach((c, i) => {
+    if (!c || typeof c !== 'object') return;
+    if (c.tutoiement !== undefined && c.tutoiement !== true) E.push(`camions[${i}].tutoiement : ne prend que la valeur true (reçu « ${c.tutoiement} »)`);
+    if (c.prenomChauffeur !== undefined && !texteNet(c.prenomChauffeur)) E.push(`camions[${i}].prenomChauffeur : le prénom est vide (retirer la clé pour garder « le chauffeur »)`);
+  });
   if (arret && commence) E.push('arret et commence : on ne peut pas à la fois s’arrêter après le déchargement et partir du contrôle (il ne resterait aucune étape)');
   if ((arret || commence) && Q.mode === 'controle') E.push(`${arret ? 'arret' : 'commence'} avec mode: 'controle' : ce mode (quai déjà réceptionné) n’a ni déchargement ni étapes à raccourcir`);
   if ((arret || commence) && Array.isArray(Q.camions) && Q.camions.length > 1) E.push(`${arret ? 'arret' : 'commence'} demande un seul camion (le camion suivant ne se met à quai qu’une fois le BL du précédent signé)`);
@@ -1691,6 +1704,13 @@ export function creerQuai(Q, opts = {}) {
   const ISO = R.iso;
   // Un quai en deux séances (lot 1) : ARRET = la vue s'arrête au déchargement (`{ texte }`), COMMENCE = elle part du contrôle, DOC = le nom du document.
   const ARRET = R.arretDech, COMMENCE = R.commence, DOC = R.document;
+  // Le document dans les phrases du quai : l'article déclaré (`document.article`), « mon / ma », et devant l'abréviation. Sans article déclaré : « le », « mon », « le ».
+  const ART = ARTICLES[R.docArt] || ARTICLES.le;
+  const DOCMIN = R.docObjet ? minuscule(DOC) : 'bon de livraison';
+  const leDoc = `${ART.def}${DOCMIN}`, monDoc = `${ART.poss} ${DOCMIN}`, leBl = ART.court;
+  // Le chauffeur d'un camion (`camions[i].chauffeur`) : son prénom à la place de « le chauffeur », et le tutoiement. Sans déclaration : les textes d'avant.
+  const quiCh = (c, maj = true) => chauffeurDe(c).nom || (maj ? 'Le chauffeur' : 'le chauffeur');
+  const ouiDecharger = (c, ouvrir) => `Oui, ${chauffeurDe(c).tu ? 'tu peux' : 'vous pouvez'}${ouvrir ? ' ouvrir et' : ''} décharger`;
   // Le mode scène (D-4) : l'inspection se joue sur le quai iso ; sinon la liste OK / Pas OK de l'étape ⓪ (inchangée).
   const SCENE = R.scene, LISTE = !!SEC && !R.scene;
   const SEUIL_SECU = SCENE ? 2 : 1;   // à partir de quelle étape il faut avoir figé l'inspection
@@ -1763,7 +1783,7 @@ export function creerQuai(Q, opts = {}) {
   const tPoseN = (i) => (CARISTE_ISO ? planC().tPose[i] : T_DEB + i * T_PAL + T_TRAJET);
   const fileP = (P) => (CARISTE_ISO ? P.slice().reverse() : P);
   // La légende de fin du déchargement, au quai iso. Quand le quai s'arrête là (`arret`), personne n'attend de signature.
-  const legFinIso = (N, e) => `${hhmm(e.minute)} — ${N > 1 ? `Les ${N} ${SUPS} sont en ${zoneMin}.` : `La ${SUP} est en ${zoneMin}.`}${ARRET ? '' : ' Le chauffeur attend ta signature.'}`;
+  const legFinIso = (N, e) => `${hhmm(e.minute)} — ${N > 1 ? `Les ${N} ${SUPS} sont en ${zoneMin}.` : `La ${SUP} est en ${zoneMin}.`}${ARRET ? '' : ` ${quiCh(cam)} attend ta signature.`}`;
   let planMemo = null;
   function planC() {
     if (!planMemo) { const P = PAL[0]; planMemo = planChariot({ gab: P.map(gabarit), places: placesIso(P), xPorte: ISO_X + 0.4, ySlot: ISO_YDEP, t0: T_DEB }); }
@@ -1907,7 +1927,7 @@ export function creerQuai(Q, opts = {}) {
     if (l) L.push(l);
     return L;
   };
-  const paroleArrivee = () => cam.parole || `Bonjour, livraison ${cam.fournisseur || ''}. Voilà mon ${R.docObjet ? minuscule(DOC) : 'bon de livraison'}.`;
+  const paroleArrivee = () => cam.parole || `Bonjour, livraison ${cam.fournisseur || ''}. Voilà ${monDoc}.`;
   // ① le camion recule à la porte en D_ARRIVEE ms ; au bout, le chauffeur descend et parle.
   const D_ARRIVEE = 5200;
   function sceneArrivee(t, e) {
@@ -1927,7 +1947,7 @@ export function creerQuai(Q, opts = {}) {
     }
     return s;
   }
-  const legArrivee = (fini) => (fini ? `${cam.arrivee || ''} — Le chauffeur te remet le ${R.docObjet ? minuscule(DOC) : 'bon de livraison'}.`
+  const legArrivee = (fini) => (fini ? `${cam.arrivee || ''} — ${quiCh(cam)} te remet ${leDoc}.`
     : `${cam.arrivee || ''} — Le camion recule à la porte${numPorte ? ` ${numPorte}` : ''}…`);
   // La palette pour le kit : chaque carton numéroté (couche par couche, du fond vers l'avant, de gauche à
   // droite : « 9 / 12 »), sa référence (celle de sa couche), sa face enfoncée, l'étiquette de sa face.
@@ -2729,7 +2749,7 @@ export function creerQuai(Q, opts = {}) {
         <div class="quai-legende">${ech(cam.arrivee || '')} — ${ech(R.lieu.nom)}. Le camion de ${fictif(cam.transporteur, cam.fictif)} vient de se mettre à quai, portes fermées.</div>
       </div>
       <div class="quai-chauffeur">${silhouette()}
-        <p><b>Le chauffeur :</b> « Bonjour, livraison ${ech(cam.fournisseur)} pour le ${ech(lieuMin)}. Voilà mon bon de livraison et le ticket de l'enregistreur. Je peux ouvrir ? »</p>
+        <p><b>${ech(quiCh(cam))} :</b> « Bonjour, livraison ${ech(cam.fournisseur)} pour le ${ech(lieuMin)}. Voilà mon bon de livraison et le ticket de l'enregistreur. Je peux ouvrir ? »</p>
       </div>
       <div class="quai-grille2">
         <div class="quai-doc">
@@ -2743,7 +2763,7 @@ export function creerQuai(Q, opts = {}) {
         </div>
       </div>
       <p class="note">Tant que les portes sont fermées, la marchandise est au froid : c'est le bon moment pour lire les papiers.</p>
-      <p><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« Oui, vous pouvez ouvrir et décharger »</button>
+      <p><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« ${ouiDecharger(cam, true)} »</button>
         <span class="quai-cout">le chauffeur pose toutes les palettes sur le quai ; le temps hors froid démarre · durée : ${formule()}</span></p>
     </section>`;
   }
@@ -2969,7 +2989,7 @@ export function creerQuai(Q, opts = {}) {
           <div class="quai-reconst">Document pédagogique, reconstitution, non contractuel.</div>
         </div>
         ${Q.noteBL ? `<p class="note">${ech(Q.noteBL)}</p>` : ''}
-        <p class="quai-ligne"><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« Oui, vous pouvez décharger »</button>
+        <p class="quai-ligne"><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« ${ouiDecharger(cam, false)} »</button>
           <button class="btn" data-q="revoir1" data-libre>↺ Revoir l’arrivée</button>
           <span class="quai-cout">${ech(quiSort)} pose ${PAL[0].length > 1 ? 'les palettes' : 'la palette'} en ${ech(zoneMin)} · durée : ${formule()}</span></p>
       </div>`;
@@ -3013,14 +3033,14 @@ export function creerQuai(Q, opts = {}) {
         <div class="quai-legende">${ech(cam.arrivee || '')} — ${ech(R.lieu.nom)}. Le camion de ${fictif(cam.transporteur, cam.fictif)} est à quai, portes fermées.</div>
       </div>
       <div class="quai-chauffeur">${silhouette()}
-        <p><b>Le chauffeur :</b> « ${ech(cam.parole || `Bonjour, livraison ${cam.fournisseur || ''}. Voilà mon ${R.docObjet ? minuscule(DOC) : 'bon de livraison'}. Je peux ouvrir ?`)} »</p>
+        <p><b>${ech(quiCh(cam))} :</b> « ${ech(cam.parole || `Bonjour, livraison ${cam.fournisseur || ''}. Voilà ${monDoc}. Je peux ouvrir ?`)} »</p>
       </div>
       <div class="quai-doc">
         <div class="quai-doc-titre">📄 ${ech(DOC)}</div>
         ${blHtml()}
         <div class="quai-reconst">${ech(R.bl)} n° ${ech(cam.bl)} — Document pédagogique, reconstitution, non contractuel.</div>
       </div>
-      <p><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« Oui, vous pouvez ouvrir et décharger »</button>
+      <p><button class="btn btn-p" data-q="decharger" ${e.decharge || e.fini || !secuFaite(e) ? 'disabled' : ''}>« ${ouiDecharger(cam, true)} »</button>
         <span class="quai-cout">${ech(quiSort)} ${CARISTE ? 'sort' : 'pose'} toutes les palettes sur le quai · durée : ${formule()}</span></p>
     </section>`;
   }
@@ -3038,7 +3058,7 @@ export function creerQuai(Q, opts = {}) {
   }
   function boutonDecharger(e, ci) {
     const premier = !unDecharge(e, R);
-    const lib = premier ? `« Oui, vous pouvez ouvrir et décharger » — camion ${ech(R.camions[ci].nom)}` : `Faire mettre à quai le camion ${ech(R.camions[ci].nom)} et décharger`;
+    const lib = premier ? `« ${ouiDecharger(R.camions[ci], true)} » — camion ${ech(R.camions[ci].nom)}` : `Faire mettre à quai le camion ${ech(R.camions[ci].nom)} et décharger`;
     const cout = premier ? `durée : ${formule(ci)}` : `manœuvre ${fmtMin(R.manoeuvre)}, puis ${formule(ci)}`;
     return `<p class="quai-ligne"><button class="btn btn-p" data-q="decharger" data-c="${ci}" ${peutDecharger(e, ci) ? '' : 'disabled'}>${lib}</button>
       <span class="quai-cout">${cout}</span></p>`;
@@ -3049,7 +3069,7 @@ export function creerQuai(Q, opts = {}) {
     const cartes = R.camions.map((c, ci) => `<div class="quai-doc" data-q-camion="${ech(c.lettre)}">
         <div class="quai-doc-titre">🚚 Camion ${ech(c.nom)} — arrivé à ${ech(c.arrivee || '')}</div>
         <p class="note">${fictif(c.fournisseur, c.fictif)} · transporteur ${fictif(c.transporteur, c.fictif)} · ${PAL[ci].length} palettes · <b data-q-etat-camion>${etat(ci)}</b></p>
-        <div class="quai-chauffeur">${silhouette(36)}<p><b>Le chauffeur :</b> « ${ech(c.parole || `Bonjour, livraison ${c.fournisseur}. Voilà mon bon de livraison et le ticket de l'enregistreur.`)} »</p></div>
+        <div class="quai-chauffeur">${silhouette(36)}<p><b>${ech(quiCh(c))} :</b> « ${ech(c.parole || `Bonjour, livraison ${c.fournisseur}. Voilà mon bon de livraison et le ticket de l'enregistreur.`)} »</p></div>
         <div class="quai-doc-titre">📄 ${ech(DOC)}</div>
         ${blHtml(ci)}
         <div class="quai-reconst">${ech(R.bl)} n° ${ech(c.bl)} — Document pédagogique, reconstitution, non contractuel.</div>
@@ -3377,7 +3397,8 @@ export function creerQuai(Q, opts = {}) {
     const lignes = k.ecrit ? ((k.lignes.length ? k.lignes.map((l) => `<div>${ech(l.texte)}</div>`).join('') : '<div>Néant — marchandise reçue conforme.</div>') + (k.mentionEcrite ? '<div>Sous réserve de déballage.</div>' : '')) : '';
     // Le chauffeur ne « recharge les palettes refusées » que s'il y en a (vu sur ENT-9.2, 18/10/2026 : des piles de vides, rien de refusé).
     const refusees = P.some((p) => st(e, p).decision === 'refuser');
-    const parole = k.paroleChauffeur || (k.signe ? (refusees ? 'C’est signé. Je recharge les palettes refusées et j’y vais. Bonne journée !' : 'C’est signé. J’y vais. Bonne journée !') : k.ecrit ? 'Faites voir ce que vous avez écrit… Je signe ?' : 'J’attends vos papiers pour signer. Mes autres clients m’attendent aussi.');
+    const TU = chauffeurDe(cm).tu;
+    const parole = k.paroleChauffeur || (k.signe ? (refusees ? 'C’est signé. Je recharge les palettes refusées et j’y vais. Bonne journée !' : 'C’est signé. J’y vais. Bonne journée !') : k.ecrit ? (TU ? 'Fais voir ce que tu as écrit… Je signe ?' : 'Faites voir ce que vous avez écrit… Je signe ?') : (TU ? 'J’attends tes papiers pour signer. Mes autres clients m’attendent aussi.' : 'J’attends vos papiers pour signer. Mes autres clients m’attendent aussi.'));
     const prof = api.estProf;
     const ouvert = unDecharge(e, R);
     let clore;
@@ -3392,13 +3413,13 @@ export function creerQuai(Q, opts = {}) {
     const suivant = M && k.signe && reste.length && !e.fini
       ? `<div class="quai-doc" data-q-suivant><p>Le camion ${ech(cm.nom)} repart, le quai est libre. ${reste.map((cj) => `Le camion ${ech(R.camions[cj].nom)}`).join(', ')} attend porte fermée.</p>${reste.map((cj) => boutonDecharger(e, cj)).join('')}</div>` : '';
     return `<section class="quai-carte">
-      <h2 class="quai-h2"><span class="quai-pastille-etape">4</span>${ISO ? `Écrire les réserves sur le ${ech(R.bl)}, faire signer le chauffeur` : `${F ? 'Rentrer le lot en chambre froide' : `Rentrer les palettes en ${ech(zoneMin)}`}, écrire les réserves, faire signer`}${M ? ` — camion ${ech(cm.nom)}` : ''}</h2>
+      <h2 class="quai-h2"><span class="quai-pastille-etape">4</span>${ISO ? `Écrire les réserves sur ${leBl}${ech(R.bl)}, faire signer le chauffeur` : `${F ? 'Rentrer le lot en chambre froide' : `Rentrer les palettes en ${ech(zoneMin)}`}, écrire les réserves, faire signer`}${M ? ` — camion ${ech(cm.nom)}` : ''}</h2>
       ${choixCamion(e)}
-      ${A.consignes && ISO ? `<p class="quai-aide">Écris tes réserves <b>sur le ${ech(R.bl)}</b>, puis fais-les signer par le chauffeur. La ${SUP} reste en ${ech(zoneMin)}.<br>
+      ${A.consignes && ISO ? `<p class="quai-aide">Écris tes réserves <b>sur ${leBl}${ech(R.bl)}</b>, puis fais-les signer par le chauffeur. La ${SUP} reste en ${ech(zoneMin)}.<br>
         Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>` : ''}
-      ${A.consignes && !F && !ISO ? `<p class="quai-aide">Règle du quai : <b>rentre les palettes acceptées</b> en ${ech(zoneMin)}, puis <b>écris tes réserves sur le ${ech(R.bl)}</b> et fais-les signer par le chauffeur.<br>
+      ${A.consignes && !F && !ISO ? `<p class="quai-aide">Règle du quai : <b>rentre les palettes acceptées</b> en ${ech(zoneMin)}, puis <b>écris tes réserves sur ${leBl}${ech(R.bl)}</b> et fais-les signer par le chauffeur.<br>
         Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>` : ''}
-      ${A.consignes && F ? `<p class="quai-aide">Règle du quai : <b>le froid d'abord, les papiers ensuite</b>. 1) <b>Rentre le lot</b> accepté en chambre froide (le temps hors froid s'arrête). 2) <b>Écris tes réserves sur le ${ech(R.bl)}</b> et fais-les signer par le chauffeur. Le chauffeur peut attendre ; les surgelés, non.<br>
+      ${A.consignes && F ? `<p class="quai-aide">Règle du quai : <b>le froid d'abord, les papiers ensuite</b>. 1) <b>Rentre le lot</b> accepté en chambre froide (le temps hors froid s'arrête). 2) <b>Écris tes réserves sur ${leBl}${ech(R.bl)}</b> et fais-les signer par le chauffeur. Le chauffeur peut attendre ; les surgelés, non.<br>
         Une réserve doit être <b>précise</b> : quelle palette, quoi, combien. « Sous réserve de déballage » ne vaut rien : ce n'est pas une réserve.</p>` : ''}
       ${ui.chef4 ? `<div class="quai-alerte" role="alert" data-q-chef>
         <p><b>Le chef de quai :</b> « Attends ! Tes palettes sont toujours sur le quai. <b>Rentre d'abord le lot accepté en chambre froide</b> : le chauffeur, lui, peut attendre cinq minutes ; les surgelés, non. Les papiers, tu les feras juste après. »</p>
@@ -3410,7 +3431,7 @@ export function creerQuai(Q, opts = {}) {
         <div class="quai-gauche">${ISO ? `<div class="quai-doc">
           <div class="quai-doc-titre">📦 ${ech(R.zone.nom)}</div>
           <svg class="quai-cf quai-iso" data-q-cf viewBox="${DEPOSE ? cadreDep().join(' ') : `200 60 640 ${N > 2 ? 520 : 470}`}" role="img" aria-label="La palette en ${ech(zoneMin)}${k.signe ? ', le chauffeur est reparti' : ', le chauffeur attend'}">${defsIso()}${imageIso(DEPOSE ? 0 : fin(N), e, false, { parti: k.signe, toutes: true }).iso}</svg>
-          <p class="note" data-q-etatcf>${k.signe ? `Le chauffeur est reparti. ${nAcc > 1 ? `Les ${nAcc} ${SUPS} restent` : `La ${SUP} reste`} en ${ech(zoneMin)}.` : `${toutDecide ? `${nAcc} ${SUP}${nAcc > 1 ? 's' : ''} en ${ech(zoneMin)}. ` : ''}Le chauffeur attend ta signature.`}</p>
+          <p class="note" data-q-etatcf>${k.signe ? `${quiCh(cm)} est reparti. ${nAcc > 1 ? `Les ${nAcc} ${SUPS} restent` : `La ${SUP} reste`} en ${ech(zoneMin)}.` : `${toutDecide ? `${nAcc} ${SUP}${nAcc > 1 ? 's' : ''} en ${ech(zoneMin)}. ` : ''}${quiCh(cm)} attend ta signature.`}</p>
         </div>` : `<div class="quai-doc">
           <div class="quai-doc-titre">${F ? `🧊 ${ech(R.lieu.chambre.nom)}` : `📦 ${ech(R.zone.nom)}`}</div>
           <svg class="quai-cf" data-q-cf viewBox="0 0 640 300" role="img" aria-label="${F ? 'Le quai et l\'entrée de la chambre froide' : `Le quai et la ${ech(zoneMin)}`}">${sceneCf(e, k.rentre ? 1 : 0)}</svg>
@@ -3424,7 +3445,7 @@ export function creerQuai(Q, opts = {}) {
           <div class="quai-doc-titre">✍️ Tes réserves</div>
           <div>${form}</div>
           <label class="quai-res-ligne quai-case"><input type="checkbox" data-q-deballage ${k.deballage ? 'checked' : ''} ${k.signe || e.fini || !toutDecide ? 'disabled' : ''}> Ajouter la mention « Sous réserve de déballage »</label>
-          <div class="quai-ligne"><button class="btn" data-q="ecrire" ${!k.decharge || !toutDecide || k.signe || e.fini ? 'disabled' : ''}>${k.ecrit ? 'Réécrire les réserves' : `Écrire les réserves sur le ${ech(R.bl)}`} <span class="quai-cout">· ${fmtMin(Math.max(1, liste.length) * C.ligne)}</span></button></div>
+          <div class="quai-ligne"><button class="btn" data-q="ecrire" ${!k.decharge || !toutDecide || k.signe || e.fini ? 'disabled' : ''}>${k.ecrit ? 'Réécrire les réserves' : `Écrire les réserves sur ${leBl}${ech(R.bl)}`} <span class="quai-cout">· ${fmtMin(Math.max(1, liste.length) * C.ligne)}</span></button></div>
         </div>
       </div>
       <div class="quai-doc quai-papier">
@@ -3437,7 +3458,7 @@ export function creerQuai(Q, opts = {}) {
         </div>
         <div class="quai-reconst">Document pédagogique, reconstitution, non contractuel.</div>
       </div>
-      <div class="quai-chauffeur" data-q-parole>${silhouette(40)}<p><b>Le chauffeur :</b> « ${ech(parole)} »</p></div>
+      <div class="quai-chauffeur" data-q-parole>${silhouette(40)}<p><b>${ech(quiCh(cm))} :</b> « ${ech(parole)} »</p></div>
       <p class="quai-ligne"><button class="btn" data-q="signer" ${!k.ecrit || k.signe || e.fini ? 'disabled' : ''}>Faire signer le chauffeur <span class="quai-cout">· ${fmtMin(C.signer)}</span></button>
         ${clore}</p>
       ${suivant}
@@ -3483,7 +3504,7 @@ export function creerQuai(Q, opts = {}) {
       ${temps}
       <p class="note" data-q-reel-bilan>Temps réel passé : ${mmss(e.reel)} (mesuré pour caler les seuils de l'évaluation, non noté).</p>
       ${Q.bonASavoir ? `<p class="note">${Q.bonASavoir}</p>` : ''}
-      ${EVAL ? '' : Q.recommencer === false ? `<p class="note" data-q-fige>Le camion est reparti : le ${ech(R.bl)} ne se corrige plus.</p>`
+      ${EVAL ? '' : Q.recommencer === false ? `<p class="note" data-q-fige>Le camion est reparti : ${leBl}${ech(R.bl)} ne se corrige plus.</p>`
         : `<p><button class="btn${ui.armeRaz ? ' quai-arme' : ''}" data-q="recommencer">${ui.armeRaz ? 'Tout effacer et recommencer ? Cliquez pour confirmer' : 'Recommencer la réception'}</button></p>`}
     </div>`;
   }
@@ -3511,7 +3532,7 @@ export function creerQuai(Q, opts = {}) {
       const vals = choisis.map((m) => [m, valeurDe(s, m)]);
       return { id: p.id, texte: texteLigne(p, s.decision, vals, R), juste, vide: !vals.length || vals.some(([, v]) => String(v == null ? '' : v).trim() === '') };
     });
-    avancer(e, Math.max(1, liste.length) * C.ligne, `réserves écrites sur le ${R.bl}${M ? ` du ${nomCam(ci)}` : ''} (${liste.length} ligne${liste.length > 1 ? 's' : ''})`);
+    avancer(e, Math.max(1, liste.length) * C.ligne, `réserves écrites sur ${leBl}${R.bl}${M ? ` du ${nomCam(ci)}` : ''} (${liste.length} ligne${liste.length > 1 ? 's' : ''})`);
     k.ecrit = true; k.paroleChauffeur = ''; k.mentionEcrite = !!k.deballage;
     api.sauver(); api.redessiner();
   }
@@ -4289,7 +4310,9 @@ export function creerQuai(Q, opts = {}) {
         // Guidage : le chauffeur refuse de signer une réserve sans valeur.
         const vides = k.lignes.filter((l) => l.vide);
         if (A.chefDeQuai && vides.length) {
-          k.paroleChauffeur = `Votre réserve sur ${vides.map((l) => l.id).join(', ')} ne dit pas combien ni quoi. Une réserve pas précise, ça ne vaut rien. Complétez et je signe.`;
+          k.paroleChauffeur = chauffeurDe(R.camions[ca(e)]).tu
+            ? `Ta réserve sur ${vides.map((l) => l.id).join(', ')} ne dit pas combien ni quoi. Une réserve pas précise, ça ne vaut rien. Complète et je signe.`
+            : `Votre réserve sur ${vides.map((l) => l.id).join(', ')} ne dit pas combien ni quoi. Une réserve pas précise, ça ne vaut rien. Complétez et je signe.`;
           api.sauver(); api.redessiner(); return;
         }
         k.signe = true; k.paroleChauffeur = '';

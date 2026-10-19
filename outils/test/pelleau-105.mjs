@@ -422,6 +422,22 @@ await v('ENT-10.5 : inspection — « C’est bon » sans rien signaler : Yann a
   egal(['securite-lampe', 'securite-aucun-faux'].map((j) => n.detail[j]), ['ko', 'ko'], 'signalée après l’arrêt, et la cale à tort');
 });
 
+await v('ENT-10.5 : l’arrivée de Loïc — « Loïc te remet la feuille de ramasse » (article féminin, prénom) et « Oui, tu peux décharger » (collègue tutoyé) ; ni « le feuille », ni « vous pouvez » à l’écran', async () => {
+  await monter({ uid: 'p105-arrivee' });
+  await preparer(); await accueil();
+  await allerV('quai'); await pg.waitForSelector(QA.SVG);
+  await QA.marquer('lampe'); await QA.signaler(); await qrep();
+  await QA.cestBon(); await qrep();
+  egal(await QA.legende(), '07:30 — Loïc te remet la feuille de ramasse.', 'la légende d’arrivée');
+  egal((await pg.textContent(`${Z} [data-q="decharger"]`)).trim().replace(/\s+/g, ' '), '« Oui, tu peux décharger »', 'le bouton');
+  const t = await texte();
+  vrai(!/le feuille de ramasse/i.test(t), 'aucun « le feuille de ramasse »');
+  vrai(!/vous pouvez/i.test(t), 'aucun « vous pouvez »');
+  vrai(!/Le chauffeur/.test(await pg.$eval(`${Z} [data-q-leg]`, (n) => n.textContent)), 'la légende nomme Loïc, pas « le chauffeur »');
+  if (CAPTURES) await pg.$eval(`${Z} [data-q="decharger"]`, (x) => x.scrollIntoView({ block: 'end' }));
+  await capture('4-arrivee-loic');
+});
+
 await v('ENT-10.5 : dialogue — « Oui, reste au volant » : Loïc réagit, la réplique revient, l’entretien finit ; seul ce jalon ✗ ; « Corriger » ne rouvre pas le dialogue (« Relire » seulement)', async () => {
   await monter({ uid: 'p105-dial' });
   await preparer();

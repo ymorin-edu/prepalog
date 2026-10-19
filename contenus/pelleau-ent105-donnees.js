@@ -90,7 +90,7 @@ export function quaiDeclare() {
     lieu: { nom: 'Quai A', temp: 15, refrigere: false },
     zone: { nom: 'Zone de réception' },
     unite: { un: 'colis', des: 'colis' },
-    document: { nom: 'Feuille de ramasse', court: 'FR' },
+    document: { nom: 'Feuille de ramasse', court: 'FR', article: 'la' },
     recommencer: false,
     aides: { consignes: true },
     dechargement: { ouverture: 0.5, parPalette: 1, par: 'cariste', nom: 'Yann' },
@@ -108,6 +108,8 @@ export function quaiDeclare() {
     arret: { etape: 'dechargement', texte: texteArret() },
     camions: [{
       transporteur: 'Transports Pelleau', fournisseur: 'ramasse de Loïc', bl: 'RAM-0512', arrivee: '07:30',
+      // Loïc est un collègue : tutoiement (« Oui, tu peux décharger »), et son prénom plutôt que « le chauffeur ».
+      tutoiement: true, prenomChauffeur: 'Loïc',
       parole: 'La feuille de ramasse, tu l’as. Je vais au local.',
       // Une copie : le moteur ne doit jamais modifier les palettes que lisent le corrigé et les tests.
       palettes: JSON.parse(JSON.stringify(PALETTES)),

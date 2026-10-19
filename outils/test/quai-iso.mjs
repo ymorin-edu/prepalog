@@ -2399,6 +2399,112 @@ await v('Quai document : le titre de ④ (et de ①) porte le nom déclaré ; sa
   await q.close();
 });
 
+/* ---- Quai : l'article du document (`document.article`) et le chauffeur collègue (`camions[i].tutoiement`, `camions[i].prenomChauffeur`) — demande d'ENT-10.5, 19/10/2026.
+   Sans ces trois clés, les textes d'avant (« le bon de livraison », « vous pouvez »). Valeurs attendues écrites à la main. */
+const CAM_ART = (opt = {}) => ({ transporteur: 'Transporteur d’essai', fournisseur: 'Brasserie d’essai', bl: 'BL-ESSAI-01', arrivee: '07:30', palettes: PALS5, ...opt });
+// Lit l'arrivée (①, quai iso arrêté au déchargement) : la légende, le bouton, la réplique par défaut du chauffeur (étiquette de la scène).
+async function lireArrivee(extra, camion) {
+  const p = await pageDeux(DEUX(Object.assign({ arret: 'dechargement', camions: [CAM_ART(camion)] }, extra)));
+  await p.waitForSelector(`${HOTE} [data-q-apres-arrivee] .quai-doc-titre`);
+  const r = {
+    leg: (await legende(p)).replace(/^\d\d:\d\d — /, ''),
+    bouton: await p.$eval(`${HOTE} [data-q="decharger"]`, (n) => n.textContent.trim().replace(/\s+/g, ' ')),
+    parole: await p.$eval(`${HOTE} [data-q-arrivee]`, (n) => n.getAttribute('aria-label')),
+  };
+  await p.close();
+  return r;
+}
+
+await v('Quai article : `document.article` (« la », « l’ ») met au féminin la légende d’arrivée et « Voilà ma… » ; sans article, ou en texte seul, les phrases d’aujourd’hui', async () => {
+  const doc = (nom, article) => ({ document: Object.assign({ nom, court: 'FR' }, article ? { article } : {}) });
+  const la = await lireArrivee(doc('Feuille de ramasse', 'la'));
+  egal(la.leg, 'Le chauffeur te remet la feuille de ramasse.', 'article la : légende');
+  vrai(la.parole.endsWith('Voilà ma feuille de ramasse. »'), `article la : réplique par défaut « ${la.parole} »`);
+  const l = await lireArrivee(doc('Annonce de ramasse', 'l’'));
+  egal(l.leg, 'Le chauffeur te remet l’annonce de ramasse.', 'article l’ : légende, sans espace');
+  vrai(l.parole.endsWith('Voilà mon annonce de ramasse. »'), `article l’ : « mon » devant une voyelle (« ${l.parole} »)`);
+  const defaut = await lireArrivee(doc('Bon de collecte'));
+  egal(defaut.leg, 'Le chauffeur te remet le bon de collecte.', 'objet sans article : « le »');
+  vrai(defaut.parole.endsWith('Voilà mon bon de collecte. »'), `objet sans article : « ${defaut.parole} »`);
+  const explicite = await lireArrivee(doc('Bon de collecte', 'le'));
+  egal(explicite, defaut, 'article: \'le\' dit la même chose que pas d’article');
+  // Document en texte seul, ou absent : le texte d'aujourd'hui, inchangé.
+  const texte = await lireArrivee({ document: 'Lettre de voiture' });
+  egal(texte.leg, 'Le chauffeur te remet le bon de livraison.', 'document en texte seul : comme avant');
+  const rien = await lireArrivee({});
+  egal(rien.leg, 'Le chauffeur te remet le bon de livraison.', 'sans document : comme avant');
+  vrai(rien.parole.endsWith('Voilà mon bon de livraison. »'), `sans document : « ${rien.parole} »`);
+  // À l'étape ④ : « sur la FR » avec l'article « la » ; « sur le BL » sans.
+  const sur = async (extra) => {
+    const p = await pageDeux(DEUX(Object.assign({ commence: 'controle', camions: [CAM_ART()] }, extra)));
+    await p.waitForSelector(`${HOTE} [data-q-palette]`);
+    await p.click(`${HOTE} [data-q="etape"][data-n="4"]`);
+    const t = await p.$eval(`${HOTE} .quai-h2`, (n) => n.textContent.trim().replace(/\s+/g, ' '));
+    await p.close();
+    return t;
+  };
+  vrai(/Écrire les réserves sur la FR, faire signer le chauffeur/.test(await sur(doc('Feuille de ramasse', 'la'))), 'titre de ④ : « sur la FR »');
+  vrai(/Écrire les réserves sur le BL, faire signer le chauffeur/.test(await sur({})), 'titre de ④ sans document : « sur le BL »');
+});
+
+await v('Quai article : verifierQuai refuse un article inconnu (« les », vide, nom hérité d’un objet) et une clé inconnue de `document` ; accepte le, la, l’ ; creerQuai lève l’erreur', async () => {
+  const bon = (m = {}) => QC([PC({ id: 'P1' })], Object.assign({ rendu: 'iso', froid: false }, m));
+  for (const a of ['le', 'la', 'l’']) egal(quaiMod.verifierQuai(bon({ document: { nom: 'Feuille', court: 'FR', article: a } })), [], `article ${a}`);
+  for (const a of ['les', '', 'LA', 'constructor', 3, null]) {
+    const E = quaiMod.verifierQuai(bon({ document: { nom: 'Feuille', court: 'FR', article: a } }));
+    vrai(E.some((m) => /document\.article : .*n’existe pas \(les seules valeurs sont 'le', 'la' et 'l’'\)/.test(m)), `article ${JSON.stringify(a)} devrait être refusé (${E.join(' | ')})`);
+  }
+  const inconnue = quaiMod.verifierQuai(bon({ document: { nom: 'Feuille', court: 'FR', genre: 'f' } }));
+  vrai(inconnue.some((m) => /document\.genre : inconnu \(nom, court, article\)/.test(m)), `clé inconnue (${inconnue.join(' | ')})`);
+  let levee = '';
+  try { quaiMod.creerQuai(bon({ document: { nom: 'Feuille', court: 'FR', article: 'les' } })); } catch (x) { levee = x.message; }
+  vrai(/document\.article/.test(levee), `creerQuai devrait lever l’erreur : ${levee}`);
+});
+
+await v('Quai chauffeur collègue : `tutoiement: true` met le bouton et les répliques du chauffeur au « tu », `prenomChauffeur` remplace « Le chauffeur » ; sans les clés, « vous » comme avant', async () => {
+  const tu = await lireArrivee({}, { tutoiement: true, prenomChauffeur: 'Loïc' });
+  egal(tu.bouton, '« Oui, tu peux décharger »', 'tutoiement : le bouton');
+  egal(tu.leg, 'Loïc te remet le bon de livraison.', 'prénom : la légende d’arrivée');
+  const seul = await lireArrivee({}, { tutoiement: true });
+  egal(seul.bouton, '« Oui, tu peux décharger »', 'tutoiement seul : le bouton');
+  egal(seul.leg, 'Le chauffeur te remet le bon de livraison.', 'tutoiement seul : « Le chauffeur » reste');
+  const prenomSeul = await lireArrivee({}, { prenomChauffeur: 'Loïc' });
+  egal(prenomSeul.bouton, '« Oui, vous pouvez décharger »', 'prénom seul : on vouvoie encore');
+  const sans = await lireArrivee({});
+  egal(sans.bouton, '« Oui, vous pouvez décharger »', 'sans option : « vous »');
+  egal(sans.leg, 'Le chauffeur te remet le bon de livraison.', 'sans option : « Le chauffeur »');
+  // À l'étape ④ : la réplique d'attente du chauffeur.
+  const quatre = async (camion) => {
+    const p = await pageDeux(DEUX({ commence: 'controle', camions: [CAM_ART(camion)] }));
+    await p.waitForSelector(`${HOTE} [data-q-palette]`);
+    await p.click(`${HOTE} [data-q="etape"][data-n="4"]`);
+    const parole = await p.$eval(`${HOTE} [data-q-parole]`, (n) => n.textContent.trim().replace(/\s+/g, ' '));
+    await p.close();
+    return parole;
+  };
+  egal(await quatre({ tutoiement: true, prenomChauffeur: 'Loïc' }), 'Loïc : « J’attends tes papiers pour signer. Mes autres clients m’attendent aussi. »', '④ au tu, avec le prénom');
+  egal(await quatre({}), 'Le chauffeur : « J’attends vos papiers pour signer. Mes autres clients m’attendent aussi. »', '④ sans option : comme avant');
+});
+
+await v('Quai chauffeur collègue : verifierQuai refuse un tutoiement qui n’est pas true et un prénom vide ; accepte les deux ; creerQuai lève l’erreur', async () => {
+  const bon = (c = {}) => QC([PC({ id: 'P1' })], { rendu: 'iso', froid: false, camions: [Object.assign({ nom: 'A', palettes: [PC({ id: 'P1' })] }, c)] });
+  egal(quaiMod.verifierQuai(bon({ tutoiement: true, prenomChauffeur: 'Loïc' })), [], 'les deux clés justes');
+  egal(quaiMod.verifierQuai(bon({})), [], 'aucune clé');
+  for (const t of [false, 'oui', 1, null]) {
+    const E = quaiMod.verifierQuai(bon({ tutoiement: t }));
+    vrai(E.some((m) => /camions\[0\]\.tutoiement : ne prend que la valeur true/.test(m)), `tutoiement ${JSON.stringify(t)} devrait être refusé (${E.join(' | ')})`);
+  }
+  for (const n of ['', '  ', 3, null]) {
+    const E = quaiMod.verifierQuai(bon({ prenomChauffeur: n }));
+    vrai(E.some((m) => /camions\[0\]\.prenomChauffeur : le prénom est vide/.test(m)), `prenomChauffeur ${JSON.stringify(n)} devrait être refusé (${E.join(' | ')})`);
+  }
+  // ENT-8.10 range déjà `chauffeur: 'Thomas'` dans son camion : cette clé-là n'est ni lue ni refusée.
+  egal(quaiMod.verifierQuai(bon({ chauffeur: 'Thomas' })), [], 'la clé `chauffeur` d’ENT-8.10 reste libre');
+  let levee = '';
+  try { quaiMod.creerQuai(bon({ tutoiement: 'oui' })); } catch (x) { levee = x.message; }
+  vrai(/camions\[0\]\.tutoiement/.test(levee), `creerQuai devrait lever l’erreur : ${levee}`);
+});
+
 await v('Quai chariot : cinq palettes (ENT-8.7) — le chariot ne touche aucune palette posée, les cinq bacs tiennent dans la zone de réception, la légende et les pastilles suivent', async () => {
   // Les places d'arrivée de cinq palettes de fûts (deux colonnes, trois rangs), écrites à la main comme PLACES_4 : y = 2,1 + (2 − rang) × 1,15.
   const gab = [0, 1, 2, 3, 4].map(() => [0.95, 0.95]);
