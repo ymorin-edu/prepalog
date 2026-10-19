@@ -17,3 +17,12 @@ Les photos de France Boissons (ENT-6.x) sont recensées, une par une, dans
 
 Le logo d'Action (Wikimedia Commons, domaine public, mais marque) et les photos d'Action (ENT-8.x) sont recensés, un par un,
 dans [`contenus/images/action/CREDITS.md`](contenus/images/action/CREDITS.md).
+
+## Transports Pelleau
+
+Logo récupéré par script (`outils/logo-pelleau.mjs`) le 19/10/2026, avec l'accord de l'enseignant (18/10/2026) pour un usage
+pédagogique interne. Le site n'en offre pas de version SVG : le fichier est le PNG de l'en-tête, rangé tel quel.
+
+| Fichier | Auteur | Page source | Licence | Retouche | Dimensions | Taille | SHA-256 |
+|---|---|---|---|---|---|---|---|
+| `contenus/trames/logos/pelleau.png` | Transports Pelleau | [transports-pelleau.fr](https://www.transports-pelleau.fr/), fichier `wp-content/uploads/2024/08/Logo-TP-V2.png` | Logo de l'entreprise, utilisé avec l'accord de l'enseignant pour un usage pédagogique interne ; marque déposée (pas de licence libre) | aucune (octets identiques à ceux du site) | 1940 × 445 px, fond transparent | 28 130 octets | `17ed634d7f035189b0a7f8311fc7776a2961e484615d332e2d871e91c3af2780` |
