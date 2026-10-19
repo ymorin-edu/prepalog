@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, docs/briefs/MOTEUR-inspection-poste.md puis docs/briefs/ENT-10.2-pelleau-premier-jour.md en entier. ENT-10.1 et la vue « Inspection du poste » doivent être livrées. Les poids du §5 sont validés par Tristan ; fais l'état des lieux du §7, annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (19/10/2026, `pret: true, ouverture: 'prof'`)
 **Date du brief** : 18/10/2026
 **Conversation d'origine** : Cowork (Opus), 18/10/2026 au soir, sur délégation de Tristan ; la vue nouvelle a été choisie par Tristan (« Nouveau
 dessin », 21 h 50). Décision de cadrage n° 5 de Tristan : **le piège « le site n'est pas fini » est obligatoire en guidage**.
@@ -251,3 +251,54 @@ poste, rendre compte). Corrigé : `contenus/corriges/ENT-10.2.js`.
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**19/10/2026 — sous-agent Opus, chantier Pelleau.** Rien n'est commité par le sous-agent (le chef relit, commite et pousse).
+
+- **Fichiers** : `activites/pelleau-premier-jour.js` (`pret: true, ouverture: 'prof'`), `contenus/pelleau-ent102.js` (messages, documents, visite,
+  fiches, planning, jalons), `contenus/pelleau-ent102-donnees.js` (données pures : défaut tiré, inspection, grille, lectures, tirage, phrases ;
+  chargé aussi sous Node par le corrigé), `contenus/questions/ENT-10.2.js`, `contenus/corriges/ENT-10.2.js`, `outils/test/pelleau-102.mjs`
+  (19 cas, dont un de captures sous `CAPTURES_ENT102`). Lignes ajoutées : `activites/index.js` (sous ENT-10.1), `outils/test.mjs` (`BLOCS`,
+  `GROUPES` 4), `outils/test/socle.mjs` (`'ENT-10.2': 'CAP-C1.2'`), `outils/test/tirage-niveaux.mjs` (`BANQUES_FIGEES`), et l'aide
+  `aidesInspection` ajoutée à la fin de `outils/test/pelleau/commun.mjs` (pour 10.3 et 10.4).
+- **Poids codés** (ceux du §5) : repérer l'entrepôt 3 (4 photos × 0,75, au premier essai) · mon poste 7 (défaut du site signalé avant de prendre
+  le poste 2,5 · avertisseur essayé 1,5 · aucun faux signalement 1,5 · « En attendant » 1,5) · le planning 3 (2 lectures × 1, la carte 1) ·
+  rendre compte 3 (ton engin et ce qui manque 1 · l'heure de Loïc 1 · salutation 0,5 · fin 0,5) · questions 4 (A 1,5 · B 1 · C 1,5 ; D
+  réflexion). Confirmé : une lecture de plus (difficile), cachée. Inaction : 0/20 (testé, y compris un poste « pris » sans signal ni essai).
+- **Écarts avec le brief** :
+  1. **Planning fixe** (décision 12 du chef) : tous les camions du matin au quai A (Loïc 7 h 30 – 8 h 15, Agri-Kerlann 9 h – 10 h), le quai B
+     n'a rien ; la grille tient dans les deux variantes. Le quai B interdit (variante extincteur) est jugé par le jalon de la carte sur le défaut de
+     l'élève, pas par le moteur : en guidage, poser au quai B ne montre aucun problème à l'écran (le panneau rappelle « un camion ne se met qu'à
+     un quai prêt : l'extincteur à sa place »), le bilan le dit ✗ et « Corriger » rouvre le planning.
+  2. Lecture `l-fin-agri` (« à quelle heure la livraison pour Agri-Kerlann libère-t-elle son quai ? », 10 h) remplace `l-fin-matin` (« quel quai
+     est libre à 11 h ? » : deux réponses sur la grille fixe).
+  3. **« Loïc arrive »** (10.2:114 contre 10.2:119) tranché par le planning : Erwan demande le compte rendu « avant le retour de Loïc » ; sa
+     réponse finale : « Loïc revient à 7 h 30 au quai A : avec Yann, je reçois son camion. La semaine prochaine, on le reçoit ensemble. »
+  4. Aucun jour de la semaine : document « Planning des quais — 5 mai » ; « l'extincteur arrive jeudi » devient « arrive après-demain ».
+  5. La phrase « mon engin » n'a pas de poids à elle seule au §5 : elle est jugée avec « ce qui manque » (jalon `cr-manque`, 1 point).
+  6. **Transpalette n° 2 non dessiné** : la vue ne dessine qu'un engin déclaré par un point ; le déclarer « en ordre » le rendrait cliquable (un
+     piège de plus). La place peinte n° 2 reste vide dans le local de charge. **Question au chef / à Tristan.**
+  7. `img-tpe` et `img-extincteur` montrent des **dessins du kit iso** (aucune photo libre au dépôt) ; `img-gilet` garde la photo d'Action.
+  8. La note du vestiaire de `PLAN_ENTREPOT` (50 signes) dépasse la limite de la visite (34) : raccourcie dans la visite de la séance
+     (« EPI ; local de charge à côté »), `contenus/pelleau.js` non touché.
+  9. « Le droit » (`droit-102`) : D4153-27, R4153-40, R4153-51 (textes de l'univers) + L4141-1 1er alinéa repris d'ENT-8.2 (Légifrance,
+     15/10/2026), non relu ici.
+- **Tests** : `pelleau-102` 19/19 ; `socle dependances tirage-niveaux questions inspection pelleau-101` 224/224. Sabotages joués puis remis
+  (empreinte du fichier vérifiée) :
+
+  | Sabotage | Cas tombés |
+  |---|---|
+  | jalon du compte rendu vrai sans envoi (inaction) | inaction + 10 autres |
+  | l'arrêt d'Erwan nomme le défaut | « défaut oublié → arrêt sans nommer le point » |
+  | « Ce mardi » dans le premier message daté | parcours juste (extincteur), questions |
+  | défaut du site jamais tiré (toujours l'extincteur) | tirage 300 graines, variante plan, confirmé, socle |
+  | phrase « ce qui manque » non calculée | tirage 300 graines, variante plan, confirmé |
+  | quai B accepté sans extincteur | planning, pire cas |
+
+- **Écran (mesuré)** : à 1366 × 768, la vue tient et la page ne défile pas, **messages lus**. À 1280 × 720, le bandeau « Transports Pelleau »
+  passe sur deux lignes (103 px au lieu de 60, « Quitter » en dessous) : le cadre `.ent-page` dépasse de 30 px alors que la vue tient (bas à
+  706). Et à toute taille, tant qu'un message n'est pas lu, la carte « Nouveau message » prend ~100 px dans le flux au-dessus de l'écran de
+  travail (84 px de défilement à 1366 × 768). Traits du moteur, non touchés.
+- **À vérifier par Tristan à l'écran** : le dessin (transpalette, extincteur, plan) au vidéoprojecteur ; le bouton « Essayer l'avertisseur du
+  n° 1 » trouvé sans aide ; la place n° 2 vide ; les textes d'Erwan et de Maëlys ; le quai B jugé seulement au bilan (écart 1) ; la consigne
+  de l'inspection raccourcie à trois lignes (« Avec ta liste, regarde ton poste et ton transpalette. Clique ce qui ne va pas, puis
+  signale-le. ») ; les deux dessins d'« Avant de commencer ». Clavier : boutons oui, marques non (arbitrage de la vue).
