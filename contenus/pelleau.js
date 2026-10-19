@@ -132,6 +132,11 @@ export const CLIENTS = {
     conditionnement: 'sacs', temperature: 'Conserver entre 4 et 8 °C — craint le gel' },
 };
 export const MENTION_FICTIF = 'entreprise fictive';
+// Ajouté par ENT-10.5 (19/10/2026) : le nom écrit AU SOL d'une case de dépose (vue quai, dépose par client) quand `court` ne s'y lit pas à
+// 1366 × 768 (« AGRI-KERLANN » sort sur deux lignes, en petit : compte rendu du lot D). PROPOSITION de Claude Code, à valider à l'écran par
+// Tristan ; `CLIENTS` ne change pas (ENT-10.1 le lit). `clientsDepose(ids)` rend `depose.clients` au format du moteur ({ nom, court } seulement).
+export const AU_SOL = { 'agri-kerlann': 'AGRI' };
+export const clientsDepose = (ids) => Object.fromEntries(ids.map((id) => [id, { nom: CLIENTS[id].nom, court: AU_SOL[id] || CLIENTS[id].court }]));
 
 // ─────────────────────────────────────────── les palettes types (construites ; reprises par ENT-10.5 à 10.12)
 // Une palette = des colis rangés en couches : `couches` × `parCouche` = `colis` (palette complète). Désignations génériques, références au
@@ -145,14 +150,17 @@ export const PALETTE_KERVEGUEN = { client: 'kerveguen', ref: 'KG-10633', designa
   temperature: { min: 4, max: 8 }, etiquette: CLIENTS.kerveguen.temperature };
 export const PALETTES_TYPES = { 'ar-vag': PALETTE_AR_VAG, 'agri-kerlann': PALETTE_AGRI, kerveguen: PALETTE_KERVEGUEN };
 
-// ─────────────────────────────────────────── les photos (libres, ni Pelleau ni visage) : celles d'Action, déjà au dépôt
-// Fichiers et mentions de `contenus/images/action/CREDITS.md` (Pexels), REPRIS tels quels : pas de photo nouvelle sans accord (téléchargement).
+// ─────────────────────────────────────────── les photos (aucun visage) : deux de Pelleau, les autres d'Action
+// `racks` et `semi` : photos du site de Transports Pelleau, récupérées par `outils/photos-pelleau.mjs` (19/10/2026, accord de Tristan),
+// rangées dans `contenus/images/pelleau/` (crédits : `CREDITS.md`, section « Transports Pelleau »). `chariot` et `quai` : fichiers et mentions
+// de `contenus/images/action/CREDITS.md` (Pexels), repris tels quels (Pelleau n'a pas de photo de chariot sur son site).
 const IMG = './contenus/images/action/';
+const IMG_PELLEAU = './contenus/images/pelleau/';
 export const PHOTOS = {
-  racks: { src: IMG + 'entrepot-racks.jpg', alt: 'Une allée d’entrepôt entre deux rangées de racks à palettes chargées de cartons et de seaux',
-    mention: 'Photo d’un autre entrepôt — Tiger Lily / Pexels' },
-  semi: { src: IMG + 'semi-remorque.jpg', alt: 'Un camion rouge avec une grande remorque blanche sur une route, en plein soleil',
-    mention: 'Photo d’un autre camion — Quintin Gellar / Pexels' },
+  racks: { src: IMG_PELLEAU + 'entrepot-racks.jpg', alt: 'Une grande allée d’entrepôt entre deux rangées de racks orange et bleu, vides, avec un chariot jaune au fond à droite',
+    mention: 'Photo : Transports Pelleau' },
+  semi: { src: IMG_PELLEAU + 'camion-pelleau-port.jpg', alt: 'Un camion blanc et bleu marine, avec une grande remorque ornée de pommes de terre, garé sur un quai de port devant une grue',
+    mention: 'Photo : Transports Pelleau' },
   chariot: { src: IMG + 'chariot-elevateur.jpg', alt: 'Un chariot élévateur orange, fourches baissées, dans un entrepôt',
     mention: 'Photo d’un autre entrepôt — Ani Set / Pexels' },
   quai: { src: IMG + 'quai-camion.jpg', alt: 'Trois remorques blanches reculées contre des portes de quai, sous un ciel bleu',

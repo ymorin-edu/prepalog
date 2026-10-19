@@ -14,9 +14,10 @@
 // AVANT DE COMMENCER (§4 ter) : 9 questions NON notées, 4 tirées par élève (`tirage: { preparation: 3, image: 1 }` : 6 notions ≥ 2 × 3,
 // 3 images ≥ 2 × 1). `cle: true` = question clé, à reprendre dans l'ouverture notée d'ENT-10.4. Écartées (brief) : `holding` et `germicopa`
 // (elles donneraient des étapes de la frise).
-// ÉCART AVEC LE BRIEF : le dépôt n'a ni photo de porteur ni photo de porte-voitures (un téléchargement demande l'accord de Tristan). Les images
-// sont celles d'Action, déjà au dépôt : `img-racks` (comme le brief), `img-semi` (à la place de `img-porteur`) et `img-chariot` (à la place de
-// `img-porte-voitures`). Les ids `img-porteur` et `img-porte-voitures` restent libres pour le jour où les photos seront là.
+// ÉCART AVEC LE BRIEF : le site de Pelleau n'a pas de photo de porteur ni de porte-voitures isolés. `img-racks` et `img-semi` (à la place de
+// `img-porteur`) montrent deux photos de Pelleau (`contenus/images/pelleau/`, récupérées avec l'accord de Tristan le 19/10/2026) ; `img-chariot`
+// (à la place de `img-porte-voitures`) garde la photo d'un chariot d'Action, déjà au dépôt. Les ids `img-porteur` et `img-porte-voitures`
+// restent libres.
 
 import { EQUIPE, PHOTOS } from '../pelleau.js';
 import { apresGeste } from '../../core/declencheurs.js';
