@@ -122,6 +122,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `animations` | tableau | Plusieurs animations (rare). | essais seulement |
 | `telephone` | objet | Écran « Téléphone » : appels où l'élève choisit ses répliques, contacts sans dialogue (voir « Vue « Dialogue à choix » »). | essai (`contenus/dialogue-essai.js`) ; Decathlon ENT-7.2 (`contenus/decathlon-ent72.js`), 7.3 et 7.4 à venir |
 | `localiser` | objet | Carte de France : l'élève situe chaque lieu en trois clics guidés (région → département → ville), trajet de la marchandise à la fin (voir « Vue « Localiser » »). | essai (`contenus/localiser-essai.js`) ; Action ENT-8.1 à venir |
+| `inspection` | objet ou fonction | Inspection du poste **avant tout camion** (écran « Mon poste ») : local de charge et quai, marques sur les objets, « Signaler à … », essai de l'avertisseur, « C'est bon, je prends mon poste » (voir « Vue « Inspection du poste » »). Une **fonction de la graine** = une inspection tirée par élève. Sans elle, rien ne change (alerte 13). | essai (`outils/essai-inspection-poste.js`) ; Pelleau ENT-10.2 à 10.4 à venir |
 | `courriel` | objet | Écran « Nouveau courriel » de la messagerie : carnet (liste du champ À), pièces jointes, réponse automatique, brouillon (voir « Nouveau courriel et fiche enregistrée »). Sans elle, « Nouveau message » (fournisseurs) ne change pas. | essai (`contenus/courriel-essai.js`) ; Decathlon ENT-7.2 (`contenus/decathlon-ent72.js`) |
 | `questions` | objet | Questions au fil et points d'étape (voir « Questions au fil »). | essais seulement (aucune séance ne la passe encore) |
 | `equipe` | objet | Personnes citées par les questions, en plus de `questions.personnes` ; destinataires d'un message à transférer (`transfert.a`). | essai des questions (`contenus/questions-essai.js`) |
@@ -1338,6 +1339,106 @@ export const ETAPES = etapesLocaliser(LOCALISER, 'action-se-situer').map((j) => 
   (aucun jalon de lieu bonus ; sans lieu bonus déclaré, l'option ne change rien). Les ✓ / ✗ par lieu se lisent dans le détail de la note
   après la remise.
 
+## Vue « Inspection du poste » : `inspection` — `core/types/inspection.js`
+
+Écrite le 19/10/2026 (chantier Transports Pelleau, lot G-5 ; brief `docs/briefs/MOTEUR-inspection-poste.md`, décisions
+`docs/briefs/COORDINATION-pelleau.md` §2) d'après la maquette validée par Tristan (`outils/essai-inspection-poste.html`, qui joue
+maintenant la vraie vue). Pour les **prises de poste** sans camion (Pelleau ENT-10.2 à 10.4, puis Amazon, Leclerc, Bricomarché) : l'élève
+regarde son poste et son engin, clique ce qui ne va pas, le signale, essaie l'avertisseur, puis prend son poste. Rien de Pelleau dans le
+moteur. Le quai garde **son** inspection sur la scène (`securite.mode: 'scene'`, avec un camion) : les deux ne se mélangent pas.
+
+```js
+import { etapesInspection } from '../core/types/inspection.js';
+import { inspectionFinie, apresGeste } from '../core/declencheurs.js';
+
+export const INSPECTION = {
+  id: 'pelleau-poste-102', libelle: 'Mon poste', qui: 'Erwan',
+  consigne: 'Regarde ton poste et ton transpalette. Clique ce qui ne va pas, puis signale-le à Erwan.',
+  vues: ['charge', 'quai'],
+  points: [
+    { id: 'tp1', objet: 'transpalette', n: 1, etat: 'ok', ok: true, lib: 'Transpalette n° 1 en ordre' },
+    { id: 'tp2-fourche', objet: 'transpalette', n: 2, etat: 'fourcheTordue', ok: false, lib: 'Fourche tordue sur le transpalette n° 2',
+      repare: 'Bien vu. Je le mets de côté : prends le n° 1.' },
+    { id: 'extincteur', objet: 'extincteur', etat: 'absent', ok: false, reparable: false, lib: 'Extincteur absent au quai B',
+      repare: 'Merci. Il arrive demain. En attendant, on ne travaille pas au quai B.' },
+    { id: 'plan', objet: 'affichage', etat: 'affiche', ok: true, lib: 'Plan de circulation affiché' },
+  ],
+  essai: { objet: 'transpalette', n: 2, resultat: 'muet' },
+  arret: true, commencer: 'C’est bon, je prends mon poste',
+  bilan: 'Avant de prendre ton poste, tu regardes ton engin et ton poste, et tu signales tout ce qui ne va pas.',
+};
+// Jalons : un par défaut, un par essai, « aucun faux signalement ». La séance pose poids et groupe (règle des ENT-x.y).
+export const ETAPES = etapesInspection(INSPECTION, 'pelleau-prise-de-poste').map((j) => Object.assign(j, { poids: 2, groupe: 'Mon poste' }));
+// Dans creerEntreprise (ou les options de seanceEntreprise) : inspection: INSPECTION
+// Un écran ouvert après la prise de poste : fermetures: { planning: { ouvertSi: inspectionFinie('pelleau-poste-102'), message: '…' } }
+// Une question après le premier signalement : quand: apresGeste('inspection:pelleau-poste-102:signaler')
+```
+
+| Champ | Contenu | Défaut | Refusé si |
+|---|---|---|---|
+| `id` | un id **par séance** (il entre dans les gestes) | — | vide ; contient « : » ; deux vues d'inspection au même id |
+| `libelle` | l'entrée du menu (groupe « Mon poste ») | « Mon poste » | — |
+| `qui` | qui reçoit le signalement : « Signaler à Erwan » | « ton chef d'équipe » | — |
+| `consigne` | la phrase en tête du panneau | « Clique sur ce qui ne va pas, puis signale-le. » | — |
+| `vues` | `['charge', 'quai']` dans l'ordre d'affichage ; une seule = pas de bascule | les deux | vue inconnue ou en double ; un point dont l'objet se voit dans une vue absente |
+| `points[]` | `{ id, objet, n?, etat, ok, lib, repare?, reparable? }` | — | liste vide ; `id` vide, en double ou **`aucun-faux`** (réservé) ; objet inconnu ; **deux points sur le même objet** (même transpalette n°) ; état inconnu pour l'objet ; `ok` absent ou **incohérent** (`ok: true` sur un état dangereux, `ok: false` sur l'état sûr) ; `n` hors de 1 et 2 (transpalette) ou donné à un autre objet ; `lib` absent |
+| `points[].repare` | ce que dit le collègue quand ce défaut est signalé | « Bien vu, je m’en occupe. » | — |
+| `points[].reparable` | `false` : le collègue répond, mais l'objet **reste** dans son état (l'extincteur n'apparaît pas d'un coup) ; le jalon est juste s'il a été signalé | réparé sous les yeux | autre valeur que `false` ; `false` sur un point en ordre |
+| `essai` | `{ objet: 'transpalette', n, resultat: 'muet' \| 'sonne' }` ou une liste : un bouton « Essayer l'avertisseur du n° X » par essai | aucun bouton | autre objet ; deux essais sur le même n° ; **engin déclaré par aucun point** ; `muet` sur un engin dont le point est en ordre ; un point `avertisseur` sans essai `muet` |
+| `arret` | `true`, `false` ou le texte de l'arrêt | `true` | autre type |
+| `commencer` | le bouton qui fige (suivi de « → ») | « C’est bon, je prends mon poste » | — |
+| `signaler` | `{ rien, fin, vide, deja, note }` : les répliques du collègue (point en ordre / toujours à la fin / rien à envoyer / défaut non réparable re-signalé / copie) | « Là, je ne vois rien qui cloche. » / « Tu me dis quand tu prends ton poste. » / « Qu’est-ce qui ne va pas ? … » / « Oui, je sais : c’est noté. » / « C’est noté. » | — |
+| `bilan` | phrase sous « Tu as pris ton poste » si un jalon est faux (guidage seulement, ne nomme rien) | rien | — |
+
+**Les objets** (kit `core/iso.js`, jamais de dessin dans `contenus/`) :
+
+| Objet | Vue | États (le sûr en premier) |
+|---|---|---|
+| `transpalette` (électrique, `n` : 1 ou 2, peint sur le capot ; jaune, jamais vert) | charge | `ok` · `fourcheTordue` · `roueAbimee` · `batterie` (voyant rouge, câble débranché) · `arretUrgence` (bouton absent) · `fuite` (flaque) · `avertisseur` (rien ne se voit : seulement à l'essai) |
+| `extincteur` | quai | `present` · `absent` (support vide, panneau seul) |
+| `affichage` (plan de circulation) | quai | `affiche` · `absent` (cadre vide) |
+
+Un transpalette que ne nomme aucun point ni essai n'est pas dessiné (le n° 1 seul si aucun) ; la borne de charge est un décor.
+
+- **Le geste.** Un clic sur un objet déclaré pose un rond numéroté (encre, ni vert ni rouge) ; un clic sur un rond **pas encore envoyé**
+  le retire. **Un clic hors de tout objet ne pose rien** (retour d'écran de Tristan, 19/10/2026 ; le quai, lui, pose une marque « à
+  côté ») : la phrase grise « Clique un objet du poste. » remplace le compteur. Rien dans le dessin ne nomme un objet ni un défaut (ni
+  `title`, ni `tabindex`, ni `data-*` : les balises `data-iso-…` du kit sont retirées ; un test le garde), curseur en croix, aucune
+  surbrillance. « Signaler à … » : les marques non envoyées partent en **un signal** ; le collègue répond les `repare` des défauts touchés
+  pas encore signalés, puis « Oui, je sais » si un défaut non réparable est re-signalé (**pas un faux**), puis `rien` s'il y a un point en
+  ordre ou un défaut déjà réparé, puis `fin`. Ce qui est réparable se répare sous les yeux. Une marque envoyée est grisée en tirets et
+  inerte. « Essayer l'avertisseur » : « Tu appuies : le klaxon sonne. » ou « Tu appuies : rien ne sonne. » (**aucun son**) ; seulement
+  dans la vue « charge ». Bascule « Le local de charge » / « Le quai », sans porte à ouvrir.
+- **« C'est bon, je prends mon poste »** : deux clics (« Tu prends ton poste, c'est définitif : clique pour confirmer », « Annuler » ; une
+  marque posée désarme). Un défaut jamais signalé, en guidage et sauf `arret: false` : le collègue **arrête** l'élève (texte `arret`,
+  **sans nommer le point**), qui continue d'inspecter ; ses signaux suivants comptent « après l'arrêt ». Sinon l'inspection est **figée**
+  (marques non envoyées abandonnées, plus rien ne bouge, la scène reste ce qu'elle est) : « Tu as pris ton poste : l'inspection est figée. ».
+- **Jalons** (même forme que ceux du quai, `{ id, lib, fait, attendu, ok }`, lus par le bandeau de fin et `bilanDetail`) :
+  `securite-<id>` par défaut, « Défaut n° i signalé avant de prendre le poste » (juste = signalé dans un signal envoyé **avant** l'arrêt ;
+  le défaut est nommé dans `attendu`, jamais dans `lib`) ; `essai-<n>` par essai déclaré, **même quand l'avertisseur sonne**,
+  « Avertisseur du n° X essayé avant de prendre le poste » ; `securite-aucun-faux` (juste = au moins un signal, aucun sur un point en
+  ordre). **Aucun n'est vrai par inaction.** `etapesInspection(decl, séance, { copie })` rend les étapes : `attente` tant que le poste
+  n'est pas pris, puis `ok`, ou `ko` (avec ce que l'élève a fait). `lignesInspection(decl, db, séance)` rend les lignes (corrigé, détail).
+  « Corriger » ne rouvre jamais l'inspection (pas d'`ecran`).
+- **Gestes** : `inspection:<id>:signaler`, `inspection:<id>:essai` (si un essai est déclaré), `inspection:<id>:fini`. **Déclencheur** :
+  `inspectionFinie('<id>')` (fermetures, messages, questions ; contrôlé au chargement : un id inconnu refuse la séance ; `tous()` le garde).
+- **État** : `db.inspections[<séance>][<id>] = { marques, compteur, signaux, essais, arrete, fait, chef }`, **cloisonné par séance** ;
+  l'état dessiné des objets se calcule (`etatsInspection`), jamais rangé. Reprise exacte après rechargement (la vue regardée repart sur la
+  première). « Réinitialiser » l'efface avec le reste. L'enseignant joue sur une copie en mémoire (rien n'est écrit).
+- **Copie** (`copie: true`) : la marque se pose au premier clic comme en guidage, le collègue répond toujours « C’est noté. », **rien ne se
+  répare**, **aucun arrêt** (un défaut oublié est figé tel quel, jalon faux), aucune phrase de bilan ; même confirmation en deux clics.
+  Après la remise, la vue se consulte sans se modifier.
+- **Tirage** : `inspection: (graine, { niveau, copie }) => ({ … })`, comme le quai tiré : gardée par graine et par niveau, les variantes de
+  la graine vide sont construites au chargement ; **mêmes `id`, même nombre de défauts et d'essais pour toutes les graines** (l'étape
+  n° k lit la k-ième ligne du jeu de la base) ; la graine est inscrite dans le détail de la note.
+- **Écran** : scène à gauche, panneau à droite ; à 1366 × 768 et 1280 × 720, la scène prend la hauteur sous le bandeau, ni la page ni le
+  panneau ne défilent. Sous 820 px, une colonne. **Clavier** : les boutons, oui ; poser une marque, non (souris ou doigt, même arbitrage
+  que l'inspection du quai, ENT-6.4 §7.3) : la séance le dit dans son compte rendu. Pendant une question au fil, la vue ne répond pas.
+- **DOM** (tests, page d'essai) : `[data-i-inspection]` (`data-insp="<id>"`, `data-i-copie` en évaluation), `[data-i-scene]`
+  (`data-vue`), `[data-i-marque="<n>"]`, boutons `button[data-i="vue|essai|signaler|valider|desarmer"]` (`data-v`, `data-n`),
+  `[data-i-nb]`, `[data-i-essai]`, `[data-i-chef]`, `[data-i-arret]`, `[data-i-fige]`, `[data-i-bilan]` ; `racine.__insp.zones()` rend
+  les zones de clic. Feuille : `styles/inspection.css`. Bloc de tests : `inspection`.
+
 ## Vue « Dialogue à choix » (l'écran Téléphone) — `core/types/dialogue.js`
 
 Écrite le 14/10/2026 (brief `docs/briefs/MOTEUR-vue-dialogue.md`, lots 1 et 2) pour Decathlon ENT-7.2 à 7.4, puis la 2de et le CAP.
@@ -2131,6 +2232,7 @@ poids de ses jalons + `part` doit valoir 20 (contrôlé à l'ouverture).
   | plan d'entrepôt `<id>` | `entrepot:<id>:poser` (poser une palette), `entrepot:<id>:verifier` |
   | animation `<id>` | `animation:<id>:<question>` (la première réponse) |
   | téléphone, dialogue `<id>` | `dialogue:<id>:appeler` (le premier appel), `dialogue:<id>:<réplique>` (la première réponse à cette réplique, juste ou non, au premier appel), `dialogue:<id>:fin` (raccroché un appel fini) ; contact sans dialogue `<id>` : `dialogue:<id>:appeler` (chaque appel) |
+  | inspection du poste `<id>` | `inspection:<id>:signaler` (chaque envoi réel de marques), `inspection:<id>:essai` (le premier essai d'un avertisseur ; publié seulement si un `essai` est déclaré), `inspection:<id>:fini` (le figeage « C'est bon, je prends mon poste », pas l'arrêt par le collègue) ; 19/10/2026 |
   | messagerie (toutes les séances) | `messagerie:transfert` (transférer un message, n'importe lequel ; chantier D-1) ; `messagerie:transfert:<clé du message>` (transférer CE message, 10/10/2026, publié **en plus** du précédent) |
   | messagerie, réponse par phrases | `messagerie:phrase:<ligne>` (le premier choix d'une phrase sur cette ligne, juste ou faux ; ENT-6.2, 10/10/2026) ; la ligne doit exister dans un mail semé par le volet **ou par un déclencheur** (chantier D-3, 10/10/2026 : chaque `declencheurs[].semer` est essayé une fois sur une base vide au chargement ; un déclencheur qui ne se sème pas sans base ne publie rien), sinon la séance ne s'ouvre pas ; une ligne imposée (`texte`) n'est pas un geste |
 

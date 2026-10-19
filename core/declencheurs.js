@@ -14,6 +14,7 @@
 //   quand: dialogueFini('quai')                              il a raccroché un appel fini (vue Téléphone, 14/10/2026)
 //   quand: localiserFini('action-carte')                     il a atteint le bilan de la carte (vue Localiser, 15/10/2026)
 //   quand: quaiDecharge('quai-action')                       la dernière palette est posée, quai arrêté (`arret: 'dechargement'`, 17/10/2026)
+//   quand: inspectionFinie('pelleau-poste-102')              il a pris son poste (vue Inspection du poste, 19/10/2026)
 //   quand: tous(apresJalon(…), apresMail(…))                 les deux
 //
 // Une condition reçoit `(db, seance)` : `seance` est l'id de la séance (les gestes sont cloisonnés par séance).
@@ -141,6 +142,16 @@ export function quaiDecharge(id) {
   return f;
 }
 
+// Vrai quand l'élève a PRIS SON POSTE dans l'inspection `id` (vue « Inspection du poste », `core/types/inspection.js`, 19/10/2026) :
+// « C'est bon, je prends mon poste » confirmé, l'inspection figée (pas l'arrêt par le collègue). **Juste ou faux, peu importe** : les
+// défauts signalés ne sont pas regardés ici (ils ont leurs jalons). Cloisonné par séance : `db.inspections[<séance>][<id>].fait`.
+// Sert aux `fermetures`, aux `quand` et aux déclencheurs. `.inspections` : contrôlé au chargement (un id inconnu empêche la séance de s'ouvrir).
+export function inspectionFinie(id) {
+  const f = (db, seance) => !!(db && db.inspections && db.inspections[seance] && db.inspections[seance][id] && db.inspections[seance][id].fait === true);
+  f.inspections = [id];
+  return f;
+}
+
 // Les gestes cités par une condition (pour le contrôle au chargement).
 export const gestesDe = (f) => (f && Array.isArray(f.gestes) ? f.gestes : []);
 
@@ -151,5 +162,6 @@ export function tous(...conditions) {
   f.dialogues = conditions.flatMap((c) => (c && Array.isArray(c.dialogues) ? c.dialogues : []));
   f.localisers = conditions.flatMap((c) => (c && Array.isArray(c.localisers) ? c.localisers : []));
   f.quais = conditions.flatMap((c) => (c && Array.isArray(c.quais) ? c.quais : []));
+  f.inspections = conditions.flatMap((c) => (c && Array.isArray(c.inspections) ? c.inspections : []));
   return f;
 }

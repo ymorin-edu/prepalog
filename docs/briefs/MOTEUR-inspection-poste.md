@@ -1,6 +1,6 @@
 # Chantier moteur — « Inspection du poste » : le transpalette, l'extincteur, l'affichage (pour ENT-10.2 à 10.4)
 
-**Statut** : à implémenter — **page d'essai cliquable d'abord** (règle de Tristan : un changement d'interaction se juge en cliquant)
+**Statut** : **livré** (19/10/2026, lot G-5 : vue branchée dans le moteur, fermée tant qu'aucune séance ne la déclare) — page d'essai cliquable d'abord (lot B, validée par Tristan le 19/10/2026)
 **Date** : 18/10/2026 (Cowork)
 **Décision de Tristan** (18/10/2026, 21 h 50) : « Nouveau dessin » — le transpalette électrique, l'extincteur et le plan de circulation entrent
 dans le dessin ; l'élève clique les défauts. Les autres choix ci-dessous sont **de Cowork** (délégation du même soir) : à relire sur la maquette.
@@ -99,3 +99,48 @@ d'un coup ; le jalon est quand même juste s'il a été signalé) ; `essai` pour
 ## 8. Retours d'écran de Tristan (à remplir)
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**19/10/2026 — lot G-5 (Opus) : la vue branchée.** Rien n'est commité par le lot (le chef relit, commite et pousse).
+
+- **Fichiers** : `core/types/inspection.js` (nouveau : la logique de la maquette déplacée telle quelle, plus la vue, `creerInspection`,
+  `etapesInspection`, `lignesInspection`, `etatInspection`) ; `core/types/entreprise.js` (import, création conditionnelle fixe ou tirée,
+  contrôle `inspectionFinie` au chargement, `controlerIdentifiants`, gestes connus, graine, `ecranOuvert`, menu « Mon poste », table
+  `vues`, état `db.inspections[séance][id]`, branchement, graine au détail de la note) ; `core/types/entreprise-options.js` (option
+  `inspection`) ; `core/declencheurs.js` (`inspectionFinie`, `tous` garde `.inspections`) ; `styles/inspection.css` + une ligne dans
+  `index.html` ; `outils/essai-inspection-poste.js` / `.html` (parties 2 et 3 jouées dans le vrai moteur, partie 1 inchangée) ;
+  `activites/FICHE-SEANCE.md` (section « Vue « Inspection du poste » », une ligne d'option, une ligne de gestes) ;
+  `outils/test/inspection.mjs` (18 cas) et deux lignes ajoutées dans `outils/test.mjs` (`BLOCS`, `GROUPES` 3). **Supprimé du disque** :
+  `outils/essai-inspection-poste-logique.js` (plus rien ne l'importe ; `git rm` à faire par le chef).
+- **Logement du code (§5)** : vue à part, **rien importé du quai** et `quai.js` non touché. Raison : `pointTouche`/`zonesScene` du quai
+  sont liés au camion ; `signalerScene`, `validerScene`, `jalonsScene` sont des fonctions internes de `creerQuai` (fermeture sur
+  `db.quais[id]`), exportables seulement en les réécrivant. La logique propre à la vue est celle de la maquette, même algorithme.
+- **Écarts avec le brief / la maquette** : (1) `essai` sur un transpalette qu'aucun point ne déclare est **refusé** (demande du chef) ;
+  (2) libellé du jalon `essai-<n>` : « Avertisseur du n° X essayé avant de prendre le poste » ; (3) les balises `data-iso-…` que le kit
+  pose sur les défauts du transpalette (`data-iso-fourche-tordue`, `-voyant`, `-fuite`…) nommaient le défaut dans le DOM : la vue les
+  **retire** du dessin (le kit n'a pas d'option `balises: false` pour le transpalette, à ajouter un jour dans `core/iso.js`) ;
+  (4) la copie garde la confirmation **en deux clics** de la maquette validée (« premier clic » lu comme : la marque se pose au premier
+  clic, sans retour) ; (5) les réglages « un bouton d'avertisseur par engin dessiné » et « Montrer les zones » de la maquette ne sont
+  plus dans les parties 2 et 3 (la vraie vue n'a qu'un bouton par essai déclaré ; les zones restent visibles en partie 1) ; (6) un clic
+  hors du cadre dit aussi « Clique un objet du poste. ». Clavier : boutons oui, marques non (comme l'inspection du quai).
+- **Tests** : bloc `inspection` **18/18** ; non-régression `socle dependances fb-6.4 quai-iso dialogue localiser inspection action chep-91
+  pelleau-101` **384/384**, sans modifier aucun de leurs cas. Sabotages joués puis remis (chaque fois le bloc relancé) :
+
+  | Sabotage | Cas tombé |
+  |---|---|
+  | `securite-aucun-faux` juste sans signal (jalon vrai par inaction) | « inaction — aucun jalon vrai » |
+  | `cliquer` pose une marque sans objet (marque dans le vide) | « un clic dans le vide ne pose rien » |
+  | l'arrêt cite le défaut oublié | « guidage — arrêt sans nommer le point » |
+  | état rangé sous `db.inspections[id]` (non cloisonné) | « état cloisonné par séance » (+ 13 autres) |
+  | arrêt aussi en copie | « copie (évaluation) » |
+  | `reparable: false` ignoré | « extincteur reparable: false » |
+  | `essai-<n>` seulement quand il est muet | « avertisseur » |
+  | entrée « Mon poste » même sans `inspection` (alerte 13) | « alerte 13 » |
+
+- **Captures** (1366 × 768 et 1280 × 720, vraie vue) : rendues au chef. La vue tient sous le bandeau ; dans la séance d'essai, la
+  **page** défilait à 1280 × 720 à cause du **menu** (écrans de données de l'univers d'essai) : `menu: []` ajouté à l'univers d'essai ;
+  et en copie, quand le **bandeau** passe sur deux lignes (nom d'entreprise long + « Évaluation », « Rendre ma copie »), le cadre du
+  moteur (`.ent-page`) dépasse de ~35 px alors que la vue tient : trait du moteur, pas de la vue (nom de l'essai raccourci). À regarder
+  sur ENT-10.4 (copie) avec le vrai nom « Transports Pelleau ».
+- **À vérifier par Tristan à l'écran** (`outils/essai-inspection-poste.html`, parties 2 et 3) : la place du panneau à droite de la
+  scène ; la phrase grise « Clique un objet du poste. » ; le filet terre de l'arrêt ; la réponse « Oui, je sais : c'est noté. » au
+  re-signalement de l'extincteur ; la phrase de bilan sous « Tu as pris ton poste » ; la copie en deux clics.

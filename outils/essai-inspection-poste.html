@@ -4,15 +4,28 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Essai — inspection du poste (Prepalog)</title>
-<!-- Page d'ESSAI de la vue « Inspection du poste » (chantier Transports Pelleau, lot B, phase 1 : la maquette ; brief
-     docs/briefs/MOTEUR-inspection-poste.md, décisions docs/briefs/COORDINATION-pelleau.md §2). Elle n'est liée nulle part.
-     Rien n'est branché dans le moteur : la scène tourne avec un faux état en mémoire. Aucune requête hors du site.
+<!-- Page d'ESSAI de la vue « Inspection du poste » (chantier Transports Pelleau ; maquette du lot B validée par Tristan le
+     19/10/2026, branchée dans le moteur au lot G-5 ; brief docs/briefs/MOTEUR-inspection-poste.md, décisions
+     docs/briefs/COORDINATION-pelleau.md §2). Elle n'est liée nulle part. Les parties 2 et 3 montent le VRAI moteur d'entreprise
+     (core/types/inspection.js) avec une base en mémoire : rien n'est envoyé. Aucune requête hors du site.
      Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-inspection-poste.html -->
 <base href="../">
 <link rel="icon" href="./styles/logo.png">
 <link rel="stylesheet" href="./styles/polices.css">
 <link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/inventaire.css">
+<link rel="stylesheet" href="./styles/plan.css">
+<link rel="stylesheet" href="./styles/grille.css">
+<link rel="stylesheet" href="./styles/quiz.css">
+<link rel="stylesheet" href="./styles/carte.css">
 <link rel="stylesheet" href="./styles/quai.css">
+<link rel="stylesheet" href="./styles/planning.css">
+<link rel="stylesheet" href="./styles/entrepot.css">
+<link rel="stylesheet" href="./styles/animation.css">
+<link rel="stylesheet" href="./styles/questions.css">
+<link rel="stylesheet" href="./styles/dialogue.css">
+<link rel="stylesheet" href="./styles/localiser.css">
+<link rel="stylesheet" href="./styles/inspection.css">
 <style>
   .eip{ max-width:1180px; margin:0 auto; padding:14px 16px 30px }
   .eip h1{ font-size:20px; margin:0 0 4px }
@@ -32,12 +45,8 @@
   /* Les zones ne se montrent que si la case est cochée (elles sont toujours dessinées, pour les tests). */
   .eip-vignette [data-zones]{ display:none }
   .eip-zones .eip-vignette [data-zones]{ display:inline }
-  /* La scène : une croix partout, aucune surbrillance (comme l'inspection du quai) ; à 1366 × 768, elle tient avec ses boutons. */
-  [data-i-scene], [data-i-scene] *{ cursor:crosshair }
-  .eip-scene svg{ max-height:440px; margin:0 auto }
-  .eip-bascule{ margin:0 0 8px }
-  .eip-essai{ margin:6px 0; font-weight:600 }
-  [data-i-chef]:empty{ display:none }
+  /* Parties 2 et 3 : la séance d'essai dans le moteur (sa propre feuille, styles/inspection.css), puis les jalons calculés. */
+  [data-hote-scene], [data-hote-copie]{ border:1px solid var(--filet); border-radius:var(--r, 8px); overflow:hidden }
   .eip-jalons{ margin:12px 0 0; font-size:14px }
   .eip-declare{ margin:0 0 10px; font-size:14px }
   .eip-declare pre{ white-space:pre-wrap; font-size:12px }
@@ -45,8 +54,8 @@
 </head>
 <body>
 <section class="eip" id="partie1">
-  <h1>Essai : l'inspection du poste (Transports Pelleau, maquette)</h1>
-  <p>Rien n'est encore branché dans Prepalog : cette page sert à juger le dessin et les gestes avant de construire la vue. <b>Partie 1</b> : chaque objet nouveau, dans chaque état. Regarde s'il se reconnaît seul, sans légende. <b>Partie 2</b> : la scène à cliquer comme un élève. <b>Partie 3</b> : la même scène en évaluation.</p>
+  <h1>Essai : l'inspection du poste (Transports Pelleau)</h1>
+  <p>La vue est branchée dans Prepalog : les parties 2 et 3 sont l'écran « Mon poste » d'une séance d'essai, tel que le verra l'élève. <b>Partie 1</b> : chaque objet nouveau, dans chaque état. Regarde s'il se reconnaît seul, sans légende. <b>Partie 2</b> : la scène à cliquer comme un élève. <b>Partie 3</b> : la même scène en évaluation.</p>
   <div data-hote-objets></div>
 </section>
 <script type="module">
@@ -55,58 +64,46 @@ monterObjets(document.querySelector('[data-hote-objets]'));
 </script>
 
 <section class="eip" id="partie2">
-  <h2>Partie 2 — La scène, comme un élève (guidage)</h2>
-  <p>Deux vues : <b>le local de charge</b> (la borne, deux transpalettes) et <b>le quai</b> (vu de l'intérieur, porte fermée). Clique ce qui ne va pas : un rond numéroté se pose (un clic sur un rond pas encore envoyé le retire). Un clic à côté de tout objet ne pose rien : une petite phrase te dit de cliquer un objet du poste. Puis « Signaler à Erwan » : il répond, et ce qu'il peut réparer se répare sous tes yeux ; l'extincteur, lui, ne revient pas (il n'est pas réparable tout de suite). « Essayer l'avertisseur » ne joue aucun son : une phrase dit ce qui se passe. « C'est bon, je prends mon poste » demande deux clics ; si un défaut n'a jamais été signalé, Erwan t'arrête sans dire lequel.</p>
+  <h2>Partie 2 — La scène, comme un élève (guidage), dans le vrai Prepalog</h2>
+  <p>La séance d'essai ouvre l'écran <b>« Mon poste »</b> du moteur, comme le verra l'élève. Deux vues : <b>le local de charge</b> (la borne, deux transpalettes) et <b>le quai</b> (vu de l'intérieur, porte fermée). Clique ce qui ne va pas : un rond numéroté se pose (un clic sur un rond pas encore envoyé le retire). Un clic à côté de tout objet ne pose rien : une petite phrase grise te dit de cliquer un objet du poste. Puis « Signaler à Erwan » : il répond, et ce qu'il peut réparer se répare sous tes yeux ; l'extincteur, lui, ne revient pas (il n'est pas réparable tout de suite). « Essayer l'avertisseur » ne joue aucun son : une phrase dit ce qui se passe. « C'est bon, je prends mon poste » demande deux clics ; si un défaut n'a jamais été signalé, Erwan t'arrête sans dire lequel.</p>
   <form class="eip-reglages" data-reglages-scene aria-label="Réglages de l'essai">
     <fieldset><legend>Erwan et un défaut oublié</legend>
       <label><input type="radio" name="arret" value="oui" checked> il t'arrête (guidage)</label>
       <label><input type="radio" name="arret" value="non"> il ne t'arrête pas</label></fieldset>
-    <fieldset><legend>Boutons « Essayer l'avertisseur »</legend>
-      <label><input type="radio" name="essais" value="declares" checked> seulement l'engin déclaré (le n° 2)</label>
-      <label><input type="radio" name="essais" value="tous"> un par engin dessiné (n° 1 et n° 2)</label></fieldset>
     <fieldset><legend>Pour toi</legend>
-      <label><input type="checkbox" name="zones"> Montrer les zones</label>
       <button type="button" class="btn" data-recommencer-scene>Tout remettre à zéro</button></fieldset>
   </form>
   <details class="eip-declare"><summary>Ce que la séance déclare (pour toi, jamais pour l'élève)</summary><pre data-declare></pre></details>
   <div data-hote-scene></div>
+  <div data-infos-scene></div>
 </section>
 
 <section class="eip" id="partie3">
   <h2>Partie 3 — La même scène en évaluation (copie)</h2>
   <p>En évaluation, Erwan répond toujours « C'est noté. » : rien ne se répare, rien n'est commenté, et rien ne t'arrête. Les jalons comptent comme en partie 2.</p>
-  <form class="eip-reglages" data-reglages-copie aria-label="Réglages de l'essai en copie">
+  <form class="eip-reglages" aria-label="Réglages de l'essai en copie">
     <fieldset><legend>Pour toi</legend>
-      <label><input type="checkbox" name="zones"> Montrer les zones</label>
       <button type="button" class="btn" data-recommencer-copie>Tout remettre à zéro</button></fieldset>
   </form>
   <div data-hote-copie></div>
+  <div data-infos-copie></div>
 </section>
 <script type="module">
 import { monterInspection, INSPECTION_EXEMPLE } from './outils/essai-inspection-poste.js';
 document.querySelector('[data-declare]').textContent = JSON.stringify({ inspection: INSPECTION_EXEMPLE }, null, 1);
 // Partie 2 (guidage).
-const f2 = document.querySelector('[data-reglages-scene]'), h2 = document.querySelector('[data-hote-scene]');
+const f2 = document.querySelector('[data-reglages-scene]');
 const lancer2 = () => {
-  window.__inspection = monterInspection(h2, {
-    arret: f2.querySelector('input[name="arret"]:checked').value === 'oui',
-    essaiTous: f2.querySelector('input[name="essais"]:checked').value === 'tous',
-  });
-  if (window.__inspection) window.__inspection.montrerZones(f2.querySelector('input[name="zones"]').checked);
+  window.__inspection = monterInspection(document.querySelector('[data-hote-scene]'), document.querySelector('[data-infos-scene]'), {
+    arret: f2.querySelector('input[name="arret"]:checked').value === 'oui', seance: 'ESSAI-10.2' });
 };
-f2.addEventListener('change', (ev) => {
-  if (ev.target.name === 'zones') { if (window.__inspection) window.__inspection.montrerZones(ev.target.checked); return; }
-  lancer2();
-});
+f2.addEventListener('change', lancer2);
 document.querySelector('[data-recommencer-scene]').addEventListener('click', lancer2);
 lancer2();
 // Partie 3 (copie).
-const f3 = document.querySelector('[data-reglages-copie]'), h3 = document.querySelector('[data-hote-copie]');
 const lancer3 = () => {
-  window.__copie = monterInspection(h3, { copie: true, seance: 'ESSAI-10.4' });
-  if (window.__copie) window.__copie.montrerZones(f3.querySelector('input[name="zones"]').checked);
+  window.__copie = monterInspection(document.querySelector('[data-hote-copie]'), document.querySelector('[data-infos-copie]'), { copie: true, seance: 'ESSAI-10.4' });
 };
-f3.addEventListener('change', (ev) => { if (ev.target.name === 'zones' && window.__copie) window.__copie.montrerZones(ev.target.checked); });
 document.querySelector('[data-recommencer-copie]').addEventListener('click', lancer3);
 lancer3();
 if (location.hash) document.querySelector(location.hash)?.scrollIntoView();

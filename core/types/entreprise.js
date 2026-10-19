@@ -23,6 +23,7 @@ import { creerLecteur } from './animation.js';
 import { creerTelephone, appelEnCours, appelRetenu, appels, journalCourt } from './dialogue.js';
 import { creerEntrepot } from './entrepot.js';
 import { creerLocaliser } from './localiser.js';
+import { creerInspection } from './inspection.js';
 import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
@@ -255,6 +256,34 @@ export function creerEntreprise(U) {
   // `db.localiser[<séance>][<id de la vue>]`. Des lieux mal déclarés (département hors de sa région, point hors de son département,
   // points trop proches…) empêchent la séance de se charger ; la vue refuse aussi une évaluation (`copie`), pas encore tranchée.
   const VLOC = U.localiser ? creerLocaliser(U.localiser, { copie: COPIE }) : null;
+  // L'INSPECTION DU POSTE (19/10/2026, chantier Transports Pelleau, lot G-5, brief `docs/briefs/MOTEUR-inspection-poste.md`) : un écran de
+  // plus, seulement si la séance déclare `inspection` (format en tête de `core/types/inspection.js`). Son état vit dans
+  // `db.inspections[<séance>][<id>]`. Une déclaration fautive (objet ou état inconnu, deux points sur le même objet, `ok` incohérent…)
+  // empêche la séance de se charger. Comme le quai, elle peut être une FONCTION de la graine (et du niveau) : une inspection par élève,
+  // gardée par graine et par niveau ; au chargement, les variantes de la graine de référence sont construites.
+  const INSP_TIRE = typeof U.inspection === 'function' ? U.inspection : null;
+  const inspsTirees = new Map();
+  const inspDeGraine = (g, niveau = 'standard') => {
+    const k = `${g}|${niveau}`;
+    if (!inspsTirees.has(k)) inspsTirees.set(k, creerInspection(INSP_TIRE, { copie: COPIE, graine: g, niveau }));
+    return inspsTirees.get(k);
+  };
+  const INSP_FIXE = U.inspection && !INSP_TIRE ? creerInspection(U.inspection, { copie: COPIE }) : null;
+  const inspDeBase = (db) => (INSP_TIRE ? inspDeGraine(graineDeBase(db), niveauEleve(db, { copie: COPIE })) : INSP_FIXE);
+  let VINSP = INSP_TIRE ? inspDeGraine('') : INSP_FIXE;
+  if (INSP_TIRE && !COPIE) {
+    NIVEAUX_ELEVE.filter((n) => n !== 'standard').forEach((n) => {
+      try { inspDeGraine('', n); } catch (x) { throw new Error(`inspection du niveau « ${n} » : ${x.message}`); }
+    });
+  }
+  {
+    // Ce qui cite une inspection (`inspectionFinie(id)` : fermetures, déclencheurs, questions) doit la trouver dans la séance.
+    const voir = (id, ou) => { if (!VINSP || VINSP.id !== id) throw new Error(`${ou} : l’inspection « ${id} » n’existe pas dans cette séance (${VINSP ? VINSP.id : 'aucune inspection du poste déclarée'})`); };
+    const inspectionsDe = (c) => (c && Array.isArray(c.inspections) ? c.inspections : []);
+    Object.entries(U.fermetures || {}).forEach(([v, F]) => inspectionsDe(F && F.ouvertSi).forEach((id) => voir(id, `la fermeture de l’écran « ${v} »`)));
+    ((U.volet && U.volet.declencheurs) || []).forEach((d) => inspectionsDe(d && d.quand).forEach((id) => voir(id, `le message « ${d.id} »`)));
+    if (MQ) MQ.fil.forEach((q) => [q.quand, q.rattrapage].forEach((c) => inspectionsDe(c).forEach((id) => voir(id, `la question « ${q.id} »`))));
+  }
   {
     // Ce qui cite une carte (`localiserFini(vue)` : fermetures, déclencheurs, questions) doit la trouver dans la séance.
     const voir = (id, ou) => { if (!VLOC || VLOC.id !== id) throw new Error(`${ou} : la carte « ${id} » n’existe pas dans cette séance (${VLOC ? VLOC.id : 'aucune carte à situer déclarée'})`); };
@@ -280,7 +309,7 @@ export function creerEntreprise(U) {
   }
   controlerIdentifiants([['quai', 'quais', [VQUAI].filter(Boolean)], ['planning', 'plannings', [VPL].filter(Boolean)],
     ["plan d'entrepôt", "plans d'entrepôt", [VENT].filter(Boolean)], ['fiche', 'fiches', VFICHES], ['animation', 'animations', VANIMS],
-    ['carte à situer', 'cartes à situer', [VLOC].filter(Boolean)]]);
+    ['carte à situer', 'cartes à situer', [VLOC].filter(Boolean)], ['inspection', 'inspections', [VINSP].filter(Boolean)]]);
   const vueAnim = (VA) => `animation:${VA.id}`;
   // LES GESTES connus de la séance (questions au fil, lot 3) : la liste que publie chaque vue déclarée. Un `apresGeste`
   // qui en cite un autre (faute de frappe, vue absente) empêche la séance de se charger : on ne découvre pas en classe
@@ -290,7 +319,7 @@ export function creerEntreprise(U) {
   const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
   {
     // La messagerie est de toutes les séances : son geste (le transfert d'un message, chantier D-1) est toujours connu.
-    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL, VCOUR, VLOC, VTOUR].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
+    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL, VCOUR, VLOC, VINSP, VTOUR].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
     // Le geste de transfert d'UN message (`messagerie:transfert:<clé>`) : connu pour les messages que le volet sème avec un
     // `transfert`, et pour ceux qu'il déclare dans `volet.transferables` (les messages qui arrivent plus tard, par un déclencheur).
     // Une clé qu'il ne déclare pas (faute de frappe) empêche la séance de s'ouvrir.
@@ -453,7 +482,7 @@ export function creerEntreprise(U) {
     if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
     else if (db && db.aisance === 'accompagne') detail.niveau = 'accompagné';
     // Un jeu tiré par élève (inventaire tiré, ou `tirage: true`) : la graine, pour retrouver son jeu.
-    if (INV_TIRE || (U.tirage && !TIR)) detail.graine = graineDeBase(db);
+    if (INV_TIRE || INSP_TIRE || (U.tirage && !TIR)) detail.graine = graineDeBase(db);
     // Le repérage de l'élève (2de, lot 6) : temps, aides ouvertes, jalons réussis du premier coup,
     // par séance. Lu par l'enseignant seul, dans le suivi de classe ; jamais montré à l'élève.
     if (db && db.indicateurs) detail.indicateurs = db.indicateurs;
@@ -613,9 +642,10 @@ export function creerEntreprise(U) {
       // Jeu tiré par élève (quai, inventaire, ou `tirage: true` pour une séance qui ne tire que ses
       // données) : la graine (son identifiant) posée une fois pour toutes, AVANT le volet — qui peut
       // la lire — puis son quai et son inventaire.
-      if (QUAI_TIRE || INV_TIRE || (U.tirage && !TIR)) {
+      if (QUAI_TIRE || INV_TIRE || INSP_TIRE || (U.tirage && !TIR)) {
         if (poserGraine(db, ctx.profil.uid || prenom)) ctx.jeu.sauver();
         if (QUAI_TIRE) VQUAI = quaiDeBase(db);
+        if (INSP_TIRE) VINSP = inspDeBase(db);
         if (INV_TIRE) VINV = invDeGraine(graineDeBase(db));
       }
       // TIRAGE MÉMORISÉ (chantier D-C, lot 2, `core/tirage.js`) : à la première ouverture, APRÈS avoir figé `db.aisance`
@@ -1324,6 +1354,7 @@ export function creerEntreprise(U) {
         if (v === 'tournee' && VTOUR) return tourOuvert();
         if (v === 'entrepot') return !!VENT;
         if (v === 'localiser') return !!VLOC;
+        if (v === 'inspection') return !!VINSP;
         if (v === 'fiche' || v.startsWith('fiche:')) {
           const VF = VFICHES.find((x) => vueDeFiche(x) === v);
           try { return !!VF && (!VF.quand || !!VF.quand(db)); } catch (x) { return false; }
@@ -1640,9 +1671,10 @@ export function creerEntreprise(U) {
                 ${MQ && MQ.ouverture ? item('ouverture', MQ.ouverture.titre || 'Avant de commencer') : ''}
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
-                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VLOC && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', ordonnerPoste([
+                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VLOC && !VINSP && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', ordonnerPoste([
                   VITI && item('itineraires', VITI.nav.libelle),
                   VLOC && item('localiser', VLOC.nav.libelle),
+                  VINSP && item('inspection', VINSP.nav.libelle),
                   ...VANIMS.filter((VA) => !VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
                   ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
                   // Une animation qui vient APRÈS les fiches dans le déroulé (`menuApres`, ENT-6.10) : listée après elles.
@@ -1938,6 +1970,7 @@ export function creerEntreprise(U) {
           entrepot: VENT ? vueEntrepot : vueAccueil,
           telephone: VTEL && telOuvert() ? () => VTEL.html(etatTel(), apiTel()) : vueAccueil,
           localiser: VLOC ? () => VLOC.html(etatLoc(), apiLoc()) : vueAccueil,
+          inspection: VINSP ? () => VINSP.html(etatInsp(), apiInsp()) : vueAccueil,
           ...Object.fromEntries(VFICHES.map((VF) => [vueDeFiche(VF), () => vueFiche(VF)])),
           ...Object.fromEntries(VANIMS.map((VA) => [vueAnim(VA), () => VA.html(etatAnim(VA), apiAnim())])),
           fiche: VFICHE ? () => vueFiche(VFICHE) : vueAccueil,
@@ -2296,6 +2329,22 @@ export function creerEntreprise(U) {
         },
       });
 
+      /* ---------------------------------------------------------- inspection du poste */
+      // Cloisonnée par séance : `db.inspections[<séance>][<id de l'inspection>]` (format en tête de `core/types/inspection.js`). L'enseignant
+      // joue sur une copie en mémoire (rien n'est écrit, ni chez lui ni chez l'élève). Pendant une question au fil (`gele()`), la vue ignore
+      // les clics ; après la remise d'une copie (`figee`), elle se consulte sans se modifier.
+      const INSP_PROF = {};
+      function etatInsp() {
+        if (estProf) return INSP_PROF[VINSP.id] || (INSP_PROF[VINSP.id] = VINSP.etatNeuf());
+        if (!db.inspections) db.inspections = {};
+        const S = db.inspections[ctx.meta.id] || (db.inspections[ctx.meta.id] = {});
+        return S[VINSP.id] || (S[VINSP.id] = VINSP.etatNeuf());
+      }
+      const apiInsp = () => ({
+        db, seance: ctx.meta.id, estProf, signal, gele: gelActif, figee: rendue(),
+        sauver: () => { if (!estProf) sauver(); },
+      });
+
       /* ---------------------------------------------------------- animation à questions */
       // Cloisonnée par séance : `db.animations[<id de l'animation de cette séance>]`. L'enseignant n'y
       // écrit rien (le lecteur le sait par `estProf`). Une réponse rangée n'est jamais suivie d'un redessin
@@ -2416,6 +2465,7 @@ export function creerEntreprise(U) {
         if (E.vue === 'entrepot' && VENT) VENT.brancher(z, etatEntrepot(), apiEntrepot());
         if (E.vue === 'telephone' && VTEL && telOuvert()) VTEL.brancher(z, etatTel(), apiTel());
         if (E.vue === 'localiser' && VLOC) VLOC.brancher(z, etatLoc(), apiLoc());
+        if (E.vue === 'inspection' && VINSP) VINSP.brancher(z, etatInsp(), apiInsp());
         // La calculette du site, sur l'écran du plan seulement (entraînement, évaluation : voir entrepot.js).
         // Posée sur la page, hors de la zone de la séance : elle prendrait l'accent de la charte (le rouge de
         // Smoby dirait « faux », un vert « juste »). Son bouton est donc à l'encre, quelle que soit l'entreprise.
