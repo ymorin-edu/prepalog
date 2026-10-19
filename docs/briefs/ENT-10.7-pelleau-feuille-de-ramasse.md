@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, docs/briefs/ENT-10.6-pelleau-ramasse-du-mercredi.md puis docs/briefs/ENT-10.7-pelleau-feuille-de-ramasse.md en entier. Les poids du §5 sont validés par Tristan ; annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : à implémenter · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 4 h.
+**Statut** : livré (19/10/2026, non commité : le chef commite) · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 4 h.
 
 ---
 
@@ -105,3 +105,35 @@ Question ouverte : faut-il que Loïc s'excuse au message de fin ? (Défaut : non
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**19/10/2026, phase 3 du chantier Pelleau (Sonnet, sous-agent du chef ; non commité, le chef commite).** Fichiers : `activites/pelleau-feuille-de-ramasse.js`, `contenus/pelleau-ent107.js`, `contenus/pelleau-ent107-donnees.js` (données pures et jeu tiré, chargées aussi sous Node par le corrigé), `contenus/questions/ENT-10.7.js`, `contenus/corriges/ENT-10.7.js`, `outils/test/pelleau-107.mjs` (22 cas) ; lignes AJOUTÉES dans `activites/index.js`, `outils/test.mjs` (`BLOCS`, `GROUPES` groupe 4), `outils/test/socle.mjs` (`ATTENDU_CAP`). Aucun `core/`, `styles/`, `commun.mjs` ni fichier d'ENT-10.1, 10.5 ou 10.6 touché. Pas de `declarerTirage` : le jeu est une fonction pure de la graine (comme l'anomalie d'ENT-8.7), donc rien dans `BANQUES_FIGEES` ; un cas « jeu figé » épingle trois élèves.
+
+**Statut : livré** (`pret: true, ouverture: 'prof'`). Vérifié : `pelleau-107` 22/22 ; `socle dependances questions tirage-niveaux pelleau-105 pelleau-107` 227/227.
+
+**Poids codés (brief §5, tels quels).** Préparer 0,5 × 2 · Loïc : demander la feuille 0,5, « je regarde l'étiquette » 1,5 · défaut 2, aucun faux 1 · trier : la palette mal notée 2, les trois autres 0,5 · rapprocher : reçues et résultat 0,5 × 4, « la feuille est-elle juste ? » 2 · faire corriger 1 · erreur 1, salutation 0,25, fin 0,25 · questions A 1,5, B 1,5, C 1 (`part: 4`). Total 20.
+
+**Le jeu tiré par la graine (décision 14).** Par élève : le client de chaque palette P1 à P4 (donc l'ordre dans le camion), LA palette mal notée (P1 à P4, uniforme), donc le sens de l'erreur, une « autre » palette du même groupe (le piège), le défaut du quai (lampe, niveleur ou cale) et l'ordre des trois choix. Les ids de jalons sont les mêmes pour tous (`securite-defaut`, `depose-mal`, `depose-autre-1` à `3`). La feuille liste, par client, les numéros des palettes que Loïc y a notées ; le nombre de colis suit le nombre de palettes notées, jamais le contenu réel. Sur 300 graines, la feuille et les annonces laissent toujours trois candidates : seule l'étiquette, lue au quai, désigne la palette.
+
+**Sabotages joués puis remis (fichiers relus identiques).**
+
+| Sabotage | Cas tombés |
+|---|---|
+| « La feuille est juste » vrai sans envoi (inaction) | inaction ; jalons sans écran ; parcours juste |
+| « Tout est conforme » accepté (ligne erreur juste = 3) | 10 cas (jalons sans écran, l'écart change avec la graine, parcours, suivre la feuille, pire cas…) |
+| Colis réels du contenu sur la feuille (écart déductible) | contenu |
+| Total écrit sur la feuille (écart déductible) | contenu ; ouverture |
+| Palette mal notée plus tirée (toujours P4) | jeu tiré ; jeu figé ; l'écart change ; suivre la feuille ; corrigé |
+| Sens plus tiré (Ar Vag toujours P1 et P2) | jeu figé ; contenu ; l'autre sens ; corrigé |
+| `depose-mal` lit la ligne d'une autre palette | jalons sans écran ; l'écart change ; suivre la feuille |
+
+**Écarts avec le brief (décisions prises en route).**
+1. Bloc `pelleau-107` (un bloc par séance), aucun jour de la semaine (« 18 mai »), chiffres calculés (4 palettes, colis, phrases).
+2. Question A (`croire-quoi`) : énoncé en hypothèse (« Imagine que la feuille et l'étiquette… ») : à ce moment l'élève n'a pas vu l'étiquette, la question ne doit pas lui annoncer l'erreur.
+3. Question B : `selon` nomme les clients de l'élève (« le jour où Ar Vag reprend… une palette d'Agri-Kerlann »), jamais le numéro de palette. Question C posée à l'envoi de la fiche « La feuille de ramasse ».
+4. Deux messages d'Erwan neutres ajoutés (« Loïc arrive », « Yann est prêt »), et un pour la fiche « Faire corriger » (« Dernière question sur la feuille de ramasse… ») qui ne dit pas qu'elle est fausse. Réactions de Loïc, retours d'« Avant de commencer » et phrases-pièges écrits par Claude Code, à relire.
+5. Quai de huit cases (trois par client + allée + quai B) : le plafond du moteur ; lisible à 1366 × 768. Choix de « La feuille est-elle juste ? » : les trois du brief, ordre tiré ; les quatre phrases du compte rendu ajoutent le sens inversé.
+6. Confirmé : seul le document « Règles du quai » n'est pas joint (message et fiche) ; aucun bonus ; accompagné = standard.
+7. `precedente: 'pelleau-ramasse-du-mercredi'` : l'élève reste fermé tant qu'ENT-10.6 n'a pas son bilan.
+8. Le moteur déclare maintenant `document.article: 'la'`, `tutoiement` et `prenomChauffeur` (modifications non commitées de `quai.js`) : utilisés ici ; sans elles, la légende dirait « le feuille ».
+
+**À vérifier à l'écran par Tristan.** Le tableau de la feuille (numéros des palettes) et la lisibilité de « AR VAG 1 » à « AGRI 3 » ; que l'élève peut retrouver la palette mal notée de mémoire (légende « étiquette : … (1 sur 4) » à chaque pause : si c'est trop dur pour des CAP, ajouter un rappel) ; la réaction de Yann devant la case du client de la feuille ; les textes construits (réactions de Loïc, phrases, message d'Erwan « La feuille de ramasse ») ; la légende à ① (« Loïc te remet la feuille de ramasse ») une fois le moteur commité ; le défaut tiré dans les trois vues.
