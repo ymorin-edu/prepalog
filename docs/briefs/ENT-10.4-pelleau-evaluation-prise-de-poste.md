@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, les briefs ENT-10.2 et ENT-10.3 (§4 à §6) puis docs/briefs/ENT-10.4-pelleau-evaluation-prise-de-poste.md en entier. Les poids du §5 sont validés par Tristan ; annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : à implémenter · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 4 h.
+**Statut** : livré (19/10/2026, à essayer à l’écran par Tristan) · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 4 h.
 
 ---
 
@@ -126,3 +126,61 @@ Pas de trame (évaluation) ; corrigé enseignant par élève.
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**19/10/2026 — sous-agent Sonnet, chantier Pelleau.** Rien n'est commité par le sous-agent (le chef relit, commite et pousse).
+
+- **Fichiers** : `activites/pelleau-evaluation-prise-de-poste.js` (`pret: true, ouverture: 'prof'`, `copie: true`, `export const noter`), `contenus/pelleau-ent104.js`
+  (messages, documents, plan numéroté, fiches, planning, dialogue, jalons), `contenus/pelleau-ent104-donnees.js` (données pures : défauts tirés, inspection,
+  dialogue, grille, lectures, tirage, phrases ; chargé aussi sous Node par le corrigé), `contenus/questions/ENT-10.4.js` (l'ouverture seule),
+  `contenus/corriges/ENT-10.4.js` (par graine), `outils/test/pelleau-104.mjs` (25 cas). Lignes ajoutées : `activites/index.js` (sous ENT-10.3), `outils/test.mjs`
+  (`BLOCS`, `GROUPES` 2), `outils/test/socle.mjs` (`'ENT-10.4': 'CAP-C1.2'`), `outils/test/tirage-niveaux.mjs` (`BANQUES_FIGEES` : la séance appelle `declarerTirage`).
+- **Poids codés** (ceux du §5, tels quels) : Où est-ce ? 2 (3 lignes × 2/3) · Mon poste 6 (défaut du site 2 · défaut de l'engin 2 · avertisseur essayé 0,5 ·
+  aucun faux 1,5) · Ne pas céder 2 (`refuser`) · Le planning 3 (2 lectures × 1, la carte 1) · Rendre compte 3 (engin 0,75 · site 0,75 · heure 0,5 · salutation 0,5 ·
+  fin 0,5) · Avant de commencer 4 (`part: 4`) = 20. Inaction : 0/20 (testé, y compris un poste « pris » sans rien). Ni bonus ni niveau. Aucune question au fil.
+- **Écarts avec le brief** :
+  1. **Planning fixe, client non tiré** (décision 12 du chef ; `planning` est statique, `cartes.liste` ne dépend pas de la graine) : une seule grille (Loïc 7 h 15 – 8 h
+     et la livraison pour Ar Vag 9 h 30 – 10 h 30 au quai A, un départ pour Rungis 10 h – 11 h au quai B), une seule carte, **Agri-Kerlann** (1 h, entre 10 h et
+     12 h). Places justes : quai A à 10 h 30, 10 h 45, 11 h ; plus le quai B à 11 h quand c'est le plan qui manque. Le quai B sans extincteur est jugé par le jalon de
+     la carte, pas par le moteur. Les trois variantes de grille du brief ne sont pas faites : « Tristan relit les 3 grilles » devient « Tristan relit la grille ».
+  2. **Défaut du site : 2 variantes, pas 3** (extincteur du quai B ou plan de circulation, 55 / 45 % sur 300 graines). Le brief disait « extincteur quai A ou B, ou
+     affichage » ; la scène du quai de la vue dessine toujours « QUAI B » (nom non déclarable) : un défaut « au quai A » contredirait la porte dessinée.
+  3. **Le transpalette n° 2** est déclaré en ordre (point `tp2`, piège « ne signaler que ce qui ne va pas ») mais **sans essai** : un second essai ajouterait un jalon
+     `essai-2` que le barème (« avertisseur essayé 0,5 ») ne prévoit pas. Un seul point en ordre, comme le brief ; l'autre objet du site n'est pas déclaré (donc pas
+     cliquable). Signaler le n° 2 coûte les 1,5 de « aucun faux ».
+  4. **Défaut de l'engin : 6, uniforme** (fourche, roue, batterie, arrêt d'urgence, fuite, avertisseur), tiré sur la graine ; ENT-10.3 n'étant pas écrite, la liste est
+     celle de la vue. **L'avertisseur muet est invisible** : il ne se trouve qu'en essayant l'avertisseur ; un élève qui n'essaie pas perd `essai-1` ET le défaut de
+     l'engin (2,5 sur 20) dans ce seul tirage (1 sur 6). Le brief le veut ainsi (« uniforme sur 6 ») ; à décider par Tristan s'il le trouve trop dur.
+  5. **Ouverture** : le brief écrit `tirage: { preparation: 4 }` mais ses questions clés comptent deux images ; le tirage est `{ preparation: 3, image: 1 }`
+     (7 notions, 2 images : `transporteur`, `entreposeur`, `ramasse`, `ambiant`, `epi`, `prise-poste`, `planning-quais` ; `img-racks`, `img-tpe`). `consigner` et `img-fourche`
+     (ENT-10.3, non écrite) ne sont pas reprises ; les documents « à gauche » sont ceux de cette séance (rien n'est importé d'une autre).
+  6. **« Les 7 lieux du plan »** : les lieux réellement déclarés par l'univers (`PLAN_ENTREPOT` / `LIEUX`) donnent **sept** ronds : vestiaire, local de charge, bureau transport,
+     zone de réception, zone de contrôle, zone litiges, **les quais** (jamais demandé : 7e choix). Plan **dessiné** pour la séance (schéma sans un nom de lieu, chaque lieu
+     se reconnaît à son contenu), **numéros tirés** par élève (permutation de 1 à 7) ; trois lignes tirées parmi six (un facile, un moyen, un difficile).
+  7. **La bonne réplique de Yann dit le défaut du site** (« … on travaille au quai A, où il y a un extincteur » / « … tu me montres le sens de circulation »), comme le
+     brief : un élève qui n'a pas trouvé le défaut du site le lit dans les réponses proposées (l'inspection est alors figée, mais les jalons suivants — carte, phrase « site » —
+     en profitent). **Question au chef / à Tristan** : garder, ou dire seulement « je préviens Erwan par écrit ».
+  8. Aucun jour de la semaine ; « Mon poste » : consigne en trois lignes ; aucune liste « Ma prise de poste », aucun « Le droit » (évaluation sans aide) ; réponse d'Erwan en
+     copie : « C'est noté. » (texte de la vue, pas « Noté. »).
+- **Tests** : `pelleau-104` 25/25 ; `socle dependances copie questions inspection pelleau-102 tirage-niveaux pelleau-104` **267/267** (la suite entière n'est pas relancée : le
+  chef le fait). Valeurs attendues écrites à la main pour six graines (p104-a, f, z, b, e, s : un engin chacune). Sabotages joués puis remis (empreinte vérifiée ; ceux de
+  la vue sont joués par interception du fichier dans le navigateur de test, `core/` n'a pas été touché) :
+
+  | Sabotage | Cas tombés |
+  |---|---|
+  | jalon du compte rendu vrai sans envoi (inaction) | « Avant de commencer » (sans réponse = 0) et « inaction » |
+  | `copie: false` dans l'activité | la séance refuse de se charger (le moteur exige la copie pour `temps: evaluation`) : 21 cas |
+  | vue : arrêt aussi en copie | « défaut du site oublié → aucun arrêt », « un défaut sur deux signalé », « parcours faux (rien ne dit juste ou faux) » |
+  | vue : réparation sous les yeux aussi en copie | « inspection en copie : rien ne se répare », « les six défauts de l'engin » |
+  | vue : Erwan répond « Bien vu » en copie | « inspection en copie : C'est noté » |
+  | bonne réplique de Yann inversée (la maladroite devient juste) | 11 cas (parcours justes, Yann, six engins, planning…) |
+  | carte jugée sans la règle de l'extincteur du quai B | « le planning », « parcours faux » |
+  | défaut de l'engin plus tiré (toujours la fourche) | 11 cas (300 graines, six engins, corrigé…) |
+  | numéros du plan plus permutés | 10 cas (« Où est-ce ? », parcours, corrigé…) |
+
+- **Écran (mesuré)** : à 1366 × 768 la vue de l'inspection tient (captures : accueil, plan « Où est-ce ? », inspection avec marques, Yann, remise). **Yann** : avec quatre
+  réponses dont une de deux lignes, la dernière réponse sort de l'écran d'environ 130 px (défilement de page) ; l'ordre des réponses est tiré par élève, la bonne peut donc
+  être la dernière. Trait de la vue Dialogue (non touchée) ; si Tristan le trouve gênant, raccourcir la réplique juste ou n'en proposer que trois.
+- **À vérifier par Tristan à l'écran** : le plan numéroté et les ronds (lisible au vidéoprojecteur ? un lieu se reconnaît-il sans nom écrit ?) ; l'inspection en copie (marque
+  au premier clic, « C'est noté. », rien ne se répare, pas d'arrêt, essai de l'avertisseur) ; Yann (ton pressé mais pas méchant, quatre réponses, la dernière hors écran) ;
+  la grille du planning (la seule : Loïc, Ar Vag, Rungis) et la carte Agri-Kerlann ; le texte des phrases du compte rendu ; l'ouverture notée sans aide ; la remise
+  (« Rendre ma copie », rien ne dit juste ou faux avant). Les écarts 1, 2, 4 et 7 sont à valider.
