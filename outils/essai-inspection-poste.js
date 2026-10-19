@@ -166,7 +166,10 @@ export function monterInspection(hote, { declaration = INSPECTION_EXEMPLE, copie
       if (!M) return;
       const p = pt.matrixTransform(M.inverse()), [vx, vy, vw, vh] = VUES_INSPECTION[ui.vue].viewBox;
       if (p.x < vx || p.x > vx + vw || p.y < vy || p.y > vy + vh) return;
-      if (cliquer(D, st, ui.vue, Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, { copie })) changer();
+      const r = cliquer(D, st, ui.vue, Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, { copie });
+      if (r) changer();
+      // Un clic qui ne touche aucun objet ne pose rien : un mot discret à la place du compteur, sans aplat ni rouge.
+      else if (r === null) { const t = scene.querySelector('[data-i-nb]'); if (t) t.textContent = T.horsObjet; }
     });
   }
   // Une marque posée ou retirée : seules la couche des marques et le compteur changent (comme au quai) ; un « C'est bon » armé se désarme.

@@ -11,6 +11,8 @@
 //   - `signalerScene`, `validerScene`, `jalonsScene` : ce sont des fonctions internes de `creerQuai` (fermeture), non exportées,
 //     et `quai.js` est en cours de modification par le lot D ; mêmes règles (réponse composée, arrêt sans nommer, jalons sans
 //     inaction), avec ce que l'inspection ajoute : `reparable: false`, l'essai de l'avertisseur, la copie sans commentaire.
+//     DIFFÉRENCE voulue (Tristan, 19/10/2026) : le quai pose une marque « à côté » sur un clic dans le vide ; ici, un clic qui ne
+//     touche aucun objet ne pose RIEN (`cliquer` rend `null`), et `securite-aucun-faux` ne compte que les objets en ordre signalés.
 //   La phase 2 décidera s'il vaut la peine d'extraire un module commun `core/types/inspection-commun.js` (décision 1 du chef).
 
 import { projection, boiteEcran, solQuai, murQuai, transpaletteElectrique, boitesTranspalette, ETATS_TRANSPALETTE,
@@ -213,13 +215,18 @@ export function textes(D) {
     confirmer: 'Tu prends ton poste, c’est définitif : clique pour confirmer',
     sonne: 'Tu appuies : le klaxon sonne.',
     muet: 'Tu appuies : rien ne sonne.',
+    horsObjet: 'Clique un objet du poste.',
   }, (D && D.signaler) || {}, D && typeof D.arret === 'string' ? { arret: D.arret } : {}, D && D.commencer ? { commencer: D.commencer } : {});
 }
-// Poser ou retirer une marque. Rend vrai si l'état a changé. Une marque envoyée est inerte.
+// Poser une marque (retour d'écran de Tristan, 19/10/2026 : AUCUNE MARQUE DANS LE VIDE). Rend `true` si une marque est posée,
+// `null` si le clic ne touche aucun objet déclaré (rien n'est posé ni rangé, le compteur ne bouge pas : l'écran peut dire
+// discrètement « Clique un objet du poste. »), `false` si l'inspection est figée. Une marque envoyée est inerte.
 export function cliquer(D, st, vue, x, y, { copie = false } = {}) {
   if (st.fait) return false;
+  const point = pointTouche(D, etatsInspection(D, st, { copie }), vue, x, y);
+  if (!point) return null;
   st.compteur = (st.compteur || 0) + 1;
-  st.marques.push({ n: st.compteur, vue, x, y, point: pointTouche(D, etatsInspection(D, st, { copie }), vue, x, y), envoi: null });
+  st.marques.push({ n: st.compteur, vue, x, y, point, envoi: null });
   return true;
 }
 export function retirerMarque(st, n) {
@@ -231,23 +238,23 @@ export function retirerMarque(st, n) {
 // « Signaler à … » : les marques pas encore envoyées partent en UN signal. Réponse composée comme au quai : la réparation de
 // chaque défaut touché pas encore signalé (dans l'ordre de déclaration ; un défaut `reparable: false` donne son texte et reste
 // tel quel), « je sais » une fois si un défaut non réparable est re-signalé (ce n'est PAS un faux), « rien » une fois s'il y a
-// une marque à côté, un point en ordre ou un défaut déjà réparé, puis la fin. En copie : « C'est noté. », rien ne se répare.
+// un point en ordre ou un défaut déjà réparé, puis la fin. En copie : « C'est noté. », rien ne se répare. Plus de marque « à
+// côté » : `cliquer` n'en pose jamais (une marque sans point, venue d'une base plus ancienne, est ignorée).
 // Rend `true` si un signal est vraiment parti (le geste `inspection:<id>:signaler` est alors publié).
 export function signaler(D, st, { copie = false } = {}) {
   if (st.fait) return false;
   const T = textes(D);
-  const envoyer = st.marques.filter((m) => m.envoi == null);
+  const envoyer = st.marques.filter((m) => m.envoi == null && m.point);
   if (!envoyer.length) { st.chef = T.vide; return false; }
   const deja = pointsSignales(st);
-  const points = [...new Set(envoyer.map((m) => m.point).filter(Boolean))];
-  const rien = envoyer.filter((m) => !m.point).length;
-  st.signaux.push({ points, rien, marques: envoyer.map((m) => m.n), apresArret: !!st.arrete });
+  const points = [...new Set(envoyer.map((m) => m.point))];
+  st.signaux.push({ points, marques: envoyer.map((m) => m.n), apresArret: !!st.arrete });
   envoyer.forEach((m) => { m.envoi = st.signaux.length; });
   if (copie) { st.chef = T.note; return true; }
   const touche = D.points.filter((p) => points.includes(p.id));
   const L = touche.filter((p) => !p.ok && !deja.has(p.id)).map((p) => p.repare || 'Bien vu, je m’en occupe.');
   if (touche.some((p) => !p.ok && p.reparable === false && deja.has(p.id))) L.push(T.deja);
-  if (rien > 0 || touche.some((p) => p.ok || (deja.has(p.id) && p.reparable !== false))) L.push(T.rien);
+  if (touche.some((p) => p.ok || (deja.has(p.id) && p.reparable !== false))) L.push(T.rien);
   L.push(T.fin);
   st.chef = L.join(' ');
   return true;
@@ -275,8 +282,8 @@ export function valider(D, st, { copie = false } = {}) {
 
 /* ================================================================ les jalons */
 // Un jalon par défaut (`securite-<id>` : signalé dans un signal envoyé AVANT l'arrêt), un par essai déclaré (`essai-<n>` : avertisseur
-// essayé, même s'il sonne), puis `securite-aucun-faux` (au moins un signal, aucun sur un point en ordre, aucune marque à côté ;
-// re-signaler un défaut, réparé ou non, n'est pas un faux). Aucun n'est vrai par inaction. Les `lib` restent NEUTRES (le défaut
+// essayé, même s'il sonne), puis `securite-aucun-faux` (au moins un signal, aucun sur un point en ordre ; le vide ne se marque
+// plus, donc le seul faux possible est un objet en ordre ; re-signaler un défaut, réparé ou non, n'est pas un faux). Aucun n'est vrai par inaction. Les `lib` restent NEUTRES (le défaut
 // est nommé dans `attendu`, lu au bilan).
 export function jalonsInspection(D, st) {
   const T = textes(D), sec = st || inspectionNeuve();
@@ -295,13 +302,10 @@ export function jalonsInspection(D, st) {
     L.push({ id: `essai-${e.n}`, lib: `Avertisseur du transpalette n° ${e.n} essayé`, fait: fait ? 'essayé' : 'pas essayé',
       attendu: `essayer l’avertisseur (il ${e.resultat === 'muet' ? 'ne sonne pas' : 'sonne'})`, ok: fait });
   });
-  const faux = signaux.filter((g) => (g.rien || 0) > 0 || (g.points || []).some((id) => point(id) && point(id).ok));
-  const aTort = [...new Set([].concat(...faux.map((g) => (g.points || []).filter((id) => point(id) && point(id).ok))))].map((id) => point(id).lib);
-  const cote = faux.reduce((t, g) => t + (g.rien || 0), 0);
+  const aTort = [...new Set([].concat(...signaux.map((g) => (g.points || []).filter((id) => point(id) && point(id).ok))))].map((id) => point(id).lib);
   L.push({ id: 'securite-aucun-faux', lib: 'Aucun faux signalement',
-    fait: !signaux.length ? 'rien signalé' : !faux.length ? 'aucun faux signalement'
-      : [aTort.length ? `signalé à tort : ${aTort.join(', ')}` : '', cote ? `${cote} marque${cote > 1 ? 's' : ''} à côté de tout défaut` : ''].filter(Boolean).join(' · '),
-    attendu: 'au moins un signalement, et aucun sur un point en ordre ni à côté', ok: signaux.length > 0 && !faux.length });
+    fait: !signaux.length ? 'rien signalé' : !aTort.length ? 'aucun faux signalement' : `signalé à tort : ${aTort.join(', ')}`,
+    attendu: 'au moins un signalement, et aucun sur un point en ordre', ok: signaux.length > 0 && !aTort.length });
   return L;
 }
 

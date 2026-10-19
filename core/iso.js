@@ -1998,20 +1998,21 @@ export function boitesAffichage(pos = [0, 0]) {
 
 /* ---------------------------------------------------------------- la borne de charge (décor) */
 // La borne de charge murale : un coffret gris (écran, pictogramme de batterie, « CHARGE »), sa gaine vers le plafond et deux
-// prises en dessous, une par place. (x, y) = le milieu du coffret, sur le plan du mur (y). Décor : jamais un point d'inspection.
-export const prisesBorne = (pos = [0, 0]) => [[pos[0] - .2, pos[1] + .1, .79], [pos[0] + .2, pos[1] + .1, .79]];
+// prises SUR la face avant du coffret, en bas, une par place. (x, y) = le milieu du coffret, sur le plan du mur (y). Décor :
+// jamais un point d'inspection. (Retour de Tristan, 19/10/2026 : des prises au mur sous le coffret semblaient « tomber dans le
+// vide » ; posées sur le coffret, une prise sans fiche reste visiblement une prise de la borne.)
+export const prisesBorne = (pos = [0, 0]) => [[pos[0] - .15, pos[1] + .22, .92], [pos[0] + .15, pos[1] + .22, .92]];
 export function borneCharge(I, pos, o = {}) {
   const { boite } = I, [x, y] = pos;
   let g = boite(x - .035, y, 1.6, .07, .05, 1.3, ['#9aa1a6', '#8a9196', '#7d858a']);
-  g += boite(x - .28, y, 1.0, .56, .16, .62, ['#d5d8da', '#c3c8cb', '#aab1b5']);
+  g += boite(x - .28, y, .8, .56, .16, .82, ['#d5d8da', '#c3c8cb', '#aab1b5']);
   g += `<g transform="${surMurX(I, x - .2, y + .161, 1.54)}"><rect width=".4" height=".18" rx=".015" fill="#1d2a35"/>`
     + '<rect x=".13" y=".05" width=".13" height=".08" rx=".008" fill="none" stroke="#e6e9eb" stroke-width=".012"/><rect x=".26" y=".075" width=".015" height=".03" fill="#e6e9eb"/>'
     + '<rect x=".145" y=".065" width=".03" height=".05" fill="#e6e9eb"/><rect x=".185" y=".065" width=".03" height=".05" fill="#e6e9eb"/>'
     + '<text x=".2" y=".31" text-anchor="middle" font-size=".085" font-weight="800" font-family="Arial, sans-serif" fill="#2b3a46">CHARGE</text></g>';
-  prisesBorne(pos).forEach(([sx]) => {
-    g += boite(sx - .015, y, .86, .03, .03, .14, ['#9aa1a6', '#8a9196', '#7d858a']);
-    g += boite(sx - .07, y, .72, .14, .1, .14, ['#5c6266', '#4a4f52', '#3a3f43']);
-    g += `<g transform="${surMurX(I, sx - .07, y + .101, .86)}"><circle cx=".07" cy=".07" r=".04" fill="#15181a" stroke="#8a9196" stroke-width=".008"/></g>`;
+  prisesBorne(pos).forEach(([sx, sy, sz]) => {
+    g += boite(sx - .065, y + .16, sz - .065, .13, sy - y - .16, .13, ['#5c6266', '#4a4f52', '#3a3f43']);
+    g += `<g transform="${surMurX(I, sx - .065, sy + .001, sz + .065)}"><circle cx=".065" cy=".065" r=".038" fill="#15181a" stroke="#8a9196" stroke-width=".008"/></g>`;
   });
   return objetEssai(o, 'borne', 'decor', g);
 }
