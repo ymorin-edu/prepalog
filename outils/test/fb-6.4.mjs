@@ -97,13 +97,13 @@ async function zone64(id, i = 0) {
   const M = (await secu64()).marques;
   return M[M.length - 1];
 }
-// Un clic sur le mur de la façade, entre deux portes (hors de toute zone) : « à côté ».
+// Un clic sur le mur de la façade, entre deux portes (hors de toute zone) : depuis le 20/10/2026 il ne pose AUCUNE marque
+// (même règle que l'inspection du poste). Rend les marques rangées après le clic.
 async function mur64() {
   await vue64('dehors');
   const m = await pg.evaluate(async () => { const K = await import('/core/iso.js'); return K.projection({ unite: 54, origine: [330, 150] }).P(5.5, 0, 1.4); });
   await cliquerVB64(m[0], m[1]);
-  const M = (await secu64()).marques;
-  return M[M.length - 1];
+  return (await secu64()).marques;
 }
 const signaler64 = async () => { await pg.click(`${Z} [data-q="sc-signaler"]`); await pause(); };
 const chef64 = () => pg.$eval(`${Z} [data-q-secu-chef]`, (n) => n.textContent.trim());
@@ -366,11 +366,16 @@ await v('ENT-6.4 : la cale signalée (un piège) → « aucun faux signalement �
   egal(n.score, 18.5, 'note');
 });
 
-await v('ENT-6.4 : un clic sur le mur signalé (à côté de tout objet) → « aucun faux signalement » faux seul ; les deux défauts restent justes', async () => {
+await v('ENT-6.4 : un clic sur le mur (à côté de tout objet) ne pose rien et dit « Clique un objet du quai. » → aucun faux signalement, tous les jalons justes, 20/20', async () => {
+  await monter64({ uid: 'fb64-mur-msg' });
+  await aller('quai');
+  await pg.waitForSelector(SVG64);
+  egal(await mur64(), [], 'le mur : aucune marque rangée');
+  egal(await pg.$eval(`${Z} [data-q-nb-marques]`, (x) => x.textContent), 'Clique un objet du quai.', 'le message à la place du compteur');
   const n = await parcours64({ uid: 'fb64-mur', envois: [['cabine', 'niveleur', 'mur']] });
-  egal(etats64(n), sauf64(['securite-aucun-faux']), 'jalons');
-  egal(n.score, 18.5, 'note');
-  egal((await secu64()).signaux.map((g) => [g.points, g.rien]), [[['cabine', 'niveleur'], 1]], 'un signal : deux points touchés, une marque à côté');
+  egal(etats64(n), sauf64([]), 'jalons : le clic sur le mur n’est pas un faux signalement');
+  egal(n.score, 20, 'note');
+  egal((await secu64()).signaux.map((g) => [g.points, g.rien]), [[['cabine', 'niveleur'], 0]], 'un signal : deux points touchés, aucune marque à côté');
 });
 
 await v('ENT-6.4 : une marque fausse retirée AVANT l’envoi ne compte pas ; envoyée, elle compte même si on la retire ensuite', async () => {

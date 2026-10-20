@@ -314,7 +314,7 @@ await v('ENT-8.7 : jalons sans écran — rien : tout « à faire » ; chaque é
   egal(await ko((d) => { d.proto.engin = 'moi-frontal'; }), ['engin'], '« toi, au chariot élévateur frontal »');
   egal(await ko((d) => { d.sec.signaux = []; }), ['securite-danger', 'securite-aucun-faux'], 'rien signalé, inspection figée : danger ✗ ET aucun faux ✗');
   egal(await ko((d) => { d.sec.signaux = [{ points: ['cale', 'lampe'], rien: 0, apresArret: false }]; }), ['securite-aucun-faux'], 'la lampe (en ordre) signalée aussi');
-  egal(await ko((d) => { d.sec.signaux = [{ points: ['cale'], rien: 1, apresArret: false }]; }), ['securite-aucun-faux'], 'une marque à côté');
+  egal(await ko((d) => { d.sec.signaux = [{ points: ['cale'], rien: 1, apresArret: false }]; }), ['securite-aucun-faux'], 'base ancienne (avant le 20/10/2026) : une marque à côté, rien: 1, est encore lue — une base neuve n’en produit plus');
   egal(await ko((d) => { d.sec.signaux = [{ points: ['cale'], rien: 0, apresArret: true }]; }), ['securite-danger'], 'signalé après l’arrêt de Samia');
   egal(await ko((d) => { d.sec.signaux = [{ points: ['cabine'], rien: 0, apresArret: false }]; }), ['securite-danger', 'securite-aucun-faux'], 'pas le bon objet');
   egal(await ko((d) => { d.depose.P3 = 'allee-1'; }), ['depose-P3'], 'P3 sur l’allée piétonne au premier choix');

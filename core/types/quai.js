@@ -1466,13 +1466,15 @@ function jalonsScene(e, R) {
       fait: avant ? 'signalé avant de décharger' : apres ? `signalé seulement après l’arrêt de ${qui}` : sec.fait ? 'jamais signalé' : 'pas signalé',
       attendu: `signaler : ${x.lib}`, ok: avant });
   });
+  // 20/10/2026 : une base neuve ne produit plus de `rien` (un clic dans le vide ne pose plus de marque, même règle que
+  // l'inspection du poste, validée par Tristan le 19/10) ; on le lit encore pour les signaux rangés avant cette date.
   const faux = signaux.filter((g) => (g.rien || 0) > 0 || (g.points || []).some((id) => point(id) && point(id).ok));
   const aTort = [...new Set([].concat(...faux.map((g) => (g.points || []).filter((id) => point(id) && point(id).ok))))].map((id) => point(id).lib);
   const cote = faux.reduce((t, g) => t + (g.rien || 0), 0);
   L.push({ id: 'securite-aucun-faux', lib: 'Aucun faux signalement',
     fait: !signaux.length ? 'rien signalé' : !faux.length ? 'aucun faux signalement'
       : [aTort.length ? `signalé à tort : ${aTort.join(', ')}` : '', cote ? `${cote} marque${cote > 1 ? 's' : ''} à côté de tout danger` : ''].filter(Boolean).join(' · '),
-    attendu: 'au moins un signalement, et aucun sur un point conforme ni à côté', ok: signaux.length > 0 && !faux.length });
+    attendu: 'au moins un signalement, et aucun sur un point conforme', ok: signaux.length > 0 && !faux.length });
   return L;
 }
 
@@ -1775,7 +1777,7 @@ export function creerQuai(Q, opts = {}) {
   // `sonde` : la palette qui vient d'être sondée (l'afficheur se stabilise une fois, pas à chaque redessin).
   const ui = { chef4: false, arme: false, arme4: false, armeRaz: false, anim: null, lancer: false, jouerCf: false, focus: null,
     tente: null, tropMotifs: false, sonde: null, arretSecu: false, arrivee: false, rejeu1: false, anim1: null, t0a: null,
-    vueScene: 'dehors', levee: null, armeScene: false,
+    vueScene: 'dehors', levee: null, armeScene: false, horsScene: false,
     // Dépose dirigée : le texte à annoncer (région `aria-live`) au prochain dessin ; `visDep` / `animDep` : l'image et le contrôleur d'une
     // animation en cours (étape B ; toujours null ici, les pauses se dessinent depuis la base par `visDe`).
     annonceDep: '', visDep: null, animDep: null };
@@ -2828,7 +2830,8 @@ export function creerQuai(Q, opts = {}) {
   // états des objets ne sont JAMAIS rangés : `etatsScene` les calcule depuis les signaux envoyés et le figeage. Rien dans le
   // DOM de la scène ne nomme un objet (ni `title`, ni `tabindex`, ni `role`, ni attribut `data-*` : les zones se calculent).
   const SG = SCENE ? Object.assign({ qui: 'le chef de quai', rien: 'Là, je ne vois rien qui cloche.', fin: 'Tu me dis quand on peut décharger.',
-    vide: 'Qu’est-ce qui ne va pas ? Clique d’abord sur ce que tu veux me signaler.' }, SEC.signaler || {}) : null;
+    vide: 'Qu’est-ce qui ne va pas ? Clique d’abord sur ce que tu veux me signaler.',
+    horsObjet: 'Clique un objet du quai.' }, SEC.signaler || {}) : null;
   // « à le chef de quai » se dit « au chef de quai ».
   const aQui = (q) => (/^le /i.test(q) ? `au ${q.slice(3)}` : /^les /i.test(q) ? `aux ${q.slice(4)}` : /^la /i.test(q) ? `à la ${q.slice(3)}` : `à ${q}`);
   const majuscule = (t) => String(t).charAt(0).toUpperCase() + String(t).slice(1);
@@ -2893,19 +2896,23 @@ export function creerQuai(Q, opts = {}) {
       ${ui.arretSecu ? `<div class="quai-alerte" role="alert" data-q-secu-arret><b>${ech(majuscule(SG.qui))} :</b> « ${ech(typeof SEC.arret === 'string' ? SEC.arret : PAROLE_ARRET)} »</div>` : ''}
       <p class="quai-ligne">
         <button class="btn" data-q="sc-signaler" ${dis}>${ech(SG.bouton || `Signaler ${aQui(SG.qui)}`)}</button>
-        <span class="note" data-q-nb-marques>${texteMarques(sec)}</span>
+        <span class="note${ui.horsScene ? ' insp-hors' : ''}" data-q-nb-marques>${ui.horsScene ? ech(SG.horsObjet) : texteMarques(sec)}</span>
         <button class="btn btn-p${ui.armeScene ? ' quai-arme' : ''}" data-q="sc-decharger" ${dis}>${ui.armeScene ? 'On décharge, c’est définitif : cliquez pour confirmer' : `${ech(SEC.commencer || 'C’est bon, on peut décharger')} →`}</button>
         ${ui.armeScene ? '<button class="btn" data-q="sc-desarmer">Annuler</button>' : ''}
       </p>
     </div>`;
   }
   // « Signaler » : les marques pas encore envoyées partent en un signal. La réponse se compose : la réparation de chaque défaut
-  // touché qui ne l'était pas encore (dans l'ordre de déclaration), « rien » une seule fois s'il y a une marque à côté, un
-  // point conforme ou un défaut déjà réparé, puis la fin. Les états réparés ne sont pas rangés : `etatsScene` les relit.
+  // touché qui ne l'était pas encore (dans l'ordre de déclaration), « rien » une seule fois s'il y a un point conforme ou un
+  // défaut déjà réparé (ou, dans une base ancienne, une marque à côté), puis la fin. Les états réparés ne sont pas rangés :
+  // `etatsScene` les relit.
+  // 20/10/2026 : un clic dans le vide ne pose plus de marque (même règle que l'inspection du poste, validée par Tristan le
+  // 19/10) ; `m.point` est donc toujours renseigné pour une base neuve. On garde pourtant `rien` (signal et lecture des
+  // jalons) pour les bases rangées avant cette date, qui peuvent contenir des marques sans point.
   function signalerScene(e, api, signal) {
     const sec = e.securite;
     if (!sec || sec.fait) return;
-    ui.armeScene = false;
+    ui.armeScene = false; ui.horsScene = false;
     const envoyer = sec.marques.filter((m) => m.envoi == null);
     if (!envoyer.length) { sec.chef = SG.vide; api.sauver(); api.redessiner(); return; }
     const deja = new Set();
@@ -2954,7 +2961,7 @@ export function creerQuai(Q, opts = {}) {
       if (!actif()) return;
       ui.vueScene = b.dataset.v === 'dedans' && sec.ouverte ? 'dedans' : 'dehors';
       if (ui.vueScene === 'dehors') ui.levee = null;
-      ui.armeScene = false;
+      ui.armeScene = false; ui.horsScene = false;
       api.redessiner();
     }));
     on('sc-signaler', geste(() => signalerScene(e, api, signal)));
@@ -2992,18 +2999,27 @@ export function creerQuai(Q, opts = {}) {
       if (!M) return;
       const p = pt.matrixTransform(M.inverse());
       const [vx, vy, vw, vh] = VUES_SCENE[vue].viewBox;
-      if (p.x < vx || p.x > vx + vw || p.y < vy || p.y > vy + vh) return;   // dans la marge autour du dessin
+      if (p.x < vx || p.x > vx + vw || p.y < vy || p.y > vy + vh) { horsObjet(); return; }   // dans la marge autour du dessin
       const x = Math.round(p.x * 10) / 10, y = Math.round(p.y * 10) / 10;
+      // Un clic qui ne touche aucun objet ne pose rien (ni marque, ni numéro) : un mot discret à la place du compteur.
+      const point = pointTouche(SEC, etatsScene(SEC, sec), vue, x, y);
+      if (!point) { horsObjet(); return; }
       sec.compteur = (sec.compteur || 0) + 1;
-      sec.marques.push({ n: sec.compteur, vue, x, y, point: pointTouche(SEC, etatsScene(SEC, sec), vue, x, y), envoi: null });
+      sec.marques.push({ n: sec.compteur, vue, x, y, point, envoi: null });
       changerMarques();
     });
+    function horsObjet() {
+      ui.horsScene = true;
+      const t = z.querySelector('[data-q-nb-marques]');
+      if (t) { t.textContent = SG.horsObjet; t.classList.add('insp-hors'); }
+    }
     function changerMarques() {
+      ui.horsScene = false;
       api.sauver();
       if (ui.armeScene) { ui.armeScene = false; api.redessiner(); return; }
       couche.innerHTML = marquesSvg(sec, vue);
       const t = z.querySelector('[data-q-nb-marques]');
-      if (t) t.textContent = texteMarques(sec);
+      if (t) { t.textContent = texteMarques(sec); t.classList.remove('insp-hors'); }
     }
   }
 
@@ -4366,7 +4382,7 @@ export function creerQuai(Q, opts = {}) {
       on('recommencer', () => {
         if (Q.recommencer === false) return;
         if (!secondClic(ui, 'armeRaz')) { api.redessiner(); return; }
-        ui.vueScene = 'dehors'; ui.levee = null; ui.armeScene = false; ui.arretSecu = false;
+        ui.vueScene = 'dehors'; ui.levee = null; ui.armeScene = false; ui.arretSecu = false; ui.horsScene = false;
         api.recommencer();
       });
       if (ui.jouerCf) { ui.jouerCf = false; jouerCf(z, e); }

@@ -526,7 +526,8 @@ reponse }`, `arret` en texte). Avec `mode: 'scene'`, l'élève inspecte le quai 
 | `consigne` | la phrase au-dessus de la scène | « Clique sur ce qui ne va pas, puis signale-le. » | — |
 | `signaler.qui` | qui reçoit le signalement | « le chef de quai » | — |
 | `signaler.bouton` | texte du bouton | `Signaler à ${qui}` (« Signaler à Nadia », « au chef de quai ») | — |
-| `signaler.rien` / `fin` / `vide` | réponses du collègue : marque à côté ou point en ordre / toujours en fin de réponse / rien à envoyer | « Là, je ne vois rien qui cloche. » / « Tu me dis quand on peut décharger. » / « Qu’est-ce qui ne va pas ? Clique d’abord sur ce que tu veux me signaler. » | — |
+| `signaler.rien` / `fin` / `vide` | réponses du collègue : point en ordre ou défaut déjà réparé (plus de « marque à côté » : depuis le 20/10/2026 un clic dans le vide ne pose rien) / toujours en fin de réponse / rien à envoyer | « Là, je ne vois rien qui cloche. » / « Tu me dis quand on peut décharger. » / « Qu’est-ce qui ne va pas ? Clique d’abord sur ce que tu veux me signaler. » | — |
+| `signaler.horsObjet` | phrase grise à la place du compteur quand le clic ne touche aucun objet (rien n'est posé ; même clé que la vue inspection du poste) | « Clique un objet du quai. » | — |
 | `commencer` | texte du bouton qui fige l'inspection (suivi de « → ») | « C’est bon, on peut décharger » | — |
 | `arret` | `true`, `false` ou le texte de l'arrêt | `true` | pas un booléen ni un texte ; **`false` en mode liste** (il n'y règle rien) |
 | `bilan` | phrase au bilan du quai si un jalon `securite-<id>` est faux | rien | — |
@@ -558,7 +559,7 @@ reponse }`, `arret` en texte). Avec `mode: 'scene'`, l'élève inspecte le quai 
   le garde), curseur en croix partout, aucune surbrillance au survol : n'en ajouter aucun.
 - **Signaler.** Sans marque à envoyer : la réponse `vide`, rien n'est rangé. Sinon les marques partent en **un signal** et le
   collègue répond : les `repare` des défauts touchés **pas encore réparés** (dans l'ordre de déclaration), puis `rien` une
-  seule fois s'il y a une marque à côté, un point en ordre ou un défaut déjà réparé, puis `fin`. La scène **se répare
+  seule fois s'il y a un point en ordre ou un défaut déjà réparé (un clic dans le vide ne pose plus de marque depuis le 20/10/2026), puis `fin`. La scène **se répare
   sous les yeux de l'élève** (cabine : plus de silhouette ni de fumée et le chauffeur descend près de l'accueil ;
   niveleur posé ; cale posée…). Une marque envoyée est grisée en tirets et **inerte** : elle masque ce qu'elle recouvre
   (pour re-signaler le même objet, cliquer ailleurs dans sa zone).
@@ -572,7 +573,7 @@ reponse }`, `arret` en texte). Avec `mode: 'scene'`, l'élève inspecte le quai 
   et la lampe dans son état sûr.
 - **Jalons** (les deux jalons de la liste ne sont pas produits en mode scène). Un par défaut : `securite-<id>`, « Danger n° 1
   signalé avant de décharger » (juste = le point est dans un signal envoyé **avant** l'arrêt) ; puis `securite-aucun-faux`
-  (juste = au moins un signal, aucun sur un point en ordre, aucune marque à côté). `lib` **neutres** (ils peuvent se lire
+  (juste = au moins un signal, aucun sur un point en ordre ; le champ `rien` des signaux d'avant le 20/10/2026 est encore lu). `lib` **neutres** (ils peuvent se lire
   pendant la séance) ; le défaut est nommé dans `attendu`, lu au bilan. Re-signaler un défaut déjà réparé n'est **pas** un
   faux signalement. Aucun n'est vrai par inaction. Les titres d'étape de la séance (`etapes[].titre`) ne s'affichent que dans le bilan du quai (après « Clore »)
   et au bandeau de fin, mais **la séance les garde neutres** quand même (pas « La cale signalée avant de décharger »),
@@ -2310,6 +2311,9 @@ Dans le fichier de questions : un bloc `ouverture` et des questions `type: 'ouve
   `detail.ouverture.tirees` ; sans tirage rangé (enseignant), toute la banque est montrée. Une question peut porter
   `variante: (hasard) => ({ enonce, libs: { <clé de choix>: texte }, retour? })` : mêmes clés et même `juste` pour tous, seuls
   les textes changent (bonne réponse et pièges **calculés** dans la fonction, jamais ceux d'un jalon de la séance).
+  Une question peut aussi porter `niveaux: ['accompagne', 'standard']` (20/10/2026) : elle n'est tirée que pour ces niveaux d'élève
+  (`niveauEleve(db, { copie })`, donc toujours `'standard'` en évaluation) ; sans la clé, elle vaut pour tous. Le chargement refuse un niveau
+  inconnu, une liste vide, et une rubrique qui n'a plus le double de ce qu'elle tire **pour l'un des niveaux** (message qui nomme le niveau).
   Reprise des questions `cle: true` des séances de travail en évaluation : pas faite (à écrire dans le fichier de l'évaluation).
 
 ### Modifier les questions d'une séance (une demande de Tristan = ce fichier seul, en Sonnet)

@@ -523,7 +523,7 @@ await v('Quai scène : état de chaque objet — déclaré, sûr dès qu’il es
   egal(quaiMod.etatsScene({ points: [] }, null), { cabine: 'vide', cale: null, butoirs: 'enPlace', niveleur: 'pose', lampe: null }, 'rien de déclaré = le quai d’aujourd’hui');
 });
 
-await v('Quai scène : point touché — le premier point déclaré de la vue ; mur et autre vue = à côté ; zones qui suivent l’état dessiné', async () => {
+await v('Quai scène : point touché — le premier point déclaré de la vue ; mur et autre vue = null (rien n’est posé à l’écran) ; zones qui suivent l’état dessiné', async () => {
   const S = SEC5(), E0 = quaiMod.etatsScene(S, null);
   const Z0 = quaiMod.zonesScene(S, E0);
   egal(Z0.map((z) => [z.id, z.vue, z.rects.length]), [['cabine', 'dehors', 2], ['niveleur', 'dedans', 1], ['cale', 'dehors', 1], ['butoirs', 'dehors', 1], ['lampe', 'dedans', 1]], 'une zone par point (cabine : pare-brise + fumée)');
@@ -578,7 +578,12 @@ await v('Quai scène : jalons — un par défaut, plus « aucun faux signalement
   egal(jalonsDe({ signaux: [SIG(['cabine']), SIG(['niveleur'])] }), { 'securite-cabine': true, 'securite-niveleur': true, 'securite-aucun-faux': true }, 'deux envois, tout juste');
   egal(jalonsDe({ signaux: [SIG(['cabine', 'niveleur'])] }), { 'securite-cabine': true, 'securite-niveleur': true, 'securite-aucun-faux': true }, 'un seul envoi pour les deux');
   egal(jalonsDe({ signaux: [SIG(['cabine', 'cale'])] })['securite-aucun-faux'], false, 'une cale conforme signalée');
-  egal(jalonsDe({ signaux: [SIG(['cabine'], { rien: 1 })] })['securite-aucun-faux'], false, 'une marque à côté');
+  // Base ANCIENNE (rangée avant le 20/10/2026, quand un clic dans le vide posait une marque « à côté ») : `rien: 1` est encore lu,
+  // le jalon tombe, et la phrase d'avant reste. Une base neuve ne produit plus jamais `rien > 0` (voir le cas du clic dans le vide).
+  egal(jalonsDe({ signaux: [SIG(['cabine'], { rien: 1 })] })['securite-aucun-faux'], false, 'base ancienne : une marque à côté (rien: 1) fait encore tomber le jalon');
+  const fauxFait = (securite) => quaiMod.jalonsQuai({ quais: { t: { securite } } }, { id: 't', rendu: 'iso', froid: false, securite: SEC5(), camions: [{ palettes: [] }] }).L.find((l) => l.id === 'securite-aucun-faux').fait;
+  egal(fauxFait({ signaux: [SIG(['cabine'], { rien: 1 })] }), '1 marque à côté de tout danger', 'base ancienne : la phrase d’avant est gardée');
+  egal(fauxFait({ signaux: [SIG(['cabine', 'cale'])] }), 'signalé à tort : ' + PT.cale.lib, 'base neuve : le libellé ne parle que du point en ordre signalé, jamais de « marque à côté »');
   egal(jalonsDe({ signaux: [SIG(['cabine']), SIG(['lampe'])] })['securite-aucun-faux'], false, 'une lampe en ordre signalée au second envoi');
   egal(jalonsDe({ signaux: [SIG(['cabine']), SIG(['cabine'])] }), { 'securite-cabine': true, 'securite-niveleur': false, 'securite-aucun-faux': true }, 'un défaut déjà réparé re-signalé n’est pas un faux signalement');
   egal(jalonsDe({ signaux: [SIG(['cabine'], { apresArret: true })] })['securite-cabine'], false, 'signalé seulement après l’arrêt du chef de quai');
@@ -708,7 +713,7 @@ await v('Quai scène : le déroulé — ① à ④, pas d’étape ⓪, ② à �
   await p.close();
 });
 
-await v('Quai scène : clic au centre de chaque zone, à la souris, dans les deux vues → le bon point ; le mur et l’autre vue → à côté', async () => {
+await v('Quai scène : clic au centre de chaque zone, à la souris, dans les deux vues → le bon point ; le mur et l’autre vue → rien de posé, message affiché', async () => {
   const p = await pageScene();
   const fautes = [];
   for (const [id, i, vue] of [['cabine', 0, 'dehors'], ['cabine', 1, 'dehors'], ['cale', 0, 'dehors'], ['butoirs', 0, 'dehors'], ['niveleur', 0, 'dedans'], ['lampe', 0, 'dedans']]) {
@@ -716,22 +721,68 @@ await v('Quai scène : clic au centre de chaque zone, à la souris, dans les deu
     if (!m || m.point !== id) fautes.push(`${id}/${i} : point touché ${m && m.point}`);
     else if (m.vue !== vue) fautes.push(`${id} : la marque est sur la vue ${m.vue}`);
   }
-  // Le mur de la façade (entre les portes 2 et 3, hors de toute zone) : à côté.
+  // Le mur de la façade (entre les portes 2 et 3, hors de toute zone) : rien n'est posé (20/10/2026), le message s'affiche.
   await allerVue(p, 'dehors');
   const mur = await p.evaluate(async () => { const K = await import('/core/iso.js'); return K.projection({ unite: 54, origine: [330, 150] }).P(5.5, 0, 1.4); });
+  const nbAvant = (await secQ(p)).marques.length;
   await cliquerViewBox(p, mur[0], mur[1]);
   let M = (await secQ(p)).marques;
-  if (M[M.length - 1].point !== null) fautes.push(`le mur touche « ${M[M.length - 1].point} »`);
-  // Le niveleur ne se touche que dedans : ses coordonnées de « dedans » cliquées dehors tombent à côté.
+  if (M.length !== nbAvant) fautes.push(`le mur pose une marque : ${JSON.stringify(M[M.length - 1])}`);
+  if (await p.$eval(`${HOTE} [data-q-nb-marques]`, (n) => n.textContent) !== 'Clique un objet du quai.') fautes.push('le mur : pas de message « Clique un objet du quai. »');
+  // Le niveleur ne se touche que dedans : ses coordonnées de « dedans » cliquées dehors ne posent rien non plus.
   const Zn = (await zonesDe(p)).find((z) => z.id === 'niveleur').rects[0];
   await cliquerViewBox(p, Zn.x + Zn.w / 2, Zn.y + Zn.h / 2);
   M = (await secQ(p)).marques;
-  if (M[M.length - 1].vue !== 'dehors' || M[M.length - 1].point !== null) fautes.push(`le niveleur cliqué dehors : ${JSON.stringify(M[M.length - 1])}`);
-  // Les marques gardent leur vue, leurs coordonnées arrondies au dixième, un numéro jamais réutilisé.
+  if (M.length !== nbAvant) fautes.push(`le niveleur cliqué dehors pose une marque : ${JSON.stringify(M[M.length - 1])}`);
+  // Les marques gardent leur vue, leurs coordonnées arrondies au dixième, un numéro jamais réutilisé ; aucune n'est « à côté ».
   M = (await secQ(p)).marques;
-  egal(M.map((m) => m.n), [1, 2, 3, 4, 5, 6, 7, 8], 'numéros dans l’ordre des clics, toutes vues confondues');
+  egal(M.map((m) => m.n), [1, 2, 3, 4, 5, 6], 'numéros dans l’ordre des clics, toutes vues confondues, sans trou (les clics dans le vide ne comptent pas)');
+  vrai(M.every((m) => m.point), 'une marque posée ne touche aucun point');
   vrai(M.every((m) => m.envoi === null && Math.abs(m.x * 10 - Math.round(m.x * 10)) < 1e-6 && Math.abs(m.y * 10 - Math.round(m.y * 10)) < 1e-6), 'les marques ne sont pas envoyées / arrondies');
   if (fautes.length) throw new Error(fautes.join(' ; '));
+  await p.close();
+});
+
+// 20/10/2026 : même règle que l'inspection du poste (validée par Tristan le 19/10) — AUCUNE MARQUE DANS LE VIDE.
+await v('Quai scène : un clic dans le vide ne pose rien — compteur immobile, « Clique un objet du quai. » ; un clic sur un objet pose la marque n° 1 ; le jalon « aucun faux » ne tombe pas', async () => {
+  const p = await pageScene();
+  const mur = await p.evaluate(async () => { const K = await import('/core/iso.js'); return K.projection({ unite: 54, origine: [330, 150] }).P(5.5, 0, 1.4); });
+  const NB = `${HOTE} [data-q-nb-marques]`, MARQUES = `${SVG} [data-q-marque]`;
+  egal(await p.$eval(NB, (n) => n.textContent), '', 'au départ, pas de compteur ni de message');
+  await cliquerViewBox(p, mur[0], mur[1]);
+  await cliquerViewBox(p, mur[0], mur[1]);
+  let s = await secQ(p);
+  egal([s.marques, s.compteur], [[], 0], 'deux clics dans le vide : aucune marque rangée, le compteur ne bouge pas');
+  egal(await p.$$eval(MARQUES, (L) => L.length), 0, 'aucun rond dessiné');
+  egal(await p.$eval(NB, (n) => n.textContent), 'Clique un objet du quai.', 'le message à la place du compteur');
+  egal(await p.$eval(NB, (n) => n.classList.contains('insp-hors')), true, 'le message est en gris discret (même classe que l’inspection du poste)');
+  egal(await p.$eval(NB, (n) => n.textContent), 'Clique un objet du quai.', 'le message reste');
+  // Un clic sur un objet : la marque n° 1 se pose, le message laisse la place au compteur.
+  const m = await cliquerZone(p, 'cabine', 0);
+  egal([m.n, m.point], [1, 'cabine'], 'la marque n° 1 sur la cabine');
+  egal(await p.$$eval(MARQUES, (L) => L.map((n) => n.getAttribute('data-q-marque'))), ['1'], 'un rond numéroté 1 dessiné');
+  egal(await p.$eval(NB, (n) => n.textContent), '1 marque à envoyer', 'le compteur revient');
+  egal(await p.$eval(NB, (n) => n.classList.contains('insp-hors')), false, 'plus de style de message');
+  // Un clic dans le vide avec une marque posée : rien de plus, la marque reste, le message revient.
+  await cliquerViewBox(p, mur[0], mur[1]);
+  s = await secQ(p);
+  egal([s.marques.length, s.compteur], [1, 1], 'la marque reste seule, le compteur est à 1');
+  egal(await p.$eval(NB, (n) => n.textContent), 'Clique un objet du quai.', 'le message revient');
+  // « Signaler » : le message disparaît, le signal ne porte aucune marque à côté, le jalon reste juste.
+  await signaler(p);
+  s = await secQ(p);
+  egal(s.signaux, [{ points: ['cabine'], rien: 0, marques: [1], apresArret: false }], 'le signal : la cabine, rien: 0');
+  egal(await p.$eval(NB, (n) => n.textContent), '', 'le message est parti après l’envoi');
+  egal((await jalonsPage(p))['securite-aucun-faux'], true, 'aucun faux signalement : cliquer dans le vide n’en est pas un');
+  await p.close();
+});
+
+await v('Quai scène : un clic dans le vide dit la phrase de securite.signaler.horsObjet quand le contenu la déclare', async () => {
+  const p = await pageScene(ctxS, { q: { securite: Object.assign(SEC5(), { signaler: { horsObjet: 'Touche un objet de la scène.' } }) } });
+  const mur = await p.evaluate(async () => { const K = await import('/core/iso.js'); return K.projection({ unite: 54, origine: [330, 150] }).P(5.5, 0, 1.4); });
+  await cliquerViewBox(p, mur[0], mur[1]);
+  egal(await p.$eval(`${HOTE} [data-q-nb-marques]`, (n) => n.textContent), 'Touche un objet de la scène.', 'la phrase du contenu');
+  egal((await secQ(p)).marques, [], 'rien de posé');
   await p.close();
 });
 
@@ -802,7 +853,7 @@ await v('Quai scène : cabine puis niveleur en deux envois — réparations visi
   await p.close();
 });
 
-await v('Quai scène : un défaut déjà réparé re-signalé, ou un point en ordre, ou une marque à côté — la réponse dit « rien » une fois', async () => {
+await v('Quai scène : un défaut déjà réparé re-signalé, ou un point en ordre (même deux à la fois) — la réponse dit « rien » une fois ; un clic sur le mur n’y change rien', async () => {
   const p = await pageScene();
   await cliquerZone(p, 'cabine', 0); await signaler(p);
   // La cabine est réparée : son pare-brise est la seule zone qui reste ; la signaler encore n'est pas un faux signalement.
@@ -810,15 +861,17 @@ await v('Quai scène : un défaut déjà réparé re-signalé, ou un point en or
   await cliquerZone(p, 'cabine', 0, true); await signaler(p);
   egal(await reponse(p), 'Nadia : « Là, je ne vois rien qui cloche. Tu me dis quand on peut décharger. »', 're-signaler un défaut réparé');
   egal(await jalonsPage(p), { 'securite-cabine': true, 'securite-niveleur': false, 'securite-aucun-faux': true }, 'pas un faux signalement');
-  // Deux faux d'un coup (une cale en ordre, une marque à côté) : « rien » une seule fois.
+  // Deux faux d'un coup (une cale en ordre, des butoirs en ordre) : « rien » une seule fois. Un clic sur le mur entre les deux
+  // ne pose rien (20/10/2026) : le signal ne porte que les deux marques, `rien` vaut 0.
   await cliquerZone(p, 'cale', 0);
   const mur = await p.evaluate(async () => { const K = await import('/core/iso.js'); return K.projection({ unite: 54, origine: [330, 150] }).P(5.5, 0, 1.4); });
   await cliquerViewBox(p, mur[0], mur[1]);
+  await cliquerZone(p, 'butoirs', 0);
   await signaler(p);
   const t = await reponse(p);
   egal(t, 'Nadia : « Là, je ne vois rien qui cloche. Tu me dis quand on peut décharger. »', 'un seul « rien »');
   const s = await secQ(p);
-  egal(s.signaux[2], { points: ['cale'], rien: 1, marques: [3, 4], apresArret: false }, 'le signal : la cale touchée, une marque à côté');
+  egal(s.signaux[2], { points: ['cale', 'butoirs'], rien: 0, marques: [3, 4], apresArret: false }, 'le signal : la cale et les butoirs touchés, aucune marque à côté (le mur n’a rien posé)');
   egal((await jalonsPage(p))['securite-aucun-faux'], false, 'cette fois c’est un faux signalement');
   await p.close();
 });
@@ -974,20 +1027,21 @@ await v('Quai scène : mouvement normal — la porte se lève en 1,8 s, la scèn
   egal(fum, [1, 1, 1], 'la fumée est animée avec le mouvement normal');
   await p.click(`${HOTE} [data-q="sc-ouvrir"]`);
   await p.waitForFunction(() => document.querySelectorAll('#qiScene [data-q-inspection] [data-iso-porte]').length === 1);
-  const bb = await p.locator(SVG).boundingBox();
-  await p.mouse.click(bb.x + bb.width * 0.5, bb.y + bb.height * 0.9);
+  // Un clic AU CENTRE du niveleur (un vrai objet : depuis le 20/10/2026 un clic dans le vide ne pose plus rien, il ne prouverait rien).
+  const Zn = (await zonesDe(p)).find((z) => z.id === 'niveleur').rects[0];
+  await cliquerViewBox(p, Zn.x + Zn.w / 2, Zn.y + Zn.h / 2);
   egal(await marques(), 0, 'un clic pendant la levée est ignoré');
   await p.waitForFunction(() => document.querySelectorAll('#qiScene [data-q-inspection] [data-iso-porte]').length === 0, null, { timeout: 4000 });
   await p.waitForTimeout(250);   // la dernière image de la levée
-  await p.mouse.click(bb.x + bb.width * 0.5, bb.y + bb.height * 0.9);
+  await cliquerViewBox(p, Zn.x + Zn.w / 2, Zn.y + Zn.h / 2);
   egal(await marques(), 1, 'la levée finie, le clic pose une marque');
   await p.close();
   // Mouvement réduit demandé : la fumée est dessinée et immobile ; et la scène répond tout de suite après « Ouvrir ».
   const r = await pageScene(ctxS);
   egal(await r.$$eval(`${SVG} .iso-fumee`, (L) => L.map((c) => [getComputedStyle(c).animationName, c.getAnimations().length])), [['none', 0], ['none', 0], ['none', 0]], 'fumée immobile mais dessinée');
   await r.click(`${HOTE} [data-q="sc-ouvrir"]`);
-  const bb2 = await r.locator(SVG).boundingBox();
-  await r.mouse.click(bb2.x + bb2.width * 0.5, bb2.y + bb2.height * 0.9);
+  const Zr = (await zonesDe(r)).find((z) => z.id === 'niveleur').rects[0];   // un vrai objet : le vide ne pose plus rien
+  await cliquerViewBox(r, Zr.x + Zr.w / 2, Zr.y + Zr.h / 2);
   egal((await secQ(r)).marques.length, 1, 'mouvement réduit : pas de levée à attendre');
   await r.close();
 });
@@ -1037,7 +1091,7 @@ await v('Quai scène : jusqu’au bilan — la phrase du bilan, « Recommencer �
   egal(lignes, [
     ['securite-cabine', 'Danger n° 1 signalé avant de décharger', 'jamais signalé', 'signaler : Chauffeur au volant, moteur allumé', true],
     ['securite-niveleur', 'Danger n° 2 signalé avant de décharger', 'jamais signalé', 'signaler : Niveleur relevé', true],
-    ['securite-aucun-faux', 'Aucun faux signalement', 'rien signalé', 'au moins un signalement, et aucun sur un point conforme ni à côté', true],
+    ['securite-aucun-faux', 'Aucun faux signalement', 'rien signalé', 'au moins un signalement, et aucun sur un point conforme', true],
   ], 'les trois jalons de sécurité au bilan');
   egal(await p.$eval(`${HOTE} [data-q-bilan-securite]`, (n) => n.textContent.trim()), 'La scène n’était pas sûre : avant d’entrer dans un camion, il doit être immobilisé et le passage vers la remorque doit être sûr.', 'la phrase du bilan');
   // Recommencer (deux clics) : le quai repart de zéro, inspection comprise.

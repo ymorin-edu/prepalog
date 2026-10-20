@@ -442,7 +442,7 @@ await v('ENT-8.10 : dialogue en évaluation — « Oui, restez dans votre cabine
   egal(['accueil-salutation', 'accueil-documents', 'accueil-quai', 'accueil-attente', 'accueil-fin'].map((j) => d[j]), ['ok', 'ok', 'ok', 'ko', 'ok'], 'jalons de l’accueil');
 });
 
-await v('ENT-8.10 : inspection — « C’est bon » sans rien signaler : rien n’arrête l’élève, le déchargement s’ouvre ; danger ✗ et aucun faux ✗ ; un défaut et une marque à côté reçoivent la même réponse neutre', async () => {
+await v('ENT-8.10 : inspection — « C’est bon » sans rien signaler : rien n’arrête l’élève, le déchargement s’ouvre ; danger ✗ et aucun faux ✗ ; un défaut et un objet en ordre reçoivent la même réponse neutre', async () => {
   await monter({ uid: 'a85-b' });
   await protocole(T['a85-b'].proto); await accueil();
   await allerV('quai'); await pg.waitForSelector(SVG);

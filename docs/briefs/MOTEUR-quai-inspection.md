@@ -235,7 +235,7 @@ palette multi-références) : décidé, à dire au compte rendu d'ENT-6.4 (son b
   « Voir dedans → » / « ← Revoir dehors ». Ouvrir ne coûte pas de minute et ne fige rien. Clics ignorés pendant la levée.
 - **Clic → viewBox** : `createSVGPoint` + `getScreenCTM().inverse()` (patron `core/types/carte.js:498`), écouteur posé sur le
   `<svg>` à chaque `brancher`. Point touché = le **premier point déclaré** de cette vue dont la zone contient le clic, sinon
-  `null` (à côté). Zone = `boiteEcran(I, boites, 12)` (2.3) calculée sur l'**état dessiné à cet instant** (cabine réparée :
+  `null` (à côté : **depuis le 20/10/2026 rien n'est posé**, la phrase `signaler.horsObjet` s'affiche, comme dans l'inspection du poste). Zone = `boiteEcran(I, boites, 12)` (2.3) calculée sur l'**état dessiné à cet instant** (cabine réparée :
   plus de fumée, donc plus de zone de fumée ; cale absente : la zone reste l'emplacement devant la roue).
 - **Marques** (état rangé) : `{ n, vue, x, y, point, envoi }`, `n` = compteur jamais réutilisé, `x`, `y` arrondis au dixième,
   `envoi` = numéro du signal ou `null`. Clic sur une marque non envoyée : elle part. Marque envoyée : grisée, **inerte**
@@ -246,9 +246,9 @@ palette multi-références) : décidé, à dire au compte rendu d'ENT-6.4 (son b
   d'inspection ; `cursor: crosshair` posé sur `[data-q-inspection]` et hérité partout ; aucune surbrillance. Les tests et la
   page d'essai lisent les zones par la fonction exportée, jamais dans le DOM. Clavier : non (brief §7.3c, au compte rendu).
 - **« Signaler à {qui} »** : sans marque non envoyée → `vide`, rien n'est rangé. Sinon un signal `{ points: [ids touchés,
-  sans doublon], rien: n marques à côté, marques: [n], apresArret }` est rangé, les marques reçoivent `envoi`. Réponse
+  sans doublon], rien: n, marques: [n], apresArret }` est rangé (depuis le 20/10/2026 `rien` vaut toujours 0 : plus de marque à côté, mais le champ reste lu pour les bases anciennes), les marques reçoivent `envoi`. Réponse
   (`securite.chef`) : les `repare` des défauts touchés **pas encore réparés**, dans l'ordre de déclaration ; puis `rien` une
-  seule fois s'il y a une marque à côté, sur un point `ok: true`, ou sur un défaut déjà réparé (décidé : ce dernier cas n'est
+  seule fois s'il y a une marque sur un point `ok: true`, ou sur un défaut déjà réparé (décidé : ce dernier cas n'est
   **pas** un faux signalement au jalon) ; puis `fin`. Affichée sous la scène, `role="status"`, « Nadia : « … » ».
 - **Réparation calculée, jamais rangée** : `etatsScene(S, sec)` (pure, exportée) rend l'état de chaque objet = état déclaré,
   ou état sûr si le point est dans un signal, ou si `fait`. `cabine` réparée : plus de silhouette ni de fumée, le chauffeur
