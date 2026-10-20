@@ -724,6 +724,8 @@ caractère. Exemple : `unite: 'fûts'` et `libelles: { avarie: { nom: 'Fût endo
 réserve « P3 AFF-20 : acceptée sous réserve — 1 fût endommagé (fuite). ». `MOTIFS` reste exporté tel quel ; un corrigé qui
 écrit les motifs d'un quai à libellés déclarés appelle `libMotifs(L, Q)` (`libellesMotifs(Q)` rend la table).
 
+**Ligne de réserve d'un refus « produit »** (20/10/2026, ENT-10.11) : les motifs sont des ids fixes du moteur (`libelles` ne change que leur nom) ; la ligne « palette REFUSÉE — produit livré X au lieu de Y commandé » ne se dit que si la référence saisie diffère de la commandée, sinon elle reprend le libellé du motif (« palette REFUSÉE — ne se stocke pas ici. 32 colis repris par le chauffeur. »). Sans référence encore saisie : la phrase d'avant sous le nom du moteur, le libellé de la séance sinon. Une pile de palettes (CHEP) ne change pas.
+
 #### Déchargement au chariot frontal : `dechargement.par: 'cariste'` en iso
 
 Sur le quai iso, un **chariot frontal** conduit par un cariste sans visage (gilet jaune, de dos) décharge à la place du

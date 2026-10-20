@@ -1272,6 +1272,15 @@ const libChamp = (R, motif, p) => (motif === 'produit' && p && p.forme === 'pile
   temperature: 'Température à cœur relevée (°C)', produit: 'Référence réellement livrée (lue sur l’étiquette)',
   avarie: `Nombre de ${R.u.des} ${ac(R.u, R.adj, true)}`, manquant: `Nombre de ${R.u.des} ${ac(R.u, 'manquant', true)}`, aucun: `Nombre de ${R.u.des} ${ac(R.u, 'concerné', true)}`,
 }[motif] || `Nombre de ${R.u.des} ${ac(R.u, 'concerné', true)}`);
+// Le motif « produit » d'un REFUS (20/10/2026, ENT-10.11) : « produit livré X au lieu de Y commandé » ne se dit que si la référence livrée
+// diffère de la commandée. Égale, la ligne reprend le libellé du motif choisi (« ne se stocke pas ici »). Sans valeur encore saisie :
+// la phrase d'avant sous le libellé du moteur, le libellé de la séance sinon. Une pile de palettes (nombre d'un autre pool) : inchangée.
+const minusc = (t) => String(t).charAt(0).toLowerCase() + String(t).slice(1);
+function produitDiffere(p, v, R) {
+  if (p.forme === 'pile') return true;
+  if (v === '' || v === undefined || v === null) return !(R.lib && R.lib.produit && R.lib.produit !== MOTIFS.produit);
+  return String(v).trim().toUpperCase() !== String(p.ref).trim().toUpperCase();
+}
 // Une ligne de réserve : un constat par motif (deux pour une palette à deux problèmes, ENT-4.4).
 // `motifs` : [[motif, valeur saisie], …].
 function texteLigne(p, decision, motifs, R) {
@@ -1283,7 +1292,7 @@ function texteLigne(p, decision, motifs, R) {
     const pourquoi = L.map(([motif, v]) => {
       const val = vide(v) ? '…' : v, s = pl(v);
       return motif === 'temperature' ? `température à cœur ${vide(v) ? '…' : fmtT(v)} (−18 °C exigé)`
-        : motif === 'produit' ? `produit livré ${val} au lieu de ${p.ref} commandé`
+        : motif === 'produit' ? (produitDiffere(p, v, R) ? `produit livré ${val} au lieu de ${p.ref} commandé` : minusc((R.lib && R.lib.produit) || MOTIFS.produit))
           : motif === 'avarie' ? `${val} ${nb(s)} ${ac(R.u, R.adj, !!s)}` : motif === 'manquant' ? `${val} ${nb(s)} ${ac(R.u, 'manquant', !!s)}` : 'motif non précisé';
     }).join(' ; ');
     return `${p.id} ${p.ref} : palette REFUSÉE — ${pourquoi}. ${p.reel} ${R.u.des} ${ac(R.u, 'repris', true)} par le chauffeur.`;

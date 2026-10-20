@@ -1696,6 +1696,26 @@ await v('Quai unité : verifierQuai accepte les déclarations justes et refuse c
   vrai(/essai-inspection/.test(msg) && /ne finit pas par « s »/.test(msg) && /« bidon » n’existe pas/.test(msg), `message : ${msg}`);
 });
 
+await v('Quai refus : un motif « produit » à libellé libre (la référence livrée est la commandée) → la ligne dit le libellé, jamais « produit livré X au lieu de X commandé »', async () => {
+  const QL = (nom, ps) => QFUT(ps, { libelles: { produit: { nom } } });
+  const REFUS_P = (o = {}) => PF({ id: 'P1', attendu: 'refuser', motifAttendu: 'produit', bl: 8, ...o });
+  // Libellé de la séance, références égales : « ne se stocke pas ici », en minuscule, puis le reste de la phrase d'avant.
+  egal(attendu(QL('Ne se stocke pas ici', [REFUS_P()]), 'P1-reserve'),
+    'P1 AFF-20 : palette REFUSÉE — ne se stocke pas ici. 8 cartons repris par le chauffeur.', 'refus à motif libre : la ligne reprend le libellé');
+  egal(attendu(QL('Article différent', [REFUS_P()]), 'P1-reserve'),
+    'P1 AFF-20 : palette REFUSÉE — article différent. 8 cartons repris par le chauffeur.', 'un autre libellé libre, même règle');
+});
+
+await v('Quai refus : un motif « produit » avec deux références différentes → la phrase « produit livré X au lieu de Y commandé » est inchangée (libellé libre ou non)', async () => {
+  const QL = (nom, ps) => QFUT(ps, { libelles: { produit: { nom } } });
+  const REFUS_P = (o = {}) => PF({ id: 'P1', attendu: 'refuser', motifAttendu: 'produit', bl: 8, ...o });
+  const AUTRE = { etiq: { ref: 'PEL-20', nom: 'X', poids: 'x', lot: 'l' } };
+  egal([attendu(QL('Ne se stocke pas ici', [REFUS_P(AUTRE)]), 'P1-reserve'), attendu(QFUT([REFUS_P(AUTRE)]), 'P1-reserve')], [
+    'P1 AFF-20 : palette REFUSÉE — produit livré PEL-20 au lieu de AFF-20 commandé. 8 cartons repris par le chauffeur.',
+    'P1 AFF-20 : palette REFUSÉE — produit livré PEL-20 au lieu de AFF-20 commandé. 8 cartons repris par le chauffeur.',
+  ], 'refus « produit » avec deux références différentes : phrase inchangée');
+});
+
 await v('Quai unité : les corrigés qui importent MOTIFS (ENT-4.1, 4.2, 4.4, 5.4) et libMotifs fonctionnent comme avant', async () => {
   for (const code of ['ENT-4.1', 'ENT-4.2', 'ENT-4.4', 'ENT-5.4']) {
     const { CORRIGE: c } = await import(pathToFileURL(path.join(ROOT, 'contenus', 'corriges', `${code}.js`)).href);

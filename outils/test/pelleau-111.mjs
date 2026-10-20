@@ -397,7 +397,7 @@ await vv('ENT-10.11 : parcours juste à l’écran (temoin-1) — Avant de comme
   await pg.click(Q('[data-q="ecrire"]')); await pause();
   const t4 = await pg.textContent(Q('[data-quai]'));
   vrai(/Feuille de ramasse n° RAM-0522/.test(t4), 'le titre du document de ④ : ' + t4.slice(0, 160));
-  vrai(/P1 KG-10633 : palette REFUSÉE — produit livré KG-10633 au lieu de KG-10633 commandé\. 32 colis repris par le chauffeur\./.test(t4), 'la ligne du refus : ' + t4.slice(0, 400));
+  vrai(/P1 KG-10633 : palette REFUSÉE — ne se stocke pas ici\. 32 colis repris par le chauffeur\./.test(t4), 'la ligne du refus : ' + t4.slice(0, 400));
   vrai(/P2 AV-20418 : acceptée sous réserve — 2 colis abîmés \(écrasé ou percé\)/.test(t4), 'réserve de P2');
   await pg.click(Q('[data-q="signer"]')); await pause();
   vrai(/Je recharge les palettes refusées/.test(await pg.textContent(Q('[data-quai]'))), 'Loïc reprend la palette refusée');
@@ -721,7 +721,7 @@ await vv('ENT-10.11 : corrigé enseignant — par élève (temoin-4) : ses palet
     ['P1 — Biscuiterie Ar Vag — Biscuits au beurre, cartons de 12 paquets',
       'PIÈGE : couche du dessus à moitié vide, mais la feuille de ramasse dit le même nombre · FR 36 · réel 36 · accepter · aucune réserve'],
     ['P2 — Ferme de Kervéguen — Plants de pommes de terre, sacs de 25 kg',
-      'PLANTS DE POMMES DE TERRE : l’étiquette dit « Conservation : entre 4 et 8 °C — craint le gel », l’entrepôt est ambiant · FR 32 · réel 32 · REFUSER (Ne se stocke pas ici) · réserve : palette REFUSÉE, produit livré = la référence de l’étiquette'],
+      'PLANTS DE POMMES DE TERRE : l’étiquette dit « Conservation : entre 4 et 8 °C — craint le gel », l’entrepôt est ambiant · FR 32 · réel 32 · REFUSER (Ne se stocke pas ici) · réserve : palette REFUSÉE — ne se stocke pas ici'],
     ['P3 — Agri-Kerlann — Terreau universel, sacs de 40 L', 'conforme, pleine · FR 40 · réel 40 · accepter · aucune réserve'],
     ['P4 — Biscuiterie Ar Vag — Biscuits au beurre, cartons de 12 paquets',
       '1 carton abîmé sur la face arrière (il faut faire le tour) · FR 40 · réel 40 · accepter avec réserves (Colis abîmé) · réserve : 1 colis abîmé(s)'],

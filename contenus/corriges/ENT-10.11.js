@@ -56,7 +56,7 @@ export function corrigeEleve(base, uid) {
     const probleme = t.role === 'probleme', kerv = t.role === 'kerveguen';
     const motif = m === 'manquant' ? 'manquant' : 'avarie';
     const decision = kerv ? DECISION.refuser : DECISION[probleme ? 'reserves' : 'accepter'];
-    const fin = kerv ? ' · réserve : palette REFUSÉE, produit livré = la référence de l’étiquette' : probleme
+    const fin = kerv ? ' · réserve : palette REFUSÉE — ne se stocke pas ici' : probleme
       ? ` (${MOTIF[motif]}) · réserve : ${n} colis ${motif === 'manquant' ? 'manquant(s)' : 'abîmé(s)'}` : ' · aucune réserve';
     return { genre: 'fait', texte: `${t.id} — ${nomClient(t.client)} — ${paletteDe(jeu, t.id).nom}`, rep: `${quoi} · FR ${t.bl} · réel ${reelDe(jeu, t)} · ${decision}${fin}` };
   });
