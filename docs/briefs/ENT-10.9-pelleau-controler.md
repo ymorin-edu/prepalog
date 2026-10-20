@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, docs/briefs/ENT-8.8-action-controler.md (le modèle du contrôle) puis docs/briefs/ENT-10.9-pelleau-controler.md en entier. Les poids du §5 sont validés par Tristan ; fais l'état des lieux du §7, annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : à implémenter · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : **Opus** · **Durée estimée** : ≈ 4 h (anomalies tirées et
+**Statut** : livré (20/10/2026, `pret: true, ouverture: 'prof'`) · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : **Opus** · **Durée estimée** : ≈ 4 h (anomalies tirées et
 leur équité, phrases calculées, tests).
 
 ---
@@ -157,3 +157,29 @@ sacs (§7).
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**Livré le 20/10/2026** (sous-agent Opus, chantier Pelleau ; rien commité par le sous-agent). Fichiers : `activites/pelleau-controler.js`,
+`contenus/pelleau-ent109.js`, `contenus/pelleau-ent109-donnees.js`, `contenus/questions/ENT-10.9.js`, `contenus/corriges/ENT-10.9.js`,
+`outils/test/pelleau-109.mjs` (17 cas) ; lignes ajoutées dans `activites/index.js`, `outils/test.mjs` (`BLOCS`, `GROUPES` groupe 1),
+`outils/test/socle.mjs` (`ATTENDU_CAP`). Aucun `declarerTirage` (jeu recalculé de la graine par `tirerJeu`, comme ENT-8.8) : rien dans `BANQUES_FIGEES`.
+
+**Poids codés** (ceux du §5, tels quels) : palettes 2,5 (facile) · 2,5 (moyen) · 1,5 (piège) · 1,5 (conforme) = 8 ; réserves 1,5 × 2 · déballage 1 ·
+signature 1 = 5 ; compte rendu : réserves 1 · zone litiges 1 · forme 1 (UNE case : salutation ET fin) = 3 ; questions Q1 1,5 (au bilan) · Q2 1 · Q3 1,5
+(`part: 4`) ; Q4 réflexion. Total 20 ; inaction 0 (testé).
+
+**Tirage** : 1 facile (`ecrase-face` chez Ar Vag / `perce-face` chez Agri-Kerlann) + 1 moyen (`cache` ou `manquant`) **de l'autre client**, 1 piège
+`couche-normale`, 1 conforme. Quantités reprises d'ENT-8.8 (construit) : 2 devant, 1 derrière, 2 manquants ; piège = moitié de la couche du dessus
+(4 cartons sur 8, 5 sacs sur 10). 300 graines : zéro secours, chaque anomalie tombe sur chaque palette possible. Pas de « mauvaise référence » (absente
+du §6.1).
+
+**Écarts avec le brief** : bloc `pelleau-109` (un bloc par séance, décision 21 du chef) au lieu de `pelleau-ctrl` ; `libelles.avarie.adjectif: 'abîmé'`
+ajouté pour que la réserve du quai dise « 2 colis abîmés (écrasé ou percé) » comme le §6.1 ; la phrase « zone litiges » dit l'unité de la palette
+(« les 2 sacs abîmés de P3 ») au lieu de « colis », comme la ligne des réserves du §6.3 ; Q2 se pose quand une palette d'Agri-Kerlann est **validée**
+(lu dans l'état du quai : le geste `valider` ne dit pas quelle palette) ; images d'« Avant de commencer » : dessins en traits construits (sac percé,
+carton écrasé), aucune photo au dépôt ; `aide` et `retour` d'« Avant de commencer » et définitions du lexique écrits par Claude Code. **Non fait** :
+la réplique de Loïc à la signature reste celle du moteur (« C'est signé. J'y vais. Bonne journée ! ») : « Je signe sous tes réserves. » demanderait une
+option du quai (demande au moteur, non faite).
+
+**À vérifier à l'écran par Tristan** : les sacs et les cartons se distinguent bien à ③ (quai A, P3/P4) ; l'étiquette d'un colis du piège dit « Colis n / 40 »
+alors que la feuille dit 36 ou 35 (numérotation du moteur, comme ENT-8.8 : peut tromper un élève) ; le dessin du sac percé d'« Avant de commencer » ;
+les textes d'aide et de lexique ; la consigne d'Erwan en tête du quai.
