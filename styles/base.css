@@ -628,7 +628,10 @@ body.immersion{ background:var(--fond); color:var(--encre) }
    tassent ou perdent des colonnes. Le plafond à 1720 px évite seulement les lignes
    interminables sur un très grand écran. */
 body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
-.ent-page{ display:block }
+/* 20/10/2026 : le cadre de travail prend la place qui reste sous le bandeau, quelle que soit sa hauteur
+   (le bandeau « Transports Pelleau » passe sur deux lignes à 1280 × 720 : l'ancienne hauteur devinée,
+   calc(100vh - 92px), faisait déborder la page). 14px = le haut de body.immersion .app. */
+.ent-page{ display:flex; flex-direction:column; min-height:calc(100vh - 14px) }
 .ent-bandeau{
   display:flex; align-items:center; gap:12px; flex-wrap:wrap;
   padding:12px 18px; margin-bottom:18px; border-radius:var(--r);
@@ -747,8 +750,8 @@ body.immersion .app{ max-width:1720px; padding:14px 24px 0 }
 .ent-shell{
   display:grid; grid-template-columns:230px 1fr; gap:0; margin-top:8px;
   /* La colonne de navigation doit descendre jusqu'en bas, même quand le contenu est court :
-     c'est le filet vertical qui sépare la navigation du travail. */
-  min-height:calc(100vh - 92px);
+     c'est le filet vertical qui sépare la navigation du travail. Elle prend le reste de .ent-page. */
+  flex:1 1 auto; min-height:0;
 }
 /* Le menu se distingue du corps par un ton légèrement différent et un filet, comme dans
    LogiSim d'origine. `--ent-side` est posé par l'entreprise ; sans elle, la colonne reste
@@ -1030,7 +1033,7 @@ fieldset[disabled] .ent-ouinon button{ cursor:default }
 .ent-pastille.fait{ border-color:var(--vert); color:var(--encre) }
 .ent-pastille.fait .ent-pastille-n{ border-color:var(--vert); color:var(--vert) }
 /* La bande prend sa place sur la hauteur du cadre : la page ne défile pas à 1366 × 768 (ENT-6.10 §4 bis.1). */
-.ent-pastilles + .ent-shell{ margin-top:0; min-height:calc(100vh - 124px) }
+.ent-pastilles + .ent-shell{ margin-top:0 }
 /* Un dessin en document, et sa loupe plein écran (chantier D-10, 13/10/2026). */
 .ent-doc.ent-doc-dessin{ width:100% }   /* un dessin prend toute la colonne (la feuille de papier en fait 560 px) */
 .ent-doc-image{ margin:0 }

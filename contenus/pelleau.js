@@ -46,7 +46,7 @@ export const LOGO = './contenus/trames/logos/pelleau.png';
 export const ENTREPRISE = {
   id: 'pelleau',
   nom: 'Transports Pelleau',
-  sousTitre: 'Entrepôt neuf de Gouesnou (29) — transport et stockage',
+  sousTitre: 'Entrepôt neuf de Gouesnou (29)',
   exercice: 'Bienvenue chez Pelleau',
   logo: LOGO,
 };
