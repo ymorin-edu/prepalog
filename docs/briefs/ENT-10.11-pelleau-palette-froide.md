@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, docs/briefs/ENT-10.9-pelleau-controler.md puis docs/briefs/ENT-10.11-pelleau-palette-froide.md en entier. Fais d'abord l'état des lieux du §7 (poids du §5 validés par Tristan), annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : à implémenter · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 4 h.
+**Statut** : livré (20/10/2026, `pret: true, ouverture: 'prof'`) · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 4 h.
 
 ---
 
@@ -129,3 +129,36 @@ le repli si « Refuser » n'existe pas (§7).
 ---
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**Livré le 20/10/2026** (sous-agent Sonnet, chantier Pelleau ; rien commité par le sous-agent). Fichiers : `activites/pelleau-palette-froide.js`, `contenus/pelleau-ent111.js`,
+`contenus/pelleau-ent111-donnees.js`, `contenus/questions/ENT-10.11.js`, `contenus/corriges/ENT-10.11.js`, `outils/test/pelleau-111.mjs` (24 cas) ; lignes ajoutées dans
+`activites/index.js` (sous ENT-10.10), `outils/test.mjs` (`BLOCS`, `GROUPES` groupe 3), `outils/test/socle.mjs` (`ATTENDU_CAP`). Aucun `declarerTirage` (jeu recalculé de la
+graine, comme ENT-10.9) : rien dans `BANQUES_FIGEES`, `tirage-niveaux.mjs` inchangé. **Le §7 est sans objet** : « Refuser » existe à ③ en quai iso sous `commence: 'controle'` ;
+aucune demande au moteur n'a été écrite dans le code.
+
+**Poids codés** (ceux du §5, tels quels) : ne pas céder 2 · Kervéguen : décision 3, « que devient-elle ? » 2 · autres palettes : à problème 2 (1 + 1), chacune des deux
+autres 1 · réserves 1 · pas de déballage 0,5 · signature 0,5 · compte rendu : Kervéguen 1, réserves 1, forme 1 (UNE case : salutation ET fin) · questions Q1 1,5 · Q2 1 (au bilan)
+· Q3 1,5 (`part: 4`). Total 20 ; inaction 0 (testé).
+
+**Tirage** : le rang de la palette de Kervéguen (P1 à P4, 32 sacs, étiquette « Conservation : entre 4 et 8 °C — craint le gel ») ; trois palettes habituelles (Ar Vag, Agri-Kerlann,
+Ar Vag) aux rangs restants ; UNE palette à problème parmi elles (`ecrase-face` / `perce-face` selon le client, `cache`, `manquant`) ; un piège `couche-normale` une fois sur deux.
+300 graines : zéro secours, chaque rang entre 62 et 86, chaque anomalie tombe. La banque d'ENT-10.10 n'existait pas encore : le tirage est celui d'ENT-10.9 recomposé (rien
+n'est importé d'une autre séance). Quantités reprises d'ENT-10.9 (construit).
+
+**Écarts avec le brief** : (1) le motif du refus s'appelle « Ne se stocke pas ici » et non « Ne se stocke pas ici : demande du froid » : ce menu est le même pour les quatre palettes et
+se lit avant l'étiquette, « demande du froid » aurait dit le piège (règle « que, jamais de combien ») ; (2) Q3 dit « deux jours » et non « jusqu'à lundi », et le message neutre d'Erwan
+« On en reparle. » (décision n° 9 : jamais le jour de la semaine) ; (3) la fiche s'appelle `kerveguen-111` (ids suffixés) ; (4) « réserve juste 1 » = UNE case qui demande la réserve de la
+palette à problème ET la ligne de refus de la palette de Kervéguen (le brief ne dit pas laquelle) ; (5) les trois mauvaises réponses à Loïc portent `accepte: true` : il dit « Comme tu veux. »
+et l'entretien continue (l'élève qui cède arrive au quai avec son erreur) ; (6) niveaux : standard et accompagné = aides de guidage d'ENT-10.9 allumées, confirmé = aides de comptage
+éteintes (le brief le dit seulement du confirmé) ; (7) Erwan dit « Bien vu : chez nous, pas de froid, on ne garde pas. Loïc la reprend. » dès que la palette est refusée (quel que soit
+le reste), sinon « Merci. On en reparle. » ; (8) fiche : « (avec du froid) » ajouté derrière « température dirigée » (les mots du brief, expliqués) ; (9) le bloc de test porte un filtre
+`SEUL_111="un morceau de titre|un autre"` pour rejouer quelques cas en travaillant (sans effet sans la variable).
+
+**À décider par le chef / Tristan (demandes au moteur, non faites)** : (a) la ligne de la feuille de ramasse pour un refus « produit » est écrite par le quai : « P1 KG-10633 : palette
+REFUSÉE — produit livré KG-10633 au lieu de KG-10633 commandé. 32 colis repris par le chauffeur. » : le début est faux pour un refus « ne se stocke pas ici » (même référence des deux côtés) ;
+(b) le tirage de l'écran « Avant de commencer » ne connaît pas le niveau : la notion `conservation` reste dans la banque pour tous (le brief la veut absente chez le confirmé) ;
+(c) l'étiquette d'un carton ou d'un sac ne dit jamais un total (« 1 sac ») : un élève peut lire « Colis 5 / 32 » sur le sac de Kervéguen, ce qui est juste (32 sacs).
+
+**À vérifier à l'écran par Tristan** : les sacs de Kervéguen se distinguent des cartons d'Ar Vag à ③ ; la ligne « Conservation » se lit au vidéoprojecteur ; la phrase de réserve du refus (a) ;
+les textes de l'écran « Avant de commencer » écrits par Claude Code (thermomètre, `conservation`, `aide`, `retour`), les définitions du lexique et les retours de Q1 à Q3 ; la
+réplique « Je la mets dehors, il fait frais » (brief) dit un peu le piège : c'est un choix du brief, laissé tel quel ; le choix des mots « température dirigée (avec du froid) ».
