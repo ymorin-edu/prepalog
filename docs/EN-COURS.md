@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Reliquats Pelleau (6 points relevés : bandeau, marque dans le vide, réponse unique, signature, Avant de commencer, étiquette colis) | `core/types/entreprise.js`, `core/types/quai.js`, `core/types/inspection.js`, `core/questions.js`, `styles/base.css`, `contenus/pelleau.js`, `activites/ent-10-*.js`, `outils/test/pelleau-*.mjs`, `quai-iso`, `inspection` | 20/10/2026 |
+| Reliquats Pelleau (6 points relevés : bandeau, marque dans le vide, réponse unique, signature, Avant de commencer, étiquette colis) | `core/types/entreprise.js`, `core/types/quai.js`, `core/types/inspection.js`, `core/types/questions.js`, `styles/base.css`, `contenus/pelleau.js`, `contenus/pelleau-ent10*-donnees.js`, `outils/test/pelleau-1*.mjs`, `quai-iso`, `inspection` | 20/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
