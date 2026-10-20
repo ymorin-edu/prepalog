@@ -448,6 +448,10 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
     'ENT-10.6': 'CAP-C1.3',
     'ENT-10.7': 'CAP-C1.3',
     'ENT-10.8': 'CAP-C1.3',
+    'ENT-10.9': 'CAP-C1.4',
+    'ENT-10.10': 'CAP-C1.4',
+    'ENT-10.11': 'CAP-C1.4',
+    'ENT-10.12': 'CAP-C1.4',
   };
   const metas = await page.evaluate(async () => {
     const { chargerActivites } = await import('/activites/index.js');

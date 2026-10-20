@@ -100,6 +100,10 @@ export const ACTIVITES = [
   () => import('./pelleau-ramasse-du-mercredi.js'),
   () => import('./pelleau-feuille-de-ramasse.js'),
   () => import('./pelleau-evaluation-reception.js'),
+  () => import('./pelleau-controler.js'),
+  () => import('./pelleau-controle-seul.js'),
+  () => import('./pelleau-palette-froide.js'),
+  () => import('./pelleau-evaluation-controle.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
