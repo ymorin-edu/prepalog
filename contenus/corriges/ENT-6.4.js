@@ -32,7 +32,7 @@ export const CORRIGE = {
   items: [
     { etape: 1, etapeTitre: 'Avant de décharger : la scène', genre: 'tableau', texte: 'Ce que l’élève doit repérer sur le quai',
       contexte: 'L’élève inspecte le quai iso lui-même (deux vues : dehors, puis dedans porte levée), clique ce qui ne va pas, puis « Signaler à Nadia ». '
-        + 'Aucune liste. Un clic à côté de tout objet compte comme un faux signalement. Entraînement : un défaut oublié est remis en ordre sans un mot au '
+        + 'Aucune liste. Un clic à côté de tout objet ne pose aucune marque (depuis le 20/10/2026). Entraînement : un défaut oublié est remis en ordre sans un mot au '
         + 'déchargement (Nadia n’arrête pas l’élève) ; le jalon reste faux.',
       entetes: ['Objet (vue)', 'État dessiné', 'Attendu'],
       reponses: SECURITE.points.map((x) => [`${x.objet} (${x.vue})`, net(x.lib), x.ok ? 'en ordre : ne pas le signaler (piège)' : 'défaut : signaler avant de décharger']),

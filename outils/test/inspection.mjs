@@ -43,6 +43,8 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
   if (o.modif === 'aucun-faux') pt('plan').id = 'aucun-faux';
   if (o.modif === 'objet-inconnu') pt('plan').objet = 'lampe';
   if (o.modif === 'reparable-ok') pt('tp1').reparable = false;
+  if (o.modif === 'reponse-vide') D.signaler = Object.assign({}, D.signaler, { reponse: '  ' });
+  if (o.reponse) D.signaler = Object.assign({}, D.signaler, { reponse: o.reponse });   // 20/10/2026 : la réponse unique du collègue
   if (o.arret === false) D.arret = false;
   if (o.sonne) D.essai = [D.essai, { objet: 'transpalette', n: 1, resultat: 'sonne' }];
   let decl = D;
@@ -303,6 +305,55 @@ await v('Inspection : avertisseur — « rien ne sonne » (muet), « le klaxon s
   await monter({ arret: false });
   await valider();
   vrai(await pg.$eval(`${R} button[data-i="essai"]`, (b) => b.disabled), 'essai encore possible après la prise de poste');
+});
+
+const REP = 'Reçu. Je regarde ça tout à l’heure.';
+await v('Inspection : signaler.reponse (20/10/2026) — défaut, point en ordre, défaut déjà réparé, défaut non réparable re-signalé : la MÊME phrase seule, sans « Bien vu », sans fin ; « rien à envoyer » garde vide ; marques, signaux et jalons inchangés', async () => {
+  vrai(/phrase non vide/.test(await monter({ modif: 'reponse-vide' }) || ''), 'une réponse vide est refusée au chargement');
+  egal(await monter({ reponse: REP }), null, 'séance montée');
+  const chef = () => texte(`${R} [data-i-chef]`);
+  const PH = 'Erwan : « ' + REP + ' »';
+  await bouton('signaler');
+  vrai((await chef()).includes('Qu’est-ce qui ne va pas'), 'rien à envoyer : vide, pas la réponse unique');
+  await cliquerPoint('tp2-fourche');
+  await bouton('signaler');
+  egal(await chef(), PH, 'défaut (celui qui se répare)');
+  await cliquerPoint('tp1');
+  await bouton('signaler');
+  egal(await chef(), PH, 'point en ordre');
+  await cliquerPoint('tp2-fourche');
+  await bouton('signaler');
+  egal(await chef(), PH, 'défaut déjà réparé');
+  await vue('quai');
+  await cliquerPoint('extincteur');
+  await bouton('signaler');
+  egal(await chef(), PH, 'défaut non réparable (l’ancienne réponse parlait de demain)');
+  await cliquerPoint('extincteur');
+  await bouton('signaler');
+  egal(await chef(), PH, 'défaut non réparable re-signalé (plus de « je sais »)');
+  const st = await etat();
+  egal(st.signaux.map((g) => g.points), [['tp2-fourche'], ['tp1'], ['tp2-fourche'], ['extincteur'], ['extincteur']], 'signaux rangés comme avant');
+  egal(st.marques.every((m) => m.envoi != null), true, 'marques envoyées');
+  const et = await pg.evaluate(async () => { const I = await import('/core/types/inspection.js'); return I.etatsInspection(window.__in.D, window.__in.db.inspections['essai-inspection']['pelleau-poste-102']); });
+  egal(et.extincteur, 'absent', 'l’extincteur n’est toujours pas réparé');
+});
+
+await v('Inspection : signaler.reponse — le parcours juste reste juste (quatre jalons ✓) avec la réponse unique ; SANS la clé, la composition d’avant est inchangée (réparation + rien + fin)', async () => {
+  await monter({ reponse: REP });
+  await parcoursJuste();
+  egal(await statuts(), { 'securite-tp2-fourche': 'ok', 'securite-extincteur': 'ok', 'essai-2': 'ok', 'securite-aucun-faux': 'ok' }, 'jalons avec la réponse unique');
+  // L'inverse : sans la clé, les trois compositions d'avant.
+  await monter();
+  const chef = () => texte(`${R} [data-i-chef]`);
+  await cliquerPoint('tp2-fourche');
+  await bouton('signaler');
+  egal(await chef(), 'Erwan : « Bien vu. Je le mets de côté : prends le n° 1. Tu me dis quand tu prends ton poste. »', 'défaut : sa réparation + fin');
+  await cliquerPoint('tp1');
+  await bouton('signaler');
+  egal(await chef(), 'Erwan : « Là, je ne vois rien qui cloche. Tu me dis quand tu prends ton poste. »', 'point en ordre : rien + fin');
+  await cliquerPoint('tp2-fourche');
+  await bouton('signaler');
+  egal(await chef(), 'Erwan : « Là, je ne vois rien qui cloche. Tu me dis quand tu prends ton poste. »', 'défaut déjà réparé : rien + fin');
 });
 
 await v('Inspection : guidage — un défaut oublié arrête l’élève sans nommer le point ; signalé après l’arrêt, son jalon reste ✗', async () => {

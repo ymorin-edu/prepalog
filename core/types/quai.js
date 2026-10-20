@@ -135,7 +135,7 @@
 // de jours par rapport à aujourd'hui, −1 = la veille) et une colonne « par carton » (`parCarton` des `refs`).
 //
 // INSPECTION SUR LA SCÈNE (10/10/2026, chantier D-4 étape 2, brief `docs/briefs/MOTEUR-quai-inspection.md` §2). `rendu: 'iso'` +
-// `securite: { mode: 'scene', points: [{ id, objet, etat, ok, lib, repare }], arret, consigne, signaler: { qui, rien, fin, vide },
+// `securite: { mode: 'scene', points: [{ id, objet, etat, ok, lib, repare }], arret, consigne, signaler: { qui, rien, fin, vide, reponse },
 // commencer, bilan }` : l'élève inspecte le quai où il va décharger (cabine, cale, butoirs, niveleur, lampe), à la souris : un clic
 // pose une marque numérotée, « Signaler à … » envoie les marques, le chef de quai répond et chaque défaut touché est réparé dans la
 // scène ; « C'est bon, on peut décharger » (deux clics) fige l'inspection. Le contenu est validé par `verifierQuai` (au chargement) ;
@@ -1109,6 +1109,7 @@ export function verifierQuai(Q) {
     return E;
   }
   if (Q.rendu !== 'iso') E.push('l’inspection sur la scène demande `rendu: \'iso\'`');
+  if (S.signaler && S.signaler.reponse !== undefined && (typeof S.signaler.reponse !== 'string' || !S.signaler.reponse.trim())) E.push('securite.signaler.reponse : une phrase non vide (la réponse unique du collègue)');
   if (S.photo !== undefined) E.push('securite.photo : en mode scène il n’y a rien à photographier (la scène est dessinée par le quai)');
   const P = S.points;
   if (!Array.isArray(P) || !P.length) { E.push('securite.points : la liste est vide (il faut au moins un point à inspecter)'); return E; }
@@ -2832,6 +2833,7 @@ export function creerQuai(Q, opts = {}) {
   const SG = SCENE ? Object.assign({ qui: 'le chef de quai', rien: 'Là, je ne vois rien qui cloche.', fin: 'Tu me dis quand on peut décharger.',
     vide: 'Qu’est-ce qui ne va pas ? Clique d’abord sur ce que tu veux me signaler.',
     horsObjet: 'Clique un objet du quai.' }, SEC.signaler || {}) : null;
+  // 20/10/2026 : `signaler.reponse` (chaîne non vide) = la seule phrase du collègue, quoi que l’élève signale (voir `signalerScene`).
   // « à le chef de quai » se dit « au chef de quai ».
   const aQui = (q) => (/^le /i.test(q) ? `au ${q.slice(3)}` : /^les /i.test(q) ? `aux ${q.slice(4)}` : /^la /i.test(q) ? `à la ${q.slice(3)}` : `à ${q}`);
   const majuscule = (t) => String(t).charAt(0).toUpperCase() + String(t).slice(1);
@@ -2921,10 +2923,12 @@ export function creerQuai(Q, opts = {}) {
     const rien = envoyer.filter((m) => !m.point).length;
     sec.signaux.push({ points, rien, marques: envoyer.map((m) => m.n), apresArret: !!sec.arrete });
     envoyer.forEach((m) => { m.envoi = sec.signaux.length; });
+    // 20/10/2026 : `signaler.reponse` déclarée = cette phrase seule (ni réparation, ni `rien`, ni `fin`) ; le reste est inchangé.
+    const unique = typeof SG.reponse === 'string' && SG.reponse.trim() ? SG.reponse : null;
     const textes = SEC.points.filter((x) => points.includes(x.id) && !x.ok && !deja.has(x.id)).map((x) => x.repare || 'Bien vu, je m’en occupe.');
     if (rien > 0 || SEC.points.some((x) => points.includes(x.id) && (x.ok || deja.has(x.id)))) textes.push(SG.rien);
     textes.push(SG.fin);
-    sec.chef = textes.join(' ');
+    sec.chef = unique || textes.join(' ');
     ui.arretSecu = false;
     signal('signaler');
     api.sauver(); api.redessiner();

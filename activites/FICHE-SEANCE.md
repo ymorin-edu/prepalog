@@ -528,10 +528,11 @@ reponse }`, `arret` en texte). Avec `mode: 'scene'`, l'élève inspecte le quai 
 | `signaler.bouton` | texte du bouton | `Signaler à ${qui}` (« Signaler à Nadia », « au chef de quai ») | — |
 | `signaler.rien` / `fin` / `vide` | réponses du collègue : point en ordre ou défaut déjà réparé (plus de « marque à côté » : depuis le 20/10/2026 un clic dans le vide ne pose rien) / toujours en fin de réponse / rien à envoyer | « Là, je ne vois rien qui cloche. » / « Tu me dis quand on peut décharger. » / « Qu’est-ce qui ne va pas ? Clique d’abord sur ce que tu veux me signaler. » | — |
 | `signaler.horsObjet` | phrase grise à la place du compteur quand le clic ne touche aucun objet (rien n'est posé ; même clé que la vue inspection du poste) | « Clique un objet du quai. » | — |
+| `signaler.reponse` | **la réponse unique** (20/10/2026) : si elle est déclarée, le collègue ne dit que cette phrase quoi que l'élève signale (défaut, point en ordre, défaut déjà réparé), sans `repare`, `rien` ni `fin` ; marques, signal rangé et jalons inchangés ; « rien à envoyer » garde `vide` (même clé que la vue inspection du poste) | composition ci-dessus | vide ou pas une chaîne |
 | `commencer` | texte du bouton qui fige l'inspection (suivi de « → ») | « C’est bon, on peut décharger » | — |
 | `arret` | `true`, `false` ou le texte de l'arrêt | `true` | pas un booléen ni un texte ; **`false` en mode liste** (il n'y règle rien) |
 | `bilan` | phrase au bilan du quai si un jalon `securite-<id>` est faux | rien | — |
-| `photo`, `alt`, `scene`, `signaler.reponse` | — | ignorés | `photo` déclarée en mode scène |
+| `photo`, `alt`, `scene` | — | ignorés | `photo` déclarée en mode scène |
 
 **Les cinq objets et leurs états.** Un objet non déclaré garde le dessin d'avant le chantier ; la cale et la lampe n'existent
 à l'écran que si un point les déclare.
@@ -1425,7 +1426,7 @@ export const ETAPES = etapesInspection(INSPECTION, 'pelleau-prise-de-poste').map
 | `essai` | `{ objet: 'transpalette', n, resultat: 'muet' \| 'sonne' }` ou une liste : un bouton « Essayer l'avertisseur du n° X » par essai | aucun bouton | autre objet ; deux essais sur le même n° ; **engin déclaré par aucun point** ; `muet` sur un engin dont le point est en ordre ; un point `avertisseur` sans essai `muet` |
 | `arret` | `true`, `false` ou le texte de l'arrêt | `true` | autre type |
 | `commencer` | le bouton qui fige (suivi de « → ») | « C’est bon, je prends mon poste » | — |
-| `signaler` | `{ rien, fin, vide, deja, note }` : les répliques du collègue (point en ordre / toujours à la fin / rien à envoyer / défaut non réparable re-signalé / copie) | « Là, je ne vois rien qui cloche. » / « Tu me dis quand tu prends ton poste. » / « Qu’est-ce qui ne va pas ? … » / « Oui, je sais : c’est noté. » / « C’est noté. » | — |
+| `signaler` | `{ rien, fin, vide, deja, note, reponse }` : les répliques du collègue (point en ordre / toujours à la fin / rien à envoyer / défaut non réparable re-signalé / copie / **la réponse unique** : si `reponse` est déclarée (chaîne non vide, 20/10/2026), le collègue ne dit que cette phrase quoi que l'élève signale, sans `repare`, `rien`, `deja` ni `fin` ; `vide` (rien à envoyer) et `note` (copie) restent à part) | « Là, je ne vois rien qui cloche. » / « Tu me dis quand tu prends ton poste. » / « Qu’est-ce qui ne va pas ? … » / « Oui, je sais : c’est noté. » / « C’est noté. » | — |
 | `bilan` | phrase sous « Tu as pris ton poste » si un jalon est faux (guidage seulement, ne nomme rien) | rien | — |
 
 **Les objets** (kit `core/iso.js`, jamais de dessin dans `contenus/`) :

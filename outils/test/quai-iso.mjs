@@ -475,6 +475,14 @@ await v('Quai scène : verifierQuai accepte une déclaration juste, les listes e
   egal(quaiMod.verifierQuai(QBON({ S: (S) => { delete S.arret; S.points.forEach((p) => { delete p.vue; delete p.repare; }); } })), [], 'scène : arret, vue et repare facultatifs');
 });
 
+// 20/10/2026 : securite.signaler.reponse = la réponse unique du collègue (même clé que la vue inspection du poste).
+const REP_SC = 'Noté. J’y regarde dans un instant.';
+await v('Quai scène : verifierQuai refuse une signaler.reponse vide ou qui n’est pas une phrase ; accepte une phrase', async () => {
+  const f = (r) => quaiMod.verifierQuai(QBON({ S: (S) => { S.signaler = { reponse: r }; } }));
+  egal(f(REP_SC), [], 'une phrase');
+  [['vide', ''], ['espaces', '   '], ['un nombre', 3]].forEach(([nom, r]) => vrai(f(r).some((e) => /signaler.reponse/.test(e)), `« ${nom} » n’est pas refusée : ${f(r)}`));
+});
+
 // Chaque refus du tableau 2.1 a, avec le mot qui doit figurer dans le message (en français, pas un code).
 const REFUS = [
   ['mode inconnu', (Q) => { Q.securite.mode = 'liste'; }, /securite\.mode/],
@@ -874,6 +882,31 @@ await v('Quai scène : un défaut déjà réparé re-signalé, ou un point en or
   egal(s.signaux[2], { points: ['cale', 'butoirs'], rien: 0, marques: [3, 4], apresArret: false }, 'le signal : la cale et les butoirs touchés, aucune marque à côté (le mur n’a rien posé)');
   egal((await jalonsPage(p))['securite-aucun-faux'], false, 'cette fois c’est un faux signalement');
   await p.close();
+});
+
+await v('Quai scène : signaler.reponse — défaut, point en ordre, défaut déjà réparé : la MÊME phrase seule (ni « Bien vu », ni « rien », ni fin) ; rien à envoyer garde vide ; marques, signaux et jalons inchangés ; sans la clé, la composition d’avant', async () => {
+  const p = await pageScene(ctxS, { q: { securite: Object.assign(SEC5(), { signaler: { qui: 'Nadia', reponse: REP_SC } }) } });
+  const PH = 'Nadia : « ' + REP_SC + ' »';
+  await signaler(p);
+  egal(await reponse(p), 'Nadia : « Qu’est-ce qui ne va pas ? Clique d’abord sur ce que tu veux me signaler. »', 'rien à envoyer : vide');
+  await cliquerZone(p, 'cabine', 0); await signaler(p);
+  egal(await reponse(p), PH, 'défaut (celui qui se répare)');
+  await cliquerZone(p, 'cale', 0); await signaler(p);
+  egal(await reponse(p), PH, 'point en ordre');
+  await cliquerZone(p, 'cabine', 0, true); await signaler(p);
+  egal(await reponse(p), PH, 'défaut déjà réparé');
+  const s = await secQ(p);
+  egal(s.signaux.map((g) => g.points), [['cabine'], ['cale'], ['cabine']], 'signaux rangés comme avant');
+  egal(s.signaux.map((g) => g.rien), [0, 0, 0], 'aucune marque à côté');
+  egal(await jalonsPage(p), { 'securite-cabine': true, 'securite-niveleur': false, 'securite-aucun-faux': false }, 'les jalons se lisent comme avant (la cale en ordre signalée est un faux)');
+  await p.close();
+  // L'inverse : sans la clé, la composition d'avant (réparation + fin ; rien + fin).
+  const q = await pageScene();
+  await cliquerZone(q, 'cabine', 0); await signaler(q);
+  egal(await reponse(q), 'Nadia : « Bien vu : je fais couper le moteur, le chauffeur me donne les clés et descend. Tu me dis quand on peut décharger. »', 'sans reponse : la réparation + la fin');
+  await cliquerZone(q, 'cale', 0); await signaler(q);
+  egal(await reponse(q), 'Nadia : « Là, je ne vois rien qui cloche. Tu me dis quand on peut décharger. »', 'sans reponse : rien + fin');
+  await q.close();
 });
 
 await v('Quai scène : décharger sans signaler, arret: false — aucun arrêt, défauts réparés sans un mot, ② montre niveleur posé', async () => {

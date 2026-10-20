@@ -140,7 +140,7 @@ export const melangerPour = (db, quoi, L) => (graineTirage(db) ? hasard(`${grain
 
 // ─────────────────────────────────────────────────────────────── l’inspection sur la scène (objets d’ENT-8.7 ; réponses NEUTRES en évaluation)
 // Le collègue qui reçoit les signalements est le cariste du site. En évaluation rien ne dit juste ou faux : la même phrase pour un défaut
-// signalé et pour une marque à côté (« C’est noté. ») ; la scène se répare quand même sous les yeux de l’élève (moteur, écart dit au compte rendu).
+// signalé et pour un point en ordre (« C’est noté. » ; un clic à côté ne pose plus de marque depuis le 20/10/2026) ; la scène se répare quand même sous les yeux de l’élève (moteur, écart dit au compte rendu).
 export const NOTE = 'C’est noté.';
 export const OBJETS = {
   cabine: { sur: 'vide', danger: 'conduite', libOk: 'Cabine vide, moteur coupé', libKo: 'Chauffeur au volant, moteur allumé' },

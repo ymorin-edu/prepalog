@@ -20,7 +20,7 @@
 //     essai: { objet: 'transpalette', n: 2, resultat: 'muet' },   // ou une liste ; un bouton « Essayer l'avertisseur du n° 2 »
 //     arret: true,                           // true, false ou le texte de l'arrêt (guidage seulement)
 //     commencer: 'C’est bon, je prends mon poste',
-//     signaler: { rien, fin, vide, deja, note },   // facultatif : les répliques du collègue
+//     signaler: { rien, fin, vide, deja, note, reponse },   // facultatif : les répliques du collègue ; `reponse` = LA phrase unique (voir `signaler`)
 //     bilan: '…',                            // phrase au bilan de la vue si un jalon est faux
 //   }
 // ou une FONCTION de la graine (modèle du quai tiré) : `inspection: (graine, { niveau, copie }) => ({ … })`, mêmes `id`, même nombre de
@@ -44,7 +44,7 @@
 // du lot G-5, §5 du brief) : `pointTouche` / `zonesScene` du quai sont liés au camion (`boitesCamion`, `OBJETS_SCENE`) ;
 // `signalerScene`, `validerScene`, `jalonsScene` sont des fonctions internes de `creerQuai` (fermeture sur son état `db.quais[id]`) :
 // les exporter demanderait de les sortir de la fermeture, donc de changer `quai.js` au-delà d'un `export`. Rien n'est importé du quai.
-// DIFFÉRENCE voulue (Tristan, 19/10/2026) : un clic qui ne touche aucun objet ne pose RIEN (le quai pose une marque « à côté »).
+// DIFFÉRENCE voulue (Tristan, 19/10/2026) : un clic qui ne touche aucun objet ne pose RIEN (le quai fait de même depuis le 20/10/2026).
 
 import { projection, boiteEcran, solQuai, murQuai, transpaletteElectrique, boitesTranspalette, ETATS_TRANSPALETTE,
   extincteur, boitesExtincteur, ETATS_EXTINCTEUR, affichage, boitesAffichage, ETATS_AFFICHAGE, borneCharge, prisesBorne } from '../iso.js';
@@ -133,6 +133,8 @@ export function verifierInspection(D) {
     if (p.reparable === false && p.ok === true) E.push(`${nom} : reparable: false n’a pas de sens sur un point en ordre`);
     if (typeof p.lib !== 'string' || !p.lib.trim()) E.push(`${nom} : lib manque (il sert au bilan, il ne s’affiche jamais pendant l’inspection)`);
   });
+  // 20/10/2026 : `signaler.reponse`, si elle est déclarée, doit être une phrase (le collègue ne dirait rien).
+  if (D.signaler && D.signaler.reponse !== undefined && (typeof D.signaler.reponse !== 'string' || !D.signaler.reponse.trim())) E.push('inspection.signaler.reponse : une phrase non vide (la réponse unique du collègue)');
   const vusEssai = new Set();
   listeEssais(D).forEach((e, i) => {
     const nom = `inspection.essai${Array.isArray(D.essai) ? `[${i}]` : ''}`;
@@ -247,7 +249,7 @@ export function recouvrements(D, etats) {
 }
 
 /* ================================================================ les gestes */
-// Les textes par défaut ; la déclaration peut les remplacer (`signaler: { rien, fin, vide, deja, note }`).
+// Les textes par défaut ; la déclaration peut les remplacer (`signaler: { rien, fin, vide, deja, note, reponse }`).
 export function textes(D) {
   const qui = (D && D.qui) || 'ton chef d’équipe';
   return Object.assign({ qui,
@@ -262,6 +264,7 @@ export function textes(D) {
     sonne: 'Tu appuies : le klaxon sonne.',
     muet: 'Tu appuies : rien ne sonne.',
     horsObjet: 'Clique un objet du poste.',
+    reponse: null, // 20/10/2026 : si déclarée, LA seule phrase du collègue, quoi que l’élève signale (voir `signaler`)
   }, (D && D.signaler) || {}, D && typeof D.arret === 'string' ? { arret: D.arret } : {}, D && D.commencer ? { commencer: D.commencer } : {});
 }
 // Poser une marque (retour d'écran de Tristan, 19/10/2026 : AUCUNE MARQUE DANS LE VIDE). Rend `true` si une marque est posée,
@@ -286,6 +289,9 @@ export function retirerMarque(st, n) {
 // tel quel), « je sais » une fois si un défaut non réparable est re-signalé (ce n'est PAS un faux), « rien » une fois s'il y a
 // un point en ordre ou un défaut déjà réparé, puis la fin. En copie : « C'est noté. », rien ne se répare. Plus de marque « à
 // côté » : `cliquer` n'en pose jamais (une marque sans point, venue d'une base plus ancienne, est ignorée).
+// 20/10/2026 : `signaler.reponse` déclarée (chaîne non vide) = le collègue ne dit QUE cette phrase (défaut, point en ordre, défaut déjà
+// réparé : la même, sans `fin`) ; marques envoyées, signal rangé et jalons ne changent pas. Sans elle, la composition ci-dessus. Aucune
+// marque à envoyer : `vide`, comme avant.
 // Rend `true` si un signal est vraiment parti (le geste `inspection:<id>:signaler` est alors publié).
 export function signaler(D, st, { copie = false } = {}) {
   if (st.fait) return false;
@@ -297,6 +303,7 @@ export function signaler(D, st, { copie = false } = {}) {
   st.signaux.push({ points, marques: envoyer.map((m) => m.n), apresArret: !!st.arrete });
   envoyer.forEach((m) => { m.envoi = st.signaux.length; });
   if (copie) { st.chef = T.note; return true; }
+  if (typeof T.reponse === 'string' && T.reponse.trim()) { st.chef = T.reponse; return true; }
   const touche = D.points.filter((p) => points.includes(p.id));
   const L = touche.filter((p) => !p.ok && !deja.has(p.id)).map((p) => p.repare || 'Bien vu, je m’en occupe.');
   if (touche.some((p) => !p.ok && p.reparable === false && deja.has(p.id))) L.push(T.deja);

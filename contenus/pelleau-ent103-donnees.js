@@ -109,7 +109,8 @@ const OK = {
   affichage: { etat: 'affiche', lib: DEFAUTS.affichage.libOk },
 };
 const cleObjet = (d) => (d.objet === 'transpalette' ? 'tp2' : d.objet);
-// Le texte « signalement reçu » : identique que le point soit en défaut ou non (Erwan est en réunion, il ne dit pas si c'est juste). Voir `signaler`.
+// Le texte « signalement reçu » : identique que le point soit en défaut ou non (Erwan est en réunion, il ne dit pas si c'est juste). Voir `signaler`
+// (clé `signaler.reponse` du moteur depuis le 20/10/2026 : la phrase unique, sans astuce sur `repare`, `rien`, `deja` ni `fin`).
 export const REPONSE_ERWAN = 'Reçu. Je lis ça à ma sortie de réunion.';
 export function inspectionDe(graine, { niveau = 'standard' } = {}) {
   const jeu = jeuDe(graine), d = D(jeu.defaut), cle = cleObjet(d);
@@ -117,7 +118,7 @@ export function inspectionDe(graine, { niveau = 'standard' } = {}) {
   const points = [{ id: 'tp1', objet: 'transpalette', n: 1, etat: 'ok', ok: true, lib: 'Transpalette n° 1 en ordre' }];
   OBJETS_TIRES.forEach((o) => {
     const base = o.n ? { objet: o.objet, n: o.n } : { objet: o.objet };
-    if (o.cle === cle) points.push({ id: 'defaut', ...base, etat: d.etat, ok: false, reparable: false, lib: d.lib, repare: ' ' });
+    if (o.cle === cle) points.push({ id: 'defaut', ...base, etat: d.etat, ok: false, reparable: false, lib: d.lib });
     else points.push({ id: `ordre-${++k}`, ...base, etat: OK[o.cle].etat, ok: true, lib: OK[o.cle].lib });
   });
   return {
@@ -130,7 +131,7 @@ export function inspectionDe(graine, { niveau = 'standard' } = {}) {
     arret: false,
     commencer: 'C’est bon, je prends mon poste',
     // Erwan est en réunion : la même réponse à tout signalement, défaut ou non (rien ne dit « juste » ou « faux » ici).
-    signaler: { rien: '', deja: '', vide: 'Il faut d’abord cliquer ce que tu veux signaler.', fin: REPONSE_ERWAN },
+    signaler: { reponse: REPONSE_ERWAN, vide: 'Il faut d’abord cliquer ce que tu veux signaler.' },
     bilan: 'Avant de prendre ton poste, on regarde tout ce qui est sur la liste et on signale ce qui ne va pas.',
   };
 }
