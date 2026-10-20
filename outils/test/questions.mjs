@@ -1207,6 +1207,96 @@ await v('Avant de commencer (tirage) : contrôle au chargement — banque trop p
   vrai(/« a ».*`variante` plante \(boum\)/.test(r.plante), 'variante qui plante : ' + r.plante);
 });
 
+// ── `niveaux` sur une question d'ouverture (20/10/2026, décision de Tristan, ENT-10.11) : le tirage connaît le niveau de l'élève.
+await v('Avant de commencer (tirage) : `niveaux: [\'standard\']` — jamais tirée pour le confirmé ni l’accompagné, tirée pour le standard (60 graines) ; niveau absent = standard', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions, tirerOuverture } = await import('/core/types/questions.js');
+    const { QUESTIONS } = await import('/contenus/questions/ESSAI.js');
+    const ch = () => [{ v: 'x', lib: 'X' }, { v: 'y', lib: 'Y' }];
+    const ouv = (id, plus = {}) => ({ id, type: 'ouverture', de: 'Ines', doc: 'doc-a', rubrique: 'droit', enonce: 'Q ?', choix: ch(), juste: 'x', retour: 'R', ...plus });
+    const liste = [ouv('a'), ouv('b'), ouv('c'), ouv('d'), ouv('s1', { niveaux: ['standard'] }), ouv('s2', { niveaux: ['standard'] })];
+    const Q = { ...QUESTIONS, etapes: [], liste, ouverture: { id: 'avant', de: 'Ines', documents: ['doc-a'], questions: liste.map((q) => q.id), tirage: { droit: 2 } } };
+    const M = compilerQuestions(Q, null, ['doc-a']);
+    const vus = { standard: new Set(), confirme: new Set(), accompagne: new Set() };
+    let defautDiffere = 0;
+    for (let s = 0; s < 60; s++) {
+      for (const n of Object.keys(vus)) tirerOuverture(M, `g-${s}`, n).ids.forEach((id) => vus[n].add(id));
+      if (tirerOuverture(M, `g-${s}`).ids.join() !== tirerOuverture(M, `g-${s}`, 'standard').ids.join()) defautDiffere += 1;
+    }
+    return { standard: [...vus.standard].sort(), confirme: [...vus.confirme].sort(), accompagne: [...vus.accompagne].sort(), defautDiffere };
+  });
+  egal(r.confirme, ['a', 'b', 'c', 'd'], 'le confirmé ne reçoit que les questions sans restriction (et les reçoit toutes)');
+  egal(r.accompagne, ['a', 'b', 'c', 'd'], 'l’accompagné non plus');
+  vrai(r.standard.includes('s1') && r.standard.includes('s2'), 'le standard doit pouvoir recevoir les questions qui lui sont réservées : ' + r.standard);
+  egal(r.defautDiffere, 0, 'sans niveau, le tirage est celui du standard');
+});
+
+await v('Avant de commencer (tirage) : sans `niveaux`, le tirage est IDENTIQUE à celui d’avant (même graine, mêmes ids, même ordre, tous niveaux) — banque d’essai et banque réelle ENT-10.9', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions, tirerOuverture } = await import('/core/types/questions.js');
+    const { hasard } = await import('/core/tirage.js');
+    const { QUESTIONS } = await import('/contenus/questions/ESSAI.js');
+    const { QUESTIONS: Q109 } = await import('/contenus/questions/ENT-10.9.js');
+    const ch = () => [{ v: 'x', lib: 'X' }, { v: 'y', lib: 'Y' }];
+    const ouv = (id, rubrique) => ({ id, type: 'ouverture', de: 'Ines', doc: 'doc-a', rubrique, enonce: 'Q ?', choix: ch(), juste: 'x', retour: 'R' });
+    const liste = ['a', 'b', 'c', 'd', 'e', 'f'].map((id, k) => ouv(id, k < 4 ? 'droit' : 'image'));
+    const Qe = { ...QUESTIONS, etapes: [], liste, ouverture: { id: 'avant', de: 'Ines', documents: ['doc-a'], questions: liste.map((q) => q.id), tirage: { droit: 2, image: 1 } } };
+    const ME = compilerQuestions(Qe, null, ['doc-a']);
+    // Le tirage d'avant, écrit ici à la main : par rubrique, `prendre` sur la liste dans l'ordre d'origine, puis un mélange d'ensemble.
+    const avant = (M, g) => {
+      const o = M.ouverture, base = `${g}|${M.id}`;
+      let ids = [];
+      Object.entries(o.tirage).forEach(([rub, n]) => { ids = ids.concat(hasard(`${base}|${rub}`).prendre(o.questions.filter((id) => M.parId.get(id).rubrique === rub), n)); });
+      return hasard(`${base}|ordre`).melanger(ids);
+    };
+    const ecarts = [];
+    let compte = 0;
+    const M109 = compilerQuestions(Q109, null, Q109.ouverture.documents.map((d) => (typeof d === 'string' ? d : d.id)));
+    for (const [nom, M] of [['essai', ME], ['ENT-10.9', M109]]) {
+      for (let s = 0; s < 40; s++) {
+        for (const n of [undefined, 'standard', 'confirme', 'accompagne']) {
+          compte += 1;
+          const ids = (n === undefined ? tirerOuverture(M, `g-${s}`) : tirerOuverture(M, `g-${s}`, n)).ids;
+          if (ids.join() !== avant(M, `g-${s}`).join()) ecarts.push(`${nom} g-${s} ${n}`);
+        }
+      }
+    }
+    return { ecarts, compte };
+  });
+  egal(r.ecarts, [], 'tirages différents de ceux d’avant');
+  vrai(r.compte === 320, 'nombre de comparaisons : ' + r.compte);
+});
+
+await v('Avant de commencer (tirage) : contrôle au chargement de `niveaux` — niveau inconnu, liste vide, rubrique trop petite POUR UN niveau (message qui le nomme), sans tirage', async () => {
+  const r = await pg.evaluate(async () => {
+    const { compilerQuestions } = await import('/core/types/questions.js');
+    const { QUESTIONS } = await import('/contenus/questions/ESSAI.js');
+    const essai = (f) => { try { f(); return 'ok'; } catch (e) { return e.message; } };
+    const ch = () => [{ v: 'x', lib: 'X' }, { v: 'y', lib: 'Y' }];
+    const ouv = (id, plus = {}) => ({ id, type: 'ouverture', de: 'Ines', doc: 'doc-a', rubrique: 'droit', enonce: 'Q ?', choix: ch(), juste: 'x', retour: 'R', ...plus });
+    const mk = (liste, tirage) => ({ ...QUESTIONS, etapes: [], liste, ouverture: { id: 'avant', de: 'Ines', documents: ['doc-a'], questions: liste.map((q) => q.id), ...(tirage ? { tirage } : {}) } });
+    const dans = (Q) => essai(() => compilerQuestions(Q, null, ['doc-a']));
+    return {
+      ok: dans(mk([ouv('a'), ouv('b'), ouv('c'), ouv('d'), ouv('s', { niveaux: ['standard'] })], { droit: 2 })),
+      okSeul: dans(mk([ouv('a', { niveaux: ['accompagne', 'standard', 'confirme'] }), ouv('b')], { droit: 1 })),
+      inconnu: dans(mk([ouv('a'), ouv('b'), ouv('c', { niveaux: ['expert'] })], { droit: 1 })),
+      vide: dans(mk([ouv('a'), ouv('b'), ouv('c', { niveaux: [] })], { droit: 1 })),
+      pasListe: dans(mk([ouv('a'), ouv('b'), ouv('c', { niveaux: 'standard' })], { droit: 1 })),
+      petitConfirme: dans(mk([ouv('a'), ouv('b'), ouv('c'), ouv('s1', { niveaux: ['standard'] }), ouv('s2', { niveaux: ['standard'] })], { droit: 2 })),
+      petitTous: dans(mk([ouv('a', { niveaux: ['standard'] }), ouv('b', { niveaux: ['standard'] }), ouv('c', { niveaux: ['standard'] })], { droit: 1 })),
+      sansTirage: dans(mk([ouv('a', { rubrique: undefined, niveaux: ['standard'] }), ouv('b', { rubrique: undefined })], null)),
+    };
+  });
+  egal(r.ok, 'ok', 'une banque du double pour chaque niveau doit se charger');
+  egal(r.okSeul, 'ok', 'les trois niveaux déclarés : ouverte à tous');
+  vrai(/« c ».*« expert », qui n’est pas un niveau/.test(r.inconnu), 'niveau inconnu : ' + r.inconnu);
+  vrai(/« c ».*liste non vide/.test(r.vide), 'liste vide : ' + r.vide);
+  vrai(/« c ».*liste non vide/.test(r.pasListe), 'pas une liste : ' + r.pasListe);
+  vrai(/au niveau « confirme », la rubrique « droit » tire 2 questions.*n’en compte que 3 à ce niveau.*au moins 4/.test(r.petitConfirme), 'banque trop petite pour le confirmé : ' + r.petitConfirme);
+  vrai(/au niveau « confirme », la rubrique « droit » tire 1 question mais.*n’en compte que 0/.test(r.petitTous) || /au niveau « accompagne »/.test(r.petitTous), 'banque vide pour les autres niveaux : ' + r.petitTous);
+  vrai(/« a ».*`niveaux` n’ont de sens qu’avec un `tirage`/.test(r.sansTirage), '`niveaux` sans tirage : ' + r.sansTirage);
+});
+
 // ─────────────────────────────────────────────────────────────── étape A (10/10/2026)
 const calcPresente = () => pg.evaluate(() => !!document.getElementById('calculetteFlottante'));
 const nettoyerCalc = () => pg.evaluate(() => document.getElementById('calculetteFlottante')?.remove());

@@ -15,8 +15,8 @@
 //
 // AVANT DE COMMENCER (§4 ter) : banque de 11 notions NON notées, 4 tirées par élève (3 de préparation sur 8, 1 image sur 3). `cle: true` = ★ du brief.
 // Banque d'ENT-10.9 (recopiée : une séance n'importe pas le fichier d'une autre), plus `ambiant` (d'ENT-10.1, ★), `conservation` et `img-thermometre`.
-// ÉCARTÉE : `entrepot-froid` (« Notre entrepôt a-t-il du froid ? » donnerait la décision). `conservation` « non tirée chez le confirmé » (brief) : le
-// tirage des notions ne connaît pas le niveau, elle reste dans la banque pour tous (demande au chef). `couches` : c et k TIRÉS (c de 3 à 6, k de 4 à 10),
+// ÉCARTÉE : `entrepot-froid` (« Notre entrepôt a-t-il du froid ? » donnerait la décision). `conservation` « non tirée chez le confirmé » (brief) : clé
+// `niveaux: ['accompagne', 'standard']` (décision de Tristan, 20/10/2026) ; le confirmé tire ses 3 notions parmi les 7 autres. `couches` : c et k TIRÉS (c de 3 à 6, k de 4 à 10),
 // jamais les dimensions d'une palette de la séance (5 × 8, 4 × 10, 4 × 8).
 //
 // Ce fichier importe les DONNÉES de la séance (`contenus/pelleau-ent111-donnees.js`), jamais le contenu (`contenus/pelleau-ent111.js` l'importe).
@@ -101,7 +101,8 @@ export const QUESTIONS = {
       juste: 'sans-froid',
       retour: 'L’entrepôt de Gouesnou n’a pas de froid : on n’y garde que ce qui supporte la température de l’entrepôt.' },
     // Brief §4 ter. Générique : ne parle d'aucune palette de la séance. Le sens de « 4 à 8 » est écrit dans le retour, avec la fourchette de l'univers.
-    { id: 'conservation', type: 'ouverture', de: 'erwan', doc: 'thermometre-111', rubrique: 'preparation', cle: true,
+    // `niveaux` (20/10/2026) : le confirmé ne la reçoit jamais (brief §4 ter) ; il reste 7 questions de préparation pour lui (3 tirées, il en faut 6).
+    { id: 'conservation', type: 'ouverture', de: 'erwan', doc: 'thermometre-111', rubrique: 'preparation', cle: true, niveaux: ['accompagne', 'standard'],
       enonce: `« Conserver ${FOURCHETTE} » veut dire…`,
       aide: 'Regarde le thermomètre à gauche : le trait dit la température.',
       choix: [{ v: 'frais', lib: 'le produit doit rester au frais, sans geler' }, { v: 'congelateur', lib: 'il peut aller au congélateur' },

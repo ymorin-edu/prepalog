@@ -655,7 +655,8 @@ export function creerEntreprise(U) {
       const assurerTirage = () => TIR && TIR.assurer(db, { uid: ctx.profil.uid || prenom, aisance: db.aisance, copie: COPIE });
       if (assurerTirage()) ctx.jeu.sauver();
       // TIRAGE DES QUESTIONS d'« Avant de commencer » (lot 3) : rangé une fois, élève seulement (graine = son identifiant).
-      if (MQ && !estProf && rangerTirageOuverture(db, MQ, ctx.profil.uid || prenom)) ctx.jeu.sauver();
+      // Le niveau de l'élève (20/10/2026) écarte les questions qui ne s'adressent pas à lui (`niveaux` sur la question).
+      if (MQ && !estProf && rangerTirageOuverture(db, MQ, ctx.profil.uid || prenom, niveauEleve(db, { copie: COPIE }))) ctx.jeu.sauver();
 
       // Le volet de la séance. Chaque activité sème le sien une seule fois, sans toucher au
       // reste : un élève qui a fait la réception la semaine dernière retrouve son stock, et

@@ -156,7 +156,7 @@ le reste), sinon « Merci. On en reparle. » ; (8) fiche : « (avec du froid) »
 
 **À décider par le chef / Tristan (demandes au moteur, non faites)** : (a) la ligne de la feuille de ramasse pour un refus « produit » est écrite par le quai : « P1 KG-10633 : palette
 REFUSÉE — produit livré KG-10633 au lieu de KG-10633 commandé. 32 colis repris par le chauffeur. » : le début est faux pour un refus « ne se stocke pas ici » (même référence des deux côtés) ;
-(b) le tirage de l'écran « Avant de commencer » ne connaît pas le niveau : la notion `conservation` reste dans la banque pour tous (le brief la veut absente chez le confirmé) ;
+(b) ~~le tirage de l'écran « Avant de commencer » ne connaît pas le niveau~~ : **fait le 20/10/2026** (décision de Tristan) : clé `niveaux` sur une question d'ouverture, `conservation` n'est plus tirée chez le confirmé ;
 (c) l'étiquette d'un carton ou d'un sac ne dit jamais un total (« 1 sac ») : un élève peut lire « Colis 5 / 32 » sur le sac de Kervéguen, ce qui est juste (32 sacs).
 
 **À vérifier à l'écran par Tristan** : les sacs de Kervéguen se distinguent des cartons d'Ar Vag à ③ ; la ligne « Conservation » se lit au vidéoprojecteur ; la phrase de réserve du refus (a) ;

@@ -672,6 +672,28 @@ await vv('ENT-10.11 : confirmé — aides de comptage ÉTEINTES (ni règle des c
   vrai(/Règle du quai/.test(B.aide) && B.rappel, 'accompagné : les aides du standard');
 });
 
+await vv('ENT-10.11 : Avant de commencer — le confirmé ne reçoit jamais `conservation` (40 graines), le standard et l’accompagné peuvent la recevoir ; chacun a 3 notions de préparation + 1 image', async () => {
+  const lire = async (aisance) => {
+    const tirages = [];
+    for (let i = 0; i < 40; i++) {
+      await monter({ uid: `niv-${i}`, aisance });
+      tirages.push(((await base()).questions[ID] || {})['@tirage'].ids);
+    }
+    return tirages;
+  };
+  const rub = await pg.evaluate(async () => { const Qs = await import('/contenus/questions/ENT-10.11.js'); return Object.fromEntries(Qs.QUESTIONS.liste.filter((x) => x.rubrique).map((x) => [x.id, x.rubrique])); });
+  for (const aisance of ['confirme', 'standard', 'accompagne']) {
+    const T = await lire(aisance);
+    T.forEach((ids, i) => {
+      egal([ids.filter((x) => rub[x] === 'preparation').length, ids.filter((x) => rub[x] === 'image').length], [3, 1], `${aisance}, graine ${i} : 3 + 1`);
+      egal(new Set(ids).size, 4, `${aisance}, graine ${i} : quatre notions distinctes`);
+    });
+    const avec = T.filter((ids) => ids.includes('conservation')).length;
+    if (aisance === 'confirme') egal(avec, 0, '`conservation` tirée chez un confirmé');
+    else vrai(avec > 0, `${aisance} : \`conservation\` n’est jamais tirée en 40 graines`);
+  }
+});
+
 await vv('ENT-10.11 : Avant de commencer — `couches` : 300 graines, jamais 5 × 8, 4 × 10 ni 4 × 8, trois choix distincts, la juste = c × k colis ; la notion « 4 à 8 » est générique (ne nomme ni palette ni client)', async () => {
   const r = await pg.evaluate(async () => {
     const Qs = await import('/contenus/questions/ENT-10.11.js');

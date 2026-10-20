@@ -69,7 +69,7 @@
 // frappe tombe dans la suite de tests (`outils/test/questions.mjs` charge tous les fichiers), jamais en classe.
 
 import { ech } from '../ui.js';
-import { hasard } from '../tirage.js';
+import { hasard, NIVEAUX_ELEVE } from '../tirage.js';
 
 const ID_OK = /^[a-z0-9][a-z0-9-]*$/;
 export const CLE_ETAPES = '@etapes';
@@ -206,10 +206,24 @@ export function compilerQuestions(Q, equipe, documentsSeance) {
     if (o.tirage != null) {
       const T = o.tirage;
       if (!T || typeof T !== 'object' || Array.isArray(T) || !Object.keys(T).length) err(`${ici} : \`tirage\` est un objet { rubrique: nombre de questions tirées }`);
+      // `niveaux` sur une question (20/10/2026, décision de Tristan, ENT-10.11) : liste non vide de niveaux d'élève à qui on peut la tirer.
+      actives.forEach((id) => {
+        const nv = parIdTout.get(id).niveaux;
+        if (nv == null) return;
+        if (!Array.isArray(nv) || !nv.length) err(`question « ${id} » : \`niveaux\` est une liste non vide parmi ${NIVEAUX_ELEVE.join(', ')}`);
+        const inconnu = nv.find((x) => !NIVEAUX_ELEVE.includes(x));
+        if (inconnu !== undefined) err(`question « ${id} » : \`niveaux\` contient « ${inconnu} », qui n’est pas un niveau (${NIVEAUX_ELEVE.join(', ')})`);
+      });
+      const parNiveaux = actives.some((id) => parIdTout.get(id).niveaux != null);
       Object.entries(T).forEach(([r, n]) => {
         if (!Number.isInteger(n) || n < 1) err(`${ici} : \`tirage.${r}\` est un entier positif`);
         const dans = actives.filter((id) => parIdTout.get(id).rubrique === r).length;
         if (dans < 2 * n) err(`${ici} : la rubrique « ${r} » tire ${n} question${n > 1 ? 's' : ''} mais la banque n’en compte que ${dans} (il en faut au moins ${2 * n}, le double)`);
+        // Le double aussi POUR CHAQUE NIVEAU, en ne comptant que les questions ouvertes à ce niveau.
+        if (parNiveaux) NIVEAUX_ELEVE.forEach((niv) => {
+          const dansN = actives.filter((id) => { const q = parIdTout.get(id); return q.rubrique === r && ouverteAuNiveau(q, niv); }).length;
+          if (dansN < 2 * n) err(`${ici} : au niveau « ${niv} », la rubrique « ${r} » tire ${n} question${n > 1 ? 's' : ''} mais la banque n’en compte que ${dansN} à ce niveau (il en faut au moins ${2 * n}, le double)`);
+        });
       });
       actives.forEach((id) => { const q = parIdTout.get(id); if (!(q.rubrique in T)) err(`question « ${id} » : \`rubrique\` = « ${q.rubrique} » n’est pas une rubrique du \`tirage\` (${Object.keys(T).join(', ')})`); });
       actives.forEach((id) => {
@@ -227,7 +241,7 @@ export function compilerQuestions(Q, equipe, documentsSeance) {
       });
     } else {
       toutes.filter((q) => q.type === 'ouverture').forEach((q) => {
-        if (q.rubrique != null || q.variante != null) err(`question « ${q.id} » : \`rubrique\` et \`variante\` n’ont de sens qu’avec un \`tirage\` de l’écran d’ouverture`);
+        if (q.rubrique != null || q.variante != null || q.niveaux != null) err(`question « ${q.id} » : \`rubrique\`, \`variante\` et \`niveaux\` n’ont de sens qu’avec un \`tirage\` de l’écran d’ouverture`);
       });
     }
     if (!actives.length) err(`${ici} n’a plus aucune question active`);
@@ -420,12 +434,15 @@ export function idsOuverture(db, M) {
   return rec.ids.filter((id) => ok.has(id));        // une question retirée de la banque disparaît sans bloquer l'élève
 }
 // Le tirage d'une graine : par rubrique, `n` questions de la banque ; l'ordre d'ensemble est tiré aussi ; les questions à
-// `variante` reçoivent leurs valeurs (rangées avec le tirage). Fonction pure de (graine, séance).
-export function tirerOuverture(M, graine) {
+// `variante` reçoivent leurs valeurs (rangées avec le tirage). Fonction pure de (graine, séance, niveau).
+// `niveau` (20/10/2026, décision de Tristan) : une question qui déclare `niveaux` n'est tirée que pour ces niveaux ; sans la clé, elle
+// vaut pour tous. Le filtre garde l'ordre d'origine : une banque sans `niveaux` donne le même tirage qu'avant.
+export const ouverteAuNiveau = (q, niveau) => !q.niveaux || q.niveaux.includes(niveau);
+export function tirerOuverture(M, graine, niveau = 'standard') {
   const o = M.ouverture, base = `${graine}|${M.id}`;
   let ids = [];
   Object.entries(o.tirage).forEach(([rub, n]) => {
-    ids = ids.concat(hasard(`${base}|${rub}`).prendre(o.questions.filter((id) => M.parId.get(id).rubrique === rub), n));
+    ids = ids.concat(hasard(`${base}|${rub}`).prendre(o.questions.filter((id) => { const q = M.parId.get(id); return q.rubrique === rub && ouverteAuNiveau(q, niveau); }), n));
   });
   ids = hasard(`${base}|ordre`).melanger(ids);
   const q = {};
@@ -433,11 +450,12 @@ export function tirerOuverture(M, graine) {
   return { graine: String(graine), ids, q, at: Date.now() };
 }
 // À l'ouverture (élève seulement) : range le tirage s'il n'y en a pas. Rend vrai si la base a changé (à sauver).
-export function rangerTirageOuverture(db, M, graine) {
+// `niveau` : celui de l'élève dans la séance (`niveauEleve(db, { copie })`, 'standard' par défaut).
+export function rangerTirageOuverture(db, M, graine, niveau = 'standard') {
   if (!M.ouverture || !M.ouverture.tirage || tirageRange(db, M)) return false;
   if (!db.questions) db.questions = {};
   if (!db.questions[M.id]) db.questions[M.id] = {};
-  db.questions[M.id][CLE_TIRAGE] = tirerOuverture(M, graine);
+  db.questions[M.id][CLE_TIRAGE] = tirerOuverture(M, graine, niveau);
   return true;
 }
 // La question telle que CET élève la voit (valeurs tirées posées sur l'énoncé et les choix).
