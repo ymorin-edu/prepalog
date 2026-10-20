@@ -162,3 +162,4 @@ doit vérifier à l'écran.
 
 - 19/10/2026 : feuille écrite après trois états des lieux ; inscription dans `docs/EN-COURS.md` ; phase 1 lancée (A, B, C, D en parallèle).
 - 19/10/2026 : maquette validée par Tristan (après deux retours : prises de la borne, aucune marque dans le vide) ; G-5 lancé ; ENT-10.5 lancée pendant l'arrêt ; sacs : dessinés ; photos Pelleau : accordées (script).
+- 20/10/2026 : phase 4 livrée (sacs, étiquette conservation, ligne de refus, ENT-10.9 à 10.12) ; douze séances construites ; suite entière finale puis push ; EN-COURS effacé.
