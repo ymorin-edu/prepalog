@@ -16,6 +16,10 @@
 retenues ; détail dans `docs/decisions.md` (ligne du 21/10 « palettier à adresse donnée ») et chantier **E-7** de `docs/chantiers.md`. Le lot 0
 (entrepôt tiré par élève, Sonnet, ≈ 2 h 30) peut démarrer dans une conversation neuve ; les corrections de briefs demandées à Cowork ne le bloquent pas.
 **Date du brief** : 21/10/2026
+**Chantier ouvert le 21/10/2026 au soir** (session chef de chantier Fable) : les décisions prises en route (noms des gestes, ids de
+jalons `compte-<rang>` / `recompte-<rang|clé>`, jalon `charge`, `ecartsConfirmes` complet, une seule palette cherchée au lot 5…)
+sont dans **`docs/briefs/COORDINATION-palettier.md` §3, qui fait foi là où le corps de ce brief dit autre chose** (`compte-<adresse>`,
+`apresSignalement`, absence de lot 0 : périmés).
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action du 21/10/2026, 16 h 14 → 17 h 00 (13 décisions de Tristan, fiche du projet
 `claude/prepalog-action-cadrage-c1.5.md`).
 **Pour** : ENT-8.11 (lots 1, 2), ENT-8.12 (lot 4), ENT-8.13 (lots 3, 5), ENT-8.14 (lot 6). **Un seul chantier moteur à la fois** : ce brief en est un.

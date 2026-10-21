@@ -53,6 +53,50 @@ un bloc de tests par séance (`action-811` … `action-814`), bloc moteur nouvea
 3. **Recomptage en copie (ENT-8.14 §11 n° 4, « reste à dire »)** : tranché par le n° 1 du même paragraphe : le Terminal le
    propose en copie comme en séance de travail, aucun poids dessus.
 
+### Décisions prises après l'audit des quatre briefs (sous-agent Sonnet, lecture seule, 21/10 au soir) — à corriger par Tristan à l'écran
+
+4. **Noms des gestes publiés par le mode `palettier`** (aucun lot ne les nommait ; un `apresGeste` sur un nom non publié
+   empêche la séance de s'ouvrir). Tous préfixés `entrepot:<id>:` et inscrits dans `signaux` : `prendre:<P>` (palette prise
+   en réception), `poser:<P>`, `confier:<P>`, `signaler:<P>`, `occupe:<P>` (lot 3), `scan:<P>` (second scan réussi, lot 2),
+   `valider` (« Valider mon rangement », remplace le `verifier` écrit dans ENT-8.11 §4), `ouvrir` (toute ouverture
+   d'emplacement de près, publié à chaque fois : « première ouverture » = premier `apresGeste`), `compte:<rang>` (compte
+   confirmé, lot 4), `compte:fin` (« Terminer le comptage »), `phase:<nom>` (passage à une phase, lot 5), `trouvee`,
+   `transfert` (lot 5). Le lot qui crée un geste l'écrit dans `activites/FICHE-SEANCE.md` avant de rendre.
+5. **Jalons du lot 1** : `place-<P>`, `signale-<P>`, `pasPoseHaut`, et **`charge`** (garde : aucune palette posée ou confiée
+   au-delà d'une plaque, compté seulement si toutes les palettes sont traitées ; ENT-8.11 §5 le pèse 1 sans le nommer).
+   Un jalon « sans poids » se déclare `poids: 0` (un jalon sans `poids` vaut 1 : `entreprise.js:430`). Les décimales
+   s'écrivent telles quelles en code (`5/6`, jamais `0,83`) : la somme est contrôlée à 1e-6.
+6. **Pas de plaque de charge au sol** : le niveau 1 n'a ni plaque ni limite (`entrepot.js:167`) ; les « 3 000 kg / N1 » des
+   briefs 8.11 et 8.14 ne se codent pas, et « charge du niveau 1 respectée » n'existe pas.
+7. **Une erreur ne se paie qu'une fois** : ENT-8.13, « C'est la faute de Kevin » ne coûte que la forme (la ligne « ce qui
+   s'est passé » reste neutre) ; ENT-8.14, `adresseLibre-P5` = adresse libre demandée **et** palette rangée là, le scan
+   n'est jugé que par `scan-P5` ; « signaler P1 à tort » coûte `place-P1` (décision 6 de Tristan), pas un `signale-P1`.
+8. **Fiche des écarts (ENT-8.12, 8.14)** : les jalons vont **par rang de ligne** de la fiche de l'élève (`ecart-1`,
+   `ecart-2` : « je le signale » puis « cause »), titre calculé par `titreBilan` ; une fiche sans ligne = faux.
+   `ecartsConfirmes(db, P)` (lot 4) rend `[{ rang, adresse, produit, compte, systeme, sens: 'manque' | 'surplus' }]`,
+   **vide tant que le comptage n'est pas terminé** (l'aveugle tient jusqu'à « Terminer le comptage »).
+9. **Lot 4, deux ajouts** : une **liste des adresses à compter** toujours visible (adresse, cochée quand comptée, jamais
+   un nombre ; le Terminal ne montre que ses 5 dernières lignes) ; une option **`aideCouche: true`** qui écrit, pour la
+   palette ouverte, les cartons par couche (« 3 × 3 = 9 par couche »), jamais le total (ENT-8.12 accompagné).
+10. **Lot 5 : une seule palette cherchée.** Le bonus « seconde adresse vide » du confirmé d'ENT-8.13 (proposé par Cowork)
+    est **retiré** ; le confirmé joue la même enquête. Tristan peut le rétablir (≈ 1 h de plus au lot 5).
+11. **Kevin et la hauteur** : pas de contradiction avec ENT-8.7 (Kevin décharge au frontal catégorie 3 au quai ; dans les
+    allées, le palettier en hauteur se sert au **rétractable, catégorie 5**, que le CAP n'a pas) : `q-kevin` reste telle
+    quelle, et le texte de Samia peut le dire en un mot.
+12. **Comptage d'ENT-8.12 et 8.14 au niveau 1 seulement** (picking) : l'élève ne monte pas, et une palette au niveau 2 ne se
+    compte pas depuis le sol. La banque des 12 adresses et les 4 de l'évaluation sont au sol ; les rôles (manque, surplus,
+    conforme) ne dépendent pas du niveau. **Question posée à Tristan** (il peut préférer des adresses en hauteur comptées
+    depuis le sol).
+13. **ENT-8.14, ouverture** : formulations neutres comme ENT-8.10 (« ton tuteur », « l'entreprise qui t'accueille » : le moteur
+    ne remplace pas `{tuteur}` dans une question d'ouverture) ; `e-adresse` cite l'allée A ou B (pas C, absente de
+    Belleville). Le plan par site se lit avec `siteDeGraine` et `COLLEGUES` **importés depuis `contenus/action-ent810-donnees.js`**
+    (le module des sites reste lu, jamais modifié).
+14. **ENT-8.11** : les données fixent le **nombre de cartons par palette** et le seuil « lourde » (le brief ne les donne pas) ;
+    la nouvelle adresse de P5 est en hauteur, donc « la confie » ; l'accueil dit en une phrase le **retour à Ensuès** après
+    Labastide et le site d'évaluation.
+15. Le corps du brief moteur reste périmé sur trois points (`compte-<adresse>`, `apresSignalement`, pas de lot 0) : **ce
+    fichier (§3) fait foi**, un renvoi est ajouté en tête du brief.
+
 ## 4. Suivi
 
 | Lot / séance | État | Commit |
