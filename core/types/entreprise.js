@@ -220,7 +220,30 @@ export function creerEntreprise(U) {
   // L'écran « Plan d'entrepôt » (04/10/2026, brief `docs/briefs/MOTEUR-vue-plan-entrepot.md`), même
   // principe : il n'existe que si la séance déclare un `entrepot` (format en tête de
   // `core/types/entrepot.js`). Son état vit dans `db.entrepots[<entrepot.id>]`.
-  const VENT = U.entrepot ? creerEntrepot(U.entrepot, COPIE ? { copie: true } : {}) : null;
+  //
+  // UN ENTREPÔT TIRÉ PAR ÉLÈVE (21/10/2026, chantier E-7 « palettier à adresse donnée », lot 0), sur le modèle exact du quai : la séance
+  // passe `entrepot` sous forme de FONCTION de la graine (`(graine, { niveau, copie }) => déclaration`), même signature et même moment
+  // que `quai`. La graine (l'identifiant de l'élève) est posée dans sa base à la première ouverture ; la note et le ramassage lisent
+  // l'entrepôt de CETTE base (`entrepotDeBase`). Le site d'un élève se lit donc dans la graine (comme pour le quai d'ENT-8.10),
+  // jamais dans la base. L'`id` doit être le même pour tous les élèves (l'état vit dans `db.entrepots[id]`). Un objet reste un
+  // entrepôt unique, créé une fois, exactement comme avant.
+  const OPTS_ENT = COPIE ? { copie: true } : {};
+  const ENT_TIRE = typeof U.entrepot === 'function' ? U.entrepot : null;
+  const entrepotsTires = new Map();
+  const entrepotDeGraine = (g, niveau = 'standard') => {
+    const k = `${g}|${niveau}`;
+    if (!entrepotsTires.has(k)) entrepotsTires.set(k, creerEntrepot(ENT_TIRE(g, { niveau, copie: COPIE }), OPTS_ENT));
+    return entrepotsTires.get(k);
+  };
+  const ENT_FIXE = U.entrepot && !ENT_TIRE ? creerEntrepot(U.entrepot, OPTS_ENT) : null;
+  const entrepotDeBase = (db) => (ENT_TIRE ? entrepotDeGraine(graineDeBase(db), niveauEleve(db, { copie: COPIE })) : ENT_FIXE);
+  // L'entrepôt de l'écran ouvert : celui de la base de l'élève, fixé par `rendre`.
+  let VENT = ENT_TIRE ? entrepotDeGraine('') : ENT_FIXE;
+  if (ENT_TIRE && !COPIE) {
+    NIVEAUX_ELEVE.filter((n) => n !== 'standard').forEach((n) => {
+      try { entrepotDeGraine('', n); } catch (x) { throw new Error(`entrepôt du niveau « ${n} » : ${x.message}`); }
+    });
+  }
   // Les DOCUMENTS JOINTS (04/10/2026, brief `docs/briefs/MOTEUR-documents-formulaire.md`, lot 1) : une
   // fiche de poste, des CV… que l'élève lit sans les saisir. Ils n'existent que si la séance les déclare
   // (format en tête de `core/types/documents.js`) ; un mail semé les joint par `pieces: [ids]`.
@@ -482,7 +505,7 @@ export function creerEntreprise(U) {
     if (db && db.aisance === 'confirme') detail.niveau = 'confirmé';
     else if (db && db.aisance === 'accompagne') detail.niveau = 'accompagné';
     // Un jeu tiré par élève (inventaire tiré, ou `tirage: true`) : la graine, pour retrouver son jeu.
-    if (INV_TIRE || INSP_TIRE || (U.tirage && !TIR)) detail.graine = graineDeBase(db);
+    if (INV_TIRE || INSP_TIRE || ENT_TIRE || (U.tirage && !TIR)) detail.graine = graineDeBase(db);
     // Le repérage de l'élève (2de, lot 6) : temps, aides ouvertes, jalons réussis du premier coup,
     // par séance. Lu par l'enseignant seul, dans le suivi de classe ; jamais montré à l'élève.
     if (db && db.indicateurs) detail.indicateurs = db.indicateurs;
@@ -523,8 +546,9 @@ export function creerEntreprise(U) {
       if (!AVEC_POIDS) return { score: n.score, max: n.max, detail };
     }
     // Le plan d'entrepôt en évaluation : même principe (jalons réussis / jalons × 20).
-    if (VENT && VENT.note) {
-      const n = VENT.note(db);
+    const VE = entrepotDeBase(db);
+    if (VE && VE.note) {
+      const n = VE.note(db);
       detail.entrepot = n.detail;
       if (!AVEC_POIDS) return { score: n.score, max: n.max, detail };
     }
@@ -642,10 +666,11 @@ export function creerEntreprise(U) {
       // Jeu tiré par élève (quai, inventaire, ou `tirage: true` pour une séance qui ne tire que ses
       // données) : la graine (son identifiant) posée une fois pour toutes, AVANT le volet — qui peut
       // la lire — puis son quai et son inventaire.
-      if (QUAI_TIRE || INV_TIRE || INSP_TIRE || (U.tirage && !TIR)) {
+      if (QUAI_TIRE || INV_TIRE || INSP_TIRE || ENT_TIRE || (U.tirage && !TIR)) {
         if (poserGraine(db, ctx.profil.uid || prenom)) ctx.jeu.sauver();
         if (QUAI_TIRE) VQUAI = quaiDeBase(db);
         if (INSP_TIRE) VINSP = inspDeBase(db);
+        if (ENT_TIRE) VENT = entrepotDeBase(db);
         if (INV_TIRE) VINV = invDeGraine(graineDeBase(db));
       }
       // TIRAGE MÉMORISÉ (chantier D-C, lot 2, `core/tirage.js`) : à la première ouverture, APRÈS avoir figé `db.aisance`
@@ -2238,6 +2263,9 @@ export function creerEntreprise(U) {
       const apiEntrepot = () => ({
         sauver, estProf, signal, temps: tempsPlanning(),
         redessiner: dessinerVue,
+        // La base de l'élève, en lecture (lot 0 du chantier E-7, sur le modèle de `apiFiche`) : la vue peut y lire ce que l'élève a fait
+        // ailleurs (une réponse à un message, un geste publié). Aucune vue d'aujourd'hui ne s'en sert ; elle ne l'écrit jamais.
+        db,
         // Le son du terminal vocal : le réglage du groupe, posé par l'enseignant seul (coupé par défaut).
         sonTerminal: () => ctx.sonTerminal === true,
         // Après la validation du rangement (mode masse) : le menu aussi, pour la fiche qui l'attend (ENT-6.5).

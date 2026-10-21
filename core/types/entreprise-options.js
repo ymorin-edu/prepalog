@@ -51,7 +51,7 @@ export const OPTIONS = {
   tournee: { type: 'object', role: 'tournée à construire sur le plan' },
   quai: { type: 'object|function', role: 'quai de réception ; une fonction de la graine = un quai tiré par élève' },
   planning: { type: 'object', role: 'planning : cartes sur une grille' },
-  entrepot: { type: 'object', role: "plan d'entrepôt (rangement, préparation, visite, stockage de masse)" },
+  entrepot: { type: 'object|function', role: "plan d'entrepôt (rangement, préparation, visite, stockage de masse) ; une fonction `(graine, { niveau, copie })` = un entrepôt tiré par élève, comme le quai (même `id` pour tous)" },
   inventaire: { type: 'object|function', role: 'inventaire ; une fonction de la graine = un inventaire tiré par élève' },
   tableur: { type: 'object', role: 'geste tableur (extractions, exporter, déposer)' },
   documents: { type: 'array', role: 'documents joints lus sans saisie : [{ id, titre, court, html }]' },

@@ -109,7 +109,7 @@ plan d'entrepôt, fiche, animation) sans `id` texte non vide, sont refusées aus
 | `tournee` | objet | La tournée à construire sur le plan (options dans l'en-tête de `core/types/tournee.js`). Depuis le 18/10/2026 (MOTEUR-chep lot A) : une mesure en **profil** (`depart: 0 \| 'somme'`, `depose`, `reprend`, `libelleDepasse` : la charge monte et descend, le **pic** compte, jauge en marches ; le bilan donne `profils`, `pics`, `charges`), `quai: { libelle, titre, reprendre, vide, max }`, `id` (sert aux gestes), `quand(db)` (hors du menu tant que faux), `horaire.libelleRate` (18/10/2026 : « quai fermé à l’arrivée » à la place de « Créneau raté (de N min) », pastille et refus du report, jamais « de combien »). Depuis le 18/10/2026 (MOTEUR-tournee-points-par-eleve) : `points` accepte une fonction `(db) => […]` pour une séance tirée par élève — **les ids sont fixes** (ceux de la base vide, donc du plan), **les valeurs sont par élève** (`vides`, `kg`, `creneau`…) ; le contenu passe alors la base à son bilan, `VUE.bilan(etat, db)` (voir « Fonction de la base de l'élève »). | `activites/boost-ent32.js` ; profil : `outils/essai-tournee-ramasse.html` (CHEP ENT-9.2, à venir) |
 | `quai` | objet ou fonction | Quai de réception (voir « Vue quai ») ; une **fonction de la graine** = un quai tiré par élève. | `activites/picard-ent42.js` ; tiré : `activites/picard-ent44.js` |
 | `planning` | objet | Planning : cartes sur une grille (voir « Vue Planning »). | `activites/smoby-arrivee.js` |
-| `entrepot` | objet | Plan d'entrepôt : rangement, préparation, visite, stockage de masse (et comptage), allée de picking (voir « Vue Plan d'entrepôt »). | `activites/smoby-rangement.js` |
+| `entrepot` | objet ou fonction | Plan d'entrepôt : rangement, préparation, visite, stockage de masse (et comptage), allée de picking (voir « Vue Plan d'entrepôt »). Une **fonction `(graine, { niveau, copie })`** = un entrepôt tiré par élève, comme le quai (même `id` pour tous). | `activites/smoby-rangement.js` |
 | `inventaire` | objet ou fonction | Inventaire ; une **fonction de la graine** = un inventaire tiré par élève. | `activites/cdiscount-inventaire.js` ; tiré : `activites/cdiscount-compte-a-rebours.js` |
 | `tableur` | objet | Geste tableur : extractions, exporter, déposer (voir « Geste tableur »). | `activites/cdiscount-chiffres.js` |
 | `documents` | tableau | Documents joints lus sans saisie `[{ id, titre, court, html }]` ; un mail les joint par `pieces`. | `activites/smoby-recrutement.js` |
@@ -1823,6 +1823,26 @@ La séance déclare `entrepot` dans `creerEntreprise` et `etapes: etapesEntrepot
 une entrée de menu s'ajoute (libellé `libelle`). L'état vit dans `db.entrepots[<entrepot.id>]` (cloisonné par séance) :
 `{ place: { P1: 'A1-T01-N1-E3', P3: 'L1' }, verifie, verifs, premierGeste, aideCharge }`. Exemple complet :
 `contenus/entrepot-essai.js` ; page d'essai `outils/essai-entrepot.html` ; tests : bloc `entrepot`.
+
+**Un entrepôt tiré par élève** (lot 0 du chantier E-7 « palettier à adresse donnée », 21/10/2026). `entrepot` peut être une **fonction**, avec
+**la même signature et le même moment que `quai`** : le moteur l'appelle **`entrepot(graine, { niveau, copie })`** (`niveau` = `niveauEleve(db)`,
+toujours `'standard'` en évaluation et pour l'enseignant ; `copie` = la séance est une copie) et lui fait rendre la déclaration **une fois par
+élève et par niveau**, à sa première ouverture (la graine, son identifiant, est posée dans sa base juste avant) ; l'entrepôt est gardé par graine et par
+niveau, donc un élève retrouve **le même plan** quand il rouvre la séance. Au chargement, les trois variantes de la graine de référence **`''`**
+(hors copie) sont construites : la fonction doit accepter la graine vide, et une déclaration fautive à un niveau est refusée tout de suite
+(« entrepôt du niveau « confirme » : … »). La note et le ramassage lisent l'entrepôt de la base de l'élève. **L'`id` doit être le même pour tous**
+(l'état vit dans `db.entrepots[<id>]`, et les gestes publiés portent l'id). Le **site** d'un élève (ENT-8.14) se lit dans la graine, comme le fait le
+quai d'ENT-8.10 (`siteDeGraine(graine)` de son contenu), jamais dans la base. Les jalons (`etapes`) restent une liste fixe : ids par rang ou par
+rôle, pas par adresse tirée. Un **objet** continue de marcher exactement comme avant (un seul entrepôt, créé une fois).
+La vue reçoit aussi **`api.db`** : la base de l'élève, **en lecture** (sur le modèle de `apiFiche`), pour qu'une vue lise ce qu'il a fait ailleurs
+(une réponse à un message, un geste publié) ; aucune vue d'aujourd'hui ne s'en sert, et elle ne l'écrit jamais.
+
+```js
+entrepot: (graine, { niveau, copie }) => ({
+  id: 'action-palettier', libelle: 'Plan de l’entrepôt', mode: 'rangement',
+  // … la déclaration habituelle ; ce qui varie (stock de départ, palettes, plan par site) se tire de `graine` et de `niveau`
+}),
+```
 
 ```js
 entrepot: {

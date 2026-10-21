@@ -2883,4 +2883,145 @@ await v('Visite : l’enseignant qui saute à la fin ne publie aucun geste ; un 
 
 await v('Visite, zones : aucune erreur JavaScript', async () => { egal(erreursZ, []); });
 await ctxZ.close();
+
+/* =========================================================== un entrepôt tiré par élève (lot 0 du chantier E-7, 21/10/2026) */
+// `entrepot` peut être une FONCTION `(graine, { niveau, copie })`, comme le quai : un plan par élève, gardé par graine et par
+// niveau. Ici, la fonction retire de 3 à 20 emplacements du stock de départ selon la graine (valeurs écrites À LA MAIN : u-a 3,
+// u-b 8, toute autre 20), plus 0 ou 1 selon un compteur d'appels, qui ne se répète jamais pour deux appels de suite : une fonction
+// rejouée à chaque ouverture ne donnerait donc PAS deux fois le même plan. Le plan de départ en compte 99 (cas d'essai).
+// Les objets déclarés (ENT-5.5, 5.6, 6.5, 6.6, 6.7, 8.2, 8.3…) sont couverts par le reste de ce bloc et par les autres blocs, inchangés.
+const ctxT = await nav.newContext({ viewport: { width: 1366, height: 768 } });
+const erreursT = [];
+const pt = await ctxT.newPage();
+pt.setDefaultTimeout(6000);
+pt.on('pageerror', (e) => erreursT.push('PAGEERROR: ' + e.message));
+pt.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreursT.push('CONSOLE: ' + m.text()); });
+await pt.goto(BASE);
+await pt.waitForSelector('#btnProf', { timeout: 8000 });
+const ZT = '#peTestT .pe';
+
+// Monte UN moteur (comme une activité : `creerEntreprise` une fois) dont l'entrepôt est une fonction ; `ouvrirT(uid)` fait un `rendre`
+// pour cet élève, sur SA base (gardée en mémoire dans `window.__t.bases`). `o.temps` : le temps de la séance.
+const monterT = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const E = await import('/outils/essai-entrepot.js');
+  const C = await import('/contenus/entrepot-essai.js');
+  const temps = o.temps || 'guidage';
+  const T = { appels: [], compteur: 0, bases: {}, moteur: null, temps };
+  const retirer = { 'u-a': 3, 'u-b': 8 };
+  const fn = (g, opts) => {
+    const n = (retirer[g] || 20) + (T.compteur++ % 2);
+    T.appels.push({ g, niveau: opts.niveau, copie: opts.copie, cles: Object.keys(opts).sort().join(','), n });
+    const P = structuredClone(C.RANGEMENT);
+    Object.keys(P.stock).slice(0, n).forEach((k) => { delete P.stock[k]; });
+    P.note = { sur: g === 'u-e' ? 10 : 12 };   // la note (en copie) est sur 10 pour u-e, sur 12 pour tout autre
+    return P;
+  };
+  const U = E.univers({ temps, entrepot: structuredClone(C.RANGEMENT) });   // les jalons : liste fixe, tirée du plan de référence
+  U.entrepot = fn;
+  T.moteur = creerEntreprise(U);
+  window.__t = T;
+}, o);
+const ouvrirT = (p, uid, o = {}) => p.evaluate(({ uid, o }) => {
+  const T = window.__t;
+  document.querySelector('#peTestT')?.remove();
+  const hote = document.createElement('div'); hote.id = 'peTestT'; document.body.appendChild(hote);
+  const db = T.bases[uid] || (T.bases[uid] = o.db || {});
+  T.moteur.rendre(hote, {
+    meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: T.temps, copie: T.temps === 'evaluation' },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid },
+    aisance: o.aisance,
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+    rendreCopie: async () => ({ rendu: Date.now() }),
+  });
+  document.querySelector('#peTestT .ent-nav[data-vue="entrepot"]').click();
+}, { uid, o });
+const occupesT = (p) => p.$$eval(`${ZT} [data-pe-mini][data-pe-etat="stock"]`, (L) => L.length);
+const appelsT = (p) => p.evaluate(() => JSON.parse(JSON.stringify(window.__t.appels)));
+// Ce que la fonction a retiré pour (graine, niveau) : son PREMIER appel, le seul gardé par le moteur.
+const retraitT = async (p, g, niveau = 'standard') => (await appelsT(p)).find((a) => a.g === g && a.niveau === niveau)?.n;
+
+await v('Entrepôt tiré par élève : deux élèves, deux plans — le stock de départ à l’écran suit la graine de chacun ; la fonction reçoit (graine, { niveau, copie })', async () => {
+  await monterT(pt);
+  // Au chargement : la graine de référence « » aux trois niveaux, rien pour un vrai élève.
+  const depart = await appelsT(pt);
+  egal(depart.map((a) => `${JSON.stringify(a.g)}|${a.niveau}`).sort(), ['""|accompagne', '""|confirme', '""|standard'], 'variantes de la graine de référence au chargement');
+  await ouvrirT(pt, 'u-a');
+  const nA = await retraitT(pt, 'u-a');
+  const na = await occupesT(pt);
+  await ouvrirT(pt, 'u-b');
+  const nB = await retraitT(pt, 'u-b');
+  const nb = await occupesT(pt);
+  vrai([3, 4].includes(nA) && [8, 9].includes(nB), `retraits tirés par la fonction : ${nA}, ${nB}`);
+  egal(na, 99 - nA, 'plan de u-a : 99 emplacements occupés moins ceux que sa graine retire');
+  egal(nb, 99 - nB, 'plan de u-b');
+  vrai(na !== nb, `les deux plans diffèrent (${na} et ${nb} emplacements occupés)`);
+  const a = (await appelsT(pt)).filter((x) => x.g === 'u-a');
+  egal(a, [{ g: 'u-a', niveau: 'standard', copie: false, cles: 'copie,niveau', n: nA }], 'signature : la graine, puis { niveau, copie } seulement, un seul appel pour u-a');
+  // La graine est posée dans la base de chacun, et l'état de la vue vit sous le même id pour tous.
+  const bases = await pt.evaluate(() => Object.fromEntries(Object.entries(window.__t.bases).map(([k, b]) => [k, { graine: b.tirage && b.tirage.graine, cles: Object.keys(b.entrepots || {}) }])));
+  egal(bases, { 'u-a': { graine: 'u-a', cles: ['essai-rangement'] }, 'u-b': { graine: 'u-b', cles: ['essai-rangement'] } }, 'graine posée, id commun');
+  egal(erreursT, [], 'erreurs JS');
+});
+
+await v('Entrepôt tiré par élève : un même élève retrouve le MÊME plan à chaque ouverture (la fonction n’est pas rejouée), même après être passé par un autre élève', async () => {
+  const n0 = (await appelsT(pt)).length;
+  const nA = await retraitT(pt, 'u-a');
+  const nB = await retraitT(pt, 'u-b');
+  for (let i = 0; i < 3; i += 1) {
+    await ouvrirT(pt, 'u-a');
+    egal(await occupesT(pt), 99 - nA, `u-a, ouverture ${i + 2}`);
+    await ouvrirT(pt, 'u-b');
+    egal(await occupesT(pt), 99 - nB, `u-b, ouverture ${i + 2}`);
+  }
+  egal((await appelsT(pt)).length, n0, 'aucun appel de plus à la fonction');
+});
+
+await v('Entrepôt tiré par élève : le niveau de l’élève (confirmé) est transmis, une seule fois ; l’enseignant et l’évaluation restent « standard » ; le ramassage lit la base de l’élève', async () => {
+  await ouvrirT(pt, 'u-c', { aisance: 'confirme' });
+  egal((await appelsT(pt)).filter((x) => x.g === 'u-c').map((x) => [x.niveau, x.copie]), [['confirme', false]], 'u-c confirmé');
+  await ouvrirT(pt, 'u-prof', { role: 'prof', aisance: 'confirme' });
+  egal((await appelsT(pt)).filter((x) => x.g === 'u-prof').map((x) => x.niveau), ['standard'], 'enseignant : standard');
+  // Évaluation (copie) : un autre moteur ; même un élève réglé « confirmé » est « standard », copie vrai.
+  await monterT(pt, { temps: 'evaluation' });
+  await ouvrirT(pt, 'u-e', { aisance: 'confirme' });
+  egal((await appelsT(pt)).filter((x) => x.g === 'u-e').map((x) => [x.niveau, x.copie]), [['standard', true]], 'évaluation : standard, copie');
+  // En copie, les variantes confirmé et accompagné de la référence ne sont PAS construites (comme le quai) : une seule.
+  egal((await appelsT(pt)).filter((x) => x.g === '').length, 1, 'une seule variante de référence en copie');
+  // Le ramassage lit la base qu'on lui donne, pas le dernier écran ouvert : u-e est noté après l'ouverture d'un autre élève.
+  await ouvrirT(pt, 'u-f');
+  const notes = await pt.evaluate(() => { const T = window.__t; const n = (u) => { const r = T.moteur.noter(T.bases[u]); return { graine: r.detail.graine, max: r.max }; }; return { e: n('u-e'), f: n('u-f') }; });
+  egal(notes, { e: { graine: 'u-e', max: 10 }, f: { graine: 'u-f', max: 12 } }, 'noter(base) lit l’entrepôt de la base de l’élève (sa note, sa graine), pas celui de l’écran ouvert');
+  egal(erreursT, [], 'erreurs JS');
+});
+
+await v('Entrepôt tiré par élève : contrôle — une fonction qui plante à un niveau, une déclaration fautive qu’elle rend, un type inconnu empêchent la séance de se charger', async () => {
+  const r = await pt.evaluate(async () => {
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const E = await import('/outils/essai-entrepot.js');
+    const C = await import('/contenus/entrepot-essai.js');
+    const essai = (entrepot) => {
+      const U = E.univers({ temps: 'guidage', entrepot: structuredClone(C.RANGEMENT) });
+      U.entrepot = entrepot;
+      try { creerEntreprise(U); return ''; } catch (e) { return e.message; }
+    };
+    return [
+      essai((g, { niveau }) => { if (niveau === 'confirme') throw new Error('plan impossible'); return structuredClone(C.RANGEMENT); }),
+      essai(() => Object.assign(structuredClone(C.RANGEMENT), { mode: 'comptage' })),
+      essai(() => Object.assign(structuredClone(C.RANGEMENT), { stock: { 'A1-T09-N1-E1': { produit: 'MAI', kg: 400 } } })),
+      essai(42),
+      essai(() => structuredClone(C.RANGEMENT)),
+    ];
+  });
+  vrai(r[0].includes('entrepôt du niveau « confirme »') && r[0].includes('plan impossible'), `niveau fautif : ${r[0]}`);
+  vrai(r[1].includes('pas encore écrit'), `déclaration rendue fautive (mode) : ${r[1]}`);
+  vrai(r[2].includes('adresse inconnue'), `déclaration rendue fautive (adresse) : ${r[2]}`);
+  vrai(r[3].includes('« entrepot » doit être de type object ou function') && r[3].includes('number'), `type : ${r[3]}`);
+  egal(r[4], '', 'une fonction qui rend une déclaration juste se charge');
+});
+
+await v('Entrepôt tiré par élève : aucune erreur JavaScript', async () => { egal(erreursT, []); });
+await ctxT.close();
 }

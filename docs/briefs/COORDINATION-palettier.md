@@ -101,7 +101,8 @@ un bloc de tests par séance (`action-811` … `action-814`), bloc moteur nouvea
 
 | Lot / séance | État | Commit |
 |---|---|---|
-| 0 | lancé le 21/10/2026 (Sonnet) | — |
+| 0 | **livré** le 21/10/2026 (Sonnet, 43 min) : `entrepot(graine, { niveau, copie })`, gardé par graine et niveau, `api.db` pour la vue, 5 cas dans `entrepot` (125/125), 8 sabotages tombés, suite 2145/2147 (deux rouges étrangers : `dependances` sur la ligne EN-COURS, `spartoo` pressé en parallèle, vert seul) | voir git log |
+| 1 | lancé le 21/10/2026 (Opus) | — |
 
 ## 5. Alertes à dire à Tristan à la livraison
 
