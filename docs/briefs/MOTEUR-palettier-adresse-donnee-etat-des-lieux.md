@@ -7,6 +7,24 @@
 > Les numéros de ligne valent au commit 2fd4f48. **Rien n'a été écrit dans le code** ; aucune décision n'est prise : la liste des 14 décisions
 > en fin de document attend Tristan (une à la fois).
 
+> **Mise à jour du 21/10/2026 au soir.** Les 14 décisions de la fin du document sont **prises** par Tristan, une à une : **chantier complet, lot 0
+> compris**, options recommandées retenues partout (ligne du 21/10 dans `docs/decisions.md`, chantier **E-7** dans `docs/chantiers.md`).
+>
+> **À porter dans les briefs par Cowork (décision 13) — liste à coller :**
+> 1. ENT-8.11 à 8.14, brief moteur §6 : la charte d'Action est **bleue** (`#195799`, `contenus/action.js`), pas rouge ; la règle des chartes rouges ou
+>    vertes ne joue pas, le vert plein reste réservé à « juste ».
+> 2. ENT-8.11 §4 étape 3 : **Kevin écrit en premier** (un mot du genre « Tu as des palettes pour moi ? ») pour que l'élève lui réponde par phrases :
+>    la Messagerie ne sait répondre par phrases qu'à un message reçu.
+> 3. ENT-8.12 §5 et ENT-8.14 §5 : les points de comptage se nomment **par rang** (`compte-1` … `compte-6`, `recompte-1` …), pas par adresse tirée (la
+>    liste des jalons d'une séance est fixe).
+> 4. ENT-8.13 §4 bis : `q-rupture` s'accroche à un **geste** (première ouverture d'emplacement, par exemple), pas à la lecture du message de Yanis.
+> 5. ENT-8.13 §6.1 et §11 n° 2 : la palette laissée dans l'allée et **posée par Kevin pendant la nuit** est à déclarer dans les données du lot 5, pas
+>    seulement dans le texte.
+>
+> Et à reporter là où les briefs disent autre chose : ENT-8.11 §4 (nouvelle adresse donnée par le terminal, Samia commente) et §5 (« Corriger » sans
+> le rangement) ; ENT-8.12 §11 n° 1 (règle unique du recompte) ; ENT-8.14 §6.1 (Belleville à 4 niveaux) ; ENT-8.11 §4 étape 3 (Kevin monte les
+> palettes après sa réponse).
+
 
 Lecture seule, 21/10/2026. Rien n'a été écrit dans le dépôt, la suite n'a pas été lancée.
 Étiquettes : **VÉRIFIÉ** (lu dans le code ou la fiche, avec fichier:ligne) ou **SUPPOSÉ** (déduit, pas essayé à l'écran).

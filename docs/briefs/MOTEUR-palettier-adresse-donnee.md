@@ -12,6 +12,9 @@
 élève), un mode à part `palettier` dans son fichier (ENT-5.5 intact), des phases dans un seul entrepôt (8.13, 8.14), des ids de jalons par rang
 (pas par adresse tirée), une fuite à couper au comptage (poids affichés), la charte d'Action **bleue** et non rouge, Belleville limitée à 4 niveaux.
 **Durée revue : ≈ 22 à 26 h** (version courte lots 0, 1, 2, 4 ≈ 14 à 16 h pour ENT-8.11 et 8.12). Rien n'est écrit tant que Tristan n'a pas tranché.
+**Décisions prises le 21/10/2026 au soir** (Tristan, une à une) : **chantier complet, lot 0 compris**, options recommandées de l'état des lieux
+retenues ; détail dans `docs/decisions.md` (ligne du 21/10 « palettier à adresse donnée ») et chantier **E-7** de `docs/chantiers.md`. Le lot 0
+(entrepôt tiré par élève, Sonnet, ≈ 2 h 30) peut démarrer dans une conversation neuve ; les corrections de briefs demandées à Cowork ne le bloquent pas.
 **Date du brief** : 21/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action du 21/10/2026, 16 h 14 → 17 h 00 (13 décisions de Tristan, fiche du projet
 `claude/prepalog-action-cadrage-c1.5.md`).
