@@ -68,6 +68,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'pelleau-110',
   'pelleau-111',
   'pelleau-112',
+  'palettier',
   'ramasse'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
@@ -101,6 +102,7 @@ const GROUPES = {
     'pelleau-101',
     'pelleau-104',
     'pelleau-110',
+    'palettier',
     'action-88', 'ramasse'],
   3: ['dependances', 'transport', 'boost', 'inventaire', 'cdiscount', 'planning', 'entrepot', 'copie', 'amenagements', 'fb-6.6', 'fb-6.8', 'action-84',
     'inspection',

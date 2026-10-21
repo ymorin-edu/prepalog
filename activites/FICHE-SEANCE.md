@@ -1811,8 +1811,9 @@ jalons et des questions (14/10/2026). Détail jalon par jalon, clics sur
 ## Vue « Plan d'entrepôt » (ranger des palettes, préparer une commande) — `core/types/entrepot.js`
 
 Depuis le 04/10/2026 (brief `docs/briefs/MOTEUR-vue-plan-entrepot.md`, maquette v2 de `docs/briefs/plan-entrepot/`).
-Cinq modes sont écrits : **`rangement`** (lots 1 et 2), **`preparation`** (lot 4), **`visite`** (second chantier), **`masse`**
-(chantier D-5, avec son sous-mode comptage du chantier D-6) et **`picking`** (chantier D-7), plus bas ; le mode `comptage` du plan à
+Six modes sont écrits : **`rangement`** (lots 1 et 2), **`preparation`** (lot 4), **`visite`** (second chantier), **`masse`**
+(chantier D-5, avec son sous-mode comptage du chantier D-6), **`picking`** (chantier D-7) et **`palettier`** (chantier E-7, ranger à
+l'adresse donnée par le système), plus bas ; le mode `comptage` du plan à
 racks (lot 3 du brief) n'est pas écrit : une séance qui le déclare ne se charge pas. En rangement, l'élève prend une palette (carte du bandeau ou zone de réception du
 plan), choisit une **travée** sur le plan vu de dessus (elle s'ouvre en grand, vue de face), puis un **emplacement**.
 L'adresse s'écrit `A1-T03-N2-E1` (allée A côté 1, travée 03, niveau 2 — niveau 1 = sol —, emplacement 1). Emplacement
@@ -2147,6 +2148,97 @@ d'ENT-6.7) qui l'ouvrent et lui **rédigent ses lignes** depuis le plan. Format 
   groupe ») ; l'élève peut le couper pour lui, jamais l'activer. Voix de synthèse **installées sur le poste** (français
   seulement, aucune requête réseau) ; sans voix française, le terminal reste muet et le texte suffit (il est toujours
   affiché). À essayer avec un casque avant la séance.
+
+### Mode `palettier` : ranger à l'adresse donnée par le système (chantier E-7, lot 1, 21/10/2026) — `core/types/entrepot-palettier.js`
+
+Chez Action (CAP, ENT-8.11 à 8.14), **le système donne l'adresse** : l'élève lit l'adresse sur la palette, ouvre la travée, regarde
+l'emplacement **de près**, puis **pose** au sol (niveau 1), **confie** la palette au cariste au-dessus du sol, ou **signale** qu'on ne peut
+pas ranger là. C'est l'inverse du `rangement` (Smoby : l'élève choisit d'après des critères), d'où un mode à part, dans son fichier : il
+emprunte le plan vu de dessus, la travée de face, les adresses, la charge d'un niveau et les hors service du rangement, qui ne change pas
+(la travée de face a gagné trois réglages, chacun absent = le dessin d'avant : `sansPoids`, `reserves`, `choisi`). Brief
+`docs/briefs/MOTEUR-palettier-adresse-donnee.md`, décisions `docs/briefs/COORDINATION-palettier.md` §3 ; exemple complet
+`contenus/palettier-essai.js` ; page d'essai **`outils/essai-palettier.html`** (aide de charge, verdict, Kevin qui monte, niveau, copie,
+enseignant) ; tests : bloc **`palettier`**. Le scan (lot 2) et le comptage (lot 4) ne sont pas encore écrits.
+
+```js
+entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lot 0, plus haut)
+  id: 'action-ranger', libelle: 'Plan de l’entrepôt', mode: 'palettier',
+  personnage: { nom: 'Samia', role: 'cheffe d’équipe', date, texte },   // texte : une chaîne, ou { guidage, entrainement, evaluation }
+  plan: { allees, cotes: { A1: { charge: { 2: 1500, 3: 1200, 4: 1000 } }, … }, travees, niveaux /* ≤ 4 */, emplacements,
+          horsService: ['B1-T01-N2-E1'], zones: { quais: ['QUAI 2'] } },   // le sol (N1) n'a ni plaque ni limite : sa charge ne se déclare pas
+  produits: { LES: { nom: 'Lessive liquide 3 L', court: 'Lessive' }, … },   // pas de gammes
+  stock: { 'A1-T02-N3-E1': { produit: 'NET', kg: 389 }, … },
+  palettes: [
+    { id: 'P1', nom: 'Cahiers grand format', cartons: 30, kg: 9, adresse: 'A1-T03-N1-E2' },   // kg : UN carton
+    { id: 'P5', nom: '…', cartons: 36, kg: 13, adresse: 'A1-T02-N3-E2', nouvelleAdresse: 'A1-T04-N2-E3' },   // à signaler
+    { id: 'P7', …, adresse: '…', aSignaler: true },   // à signaler, sans nouvelle adresse
+    { id: 'P6', …, niveaux: ['confirme'] },          // au confirmé seulement : ses jalons sont bonus
+  ],
+  cariste: { nom: 'Kevin', niveaux: [2, 3, 4], monte: 'validation' },   // monte : 'validation' (défaut) ou (db) => vrai / faux
+  aideCharge: 'somme' | 'pose' | 'plaque',   // absent = 'plaque'
+  verdict: 'critere' | 'adresse',            // absent = rien après « Valider »
+  regles: { titre?, entete?, lignes: [html…], encadre? },   // « Les règles ▾ », jamais en copie
+}
+```
+
+- **Le poids d'une palette** = cartons × kg + 25 (le support), **calculé par la vue**, jamais recopié. La carte de la palette porte
+  l'**étiquette du système** (« Adresse » puis, après un signalement, « Nouvelle adresse »), les cartons et ce poids.
+- **Contrôles** (une déclaration fautive ne se charge pas) : adresses connues et toutes différentes (adresse et nouvelle adresse) ;
+  une palette à ranger (sans `nouvelleAdresse` ni `aSignaler`) au-dessus du sol, ou une nouvelle adresse au-dessus du sol, doit être
+  à un niveau du cariste ; `niveaux` vaut `['confirme']` ou rien ; au moins une palette pour tous ; `aideCharge`, `verdict`, `cariste.monte`.
+- **Les gestes de l'élève** (les mêmes boutons à tous les niveaux : c'est ce qui donne un sens à `pasPoseHaut`) :
+  - prendre une palette (sa carte, ou en réception sur le plan) ; recliquer la palette en main la remet en réception ; une palette
+    posée, ou confiée et pas encore montée, se **reprend** tant que rien n'est validé ;
+  - ouvrir une travée (plan), puis un emplacement : la **vue de près** s'ouvre à droite de la travée — l'étiquette de l'emplacement
+    (comme sur la lisse, le lot 2 y scannera), le niveau, ce qui l'occupe (stock, ta palette, « Réservé : P3, à monter », hors service),
+    la **plaque** du niveau (jamais au sol), puis selon `aideCharge` : **`pose`** le capteur « déjà posé » (stock + palettes posées ou
+    confiées sur ce niveau), **`somme`** le même et « Avec ta palette P5 : 789 + 493 = 1 282 kg », **`plaque`** rien d'autre (et la travée
+    de face n'écrit **aucun poids** : la charge ne se déduit pas). Aucun rouge, aucun « surcharge » : la vue ne juge pas ;
+  - **Poser ici** : au sol, la palette se pose (emplacement occupé ou réservé : « Emplacement déjà occupé. La palette reste en main. ») ;
+    au-dessus du sol : **refusé** (« Au-dessus du sol, c’est Kevin qui monte la palette. »), la palette reste en main, la tentative est
+    comptée (`tentativesHaut`) ;
+  - **Confier à Kevin** (au sol : « Au sol, tu poses toi-même. » ; niveau que le cariste ne dessert pas : refusé) : la palette part dans la
+    zone **« À MONTER »**, dessinée au pied de chaque allée (trait de l'accent, jamais d'aplat), avec sa destination ; la travée la montre
+    réservée, en trait. Kevin la **monte** (elle occupe alors son emplacement) à la validation, ou dès que `monte(db)` est vrai (relu à chaque
+    dessin : ENT-8.11 la fait monter quand l'élève a répondu au message de Kevin) ; une palette montée ne se reprend plus ;
+  - **Signaler : on ne peut pas ranger ici** : un motif à choisir (« C’est occupé », « La charge serait dépassée », « L’emplacement est
+    abîmé », « Autre »), la palette retourne en réception, marquée « signalée ». Le **système** répond dans l'encart « Système » (colonne de
+    droite, la place du Terminal du lot 2 ; la fonction `direSysteme` sera rebranchée sur lui) : « Nouvelle adresse : A1-T04-N2-E3. » si la
+    palette déclare `nouvelleAdresse` (la carte la porte aussi), sinon « Signalement enregistré. » ; **en copie, « C’est noté. »** et jamais de
+    nouvelle adresse. Aucun jugement à l'écran ; un nouveau signalement de la même palette remplace le précédent ;
+  - **Valider mon rangement** (avec confirmation, possible avec des palettes en réception) : fige tout, Kevin monte (`'validation'`), plus
+    aucun geste (regarder les travées reste permis) ; en copie, la copie est rendue. Puis, hors copie et selon `verdict`, sur chaque carte :
+    « ✓ bien rangée », ou le nom des critères faux (« ✗ signalement », « ✗ adresse », « ✗ plaque de charge » ; le lot 2 ajoutera « ✗ scan »),
+    avec `'adresse'` suivi de l'adresse attendue. Tous les textes nouveaux sont au « tu ».
+- **Gestes publiés** (dans `signaux`, préfixés `entrepot:<id>:`) : `prendre:<P>`, `poser:<P>` (pose réussie), `confier:<P>`,
+  `signaler:<P>` — une entrée par palette déclarée, celles du confirmé comprises —, `ouvrir` (toute ouverture d'un emplacement de près ; la
+  première seule est retenue par la base) et `valider`. Ni `poser` ni `verifier` du rangement. Rien n'est publié après « Valider ».
+- **Jalons** (ids stables ; `attente` avant « Valider », `ok` / `ko` après, **jamais `attente` après**) :
+  - `place-<P>` (palette à ranger) : posée au sol ou confiée **à son adresse** ; **signalée à tort** (son adresse était possible) = faux,
+    même posée juste ensuite (décision 6 de Tristan) ;
+  - `signale-<P>` (palette avec `nouvelleAdresse` ou `aSignaler`) : signalée **depuis son adresse**, avec un **motif vrai**, non rangée à son
+    adresse d'origine, puis rangée à sa nouvelle adresse si le système l'a donnée (pas en copie) ;
+  - `pasPoseHaut` : aucune tentative de pose au-dessus du sol **et toutes les palettes traitées** (posée, confiée ou signalée) : sinon faux ;
+  - `charge` : aucune palette posée ou confiée au-delà d'une plaque, même garde.
+  - **La vérité d'un emplacement**, contre laquelle tout signalement se juge : hors service → `abime` ; stock de départ ou une autre palette
+    de l'élève (à la fin) → `occupe` ; charge du niveau (stock + les autres palettes posées ou confiées, à la fin) + la palette > plaque →
+    `charge` ; `autre` n'est jamais vrai.
+  - La séance les prend par **`etapesPalettier(ENTREPOT, { copie })`** (exporté par `entrepot.js` ; `etapesEntrepot` y renvoie pour un objet)
+    et y pose ses poids : la liste vient de la déclaration de **référence** (graine « », standard), la même pour tous ; chaque `verifier`
+    juge la déclaration **de l'élève** (une fonction est rappelée avec sa graine et son niveau, gardée en mémoire). Une palette
+    `niveaux: ['confirme']` donne des jalons **`bonus: true`** (sans poids) dont le `verifier` rend `null` chez qui ne l'a pas. Une fonction
+    doit déclarer **les mêmes palettes à tous les niveaux** (celles du confirmé marquées) : sinon la séance ne se charge pas.
+- **État** (`db.entrepots[<id>]`, cloisonné par séance ; les lots 2 à 6 le liront) : `{ enMain, posees: { P1: adresse },
+  confiees: { P3: adresse }, signalees: { P5: { motif, adresse } }, nouvelles: { P5: adresse }, tentativesHaut, valide, at, premierGeste }`.
+  Les palettes montées ne sont pas rangées : elles se calculent (`monte`).
+- **Exports lisibles par une séance** (`core/types/entrepot.js`, `P` = la déclaration ou la fonction de la séance, `o.copie` en évaluation) :
+  `palettesConfiees(db, P, o)` → `[{ id, nom, adresse }]` (les phrases du message à Kevin ; calculées une fois, à l'arrivée du message) ;
+  `etatPalettier(db, P, o)` → `{ enMain, posees, confiees, signalees: { P5: motif }, nouvelles, montees, tentativesHaut, valide }`.
+  `bonnesReponses(P)` rend les attendus (enseignant, page d'essai) ; la note d'une copie non pondérée compte les jalons du socle seuls.
+- **Dessin** : charte de l'entreprise (Action : bleu, gardé dans la zone de travail) ; le vert plein ne dit que « juste » (texte des
+  verdicts) ; palettes confiées, « À monter », emplacement vu de près : un trait ; refus en texte rouge. Tient en **1366 × 768 et
+  1280 × 720 sans défiler** (plan, travée et vue de près, motifs : testé ; pendant le choix du motif, la ligne « En main » s'efface) ; la colonne de droite (300 px) garde la place du Terminal. L'enseignant voit les
+  attendus (« Côté enseignant : attendus »).
 
 ## Vue « animation à questions » (scène isométrique, arrêt, question) — `core/types/animation.js`
 

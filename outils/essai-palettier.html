@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Essai — Palettier à adresse donnée (Prepalog)</title>
+<!-- Page d'ESSAI du mode « palettier » de l'écran Plan d'entrepôt (`core/types/entrepot-palettier.js`, chantier E-7, lot 1),
+     dans le vrai moteur d'entreprise, sur le cas `contenus/palettier-essai.js` (5 palettes comme ENT-8.11, une 6e au confirmé).
+     Elle n'est liée nulle part et rien n'y est enregistré : la base vit en mémoire, un changement de réglage repart de zéro.
+     Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-palettier.html -->
+<base href="../">
+<link rel="icon" href="./styles/logo.png">
+<link rel="stylesheet" href="./styles/polices.css">
+<link rel="stylesheet" href="./styles/base.css">
+<link rel="stylesheet" href="./styles/inventaire.css">
+<link rel="stylesheet" href="./styles/plan.css">
+<link rel="stylesheet" href="./styles/grille.css">
+<link rel="stylesheet" href="./styles/quiz.css">
+<link rel="stylesheet" href="./styles/carte.css">
+<link rel="stylesheet" href="./styles/entrepot.css">
+<style>
+  .essai-reglages{ background:#fff7d6; border-bottom:1px solid #e8d48a; padding:3px 12px; font:12.5px/1.4 sans-serif; color:#3b3200 }
+  .essai-reglages label{ display:inline-block; margin:1px 10px 1px 0; white-space:nowrap; font-weight:400; color:#3b3200; font-size:12.5px }
+  .essai-reglages select{ width:auto; display:inline-block; padding:0 2px; font-size:12.5px; min-height:0; height:auto }
+  .essai-reglages button{ font:inherit; padding:0 8px; margin-right:6px; cursor:pointer }
+  .essai-note{ background:#fff7d6; border:1px solid #e8d48a; color:#3b3200; padding:4px 12px; font:13px/1.45 sans-serif }
+  .essai-mention{ font:11.5px/1.4 sans-serif; color:#3b3200; background:#fffbea; padding:2px 12px; border-bottom:1px solid #e8d48a }
+  .essai-note .ok{ color:#0b6b35; font-weight:700 } .essai-note .ko{ color:#9d2727; font-weight:700 } .essai-note .at{ color:#6b6250 }
+</style>
+</head>
+<body>
+<form class="essai-reglages" id="reglages">
+  <b>Essai</b> (chaque réglage repart de zéro) :
+  <label>De près <select name="aide"><option value="pose">plaque + déjà posé</option><option value="somme">plaque + déjà posé + somme</option><option value="plaque">plaque seule</option></select></label>
+  <label>Après « Valider » <select name="verdict"><option value="critere">nom du critère faux</option><option value="adresse">critère et adresse attendue</option><option value="">rien</option></select></label>
+  <label>Kevin monte <select name="monte"><option value="validation">à la validation</option><option value="message">à ta réponse (bouton)</option></select></label>
+  <label>Niveau <select name="niveau"><option value="standard">standard</option><option value="confirme">confirmé (P6)</option></select></label>
+  <label>Temps <select name="temps"><option value="guidage">travail</option><option value="evaluation">évaluation (copie)</option></select></label>
+  <label>Voir <select name="role"><option value="eleve">élève</option><option value="prof">enseignant</option></select></label>
+  <button type="button" id="kevin" hidden>Kevin a reçu ta réponse</button>
+  <button type="button" id="raz">Réinitialiser</button>
+</form>
+<div class="essai-mention" id="mention"></div>
+<div id="essaiNote" class="essai-note" hidden></div>
+<div id="hote"></div>
+<script type="module">
+import { creerEntreprise } from './core/types/entreprise.js';
+import { jalonsEntrepot } from './core/types/entrepot.js';
+import { MENTION, palettier, universPalettier } from './contenus/palettier-essai.js';
+
+document.getElementById('mention').innerHTML = MENTION;
+const form = document.getElementById('reglages');
+const boite = document.getElementById('essaiNote');
+const kevin = document.getElementById('kevin');
+let courant = null;
+// Le bilan des jalons, sous les réglages, dès que le rangement est validé (ce que lira la séance : ok / ko / à faire).
+function bilan() {
+  const { db, P, temps } = courant;
+  const e = (db.entrepots || {})[P.id];
+  if (!e || !e.valide) { boite.hidden = true; return; }
+  const { L } = jalonsEntrepot(db, P, temps);
+  boite.hidden = false;
+  boite.innerHTML = `<b>Bilan des jalons</b> (rangement validé) : ${L.map((l) => `<span class="${l.etat === 'ok' ? 'ok' : l.etat === 'ko' ? 'ko' : 'at'}">${l.etat === 'ok' ? '✓' : l.etat === 'ko' ? '✗' : '…'} ${l.id}${l.bonus ? ' (bonus)' : ''}</span>`).join(' · ')}`;
+}
+function monter() {
+  const f = new FormData(form);
+  const temps = f.get('temps');
+  const db = {};
+  const P = palettier({ aideCharge: f.get('aide'), verdict: f.get('verdict') || undefined,
+    monte: f.get('monte') === 'message' ? (d) => !!(d && d.essaiKevin) : undefined });
+  kevin.hidden = f.get('monte') !== 'message';
+  const hote = document.getElementById('hote');
+  const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
+  boite.hidden = true;
+  const moteur = creerEntreprise(universPalettier({ temps, entrepot: P }));
+  courant = { db, P, temps, moteur };
+  moteur.rendre(neuf, {
+    meta: { id: 'essai-palettier', code: 'ESSAI', titre: 'Essai du palettier', portee: 'eleve', immersif: true, temps, copie: temps === 'evaluation' },
+    profil: { prenom: 'Essai', nom: 'Palettier', role: f.get('role'), uid: 'essai' },
+    aisance: f.get('niveau'),
+    jeu: { etat: () => db, sauver: () => { bilan(); } },
+    enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: 'ESSAI',
+    lireScore: async () => null,
+    rendreCopie: async () => { bilan(); return { rendu: Date.now() }; },
+  });
+  window.__essai = courant;
+  document.querySelector('.ent-nav[data-vue="entrepot"]')?.click();
+}
+kevin.addEventListener('click', () => { courant.db.essaiKevin = true; document.querySelector('.ent-nav[data-vue="entrepot"]')?.click(); });
+document.getElementById('raz').addEventListener('click', monter);
+form.addEventListener('change', monter);
+monter();
+</script>
+</body>
+</html>

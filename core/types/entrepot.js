@@ -9,7 +9,8 @@
 // venu le même jour (voir plus bas, « PRÉPARATION ») ; le mode « comptage » (lot 3) n'est pas encore
 // écrit : une séance qui le déclare ne se charge pas. Le mode « masse » (stockage de masse en 3D isométrique, chantier D-5,
 // 11/10/2026) vit dans `entrepot-masse.js` : voir sa tête. Le mode « picking » (allée de picking en 3D guidée par le terminal
-// vocal, chantier D-7, 12/10/2026) vit dans `entrepot-picking.js` : voir sa tête.
+// vocal, chantier D-7, 12/10/2026) vit dans `entrepot-picking.js` : voir sa tête. Le mode « palettier » (ranger à l'adresse donnée par le
+// système, chantier E-7, lot 1, 21/10/2026) vit dans `entrepot-palettier.js` : il emprunte le plan et la travée de face d'ici.
 //
 // Elle vit dans l'environnement d'entreprise (`entreprise.js`), comme le quai et le planning, et
 // n'existe que si la séance déclare `entrepot` (`plan` est déjà la vue de transport). Elle ne connaît
@@ -89,6 +90,10 @@ import { compilerVisite, jalonsVisite, detailVisite, creerVisite, etatVisiteNeuf
 // Le mode STOCKAGE DE MASSE (chantier D-5, 11/10/2026) vit aussi dans son fichier : il ne prend rien du plan à racks.
 import { compilerPicking, etatPickingNeuf, jalonsPicking, attendusPicking, creerPicking } from './entrepot-picking.js';
 import { compilerMasse, etatMasseNeuf, jalonsMasse, solutionsMasse, creerMasse, placeDe, fautesMasse as fautesM, comptageMasse } from './entrepot-masse.js';
+// Le mode PALETTIER, ranger à l'adresse donnée (chantier E-7, lot 1, 21/10/2026) : son fichier ; il emprunte le plan et la travée.
+import { compilerPalettier, etatPalettierNeuf, jalonsPalettier, detailPalettier, attendusPalettier, creerPalettier,
+  confieesPalettier, etatLisiblePalettier, declarationDe } from './entrepot-palettier.js';
+import { niveauEleve } from '../tirage.js';
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
 import { auClavier } from '../gestes.js';
@@ -185,7 +190,8 @@ function compiler(P) {
   const err = (m) => { throw new Error(`entrepot ${P && P.id} : ${m}`); };
   if (!P || !P.id) err('il manque un id');
   const mode = P.mode || 'rangement';
-  if (!['rangement', 'preparation', 'visite', 'masse', 'picking'].includes(mode)) err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lot 3 du brief)`);
+  if (!['rangement', 'preparation', 'visite', 'masse', 'picking', 'palettier'].includes(mode)) err(`le mode « ${mode} » n'est pas encore écrit dans le moteur (lot 3 du brief)`);
+  const PAL = mode === 'palettier';   // ses produits n'ont pas de gamme, ses palettes ne citent pas de produit (voir son fichier)
   if (mode === 'masse') { const MM = compilerMasse(P, err); COMPILES.set(P, MM); return MM; }
   if (mode === 'picking') { const MK = compilerPicking(P, err); COMPILES.set(P, MK); return MK; }
   const L = P.plan || err('il manque le plan');
@@ -231,7 +237,7 @@ function compiler(P) {
   }
   const produits = P.produits || {};
   const gammes = P.gammes || {};
-  Object.entries(produits).forEach(([k, p]) => { if (!gammes[p.gamme]) err(`le produit ${k} a une gamme inconnue (${p.gamme})`); });
+  Object.entries(produits).forEach(([k, p]) => { if (!PAL && !gammes[p.gamme]) err(`le produit ${k} a une gamme inconnue (${p.gamme})`); });
   const stock = P.stock || {};
   Object.entries(stock).forEach(([a, s]) => {
     if (!existe.has(a)) err(`stock à une adresse inconnue : ${a}`);
@@ -239,7 +245,7 @@ function compiler(P) {
     if (!produits[s.produit]) err(`stock de ${a} : produit inconnu (${s.produit})`);
   });
   const pal = {};
-  (P.palettes || []).forEach((p) => {
+  (PAL ? [] : P.palettes || []).forEach((p) => {
     if (!produits[p.produit]) err(`palette ${p.id} : produit inconnu (${p.produit})`);
     if (p.rotation && !(L.rotation || {})[p.rotation]) err(`palette ${p.id} : classe de rotation inconnue (${p.rotation})`);
     if (p.litige && !litiges.length) err(`palette ${p.id} en litige, mais aucune zone litiges`);
@@ -270,6 +276,7 @@ function compiler(P) {
     nomGamme, gammeDe, cotesDeGamme, estLitige, occupant, chargeNiveau };
   if (mode === 'preparation') compilerPrep(M, err);
   else if (mode === 'visite') compilerVisite(M, err);
+  else if (PAL) compilerPalettier(M, err);
   else {
     M.jalons = (P.jalons || (P.palettes || []).map((p) => ({ id: `palette-${p.id}`, palette: p.id,
       lib: `${p.id} bien rangée (${p.nom || produits[p.produit].nom})` })));
@@ -523,6 +530,7 @@ export function etatNeuf(mode) {
   if (mode === 'visite') return etatVisiteNeuf();
   if (mode === 'masse') return etatMasseNeuf();
   if (mode === 'picking') return etatPickingNeuf();
+  if (mode === 'palettier') return etatPalettierNeuf();
   return { place: {}, verifie: false, verifs: 0, premierGeste: null, aideCharge: true };
 }
 const etatDe = (db, P) => (db && db.entrepots && db.entrepots[P.id]) || etatNeuf(P.mode);
@@ -533,6 +541,13 @@ const etatDe = (db, P) => (db && db.entrepots && db.entrepots[P.id]) || etatNeuf
 export function jalonsEntrepot(db, P, temps = P.temps) {
   const M = compiler(P);
   const e = etatDe(db, P);
+  // Palettier : les jalons de l'élève (ses palettes, selon son niveau ; en évaluation, le standard) ; un jalon bonus ne compte
+  // ni dans les réussis ni dans le total de la note proportionnelle.
+  if (M.mode === 'palettier') {
+    const LP = jalonsPalettier(M, e, niveauEleve(db, { copie: temps === 'evaluation' }));
+    const S = LP.filter((l) => !l.bonus);
+    return { L: LP, ok: S.filter((l) => l.ok).length, total: S.length };
+  }
   let L;
   if (M.mode === 'preparation') L = jalonsPrep(M, Object.assign(etatPrepNeuf(), e), temps);
   else if (M.mode === 'visite') L = jalonsVisite(M, e);
@@ -549,6 +564,7 @@ export function jalonsEntrepot(db, P, temps = P.temps) {
 // Les étapes à donner à `creerEntreprise` : un jalon = une étape du suivi. La visite rend aussi 'ko' (un
 // essai faux), pour que le repérage sache ce qui n'a pas été réussi du premier coup.
 export function etapesEntrepot(P) {
+  if (P && P.mode === 'palettier') return etapesPalettier(P);
   return jalonsEntrepot({}, P).L.map(({ id, lib }) => ({
     id, titre: lib,
     verifier(db) {
@@ -582,6 +598,7 @@ export function noteEntrepot(db, P, temps = P.temps) {
     return { score, max: N.sur, ok, total, detail: { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, adresse: l.place, criteres: l.criteres })),
       premierGeste: e.premierGeste || null } };
   }
+  if (compiler(P).mode === 'palettier') return { score, max: N.sur, ok, total, detail: detailPalettier(compiler(P), e, L) };
   if (compiler(P).mode === 'preparation') {
     const X = calculPrep(compiler(P), Object.assign(etatPrepNeuf(), e));
     return { score, max: N.sur, ok, total,
@@ -598,6 +615,7 @@ export function bonnesReponses(P) {
   const M = compiler(P);
   if (M.mode === 'masse') return solutionsMasse(M);
   if (M.mode === 'picking') return attendusPicking(M);
+  if (M.mode === 'palettier') return attendusPalettier(M);
   return Object.fromEntries(Object.keys(M.pal).map((id) => [id, solutions(M, id)]));
 }
 // Ce que la préparation attend (page d'essai, côté enseignant, tests) : les meilleurs tours, et la
@@ -628,6 +646,37 @@ export function futsReels(P, couloir, ref, lot = null) {
 export function comptagesTerminal(db, P) { const T = etatDe(db, P).terminal || {}; return Object.assign({}, T.reponses || {}); }
 export function comptageFini(db, P) { return !!(etatDe(db, P).terminal || {}).fin; }
 export function placeMasse(db, P, id) { return placeDe(compiler(P), Object.assign(etatMasseNeuf(), etatDe(db, P)), id); }
+// PALETTIER (chantier E-7, lot 1) : ce qu'une séance lit. `P` : la déclaration, ou la fonction `(graine, { niveau, copie })` de la
+// séance (lot 0 : la déclaration de l'élève est retrouvée par sa graine et son niveau, lus dans la base) ; `o.copie` en évaluation.
+// Les palettes confiées au cariste, [{ id, nom, adresse }] (les phrases du message à Kevin, ENT-8.11) ; l'état en clair
+// { enMain, posees, confiees, signalees: { P5: motif }, nouvelles, montees, tentativesHaut, valide }.
+export function palettesConfiees(db, P, o = {}) {
+  const Q = declarationDe(P, db, o);
+  return confieesPalettier(compiler(Q), etatDe(db, Q), niveauEleve(db, o));
+}
+export function etatPalettier(db, P, o = {}) { const Q = declarationDe(P, db, o); return etatLisiblePalettier(compiler(Q), etatDe(db, Q), db); }
+// Les étapes à donner à `creerEntreprise` : la liste est celle de la déclaration de RÉFÉRENCE (graine « », standard), la même
+// pour tous les élèves ; chaque `verifier` juge la déclaration de L'ÉLÈVE. Une palette `niveaux: ['confirme']` donne des jalons
+// `bonus: true` dont le `verifier` rend null chez un élève qui ne l'a pas. Une fonction doit déclarer les mêmes palettes à tous
+// les niveaux (celles du confirmé marquées) : sinon les listes diffèrent et la séance ne se charge pas.
+export function etapesPalettier(E, { copie = false } = {}) {
+  const ref = (niveau) => compiler(declarationDe(E, { aisance: niveau }, { copie }));
+  const R = ref('standard');
+  if (R.mode !== 'palettier') throw new Error(`entrepot ${R.P.id} : etapesPalettier sert au mode palettier (mode « ${R.mode} »)`);
+  const ids = R.jalons.map((j) => j.id).join();
+  if (typeof E === 'function' && !copie) {
+    ['confirme', 'accompagne'].forEach((n) => {
+      if (ref(n).jalons.map((j) => j.id).join() !== ids) throw new Error(`entrepot ${R.P.id} : les jalons du niveau « ${n} » ne sont pas ceux du standard (déclarer les mêmes palettes à tous les niveaux ; celles du confirmé portent niveaux: ['confirme'])`);
+    });
+  }
+  return R.jalons.map((j) => ({
+    id: j.id, titre: j.lib, ...(j.bonus ? { bonus: true } : {}),
+    verifier(db) {
+      const l = jalonsEntrepot(db, declarationDe(E, db, { copie }), copie ? 'evaluation' : undefined).L.find((x) => x.id === j.id);
+      return l ? { status: l.etat } : null;
+    },
+  }));
+}
 
 /* ================================================================ géométrie */
 // Les zones nommées qu'une visite peut déclarer dans `zones` (clé, nom affiché par défaut), de haut en bas.
@@ -987,6 +1036,10 @@ export function creerEntrepot(P, opts = {}) {
   }
 
   /* ------------------------------------------- la travée vue de face */
+  // Réglages du mode palettier (21/10/2026), chacun ABSENT = le dessin d'avant : `R.sansPoids` (aucun poids sur les
+  // emplacements : la charge déjà posée ne se déduit pas), `R.reserves` ({ adresse: palette } : emplacement réservé, la palette
+  // attend le cariste, en trait), `R.choisi` (l'emplacement vu de près, cerné de l'accent, sans aplat). Le capteur se cache
+  // déjà par `R.aideCharge` faux.
   function htmlFace(e, R) {
     const d = decoupe(`${ui.trav}-N1-E1`), c = M.cotes[d.c], g = G.racks[d.c];
     // Le capteur de charge (05/10/2026) : un boîtier fixé au montant droit, un par niveau au-dessus du sol. Il
@@ -1022,12 +1075,13 @@ export function creerEntrepot(P, opts = {}) {
       for (let k = 1; k <= M.E; k++) {
         const a = adresse(d.c, d.t, n, k), p = M.occupant(e.place, a), hs = M.hs.has(a), x = XG + (k - 1) * PW;
         const st = PREP && (e.vides || []).includes(a) ? null : M.stock[a];
-        const lib = st ? (PREP ? `${court(st.produit)}, ${n === 1 ? `picking, ${pickDe(e, a)} cartons` : 'réserve'}` : `${court(st.produit)}, ${kg(st.kg)}`)
-          : p ? `votre palette ${p}, ${kg(M.pal[p].kg)}` : hs ? 'hors service' : 'libre';
+        const sp = !!R.sansPoids, res = !st && !p && !hs && R.reserves ? R.reserves[a] : null;
+        const lib = st ? (PREP ? `${court(st.produit)}, ${n === 1 ? `picking, ${pickDe(e, a)} cartons` : 'réserve'}` : sp ? court(st.produit) : `${court(st.produit)}, ${kg(st.kg)}`)
+          : p ? (sp ? `votre palette ${p}` : `votre palette ${p}, ${kg(M.pal[p].kg)}`) : hs ? 'hors service' : res ? `réservé à ${res}, à monter` : 'libre';
         // La visite met en avant l'emplacement trouvé, et lui seul, en vert : il dit « juste » (l'accent de
         // l'entreprise peut être rouge, comme chez Smoby).
         const marque = ui.marque === a;
-        s += `<g class="pe-emp${marque ? ' pe-marque' : ''}" data-pe-emp="${a}" data-pe-cle="emp:${a}" tabindex="0" role="button" aria-label="${a} : ${ech(lib)}">
+        s += `<g class="pe-emp${marque ? ' pe-marque' : ''}${R.choisi && R.choisi === a ? ' pe-choisi' : ''}" data-pe-emp="${a}" data-pe-cle="emp:${a}" tabindex="0" role="button" aria-label="${a} : ${ech(lib)}">
           <rect class="pe-cible" x="${x + 3}" y="${yb - 116}" width="${PW - 6}" height="112" rx="3" fill="${hs ? 'url(#peHachF)' : marque ? 'var(--vert-pale)' : 'transparent'}" stroke="${marque ? 'var(--vert)' : 'transparent'}" stroke-width="${marque ? 4 : 0}"/>`;
         const contenuPrep = PREP ? empPrep(e, a, n, x, yb, PW) : null;
         if (contenuPrep) s += contenuPrep;
@@ -1035,7 +1089,11 @@ export function creerEntrepot(P, opts = {}) {
           s += `<rect x="${x + 14}" y="${yb - 92}" width="${PW - 28}" height="78" fill="${p ? 'var(--pe-carton)' : 'var(--pe-gris)'}" stroke="${p ? 'var(--pe-carton-trait)' : 'var(--pe-gris-trait)'}" stroke-width="${p ? 2.5 : 1}"/>
             <rect x="${x + 14}" y="${yb - 14}" width="${PW - 28}" height="11" fill="#a87b45"/>
             <text x="${x + PW / 2}" y="${yb - 58}" text-anchor="middle" font-size="13" font-weight="${p ? 800 : 600}" fill="${p ? '#1a1915' : 'var(--pe-sur-gris)'}" ${TXT}>${ech(p || court(st.produit))}</text>
-            <text x="${x + PW / 2}" y="${yb - 38}" text-anchor="middle" font-size="15" font-weight="800" fill="${p ? '#1a1915' : 'var(--pe-sur-gris)'}" ${TXT}>${kg(p ? M.pal[p].kg : st.kg)}</text>`;
+            ${sp ? '' : `<text x="${x + PW / 2}" y="${yb - 38}" text-anchor="middle" font-size="15" font-weight="800" fill="${p ? '#1a1915' : 'var(--pe-sur-gris)'}" ${TXT}>${kg(p ? M.pal[p].kg : st.kg)}</text>`}`;
+        } else if (res) {
+          s += `<rect x="${x + 14}" y="${yb - 92}" width="${PW - 28}" height="78" fill="none" stroke="var(--ardoise)" stroke-width="2.5" stroke-dasharray="8 5" data-pe-reserve="${ech(res)}"/>
+            <text x="${x + PW / 2}" y="${yb - 58}" text-anchor="middle" font-size="14" font-weight="800" fill="var(--encre)" ${TXT}>${ech(res)}</text>
+            <text x="${x + PW / 2}" y="${yb - 38}" text-anchor="middle" font-size="12" fill="var(--encre-douce)" ${TXT}>à monter</text>`;
         } else if (hs) {
           s += `<text x="${x + PW / 2}" y="${yb - 56}" text-anchor="middle" font-size="13" font-weight="800" fill="var(--rouge)" ${TXT}>HORS SERVICE</text>`;
         } else {
@@ -1491,6 +1549,16 @@ export function creerEntrepot(P, opts = {}) {
   if (M.mode === 'visite') {
     return creerVisite(P, M, { G, ui, Y0, TH, htmlPlan, htmlFace,
       echap: (racine, fn) => { echap = { racine, fn }; }, clavier: auClavier });
+  }
+  // Le palettier (chantier E-7, lot 1) emprunte de même le plan et la travée de face, avec ses réglages.
+  if (M.mode === 'palettier') {
+    const V = creerPalettier(P, M, opts, { G, ui, AW, htmlPlan, htmlFace,
+      echap: (racine, fn) => { echap = { racine, fn }; }, clavier: auClavier });
+    const temps = opts.copie ? 'evaluation' : undefined;
+    V.jalons = (db) => jalonsEntrepot(db, P, temps);
+    V.note = P.note || opts.copie ? (db) => noteEntrepot(db, P, temps) : null;
+    V.bonnesReponses = () => bonnesReponses(P);
+    return V;
   }
 
   return {

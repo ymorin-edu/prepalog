@@ -458,3 +458,76 @@ button.vt-son-btn:focus-visible{ outline:3px solid #ffe08a; outline-offset:1px }
 .vt-bilan h3{ margin:0 0 6px; font-size:1rem }
 .vt-bilan ul{ margin:0; padding-left:1.2em }
 .vt-bilan p{ margin:8px 0 0; color:var(--encre-douce) }
+
+/* ------------------------------------------------------------------
+   Le PALETTIER à adresse donnée (core/types/entrepot-palettier.js, chantier E-7, lot 1, 21/10/2026).
+   Le plan et la travée de face sont ceux du rangement ; s'y ajoutent la vue de près d'un emplacement (à droite de la
+   travée), l'encart « Système » (la colonne de droite garde la place du Terminal du lot 2, 300 px comme le terminal
+   vocal) et les cartes des palettes avec l'étiquette du système. Le vert plein ne dit que « juste » (après « Valider »,
+   en texte) : palettes confiées, zone « À monter » et emplacement vu de près se marquent d'un TRAIT de l'accent, jamais
+   d'un aplat ; un refus est du texte rouge. La plaque et le capteur sont des objets dessinés : teintes fixes, texte foncé
+   sur la plaque jaune, clair sur le capteur sombre (contrastes ≥ 4,5).
+   ------------------------------------------------------------------ */
+.pal-jeu{ display:grid; grid-template-columns:minmax(0,1fr) 300px; gap:8px; align-items:start }
+@media (max-width:900px){ .pal-jeu{ grid-template-columns:minmax(0,1fr) } }
+.pal-bandeau .pe-pal{ display:flex; flex-direction:column; gap:2px }
+.pal-carte .pe-ttl{ margin:0 }
+.pal-etiq{ display:flex; flex-direction:column; align-items:flex-start; align-self:flex-start; max-width:100%; padding:0 7px 1px;
+  border:1.5px solid var(--encre); border-radius:3px; background:var(--fond); white-space:nowrap; line-height:1.15 }
+.pal-etiq small{ font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--encre-douce) }
+.pal-etiq b{ font-size:.9rem }
+.pal-etiq.pal-nouvelle{ border-width:2.5px; border-color:var(--ardoise) }
+.pal-info{ font-size:.78rem; color:var(--encre-douce); white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pal-etat{ font-size:.76rem; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pe-pal.pal-confiee{ border:3px dashed var(--pe-carton-trait); padding:4px 6px }
+.pe-pal.pe-en-main.pal-confiee{ border-style:solid }
+
+.pal-cote{ display:flex; flex-direction:column; gap:8px; font-size:.88rem; line-height:1.35; min-width:0 }
+.pal-cote > *{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:6px 8px }
+.pal-cote > .pe-msg:empty{ display:none }
+.pal-systeme{ padding:0 !important; overflow:hidden }
+.pal-systeme-t{ font-size:.72rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--encre-douce);
+  padding:4px 8px; border-bottom:1px solid var(--filet) }
+.pal-systeme-e{ min-height:5.2em; padding:6px 8px; font:.88rem/1.4 "IBM Plex Mono", ui-monospace, Consolas, monospace; overflow-wrap:anywhere }
+.pal-sys-passe{ color:var(--encre-douce); font-size:.8rem }
+.pal-sys-actu{ font-weight:700 }
+.pal-sys-vide{ color:var(--encre-douce) }
+.pal-liste-amonter span{ display:block }
+.pal-liste-amonter > span:first-child{ display:inline }
+.pal-p-reserve{ background:transparent; border:1.5px dashed var(--ardoise) }
+
+/* la travée ouverte : la travée de face à gauche, la vue de près à droite, dans la même hauteur */
+.pal-partage{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; align-items:start }
+.pal-fil{ max-width:none; flex:1 }
+.pe-emp.pe-choisi .pe-cible{ stroke:var(--ardoise); stroke-width:5 }
+.pal-pres{ height:var(--pe-dispo, 520px); overflow:auto; display:flex; flex-direction:column; gap:6px; padding:2px 6px 2px 2px; font-size:.92rem }
+.pal-pres-vide{ justify-content:flex-start; color:var(--encre-douce); padding-top:12px }
+.pal-etiq-emp{ display:flex; flex-direction:column; align-items:flex-start; gap:2px; align-self:flex-start; padding:3px 10px 5px;
+  background:#fbfaf6; border:2px solid #1a1915; border-radius:4px; color:#1a1915 }
+.pal-etiq-emp b{ font-size:1.2rem; letter-spacing:.02em; line-height:1.2 }
+.pal-code{ display:block; width:160px; height:15px }
+.pal-niv{ display:flex; flex-direction:column; gap:0; line-height:1.35 }
+.pal-occ{ font-weight:700 }
+.pal-occ-hs{ color:var(--rouge) }
+.pal-charge{ display:flex; flex-wrap:wrap; gap:8px; align-items:stretch }
+.pal-plaque{ display:flex; flex-direction:column; justify-content:center; padding:5px 10px; background:var(--pe-plaque); color:#1a1915;
+  border-radius:3px; font:700 .82rem "IBM Plex Mono", ui-monospace, Consolas, monospace; text-transform:uppercase; line-height:1.3 }
+.pal-plaque b{ font-size:1rem }
+.pal-capteur{ display:grid; grid-template-columns:auto auto; align-items:center; gap:0 8px; padding:4px 10px; background:#2a2d31;
+  border:1.5px solid #1a1915; border-radius:8px; color:#c9c3b8; font-size:.7rem; letter-spacing:.06em }
+.pal-capteur-t{ font-weight:700; grid-column:1 / -1 }
+.pal-capteur-v{ background:#141a12; border-radius:3px; padding:1px 8px; display:flex; gap:8px; align-items:baseline; justify-content:space-between; grid-column:1 / -1 }
+.pal-capteur-v small{ color:#a39c8e }
+.pal-capteur-v b{ color:#f3d04a; font:700 1.25rem "IBM Plex Mono", ui-monospace, Consolas, monospace }
+.pal-capteur-b{ grid-column:1 / -1; text-align:center }
+.pal-somme{ flex-basis:100%; padding:3px 8px; border:1px dashed var(--encre-douce); border-radius:4px }
+.pal-sol{ color:var(--encre-douce) }
+.pal-main{ border-left:3px solid var(--ardoise); background:var(--survol); padding:4px 8px; border-radius:0 var(--r) var(--r) 0; line-height:1.35 }
+.pal-boutons{ display:flex; flex-wrap:wrap; gap:6px }
+.pal-boutons .btn{ flex:1 1 auto; min-height:40px }
+.pal-boutons .pal-signaler{ flex-basis:100% }
+.pal-motifs{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:5px; margin:0; padding:2px 6px 6px; border:1px solid var(--filet); border-radius:var(--r) }
+.pal-motifs legend{ font-weight:700; font-size:.86rem; padding:0 4px }
+.pal-motifs .btn{ min-height:34px; padding:3px 8px; font-size:.84rem; line-height:1.15 }
+.pal-motifs .pal-annuler{ grid-column:1 / -1; min-height:30px }
+.pal-pres .pe-msg:empty{ display:none }
