@@ -100,8 +100,10 @@ un bloc de tests par séance (`action-811` … `action-814`), bloc moteur nouvea
 ### Retours d'écran de Tristan sur la page d'essai du lot 1 (21/10/2026, 22 h 30)
 
 16. **La nouvelle adresse s'impose à l'écran** : au signalement d'une palette qui a `nouvelleAdresse`, une fenêtre modale (palette,
-    produit, nouvelle adresse, bouton « Compris ») que l'élève doit fermer ; la ligne reste aussi dans l'encart « Système ». Sans
-    `nouvelleAdresse` (ou en copie) : pas de fenêtre.
+    produit, nouvelle adresse, bouton « Compris ») que l'élève doit fermer ; la ligne reste aussi dans l'encart « Système ».
+    **Second retour (23 h) : la fenêtre s'ouvre à chaque signalement**, avec un texte neutre quand le système ne donne pas d'autre
+    adresse (« Signalement enregistré pour P3 (…) : « C'est occupé ». Le système ne donne pas d'autre adresse : la palette retourne en
+    réception. ») et, en copie, « … C'est noté. » ; jamais de jugement à l'écran, le signalement à tort coûte `place-<P>` (décision 6).
 17. **Bouton « Faire monter les palettes »** sous « Valider mon rangement » : geste `entrepot:<id>:monter` (inscrit dans `signaux`).
     Sans `cariste.monte`, le bouton fait monter tout de suite ce qui est « À monter » ; avec `monte: (db) => bool`, le bouton
     publie le geste et les palettes montent quand la base le dit (ENT-8.11 : Kevin écrit à `apresGeste('…:monter')`, l'élève lui
