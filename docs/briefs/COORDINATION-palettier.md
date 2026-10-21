@@ -85,8 +85,8 @@ un bloc de tests par séance (`action-811` … `action-814`), bloc moteur nouvea
     quelle, et le texte de Samia peut le dire en un mot.
 12. **Comptage d'ENT-8.12 et 8.14 au niveau 1 seulement** (picking) : l'élève ne monte pas, et une palette au niveau 2 ne se
     compte pas depuis le sol. La banque des 12 adresses et les 4 de l'évaluation sont au sol ; les rôles (manque, surplus,
-    conforme) ne dépendent pas du niveau. **Question posée à Tristan** (il peut préférer des adresses en hauteur comptées
-    depuis le sol).
+    conforme) ne dépendent pas du niveau. **Tranché par Tristan (21/10/2026 au soir)** : « les adresses à compter sont toutes
+    au niveau 1 (picking), l'élève ne monte pas ».
 13. **ENT-8.14, ouverture** : formulations neutres comme ENT-8.10 (« ton tuteur », « l'entreprise qui t'accueille » : le moteur
     ne remplace pas `{tuteur}` dans une question d'ouverture) ; `e-adresse` cite l'allée A ou B (pas C, absente de
     Belleville). Le plan par site se lit avec `siteDeGraine` et `COLLEGUES` **importés depuis `contenus/action-ent810-donnees.js`**
