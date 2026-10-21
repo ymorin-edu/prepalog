@@ -2008,7 +2008,7 @@ export function creerQuai(Q, opts = {}) {
       const no = 1 + k * p.W * p.D + j * p.W + i, rf = refDeCouche(p, k), et = (rf ? rf.etiq : p.etiq) || {};
       const av = p.avarie[`${i},${j},${k}`];
       cartons.push({ i, j, k, no, ref: rf ? rf.ref : p.ref, absent: manque.has(`${i},${j},${k}`), abime: av ? DIR_FACE(av) : null,
-        etiq: { haut: marque(et), no: `${no}/${total}`, ref: et.ref || (rf ? rf.ref : p.ref), bas: et.court || '' } });
+        etiq: { haut: marque(et), no: String(no), ref: et.ref || (rf ? rf.ref : p.ref), bas: et.court || '' } });
     }
     return { nW: p.W, nD: p.D, nL: p.L, total, cartons };
   }
@@ -2411,9 +2411,8 @@ export function creerQuai(Q, opts = {}) {
   }
   // L'étiquette du carton cliqué, lisible, et ce qu'on voit de son état DEPUIS LA VUE ACTUELLE.
   // 20/10/2026 (décision de Tristan, reliquat Pelleau) : l'étiquette du zoom ne dit que le numéro (« Colis 7 »), jamais « / total », pour un carton, un fût ou un sac :
-  // le total est la palette complète numérotée par le moteur, même quand la feuille dit moins (couche du dessus incomplète, piège « couche normale ») .
-  // Le petit « n/N » dessiné sur la face du carton (`etiq.no`, `palIso`) est resté : il fait partie de la référence octet pour octet de Spartoo (bloc quai-iso) ;
-  // le retirer demande de régénérer cette référence (décision de Tristan, à prendre).
+  // le total est la palette complète numérotée par le moteur, même quand la feuille dit moins (couche du dessus incomplète, piège « couche normale »).
+  // Le petit numéro dessiné sur la face du carton (`etiq.no`, `palIso`) est lui aussi sans total (« 7 », plus « 7/40 ») : fait le 20/10/2026, référence octet pour octet de Spartoo régénérée.
   function zoomFut(p, s, cm) {
     const P = palFutsIso(p), f = s.carton ? P.futs.find((x) => x.no === s.carton && !x.absent) : null;
     if (!f) return `<span class="note">🔍 Clique sur un ${R.u.un} de la palette : son étiquette s’affiche ici (${fmtMin(C.etiquette)} la première fois).</span>`;
