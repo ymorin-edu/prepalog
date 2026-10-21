@@ -6,6 +6,9 @@
 // déclaration d'exemple du brief §3 : transpalette n° 1 en ordre, n° 2 fourche tordue et avertisseur muet, extincteur absent NON
 // réparable, plan de circulation affiché). Les variantes (refus, copie, tirage, avertisseur qui sonne) sont faites ici, à la main.
 // Les clics passent par la SOURIS, au milieu d'une zone de clic que `elementFromPoint` confirme dans la scène.
+// 21/10/2026 (décision de Tristan) : l'avertisseur s'essaie en cliquant le bouton DESSINÉ sous la tête de timon (`essai(n)`, à la souris) ;
+// le bouton d'interface « Essayer l'avertisseur du n° X » n'existe plus. Cas recalés ce jour-là (l'ancien bouton → `essai(n)`) : le premier
+// (« la vue s'ouvre »), le parcours juste, l'extincteur non réparable, l'avertisseur, le rechargement, et `parcoursJuste`.
 
 export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
@@ -101,11 +104,14 @@ async function cliquerPoint(id) {
     const z = racine.__insp.zones().find((q) => q.id === id && q.vue === svg.dataset.vue);
     if (!z) return { rate: `pas de zone dans la vue ${svg.dataset.vue}` };
     const M = svg.getScreenCTM(), q = svg.createSVGPoint();
+    // 21/10/2026 : jamais dans la zone du bouton de l'avertisseur d'un engin dont l'essai est déclaré (ce clic-là vaut l'essai).
+    const A = racine.__insp.avertisseurs().filter((a) => a.essai && a.vue === svg.dataset.vue).map((a) => a.rect);
     // Le milieu de chaque rectangle de la zone, le plus grand d'abord, puis d'autres points de ce rectangle (une marque envoyée,
     // inerte, masque ce qu'elle recouvre) : le premier qui tombe dans la scène, hors d'une marque.
     const fr = [[.5, .5], [.3, .3], [.7, .7], [.3, .7], [.7, .3], [.5, .25], [.5, .75]];
     for (const r of z.rects.slice().sort((a, b) => b.w * b.h - a.w * a.h)) for (const [fx, fy] of fr) {
       q.x = r.x + r.w * fx; q.y = r.y + r.h * fy;
+      if (A.some((a) => q.x >= a.x && q.x <= a.x + a.w && q.y >= a.y && q.y <= a.y + a.h)) continue;
       const e = q.matrixTransform(M);
       const t = document.elementFromPoint(e.x, e.y);
       if (t && svg.contains(t) && !t.closest('[data-i-marque]')) return { x: e.x, y: e.y };
@@ -119,7 +125,8 @@ async function cliquerPoint(id) {
 async function cliquerVide() {
   const p = await pg.evaluate((R) => {
     const racine = document.querySelector(R), svg = racine.querySelector('[data-i-scene]');
-    const Z = racine.__insp.zones().filter((q) => q.vue === svg.dataset.vue).flatMap((q) => q.rects);
+    const Z = racine.__insp.zones().filter((q) => q.vue === svg.dataset.vue).flatMap((q) => q.rects)
+      .concat(racine.__insp.avertisseurs().filter((a) => a.vue === svg.dataset.vue).map((a) => a.rect));
     const [vx, vy, vw, vh] = svg.getAttribute('viewBox').split(' ').map(Number);
     const M = svg.getScreenCTM(), q = svg.createSVGPoint();
     for (let i = 1; i < 20; i++) for (let j = 1; j < 20; j++) {
@@ -136,10 +143,29 @@ async function cliquerVide() {
   await pg.mouse.click(p.x, p.y);
 }
 const valider = async () => { await bouton('valider'); await bouton('valider'); };
+// 21/10/2026 : appuyer sur l'avertisseur du n° n = cliquer À LA SOURIS le milieu de la zone de son bouton dessiné (`__insp.avertisseurs()`),
+// vue « charge » ; `elementFromPoint` doit tomber dans la scène. Rend la taille de la zone à l'écran (px) : { w, h }.
+async function essai(n) {
+  if ((await pg.$eval(`${R} [data-i-scene]`, (s) => s.dataset.vue)) !== 'charge') await vue('charge');
+  await pg.$eval(`${R} [data-i-scene]`, (s) => s.scrollIntoView({ block: 'nearest' }));
+  const p = await pg.evaluate(({ R, n }) => {
+    const racine = document.querySelector(R), svg = racine.querySelector('[data-i-scene]');
+    const z = racine.__insp.avertisseurs().find((q) => q.n === n && q.vue === svg.dataset.vue);
+    if (!z) return { rate: `pas de bouton d’avertisseur pour le n° ${n}` };
+    const M = svg.getScreenCTM(), pt = (x, y) => { const q = svg.createSVGPoint(); q.x = x; q.y = y; return q.matrixTransform(M); };
+    const c = pt(z.rect.x + z.rect.w / 2, z.rect.y + z.rect.h / 2), a = pt(z.rect.x, z.rect.y), b = pt(z.rect.x + z.rect.w, z.rect.y + z.rect.h);
+    const t = document.elementFromPoint(c.x, c.y);
+    if (!t || !svg.contains(t)) return { rate: `le milieu du bouton n’est pas dans la scène (${t && t.tagName})` };
+    return { x: c.x, y: c.y, w: b.x - a.x, h: b.y - a.y };
+  }, { R, n });
+  vrai(!p.rate, `avertisseur du n° ${n} : ${p.rate}`);
+  await pg.mouse.click(p.x, p.y);
+  return { w: p.w, h: p.h };
+}
 // Le parcours juste : le n° 2 marqué et signalé, l'avertisseur essayé, l'extincteur marqué et signalé, puis le poste pris.
 async function parcoursJuste() {
   await cliquerPoint('tp2-fourche');
-  await bouton('essai', '[data-n="2"]');
+  await essai(2);
   await bouton('signaler');
   await vue('quai');
   await cliquerPoint('extincteur');
@@ -147,12 +173,12 @@ async function parcoursJuste() {
   await valider();
 }
 
-await v('Inspection : la vue s’ouvre au menu « Mon poste », sans erreur ; deux vues, bouton d’avertisseur, aucun objet nommé dans le dessin (ni title, ni tabindex, ni data-*)', async () => {
+await v('Inspection : la vue s’ouvre au menu « Mon poste », sans erreur ; deux vues, plus de bouton d’interface pour l’avertisseur (21/10/2026), aucun objet nommé dans le dessin (ni title, ni tabindex, ni data-*)', async () => {
   egal(await monter(), null, 'séance refusée');
   await pg.waitForSelector(`${R} [data-i-scene]`);
   egal(await texte('#insp-hote .ent-nav[data-vue="inspection"]'), 'Mon poste', 'entrée de menu');
   egal(await pg.$$eval(`${R} button[data-i="vue"]`, (L) => L.map((b) => b.textContent)), ['Le local de charge', 'Le quai'], 'bascule des deux vues');
-  egal(await pg.$$eval(`${R} button[data-i="essai"]`, (L) => L.map((b) => b.textContent)), ['Essayer l’avertisseur du n° 2'], 'un bouton par essai déclaré');
+  egal(await pg.$$eval(`${R} button`, (L) => L.filter((b) => b.dataset.i === 'essai' || /avertisseur/i.test(b.textContent)).length), 0, 'bouton d’interface de l’avertisseur');
   egal(await texte(`${R} button[data-i="signaler"]`), 'Signaler à Erwan', 'bouton Signaler');
   egal(await texte(`${R} button[data-i="valider"]`), 'C’est bon, je prends mon poste →', 'bouton de prise de poste');
   const nomme = await pg.$$eval(`${R} [data-i-scene] *`, (L) => L.filter((e) => e.tagName.toLowerCase() === 'title' || e.hasAttribute('tabindex') || e.hasAttribute('role')
@@ -231,7 +257,7 @@ await v('Inspection : parcours juste — défauts marqués et signalés, avertis
   egal(await texte(`${R} [data-i-chef]`), 'Erwan : « Bien vu. Je le mets de côté : prends le n° 1. Tu me dis quand tu prends ton poste. »', 'réponse d’Erwan');
   const etats = await pg.evaluate(async () => { const I = await import('/core/types/inspection.js'); return I.etatsInspection(window.__in.D, window.__in.db.inspections['essai-inspection']['pelleau-poste-102']); });
   egal(etats['transpalette-2'], 'ok', 'le n° 2 réparé sous les yeux');
-  await bouton('essai', '[data-n="2"]');
+  await essai(2);
   await vue('quai');
   await cliquerPoint('extincteur');
   await bouton('signaler');
@@ -280,7 +306,7 @@ await v('Inspection : extincteur « reparable: false » — signalé, il reste a
   egal(await et(), 'absent', 'toujours absent');
   await vue('charge');
   await cliquerPoint('tp2-fourche');
-  await bouton('essai', '[data-n="2"]');
+  await essai(2);
   await bouton('signaler');
   await valider();
   egal(await statuts(), { 'securite-tp2-fourche': 'ok', 'securite-extincteur': 'ok', 'essai-2': 'ok', 'securite-aucun-faux': 'ok' }, 'jalons');
@@ -288,10 +314,10 @@ await v('Inspection : extincteur « reparable: false » — signalé, il reste a
 
 await v('Inspection : avertisseur — « rien ne sonne » (muet), « le klaxon sonne » (en ordre), aucun son ; le jalon essai-<n> existe même quand il sonne, faux s’il n’est pas essayé ; geste publié une fois', async () => {
   await monter({ sonne: true, arret: false });
-  egal(await pg.$$eval(`${R} button[data-i="essai"]`, (L) => L.map((b) => b.textContent)), ['Essayer l’avertisseur du n° 2', 'Essayer l’avertisseur du n° 1'], 'boutons');
-  await bouton('essai', '[data-n="2"]');
+  egal(await pg.$$eval(`${R} button[data-i="essai"]`, (L) => L.length), 0, 'boutons d’interface');
+  await essai(2);
   egal(await texte(`${R} [data-i-essai]`), 'Tu appuies : rien ne sonne.', 'muet');
-  await bouton('essai', '[data-n="2"]');
+  await essai(2);
   egal((await etat()).essais, [2], 'premier essai rangé une fois');
   egal(await pg.$$eval('audio, video', (L) => L.length), 0, 'aucun son');
   await valider();
@@ -299,12 +325,46 @@ await v('Inspection : avertisseur — « rien ne sonne » (muet), « le klaxon s
   egal([d['essai-2'], d['essai-1']], ['ok', 'ko'], 'n° 2 essayé, n° 1 (qui sonne) pas essayé');
   egal(Object.keys((await base()).gestes[SEANCE]).filter((g) => g.endsWith(':essai')), [`inspection:${ID}:essai`], 'geste essai');
   await monter({ sonne: true });
-  await bouton('essai', '[data-n="1"]');
+  await essai(1);
   egal(await texte(`${R} [data-i-essai]`), 'Tu appuies : le klaxon sonne.', 'sonne');
   // Après la prise de poste, l'essai ne se fait plus (le jalon dit « avant de prendre le poste »).
   await monter({ arret: false });
   await valider();
-  vrai(await pg.$eval(`${R} button[data-i="essai"]`, (b) => b.disabled), 'essai encore possible après la prise de poste');
+  await essai(2);
+  egal([(await etat()).essais, await pg.$$eval(`${R} [data-i-essai]`, (L) => L.length), await nbMarques()], [[], 0, 0], 'essai encore possible après la prise de poste');
+});
+
+// ── 21/10/2026 (décision de Tristan) : l'avertisseur s'essaie sur l'engin. Cas ajoutés.
+await v('Inspection : bouton dessiné de l’avertisseur (21/10/2026) — sur l’engin dont l’essai est déclaré, le clic VAUT l’essai et ne pose aucune marque (texte, essais [2], geste, jalon essai-2 ✓) ; zone ≥ 14 px à 1366 × 768 ; l’ancien bouton n’existe plus', async () => {
+  await monter({ arret: false });
+  egal(await pg.$$eval(`${R} button`, (L) => L.filter((b) => b.dataset.i === 'essai' || /avertisseur/i.test(b.textContent)).length), 0, 'ancien bouton « Essayer l’avertisseur »');
+  const t = await essai(2);
+  vrai(t.w >= 14 && t.h >= 14, `zone du bouton trop petite à 1366 × 768 : ${Math.round(t.w)} × ${Math.round(t.h)} px`);
+  egal(await texte(`${R} [data-i-essai]`), 'Tu appuies : rien ne sonne.', 'texte de l’essai');
+  egal(await nbMarques(), 0, 'une marque posée sur le bouton de l’avertisseur');
+  const st = await etat();
+  egal([st.essais, st.marques.length, st.compteur], [[2], 0, 0], 'état rangé');
+  egal(Object.keys((await base()).gestes[SEANCE]), [`inspection:${ID}:essai`], 'geste essai seul');
+  // Le reste de l'engin se marque toujours (le défaut du n° 2), et l'essai ne compte pas comme un signalement.
+  await cliquerPoint('tp2-fourche');
+  egal((await etat()).marques.map((m) => m.point), ['tp2-fourche'], 'marque sur l’engin hors du bouton');
+  await valider();
+  egal((await jalons())['essai-2'], 'ok', 'jalon essai-2');
+  egal((await etat()).signaux.length, 0, 'l’essai envoyé comme un signal');
+  // En copie, pareil : l'essai n'est pas un signalement.
+  egal(await monter({ copie: true }), null, 'copie refusée');
+  await essai(2);
+  egal([await nbMarques(), (await etat()).essais, await texte(`${R} [data-i-essai]`)], [0, [2], 'Tu appuies : rien ne sonne.'], 'copie : essai sans marque');
+});
+
+await v('Inspection : bouton dessiné de l’avertisseur (21/10/2026) — sur un engin SANS essai déclaré (le n° 1), le clic sur le bouton est un clic sur l’engin : une marque, aucun essai', async () => {
+  await monter();
+  const z = await pg.evaluate((R) => document.querySelector(R).__insp.avertisseurs().map((a) => [a.n, a.essai]), R);
+  egal(z, [[1, false], [2, true]], 'boutons dessinés, essai déclaré');
+  await essai(1);
+  egal((await etat()).marques.map((m) => m.point), ['tp1'], 'marque sur le n° 1');
+  egal([(await etat()).essais, await pg.$$eval(`${R} [data-i-essai]`, (L) => L.length)], [[], 0], 'aucun essai');
+  egal((await base()).gestes?.[SEANCE]?.[`inspection:${ID}:essai`], undefined, 'geste essai');
 });
 
 const REP = 'Reçu. Je regarde ça tout à l’heure.';
@@ -453,7 +513,7 @@ await v('Inspection : rechargement — marques, réponse d’Erwan, essais et fi
   await cliquerPoint('tp2-fourche');
   await bouton('signaler');
   await cliquerPoint('tp1');
-  await bouton('essai', '[data-n="2"]');
+  await essai(2);
   const db = await base();
   egal(await monter({ db }), null, 'reprise refusée');
   egal(await nbMarques(), 2, 'marques');

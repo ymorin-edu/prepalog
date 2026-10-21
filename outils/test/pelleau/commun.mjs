@@ -260,9 +260,12 @@ export function aidesInspection(P) {
       const z = racine.__insp.zones().find((q) => q.id === id && q.vue === svg.dataset.vue);
       if (!z) return { rate: `pas de zone dans la vue ${svg.dataset.vue}` };
       const M = svg.getScreenCTM(), q = svg.createSVGPoint();
+      // 21/10/2026 : jamais dans la zone du bouton de l'avertisseur d'un engin dont l'essai est déclaré (ce clic-là vaut l'essai, pas une marque).
+      const A = racine.__insp.avertisseurs().filter((a) => a.essai && a.vue === svg.dataset.vue).map((a) => a.rect);
       const fr = [[.5, .5], [.3, .3], [.7, .7], [.3, .7], [.7, .3], [.5, .25], [.5, .75]];
       for (const r of z.rects.slice().sort((a, b) => b.w * b.h - a.w * a.h)) for (const [fx, fy] of fr) {
         q.x = r.x + r.w * fx; q.y = r.y + r.h * fy;
+        if (A.some((a) => q.x >= a.x && q.x <= a.x + a.w && q.y >= a.y && q.y <= a.y + a.h)) continue;
         const e = q.matrixTransform(M);
         const t = document.elementFromPoint(e.x, e.y);
         if (t && svg.contains(t) && !t.closest('[data-i-marque]')) return { x: e.x, y: e.y };
@@ -273,7 +276,24 @@ export function aidesInspection(P) {
     await pg.mouse.click(p.x, p.y);
     await pause(40);
   }
-  const essai = (n = 1) => bouton('essai', `[data-n="${n}"]`);
+  // 21/10/2026 (décision de Tristan) : l'avertisseur s'essaie en cliquant le bouton DESSINÉ sous la tête de timon (le bouton d'interface
+  // « Essayer l'avertisseur du n° X » n'existe plus) : à la souris, au milieu de sa zone (`racine.__insp.avertisseurs()`), vue « charge ».
+  async function essai(n = 1) {
+    await vue('charge');
+    await pg.$eval(`${R} [data-i-scene]`, (s) => s.scrollIntoView({ block: 'nearest' }));
+    const p = await pg.evaluate(({ R, n }) => {
+      const racine = document.querySelector(R), svg = racine.querySelector('[data-i-scene]');
+      const z = racine.__insp.avertisseurs().find((q) => q.n === n && q.vue === svg.dataset.vue);
+      if (!z) return { rate: `pas de bouton d’avertisseur pour le n° ${n}` };
+      const q = svg.createSVGPoint(); q.x = z.rect.x + z.rect.w / 2; q.y = z.rect.y + z.rect.h / 2;
+      const e = q.matrixTransform(svg.getScreenCTM()), t = document.elementFromPoint(e.x, e.y);
+      if (!t || !svg.contains(t)) return { rate: `le milieu du bouton n’est pas dans la scène (${t && t.tagName})` };
+      return { x: e.x, y: e.y };
+    }, { R, n });
+    vrai(!p.rate, `avertisseur du n° ${n} : ${p.rate}`);
+    await pg.mouse.click(p.x, p.y);
+    await pause(40);
+  }
   const signaler = () => bouton('signaler');
   // « C'est bon, je prends mon poste » : deux clics (le second confirme).
   const valider = async () => { await bouton('valider'); await bouton('valider'); };

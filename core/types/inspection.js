@@ -17,7 +17,7 @@
 //       { id: 'extincteur', objet: 'extincteur', etat: 'absent', ok: false, reparable: false, lib: '…', repare: '…' },
 //       { id: 'plan', objet: 'affichage', etat: 'affiche', ok: true, lib: 'Plan de circulation affiché' },
 //     ],
-//     essai: { objet: 'transpalette', n: 2, resultat: 'muet' },   // ou une liste ; un bouton « Essayer l'avertisseur du n° 2 »
+//     essai: { objet: 'transpalette', n: 2, resultat: 'muet' },   // ou une liste ; l'élève appuie sur le bouton dessiné du n° 2 (21/10/2026)
 //     arret: true,                           // true, false ou le texte de l'arrêt (guidage seulement)
 //     commencer: 'C’est bon, je prends mon poste',
 //     signaler: { rien, fin, vide, deja, note, reponse },   // facultatif : les répliques du collègue ; `reponse` = LA phrase unique (voir `signaler`)
@@ -45,8 +45,13 @@
 // `signalerScene`, `validerScene`, `jalonsScene` sont des fonctions internes de `creerQuai` (fermeture sur son état `db.quais[id]`) :
 // les exporter demanderait de les sortir de la fermeture, donc de changer `quai.js` au-delà d'un `export`. Rien n'est importé du quai.
 // DIFFÉRENCE voulue (Tristan, 19/10/2026) : un clic qui ne touche aucun objet ne pose RIEN (le quai fait de même depuis le 20/10/2026).
+//
+// 21/10/2026 (décision de Tristan, `docs/decisions.md`) : L'AVERTISSEUR S'ESSAIE SUR L'ENGIN. Le bouton d'interface « Essayer l'avertisseur
+// du n° X » a disparu : l'élève clique le bouton de l'avertisseur dessiné sous la tête de timon (`core/iso.js`, `boiteAvertisseur`). Sur
+// un engin dont l'essai est déclaré, ce clic VAUT l'essai (texte « Tu appuies : … » dans le panneau, geste et jalon `essai-<n>` inchangés)
+// et ne pose AUCUNE marque ; sur un engin sans essai déclaré, c'est un clic sur l'engin comme un autre (marque). Le reste ne change pas.
 
-import { projection, boiteEcran, solQuai, murQuai, transpaletteElectrique, boitesTranspalette, ETATS_TRANSPALETTE,
+import { projection, boiteEcran, solQuai, murQuai, transpaletteElectrique, boitesTranspalette, boiteAvertisseur, ETATS_TRANSPALETTE,
   extincteur, boitesExtincteur, ETATS_EXTINCTEUR, affichage, boitesAffichage, ETATS_AFFICHAGE, borneCharge, prisesBorne } from '../iso.js';
 import { ech } from '../texte.js';
 import { secondClic } from '../gestes.js';
@@ -236,6 +241,20 @@ export function pointTouche(D, etats, vue, x, y) {
   const z = zonesInspection(D, etats).find((q) => q.vue === vue && q.rects.some((r) => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h));
   return z ? z.id : null;
 }
+// 21/10/2026 : les zones du BOUTON DE L'AVERTISSEUR, une par transpalette dessiné : `[{ n, vue: 'charge', rect, essai }]` (`essai` : un
+// essai est déclaré sur cet engin, donc le clic y vaut l'essai). Marge serrée (le bouton est petit, l'arrêt d'urgence et le voyant sont
+// juste au-dessus) : à 1366 × 768, la zone fait environ 36 × 52 px.
+export const MARGE_AVERTISSEUR = 3;
+export function zonesAvertisseur(D) {
+  const I = projeterVue('charge'), E = listeEssais(D).map((e) => e && e.n);
+  return numerosDessines(D).map((n) => ({ n, vue: 'charge', rect: boiteEcran(I, boiteAvertisseur(PLACE_TP[n]), MARGE_AVERTISSEUR), essai: E.includes(n) }));
+}
+// Le n° de l'engin dont on presse l'avertisseur par un clic en (x, y) de la vue `vue`, s'il a un essai déclaré ; sinon `null` (le clic
+// est alors un clic ordinaire : marque sur l'engin, ou rien).
+export function avertisseurTouche(D, vue, x, y) {
+  const z = zonesAvertisseur(D).find((q) => q.essai && q.vue === vue && x >= q.rect.x && x <= q.rect.x + q.rect.w && y >= q.rect.y && y <= q.rect.y + q.rect.h);
+  return z ? z.n : null;
+}
 // Les recouvrements entre zones de points DIFFÉRENTS d'une même vue (pour la page d'essai et les tests : doit rester vide).
 export function recouvrements(D, etats) {
   const Z = zonesInspection(D, etats), L = [];
@@ -312,7 +331,7 @@ export function signaler(D, st, { copie = false } = {}) {
   st.chef = L.join(' ');
   return true;
 }
-// « Essayer l'avertisseur » du transpalette n : le texte (aucun son). Le premier essai de chaque engin est rangé ; rend
+// L'avertisseur du transpalette n pressé (21/10/2026 : un clic sur son bouton dessiné, voir `avertisseurTouche`) : le texte (aucun son). Le premier essai de chaque engin est rangé ; rend
 // `{ texte, premier }` (`premier` : publier le geste `inspection:<id>:essai`). Un engin sans essai déclaré sonne.
 export function essayer(D, st, n) {
   const T = textes(D), e = listeEssais(D).find((x) => x && x.n === n);
@@ -430,12 +449,10 @@ export function creerInspection(decl, { copie = false, graine = '', niveau = 'st
     const dis = bloque(st, api) ? ' disabled' : '';
     const bascule = vues.length < 2 ? '' : `<p class="insp-ligne insp-bascule" role="group" aria-label="Où regarder">${vues.map((v) =>
       `<button type="button" class="btn${v === ui.vue ? ' btn-p' : ''}" data-i="vue" data-v="${v}" aria-pressed="${v === ui.vue}"${dis}>${ech(VUES_INSPECTION[v].titre)}</button>`).join('')}</p>`;
-    const boutonsEssai = ui.vue !== 'charge' ? '' : essais.map((n) => `<button type="button" class="btn" data-i="essai" data-n="${n}"${dis}>Essayer l’avertisseur du n° ${n}</button>`).join('');
     // Le bilan de la vue (guidage seulement) : la phrase `bilan` si un jalon est faux, sans nommer le point.
     const rate = !COPIE && st.fait && D.bilan && jalonsInspection(D, st).some((l) => !l.ok);
     return `<p class="insp-consigne" data-i-consigne>${ech(D.consigne || 'Clique sur ce qui ne va pas, puis signale-le.')}</p>
       ${bascule}
-      ${boutonsEssai ? `<p class="insp-ligne">${boutonsEssai}</p>` : ''}
       ${ui.essai ? `<p class="insp-essai" role="status" data-i-essai>${ech(ui.essai)}</p>` : ''}
       <div class="insp-chef" data-i-chef role="status">${st.chef ? `<b>${ech(majuscule(T.qui))} :</b> « ${ech(st.chef)} »` : ''}</div>
       ${ui.arret && !st.fait ? `<div class="insp-arret" role="alert" data-i-arret><b>${ech(majuscule(T.qui))} :</b> « ${ech(T.arret)} »</div>` : ''}
@@ -501,7 +518,18 @@ export function creerInspection(decl, { copie = false, graine = '', niveau = 'st
         if (!M) return;
         const p = pt.matrixTransform(M.inverse()), [vx, vy, vw, vh] = VUES_INSPECTION[ui.vue].viewBox;
         if (p.x < vx || p.x > vx + vw || p.y < vy || p.y > vy + vh) { horsObjet(); return; }
-        const r = cliquer(D, st, ui.vue, Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, { copie: COPIE });
+        const cx = Math.round(p.x * 10) / 10, cy = Math.round(p.y * 10) / 10;
+        // 21/10/2026 : le bouton de l'avertisseur d'un engin dont l'essai est déclaré = l'essai, sans marque (copie comprise).
+        const n = avertisseurTouche(D, ui.vue, cx, cy);
+        if (n != null) {
+          ui.hors = false; ui.arme = false;
+          const e = essayer(D, st, n);
+          ui.essai = e.texte;
+          if (e.premier) { signal('essai'); api.sauver(); }
+          rendre({ scene: false });
+          return;
+        }
+        const r = cliquer(D, st, ui.vue, cx, cy, { copie: COPIE });
         if (r) { marques(); api.sauver(); }
         // Un clic qui ne touche aucun objet ne pose rien : un mot discret à la place du compteur, sans aplat ni rouge.
         else if (r === null) horsObjet();
@@ -518,13 +546,7 @@ export function creerInspection(decl, { copie = false, graine = '', niveau = 'st
       }
       if (quoi === 'desarmer') { ui.arme = false; rendre({ scene: false }); return; }
       if (bloque(st, api)) return;
-      if (quoi === 'essai') {
-        ui.arme = false;
-        const r = essayer(D, st, +b.dataset.n);
-        ui.essai = r.texte;
-        if (r.premier) { signal('essai'); api.sauver(); }
-        rendre({ scene: false });
-      } else if (quoi === 'signaler') {
+      if (quoi === 'signaler') {
         ui.arme = false;
         if (signaler(D, st, { copie: COPIE })) { signal('signaler'); ui.arret = false; }
         api.sauver();
@@ -549,7 +571,7 @@ export function creerInspection(decl, { copie = false, graine = '', niveau = 'st
     }
     // Pour les tests et la page d'essai : l'état d'écran, sans passer par le DOM.
     racine.__insp = { lire: () => ({ vue: ui.vue, arme: ui.arme, arret: ui.arret, essai: ui.essai, hors: ui.hors }),
-      zones: () => zonesInspection(D, etatsInspection(D, st, { copie: COPIE })) };
+      zones: () => zonesInspection(D, etatsInspection(D, st, { copie: COPIE })), avertisseurs: () => zonesAvertisseur(D) };
   }
 
   return {

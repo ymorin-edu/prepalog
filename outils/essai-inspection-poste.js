@@ -3,6 +3,8 @@
 // `docs/briefs/COORDINATION-pelleau.md` §2 (points 1 à 8).
 //
 //   Partie 1 : chaque objet du kit (`core/iso.js`) dans chaque état, seul (`data-essai-objet`, `data-etat`) : se reconnaît-il sans légende ?
+//              21/10/2026 : plus la tête de timon de près (le bouton de l'avertisseur, qu'on clique pour l'essayer) ; sa zone de clic,
+//              à part de celle de l'engin, se montre en tirets courts quand « Montrer les zones » est coché.
 //   Partie 2 : la scène cliquable avec la déclaration d'exemple (brief §3), en guidage, DANS LE VRAI MOTEUR d'entreprise
 //              (`creerEntreprise` avec un faux univers et un faux `ctx`, comme `outils/essai-quai-inspection.js`) : ce que verra l'élève.
 //   Partie 3 : la même scène en copie (évaluation) : aucune réparation, aucun commentaire, aucun arrêt.
@@ -49,6 +51,7 @@ const LIB = {
   extincteur: { titre: 'Extincteur', present: 'Présent', absent: 'Absent (support vide)' },
   affichage: { titre: 'Plan de circulation', affiche: 'Affiché', absent: 'Absent (cadre vide)' },
   borne: { titre: 'Borne de charge (décor)', decor: 'Décor' },
+  tete: { titre: 'Tête de timon, de près (21/10/2026)', avertisseur: 'Le bouton de l’avertisseur (on le clique pour l’essayer)' },
 };
 // Une vignette : un bout de sol et de mur, l'objet, et sa zone (cachée sauf « Montrer les zones »).
 function vignette(objet, etat, teinte) {
@@ -60,6 +63,14 @@ function vignette(objet, etat, teinte) {
     s += borneCharge(I, [1.15, 0]) + transpaletteElectrique(I, [0, 0.3], etat, { n: 2, teinte, prise, essai: true });
     zones = boitesTranspalette(etat, [0, 0.3], prise);
     cadre = boiteEcran(I, [[-0.3, 0.15, 0, 1.2, 2.0, 1.4]], 6);
+  } else if (objet === 'tete') {
+    // La tête de timon de près : le transpalette dessiné plus grand, le cadre serré sur la tête et le bouton de l'avertisseur.
+    const J = projection({ unite: 420, origine: [300, 560] });
+    s = J.face([[-4, 0, 0], [4, 0, 0], [4, 4, 0], [-4, 4, 0]], '#e4dfd3', 'none') + transpaletteElectrique(J, [0, 0.3], 'ok', { n: 2, teinte, essai: true });
+    const za = boiteEcran(J, boitesTranspalette('ok', [0, 0.3]).avertisseur, 3);
+    cadre = boiteEcran(J, [[0.05, 0.3, 0.95, 0.8, 0.75, 1.32]], 6);
+    return `<figure class="eip-vignette"><figcaption>${ech(LIB.tete.avertisseur)}</figcaption>
+    <svg viewBox="${cadre.x} ${cadre.y} ${cadre.w} ${cadre.h}" role="img" aria-label="${ech(LIB.tete.titre)}"><g>${s}</g><g data-zones><rect x="${za.x}" y="${za.y}" width="${za.w}" height="${za.h}" fill="rgba(47,95,158,.08)" stroke="#2f5f9e" stroke-width="2" stroke-dasharray="2 3"/></g></svg></figure>`;
   } else if (objet === 'extincteur') {
     s += extincteur(I, [0.4, 0], etat, { essai: true });
     zones = boitesExtincteur([0.4, 0]);
@@ -72,7 +83,9 @@ function vignette(objet, etat, teinte) {
     s += borneCharge(I, [0.3, 0], { essai: true });
     cadre = boiteEcran(I, [[-0.35, 0, 0.55, 0.95, 0.45, 2.0]], 6);
   }
-  const z = zones.map((b) => { const r = boiteEcran(I, b, 10); return `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="rgba(47,95,158,.08)" stroke="#2f5f9e" stroke-width="2" stroke-dasharray="6 4"/>`; }).join('');
+  const z = zones.map((b) => { const r = boiteEcran(I, b, 10); return `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="rgba(47,95,158,.08)" stroke="#2f5f9e" stroke-width="2" stroke-dasharray="6 4"/>`; }).join('')
+    // 21/10/2026 : la zone du bouton de l'avertisseur, à part (tirets courts) : un clic y vaut l'essai quand l'essai est déclaré.
+    + (zones.avertisseur ? (() => { const r = boiteEcran(I, zones.avertisseur, 3); return `<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="none" stroke="#1a1915" stroke-width="2" stroke-dasharray="2 3"/>`; })() : '');
   return `<figure class="eip-vignette"><figcaption>${ech(LIB[objet][etat])}</figcaption>
     <svg viewBox="${cadre.x} ${cadre.y} ${cadre.w} ${cadre.h}" role="img" aria-label="${ech(LIB[objet].titre)} : ${ech(LIB[objet][etat])}"><g>${s}</g><g data-zones>${z}</g></svg></figure>`;
 }
@@ -80,7 +93,7 @@ export function monterObjets(hote) {
   let teinte = 'jaune';
   const dessiner = () => {
     hote.querySelector('[data-objets]').innerHTML = [
-      ['transpalette', ETATS_TRANSPALETTE], ['extincteur', ETATS_EXTINCTEUR], ['affichage', ETATS_AFFICHAGE], ['borne', ['decor']],
+      ['transpalette', ETATS_TRANSPALETTE], ['tete', ['avertisseur']], ['extincteur', ETATS_EXTINCTEUR], ['affichage', ETATS_AFFICHAGE], ['borne', ['decor']],
     ].map(([o, E]) => `<section class="eip-objet"><h3>${ech(LIB[o].titre)}</h3><div class="eip-grille">${E.map((e) => vignette(o, e, teinte)).join('')}</div></section>`).join('');
   };
   hote.innerHTML = `

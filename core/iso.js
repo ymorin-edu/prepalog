@@ -1897,6 +1897,10 @@ export const TEINTES_TRANSPALETTE = { jaune: ['#f2c21b', '#dcaa0b', '#be9206'], 
 const TPE = { L: .72, D: .57, fy: .57, fl: 1.15, fh: .075, fw: .17, fx: [.08, .47], roue: { y: .3, z: .13, r: .13, x: .7, l: .06 },
   tete: [.11, .1, 1.16, .5, .22, .09], timon: [.33, .2, .72, .08, .07, .46] };
 const NOIR_TPE = ['#4a4f52', '#33373a', '#2a2e30'], FOURCHE_TPE = ['#5c6266', '#43484b', '#33373a'];
+// 21/10/2026 (décision de Tristan : l'avertisseur s'essaie sur l'engin) : le BOÎTIER DE L'AVERTISSEUR, sous le devant de la tête de timon,
+// un peu à droite du milieu (l'arrêt d'urgence est au-dessus à gauche, le voyant au-dessus à droite : leurs dessins restent hors de sa
+// boîte de clic). [dx, dy, z, largeur, épaisseur, hauteur] depuis le coin du châssis. Sur sa face avant : un rond clair et la trompe noire.
+const AVERT_TPE = [.33, .32, 1.07, .18, .03, .18];
 // Le point du connecteur de charge sur le capot : à l'arrière, du côté de la prise murale `prise` (s'il y en a une).
 function connecteurTpe(x, y, prise) {
   return prise && prise[0] < x + TPE.L / 2 ? [x + .14, y + .06, .74] : [x + .58, y + .06, .74];
@@ -1935,7 +1939,9 @@ function roueTpe(I, x, y, abime) {
 // tête de timon, jauge vide, câble de charge DÉBRANCHÉ, fiche au sol) | 'arretUrgence' (le bouton d'arrêt d'urgence de la
 // tête manque : un trou noir dans sa platine jaune) | 'fuite' (une flaque sombre sous le groupe hydraulique, à l'avant du capot).
 // Options (`o`) : `n` (le numéro peint en grand sur le flanc du capot), `teinte` ('jaune', défaut, ou 'gris'), `prise` (le
-// point [x, y, z] de la prise murale où il se charge : le câble y est branché, sauf en 'batterie'), `essai` (voir `objetEssai`).
+// point [x, y, z] de la prise murale où il se charge : le câble y est branché, sauf en 'batterie'), `essai` (voir `objetEssai`),
+// `avertisseur` (21/10/2026 : le bouton de l'avertisseur sous le devant de la tête de timon, dessiné par défaut ; `false` = le dessin
+// d'avant, sans lui). Le bouton est le même dans tous les états (l'avertisseur muet ne se voit pas : il ne se trouve qu'en appuyant).
 export function transpaletteElectrique(I, pos, etat = 'ok', o = {}) {
   const { boite, face, P } = I, u = I.unite;
   const [x, y] = pos;
@@ -2003,11 +2009,32 @@ export function transpaletteElectrique(I, pos, etat = 'ok', o = {}) {
     g += `<path d="M${fx1(kx)},${fx1(ky)} C${fx1(kx)},${fx1(ky + u * .4)} ${fx1(px)},${fx1(py + u * .4)} ${fx1(px)},${fx1(py)}" fill="none" stroke="#1b1d1f" stroke-width="${ep}" stroke-linecap="round"/>`
       + boite(o.prise[0] - .045, o.prise[1] - .02, o.prise[2] - .045, .09, .07, .09, ['#4a4f52', '#2a2e30', '#1f2224']);
   }
+  if (o.avertisseur !== false) g += boutonAvertisseur(I, x, y);
   return objetEssai(o, 'transpalette', ETATS_TRANSPALETTE.includes(etat) ? etat : 'ok', g);
+}
+// Le bouton de l'avertisseur (21/10/2026) : un boîtier noir sous le devant de la tête de timon ; sur sa face avant, un rond clair
+// cerclé de noir et le pictogramme de la trompe (embouchure, pavillon évasé, deux ondes) en noir. Ni vert ni rouge : le rouge reste
+// l'arrêt d'urgence. Dessiné en dernier (il est devant tout ce qui est à sa hauteur). Balise `data-iso-avertisseur` (retirée dans la vue).
+function boutonAvertisseur(I, x, y) {
+  const [dx, dy, z, w, d, h] = AVERT_TPE, X = x + dx, Y = y + dy;
+  const N = '#1a1915', sw = (v) => v.toFixed(4);
+  const picto = `<circle cx="${w / 2}" cy="${h / 2}" r=".072" fill="#f4f1ea" stroke="${N}" stroke-width="${sw(.008)}"/>`
+    + `<rect x=".030" y=".082" width=".036" height=".016" rx=".004" fill="${N}"/>`
+    + `<path d="M.064,.084 C.086,.082 .1,.07 .112,.054 L.112,.126 C.1,.11 .086,.098 .064,.096 Z" fill="${N}"/>`
+    + `<path d="M.124,.07 Q.137,.09 .124,.11" fill="none" stroke="${N}" stroke-width="${sw(.008)}" stroke-linecap="round"/>`
+    + `<path d="M.134,.06 Q.153,.09 .134,.12" fill="none" stroke="${N}" stroke-width="${sw(.008)}" stroke-linecap="round"/>`;
+  return `<g data-iso-avertisseur>${I.boite(X, Y, z, w, d, h, ['#2a2e30', '#1f2224', '#17191a'])}<g transform="${surMurX(I, X, Y + d + .001, z + h)}">${picto}</g></g>`;
+}
+// La boîte monde du bouton de l'avertisseur du transpalette en (x, y) : sa zone de clic à part (`boitesTranspalette(…).avertisseur`).
+export function boiteAvertisseur(pos = [0, 0]) {
+  const [dx, dy, z, w, d, h] = AVERT_TPE, [x, y] = pos;
+  return [x + dx, y + dy, z, x + dx + w, y + dy + d, z + h];
 }
 // Les boîtes monde du transpalette en (x, y) dans l'état `etat` : le châssis et le capot, le timon et sa tête, les fourches en
 // trois tronçons (une zone par tronçon : deux engins côte à côte ne se recouvrent pas), et ce que l'état ajoute au sol
 // (flaque, éclats, fiche débranchée) ou en l'air (la fourche relevée). `prise` : comme pour le dessin (côté de la fiche).
+// 21/10/2026 : la liste porte en plus `.avertisseur` = la boîte du bouton de l'avertisseur (`boiteAvertisseur`), À PART : elle n'entre
+// pas dans la liste (la zone de l'engin ne change pas ; un `map`, un `...` ou un `boiteEcran` de la liste l'ignorent).
 export function boitesTranspalette(etat = 'ok', pos = [0, 0], prise = null) {
   const [x, y] = pos, y0 = y + TPE.fy, X0 = x + TPE.fx[0], X1 = x + TPE.fx[1] + TPE.fw;
   const L = [[x, y, 0, x + TPE.L, y + TPE.D, .76], [x + .03, y + .1, .72, x + .7, y + .32, 1.26]];
@@ -2020,6 +2047,7 @@ export function boitesTranspalette(etat = 'ok', pos = [0, 0], prise = null) {
   if (etat === 'fuite') L.push([x + .39, y + .55, 0, x + 1.2, y + 1.27, .01]);
   if (etat === 'roueAbimee') L.push([x + .78, y + .22, 0, x + 1.09, y + .68, .02]);
   if (etat === 'batterie') { const F = ficheAuSol(x, y, prise); L.push([F[0] - .08, F[1] - .06, 0, F[0] + .08, F[1] + .06, .1]); }
+  L.avertisseur = boiteAvertisseur(pos);
   return L;
 }
 

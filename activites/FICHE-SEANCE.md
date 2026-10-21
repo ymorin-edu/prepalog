@@ -1423,7 +1423,7 @@ export const ETAPES = etapesInspection(INSPECTION, 'pelleau-prise-de-poste').map
 | `points[]` | `{ id, objet, n?, etat, ok, lib, repare?, reparable? }` | — | liste vide ; `id` vide, en double ou **`aucun-faux`** (réservé) ; objet inconnu ; **deux points sur le même objet** (même transpalette n°) ; état inconnu pour l'objet ; `ok` absent ou **incohérent** (`ok: true` sur un état dangereux, `ok: false` sur l'état sûr) ; `n` hors de 1 et 2 (transpalette) ou donné à un autre objet ; `lib` absent |
 | `points[].repare` | ce que dit le collègue quand ce défaut est signalé | « Bien vu, je m’en occupe. » | — |
 | `points[].reparable` | `false` : le collègue répond, mais l'objet **reste** dans son état (l'extincteur n'apparaît pas d'un coup) ; le jalon est juste s'il a été signalé | réparé sous les yeux | autre valeur que `false` ; `false` sur un point en ordre |
-| `essai` | `{ objet: 'transpalette', n, resultat: 'muet' \| 'sonne' }` ou une liste : un bouton « Essayer l'avertisseur du n° X » par essai | aucun bouton | autre objet ; deux essais sur le même n° ; **engin déclaré par aucun point** ; `muet` sur un engin dont le point est en ordre ; un point `avertisseur` sans essai `muet` |
+| `essai` | `{ objet: 'transpalette', n, resultat: 'muet' \| 'sonne' }` ou une liste : l'élève **clique le bouton de l'avertisseur dessiné** sur le transpalette n° X (depuis le 21/10/2026 ; avant, un bouton d'interface « Essayer l'avertisseur du n° X ») | aucun essai (le bouton dessiné est un morceau de l'engin) | autre objet ; deux essais sur le même n° ; **engin déclaré par aucun point** ; `muet` sur un engin dont le point est en ordre ; un point `avertisseur` sans essai `muet` |
 | `arret` | `true`, `false` ou le texte de l'arrêt | `true` | autre type |
 | `commencer` | le bouton qui fige (suivi de « → ») | « C’est bon, je prends mon poste » | — |
 | `signaler` | `{ rien, fin, vide, deja, note, reponse }` : les répliques du collègue (point en ordre / toujours à la fin / rien à envoyer / défaut non réparable re-signalé / copie / **la réponse unique** : si `reponse` est déclarée (chaîne non vide, 20/10/2026), le collègue ne dit que cette phrase quoi que l'élève signale, sans `repare`, `rien`, `deja` ni `fin` ; `vide` (rien à envoyer) et `note` (copie) restent à part) | « Là, je ne vois rien qui cloche. » / « Tu me dis quand tu prends ton poste. » / « Qu’est-ce qui ne va pas ? … » / « Oui, je sais : c’est noté. » / « C’est noté. » | — |
@@ -1446,8 +1446,17 @@ Un transpalette que ne nomme aucun point ni essai n'est pas dessiné (le n° 1 s
   surbrillance. « Signaler à … » : les marques non envoyées partent en **un signal** ; le collègue répond les `repare` des défauts touchés
   pas encore signalés, puis « Oui, je sais » si un défaut non réparable est re-signalé (**pas un faux**), puis `rien` s'il y a un point en
   ordre ou un défaut déjà réparé, puis `fin`. Ce qui est réparable se répare sous les yeux. Une marque envoyée est grisée en tirets et
-  inerte. « Essayer l'avertisseur » : « Tu appuies : le klaxon sonne. » ou « Tu appuies : rien ne sonne. » (**aucun son**) ; seulement
-  dans la vue « charge ». Bascule « Le local de charge » / « Le quai », sans porte à ouvrir.
+  inerte. L'avertisseur (bouton dessiné, voir ci-dessous) : « Tu appuies : le klaxon sonne. » ou « Tu appuies : rien ne sonne. » (**aucun
+  son**) ; seulement dans la vue « charge ». Bascule « Le local de charge » / « Le quai », sans porte à ouvrir.
+- **L'avertisseur s'essaie sur l'engin (21/10/2026, décision de Tristan).** Chaque transpalette porte, sous le devant de sa tête de timon,
+  un **bouton d'avertisseur** dessiné (boîtier noir, rond clair, trompe noire ; ni vert ni rouge : le rouge reste l'arrêt d'urgence ; kit
+  `transpaletteElectrique`, option `avertisseur: false` = l'ancien dessin ; sa boîte : `boiteAvertisseur(pos)`, aussi rendue à part par
+  `boitesTranspalette(…).avertisseur`). Sur un engin dont l'**essai est déclaré**, un clic dans la zone de ce bouton (environ 36 × 52 px à
+  1366 × 768) **vaut l'essai** : le texte s'affiche dans le panneau, le premier essai est rangé (`essais`), geste `inspection:<id>:essai`,
+  jalon `essai-<n>` inchangés, **aucune marque** (en copie aussi : l'essai n'est pas un signalement). Sur un engin **sans essai déclaré**,
+  ce clic est un clic sur l'engin comme un autre (marque). Le bouton d'interface « Essayer l'avertisseur du n° X » **n'existe plus** :
+  l'essai se fait à la souris ou au doigt, comme les marques (plus au clavier). Rien ne change pour la déclaration ni pour les jalons.
+  Tests : `racine.__insp.avertisseurs()` rend `[{ n, vue, rect, essai }]` ; l'aide `essai(n)` des blocs clique le milieu de cette zone.
 - **« C'est bon, je prends mon poste »** : deux clics (« Tu prends ton poste, c'est définitif : clique pour confirmer », « Annuler » ; une
   marque posée désarme). Un défaut jamais signalé, en guidage et sauf `arret: false` : le collègue **arrête** l'élève (texte `arret`,
   **sans nommer le point**), qui continue d'inspecter ; ses signaux suivants comptent « après l'arrêt ». Sinon l'inspection est **figée**

@@ -144,3 +144,28 @@ d'un coup ; le jalon est quand même juste s'il a été signalé) ; `essai` pour
 - **À vérifier par Tristan à l'écran** (`outils/essai-inspection-poste.html`, parties 2 et 3) : la place du panneau à droite de la
   scène ; la phrase grise « Clique un objet du poste. » ; le filet terre de l'arrêt ; la réponse « Oui, je sais : c'est noté. » au
   re-signalement de l'extincteur ; la phrase de bilan sous « Tu as pris ton poste » ; la copie en deux clics.
+
+**21/10/2026 — l'avertisseur s'essaie sur l'engin (décision de Tristan, `docs/decisions.md` du 21/10).** Rien n'est commité par ce lot
+(le chef relit, commite et pousse).
+
+- **Dessin** (`core/iso.js`) : chaque transpalette électrique porte, sous le devant de la tête de timon, un **bouton d'avertisseur** (boîtier
+  noir 18 × 18 cm, rond clair cerclé de noir, trompe noire et deux ondes ; ni vert ni rouge). Placé un peu à droite du milieu pour que
+  l'arrêt d'urgence (au-dessus à gauche) et le voyant (au-dessus à droite) restent **hors** de sa zone. Option `avertisseur: false` de
+  `transpaletteElectrique` = le dessin d'avant ; **par défaut il est dessiné partout**, y compris dans les dessins « Avant de commencer »
+  d'ENT-10.2, 10.3 et 10.4 (un morceau de l'engin de plus, rien d'autre ne bouge). Boîte : `boiteAvertisseur(pos)`, aussi rendue **à part**
+  par `boitesTranspalette(…).avertisseur` (propriété de la liste, pas un élément : la zone de l'engin est inchangée).
+- **Vue** (`core/types/inspection.js`) : `zonesAvertisseur(D)`, `avertisseurTouche(D, vue, x, y)`. Un clic dans la zone du bouton d'un engin
+  dont l'essai est déclaré **vaut l'essai** (texte dans le panneau, à la même place qu'avant ; premier essai rangé ; geste et jalon
+  `essai-<n>` inchangés) et **ne pose aucune marque**, en copie aussi. Engin sans essai déclaré : clic ordinaire (marque). Le bouton
+  d'interface « Essayer l'avertisseur du n° X » est **supprimé**. Zone à 1366 × 768 : environ 36 × 52 px (marge 3). Écart : l'essai ne se
+  fait plus au clavier (comme les marques).
+- **Page d'essai** : partie 1, vignette « la tête de timon de près » et zone du bouton en tirets courts ; parties 2 et 3 inchangées (vrai
+  moteur), texte de la partie 2 à jour. `activites/FICHE-SEANCE.md` : ligne `essai` et paragraphe daté.
+- **Tests** : bloc `inspection` 23/23 (21 avant : cas **recalés** = « la vue s'ouvre », parcours juste, extincteur non réparable,
+  avertisseur, rechargement et l'aide `parcoursJuste` ; **ajoutés** = bouton de l'engin avec essai → essai sans marque, zone ≥ 14 px, ancien
+  bouton absent, copie ; bouton d'un engin sans essai → marque). Aide `essai(n)` d'`outils/test/pelleau/commun.mjs` passée à la souris,
+  et `cliquerPoint` évite la zone du bouton : `pelleau-102`, `pelleau-103` et `pelleau-104` **sans un cas réécrit**. Sabotages : le clic
+  sur le bouton ne fait plus l'essai (pose une marque) → 7 cas tombés dont le nouveau ; l'essai aussi sur un engin sans essai → le
+  second cas nouveau tombe.
+- **À vérifier par Tristan à l'écran** : le bouton se reconnaît-il au vidéoprojecteur ? Les consignes des séances ne disent pas encore où
+  est le bouton (« le bouton à la trompe, sous la tête de timon ») : à décider séance par séance.
