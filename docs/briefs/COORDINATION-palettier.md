@@ -97,6 +97,19 @@ un bloc de tests par séance (`action-811` … `action-814`), bloc moteur nouvea
 15. Le corps du brief moteur reste périmé sur trois points (`compte-<adresse>`, `apresSignalement`, pas de lot 0) : **ce
     fichier (§3) fait foi**, un renvoi est ajouté en tête du brief.
 
+### Retours d'écran de Tristan sur la page d'essai du lot 1 (21/10/2026, 22 h 30)
+
+16. **La nouvelle adresse s'impose à l'écran** : au signalement d'une palette qui a `nouvelleAdresse`, une fenêtre modale (palette,
+    produit, nouvelle adresse, bouton « Compris ») que l'élève doit fermer ; la ligne reste aussi dans l'encart « Système ». Sans
+    `nouvelleAdresse` (ou en copie) : pas de fenêtre.
+17. **Bouton « Faire monter les palettes »** sous « Valider mon rangement » : geste `entrepot:<id>:monter` (inscrit dans `signaux`).
+    Sans `cariste.monte`, le bouton fait monter tout de suite ce qui est « À monter » ; avec `monte: (db) => bool`, le bouton
+    publie le geste et les palettes montent quand la base le dit (ENT-8.11 : Kevin écrit à `apresGeste('…:monter')`, l'élève lui
+    répond, Kevin monte). **Le parcours de l'élève** : poser, signaler (fenêtre), faire monter, valider. « Valider » avec des
+    palettes encore « À monter » demande confirmation (« Des palettes attendent Kevin. Valider quand même ? ») ; validées sans être
+    montées, elles restent jugées « confiées à leur adresse » (`place-` ok). `monte: 'validation'` reste accepté (défaut d'avant)
+    mais le bouton existe dans tous les cas. **ENT-8.11 §4 étape 3 change** : Kevin écrit sur `monter`, plus sur `valider`.
+
 ## 4. Suivi
 
 | Lot / séance | État | Commit |
