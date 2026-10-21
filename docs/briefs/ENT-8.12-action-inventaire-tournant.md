@@ -7,10 +7,11 @@
 > ```
 
 **Statut** : à implémenter
-**Date du brief** : 21/10/2026
+**Date du brief** : 21/10/2026 ; **corrigé le 21/10/2026 au soir** d'après l'état des lieux du chantier moteur E-7 et les
+décisions de Tristan (§11 n° 4).
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action, 21/10/2026 (fiche `claude/prepalog-action-cadrage-c1.5.md`).
 **Modèle** : **Opus** (séance nouvelle).
-**Place dans l'ordre** : après ENT-8.11. Attend le **lot 4** de `MOTEUR-palettier-adresse-donnee.md`.
+**Place dans l'ordre** : après ENT-8.11. Attend les **lots 0, 1, 2 et 4** de `MOTEUR-palettier-adresse-donnee.md` (chantier E-7).
 **Durée estimée par Cowork** : ≈ 3 h 30. Ce qui prend le temps : les palettes à compter (dessin, couches, écarts tirés), la fiche de signalement
 calculée, les tests de l'aveugle.
 
@@ -18,8 +19,8 @@ calculée, les tests de l'aveugle.
 
 ## 0. Règles communes
 
-**§0 d'ENT-8.11** (tout : CAP, Ensuès, Samia / Kevin / Julie, décisions de Tristan du 21/10, interdits). **Date : mercredi 3 mars, 6 h** (proposée),
-le lendemain d'ENT-8.11, **dans la même allée**. Rien n'est lu dans la base d'ENT-8.11 : l'allée est redéclarée (même plan, stock du jour).
+**§0 d'ENT-8.11** (tout : CAP, Ensuès, Samia / Kevin / Julie, décisions de Tristan du 21/10, **décisions sur le moteur du 21/10 au soir** — charte
+bleue, « Terminal » sans voix, on scanne l'emplacement avant de compter —, interdits). **Sans date** (décision de Tristan) : **le lendemain d'ENT-8.11, 6 h**, **dans la même allée**. Rien n'est lu dans la base d'ENT-8.11 : l'allée est redéclarée (même plan, stock du jour).
 
 Écrans : **Avant de commencer → Compter (palettier, terminal) → Signaler à Samia (fiche) → Rendre compte (phrases)** → bilan.
 
@@ -145,8 +146,8 @@ Tirage **3 préparation + 1 image**, non notées.
 | Bloc | Cases | Poids | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|---|
 | **Scanner avant de compter** | aucun compte tapé sans scan de la bonne adresse | **2** | `scanAvant` (lot 4) | **faux si rien n'est compté** (inaction) |
-| **Comptages justes** | 5 adresses notées sur 6, 1 chacune (la 6e : compte sans écart, non notée — voir §11 n° 2) | **5** | `compte-<adresse>` | dernier compte confirmé = réel |
-| **Recompter quand ça ne colle pas** | les **2 adresses à écart réel**, 1,5 chacune | **3** | `recompte-<adresse>` | sur une adresse à écart réel, le premier compte diffère toujours du système **si l'élève compte juste** : le terminal propose de recompter ; ✓ s'il a choisi « Recompter » au moins une fois ; si son premier compte égalait par erreur le système (le terminal n'a rien proposé), ✓ dès que l'adresse est comptée : l'erreur est déjà payée au comptage ; adresse non comptée = faux (§11 n° 1) |
+| **Comptages justes** | les 6 adresses, **par rang** dans la liste (`compte-1` … `compte-6`), **5/6 de point chacune** (option (a) de Tristan, 21/10) | **5** | `compte-1` … `compte-6` | dernier compte confirmé = réel ; les ids ne dépendent jamais de l'adresse tirée (la liste des jalons d'une séance est fixe) |
+| **Recompter quand ça ne colle pas** | les **2 adresses à écart réel**, 1,5 chacune | **3** | `recompte-manque`, `recompte-surplus` (ids fixes **par rôle** : §11 n° 1) | **règle unique (décision de Tristan, 21/10 au soir), jamais « à faire » après le comptage** : adresse non comptée → faux ; recomptage proposé et fait → juste ; proposé, confirmé sans recompter → faux ; rien proposé (premier compte = système) → juste (l'erreur se paie au jalon `compte-`) |
 | **Signaler sans corriger soi-même** | « je le signale à Samia » sur chaque ligne de **sa** fiche, 1,5 × 2 | **3** | fiche `ecarts`, ligne 1 | jugé sur **ses** écarts confirmés ; une fiche sans ligne (aucun écart confirmé) → faux (il n'a rien trouvé) |
 | **Une cause possible** | ligne 2 juste (l'une des deux réponses justes du sens), 1 × 2 | **2** | fiche `ecarts`, ligne 2 | idem |
 | **Les questions de Samia** | `q-pourquoi` 0,5 · `q-aveugle` 0,5 · `q-colisage` 0,75 · `q-que-faire` 0,75 · `q-cause` 0,75 · `q-argent` 0,75 | **4** | moteur des questions | `q-robot` non notée |
@@ -185,7 +186,7 @@ Tirage **3 préparation + 1 image**, non notées.
 
 - 6 adresses tirées parmi une banque de **12** (rôles du §6.1 respectés) ; écarts tirés (manque 2-4, surplus 1-3) ; 200 graines (chaque rôle
   à des adresses variées ; aucun secours).
-- **Confirmé** : une **7e adresse** en bonus, avec un **second manque** (jalons `compte-` et `recompte-` en `bonus: true`) ; consigne identique.
+- **Confirmé** : une **7e adresse** en bonus, avec un **second manque** (jalons `compte-7` et `recompte-bonus` en `bonus: true`) ; consigne identique.
 - **Accompagné** : l'encadré « Compter une palette » montre, **pour la palette ouverte**, le nombre de cartons par couche (« 3 × 3 = 9 par couche »)
   — pas le total.
 - **Consigne neutre** : « Compte les adresses de la liste » (ne dit pas qu'il y a des écarts).
@@ -206,8 +207,8 @@ Bloc `action-812` (alerte 7).
 - **Aveugle** : le nombre du système d'aucune adresse n'est dans la page avant l'ouverture de la fiche.
 - Un compte faux confirmé sur une adresse conforme → `compte-` ✗ ; elle apparaît dans la fiche (écart confirmé), sa ligne « je le signale » reste
   ✓ (une erreur ne se paie qu'une fois), sa cause est jugée **selon le sens de son écart**.
-- Écart réel trouvé du premier coup puis « Confirmer » sans recompter → `recompte-` ✗ (le terminal l'a proposé) ; trouvé, « Recompter », même nombre,
-  « Confirmer » → ✓.
+- Écart réel trouvé du premier coup puis « Confirmer » sans recompter → `recompte-<rôle>` ✗ (le terminal l'a proposé) ; trouvé, « Recompter », même
+  nombre, « Confirmer » → ✓ ; adresse à écart non comptée → ✗ ; aucun jalon ne reste « à faire » après « Terminer le comptage ».
 - « Je corrige le stock moi-même » → ✗ sur cette ligne.
 - `q-que-faire` et `q-cause` au bilan ; somme 20 ; `part` 4.
 - Sabotages : fiche jugée contre les écarts **réels** au lieu de **ses** écarts confirmés → le cas « une erreur ne se paie qu'une fois » tombe ;
@@ -226,13 +227,16 @@ l'aveugle », « Écart : recompter, puis signaler ». Corrigé : `contenus/corr
 
 ## 11. Questions ouvertes et décisions de Cowork
 
-1. **Proposé par Cowork** : le jalon « Recompter » (3 points) porte sur les **2 adresses à écart réel**, et ne fait jamais payer deux fois une erreur
-   de comptage (§5). Un élève qui a faux sur une adresse conforme et ne recompte pas ne perd rien ici (il perd le comptage). Si Tristan veut aussi
-   récompenser le recompte d'un écart **qu'il a cru voir**, le dire : le jalon change. ⚠ Le lot 4 du brief moteur dit « à faire » dans ce cas : la
-   séance le lit comme juste une fois l'adresse comptée.
-2. **Proposé par Cowork** : 5 comptages notés sur 6 (1 point chacun) ; la 6e adresse (conforme) compte dans la fiche mais pas dans la note. Autre
-   option : 6 × 5/6 point.
+1. **Règle du recompte : tranchée par Tristan (21/10 au soir)**, celle de l'état des lieux §C (voir §5) ; poids **non rééquilibrés** (limite connue :
+   sur une adresse à écart, l'élève qui compte faux en tombant pile sur le système gagne `recompte` mais perd `compte`). **Ids** : les comptes vont
+   **par rang** (`compte-1` … `compte-6`) ; le recompte, lui, ne porte de poids que sur les **deux adresses à écart**, dont le rang est tiré : Cowork
+   les nomme **par rôle** (`recompte-manque`, `recompte-surplus`, liste fixe, comme le proposait l'état des lieux §A). Le moteur peut aussi rendre
+   `recompte-1` … `recompte-6` sans poids : la séance n'en pèse que les deux rôles. À confirmer à la construction.
+2. **Tranché par Tristan (21/10, 18 h 08) : option (a)**, 6 comptages à **5/6 de point** chacun (somme 5, poids validés gardés). Si le moteur
+   refuse ces décimales (somme contrôlée à 20), le dire à Tristan avant de changer quoi que ce soit.
 3. Textes de Cowork (Samia, questions, retours, fiche, phrases) : à relire à l'écran.
+4. **Corrections du 21/10/2026 au soir** (état des lieux E-7) : ids des jalons par rang (ou par rôle pour le recompte), règle unique du recompte,
+   lots 0, 1, 2, 4 ; « Terminal » sans voix ; charte bleue.
 
 ---
 

@@ -7,11 +7,12 @@
 > ```
 
 **Statut** : à implémenter
-**Date du brief** : 21/10/2026
+**Date du brief** : 21/10/2026 ; **corrigé le 21/10/2026 au soir** d'après l'état des lieux du chantier moteur
+(`docs/briefs/MOTEUR-palettier-adresse-donnee-etat-des-lieux.md`) et les 14 décisions de Tristan (chantier **E-7**) — §11 n° 5.
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action, 21/10/2026, 16 h 14 → 17 h 00 : **13 décisions de Tristan** (fiche du
 projet `claude/prepalog-action-cadrage-c1.5.md`). Ce qui n'a pas été tranché par Tristan est signalé « proposé par Cowork » et listé au §11.
 **Modèle** : **Opus** (séance nouvelle).
-**Place dans l'ordre** : après ENT-8.10. Attend les **lots 1 et 2** de `MOTEUR-palettier-adresse-donnee.md`.
+**Place dans l'ordre** : après ENT-8.10. Attend les **lots 0, 1 et 2** de `MOTEUR-palettier-adresse-donnee.md` (ordre du chantier E-7 : 0 → 1 → 2 → 4 → 3 → 5 → 6).
 **Durée estimée par Cowork** : ≈ 4 h. Ce qui prend le temps : le plan de l'allée et les palettes, l'étiquette d'adresse dessinée, la fiche, les
 questions, les tests. Rien de nouveau au moteur hors du chantier ci-dessus.
 
@@ -35,8 +36,22 @@ questions, les tests. Rien de nouveau au moteur hors du chantier ci-dessus.
   5. Évaluation : la matinée complète, dans le **site d'évaluation** de l'élève (ENT-8.14).
   6. Produits : **catégories réelles d'Action, produits sans marque**, lourds et légers mêlés ; aucune saison.
   7. Les séances C1.5 déjà ouvertes au CAP (5.5, 6.5, 6.6, 2.3, TAB-4, TAB-5) **restent telles quelles** (renforcement).
-- **Dates (proposées par Cowork, §11)** : ENT-8.11 **mardi 2 mars, 13 h 30** ; ENT-8.12 **mercredi 3 mars, 6 h** ; ENT-8.13 **jeudi 4 mars, 20 h 30**
-  puis **vendredi 5 mars, 6 h** ; ENT-8.14 **mardi 9 mars, 6 h** (sans année ; jours justes en 2027).
+- **Sans date** (décision de Tristan, 21/10/2026, 18 h 12) : les séances ne donnent **que le jour et l'heure**, jamais de date ni de mois, pour
+  n'avoir rien à recaler si la progression bouge : ENT-8.11 **un mardi, 13 h 30** ; ENT-8.12 **le lendemain, 6 h** ; ENT-8.13 **un jeudi, 20 h 30**
+  puis **le lendemain, 6 h** ; ENT-8.14 **un mardi, 6 h**. Aucun texte (messages, documents, bandeau) n'écrit de date.
+- **Décisions de Tristan sur le moteur (21/10/2026 au soir, état des lieux du chantier E-7)**, valables pour les quatre séances :
+  - **Charte d'Action bleue** (`#195799`, `contenus/action.js`), gardée dans la zone de travail : la règle des chartes rouges ou vertes ne joue
+    pas ; le **vert plein reste réservé à « juste »** (« À monter », palettes confiées : trait ou bordure).
+  - Mode à part **`palettier`** (ENT-5.5 Smoby intact) ; plan d'entrepôt **tiré par élève** (lot 0) ; **phases** dans un seul entrepôt (8.13 :
+    soir / lendemain ; 8.14 : ranger / compter).
+  - **Deux scans, toujours dans le même ordre : la palette, puis l'emplacement** (en rangement comme en transfert) ; au comptage, on scanne
+    l'emplacement. Le boîtier est **le même que le terminal vocal, renommé « Terminal », sans voix** (à confirmer sur la page d'essai du lot 2).
+  - **Aide sur la charge** : guidage = plaque **+ « déjà posé »** (la somme faite seulement en **accompagné**) ; entraînement et évaluation = **la
+    plaque seule**.
+  - **Après un signalement juste, la nouvelle adresse est donnée par le terminal** (le système) ; Samia ne fait que commenter (jamais un « bien
+    vu » qui dépendrait de la justesse : un message n'est jamais conditionné à une réponse juste).
+  - **Signaler à tort coûte le point « rangée à son adresse »** (`place-`) de la palette signalée.
+  - **Le rangement se fige à « Valider mon rangement »** : « Corriger » ne le rouvre pas.
 - **Interdits** : aucun visage de salarié ; aucune parole prêtée à un salarié réel ; produits sans marque ; la plaque de charge dit *que*, jamais
   *de combien* dans un message de correction.
 
@@ -104,27 +119,33 @@ c'est Kevin. Et tu scannes toujours. Samia »
   « {T03} : c'est… » la 3e travée de l'allée / le niveau 3 / le quai 3 · « {N2} : c'est… » le 2e niveau, au-dessus du sol / le sol / le 2e
   emplacement. Envoi : « Envoyer à Samia » → « C'est ça. Maintenant, au rack ! »
 
-### Étape 2 — Ranger (Plan d'entrepôt, palettier à adresse donnée : lots 1 et 2)
+### Étape 2 — Ranger (Plan d'entrepôt, mode `palettier` : lots 0, 1 et 2)
 
 - Message de Samia (consigne) : « Prends une palette, va à son adresse. Niveau 1 : tu poses. Plus haut : tu vérifies la plaque, puis tu confies à
-  Kevin. Et tu scannes. Samia »
+  Kevin. Et tu scannes : la palette, puis l'emplacement. Samia »
 - **5 palettes** en zone de réception (§6) : 2 pour le **sol** (picking), 2 pour la **réserve** (Kevin), 1 dont l'**adresse dépasserait la plaque
   de charge** (à signaler).
-- Guidage : « Les règles ▾ » ouvertes (adresse, sol / réserve, plaque, scan), la plaque de charge et la charge déjà posée **visibles de près**
-  (aide charge du moteur) ; après « Vérifier », le nom du critère seul (« ✗ adresse », « ✗ scan », « ✗ plaque de charge »).
-- Signalement de la palette trop lourde : motif « charge dépassée » → Samia (`apresSignalement`) : « Bien vu. Le système te donne une autre adresse :
-  {adresse 2}. » ; l'élève la range (ou la confie) et la scanne.
+- Guidage : « Les règles ▾ » ouvertes (adresse, sol / réserve, plaque, scan) ; de près, **la plaque de charge et le « déjà posé »** du niveau
+  (la somme seulement en accompagné, §6 bis). **« Valider mon rangement » fige le rangement** (avec confirmation) ; ensuite, dans chaque carte, le
+  nom du critère seul (« ✗ adresse », « ✗ scan », « ✗ plaque de charge »).
+- Signalement (« On ne peut pas ranger ici », motif « charge dépassée ») : **le terminal** donne la nouvelle adresse de P5 (`nouvelleAdresse`
+  déclarée sur la palette) : « Nouvelle adresse : {adresse 2}. » ; l'élève la range (ou la confie) et la scanne. Samia commente, **le même
+  message quel que soit le signalement** (geste `entrepot:<id>:signaler:<P>`) : « C'est noté. Suis ce que te dit le terminal. Samia ». Un
+  signalement sur une autre palette : « Signalement enregistré. », sans nouvelle adresse ; il coûte le point `place-` de cette palette.
 
-### Étape 3 — Demander à Kevin (Messagerie, réponse par phrases)
+### Étape 3 — Répondre à Kevin (Messagerie, réponse par phrases)
 
-- Message de Samia (`apresGeste('entrepot:action-ranger:verifier')`) : « Écris à Kevin les palettes à monter. Samia »
-- Phrases **calculées** sur les palettes que l'élève a **confiées** (§6.3) : salutation · la demande (palettes et adresses) · politesse · fin.
-- Kevin répond (`apresMail`) : « OK, je monte ça tout de suite. Kevin » → les palettes passent de « À monter » à leur emplacement.
+- **Kevin écrit en premier** (la Messagerie ne sait répondre par phrases qu'à un message reçu), à la validation du rangement
+  (`apresGeste('entrepot:action-ranger:verifier')`) : « Salut {prénom} ! Tu as des palettes pour moi ? Kevin »
+- L'élève répond par phrases **calculées** sur les palettes qu'il a **confiées** (`palettesConfiees(db, P)`, §6.4) : salutation · la demande
+  (palettes et adresses) · politesse · fin.
+- **Kevin monte les palettes quand il a répondu** (`apresMail`) : « OK, je monte ça tout de suite. Kevin » → les palettes passent de « À monter » à
+  leur emplacement (décision de Tristan du 21/10 au soir).
 
 ### Fin
 
 - Samia : « Merci {prénom}. Demain matin, 6 h : inventaire tournant dans cette allée. Samia »
-- Bilan, `bilanDetail` ; « Corriger » rouvre la fiche, le rangement et le message.
+- Bilan, `bilanDetail` ; « Corriger » rouvre **la fiche et le message seulement** : le rangement est figé à « Valider » (`finFige`).
 
 **Mots cliquables** : adresse, allée, travée, niveau, emplacement, picking, réserve, plaque de charge, scanner, cariste.
 
@@ -172,14 +193,15 @@ moteur) ; poids proposés par Cowork (somme 4).
 | **Ranger au niveau 1** (C1.5.2) | P1 et P2 posées au sol, à leur adresse, 2 chacune | **4** | `place-P1`, `place-P2` | non posée = faux |
 | **Plaque de charge** (C1.5.2) | P5 signalée « charge dépassée », non posée ni confiée à son adresse d'origine 2 · aucune palette posée ou confiée au-delà d'une plaque 1 | **3** | `signale-P5`, critère `charge` | le second **seulement si toutes les palettes sont traitées** (sinon il récompense l'inaction) |
 | **Passer la main à Kevin** (C1.5.2) | P3 et P4 confiées à leur adresse, 1 chacune | **2** | `place-P3`, `place-P4` (+ `pasPoseHaut`, garde) | une tentative de pose en hauteur n'enlève rien ici (refusée par la vue), elle est en trace |
-| **Scanner** (C1.5.3) | P1 à P4 scannées à leur adresse, et P5 à sa nouvelle adresse, 0,6 chacune | **3** | `scan-P1` … `scan-P5` | non scannée = faux |
+| **Scanner** (C1.5.3) | P1 à P4 scannées (palette puis emplacement) à leur adresse, et P5 à sa nouvelle adresse, 0,6 chacune | **3** | `scan-P1` … `scan-P5` | non scannée = faux |
 | **Les questions de Samia** | `q-adresse` 0,75 · `q-plaque` 0,75 · `q-kevin` 0,5 · `q-sans-scan` 0,75 · `q-materiel` 0,75 · `q-securite` 0,5 | **4** | moteur des questions | — |
 | **Forme du message à Kevin** | salutation et politesse justes | **1** | phrases | ≤ 15 % (5 %) |
 | **Total** | | **20** | | |
 
 - La ligne « la demande » du message (palettes et adresses) **n'est pas notée à part** : elle est calculée sur ce que l'élève a confié (une erreur
   ne se paie qu'une fois).
-- **Corriger** : `'fiche:adresse'`, `'entrepot:action-ranger'`, `'phrases:kevin'`.
+- **Corriger** : `'fiche:adresse'`, `'phrases:kevin'` ; **pas le rangement** (figé à « Valider », `finFige`).
+- **Signaler à tort** une palette (P1 à P4) : son jalon `place-` est faux (décision de Tristan), le reste ne bouge pas.
 
 ## 6. Contenu (données)
 
@@ -238,14 +260,18 @@ Palette : **25 kg** (support). Poids d'une palette = cartons × kg + 25, **calcu
   sous les contraintes du §6.3 ; 200 graines vérifiées (aucun secours, chaque produit sorti au moins 10 fois).
 - **Confirmé** : une **6e palette** en bonus (réserve, à confier, jalons `place-P6` et `scan-P6` en `bonus: true`) ; consigne identique.
 - **Accompagné** : « Les règles ▾ » restent ouvertes, et la **somme « charge déjà posée + ta palette »** s'affiche de près (le calcul fait) ;
-  « Vérifier » dit l'adresse attendue pour la palette en main (et pas seulement le nom du critère).
+  après « Valider », le bilan dit l'adresse attendue pour chaque palette fausse (et pas seulement le nom du critère).
+- **Standard (guidage)** : la plaque et le « déjà posé », sans la somme.
 - **Consigne neutre** : « Range les palettes de la réception » (ne dit pas combien, ni qu'une est à signaler).
 
 ## 7. Demandes au moteur
 
-**Chantier `MOTEUR-palettier-adresse-donnee.md`, lots 1 et 2** (adresse donnée, niveaux du cariste, signaler, scan). À vérifier à l'état des lieux :
-- `apresSignalement` qui donne une nouvelle adresse (guidage) ;
-- la Messagerie qui calcule ses phrases sur **les palettes confiées** ;
+**Chantier `MOTEUR-palettier-adresse-donnee.md` (E-7), lots 0, 1 et 2** (plan tiré par élève, mode `palettier`, cariste, signaler, Valider qui
+fige, deux scans). Réponses de l'état des lieux (21/10) :
+- `apresSignalement` n'existe pas : **la vue** donne la nouvelle adresse (`nouvelleAdresse` sur la palette, dite par le terminal) ; Samia commente
+  par `apresGeste('entrepot:<id>:signaler:P5')`, même texte pour tout signalement ;
+- la Messagerie calcule ses phrases sur les palettes confiées (`palettesConfiees(db, P)` exportée par la vue), **une fois, à l'arrivée du message
+  de Kevin** ; Kevin écrit en premier ;
 - l'étiquette d'emplacement dessinée (document à gauche de la fiche) : un SVG de la séance suffit, sinon demande.
 
 ### 7 bis. Séance déjà jouée ? Non.
@@ -256,7 +282,8 @@ Bloc `action-811` (lignes dans `BLOCS` et `GROUPES` : alerte 7).
 
 - Parcours juste (deux témoins de graines différentes) : 20/20 ; inaction : 0/20 (le jalon « aucune palette au-delà d'une plaque » non compté).
 - P5 posée à son adresse d'origine → refusée par la vue (hauteur) ; confiée à Kevin à son adresse d'origine → `signale-P5` ✗ et critère `charge` ✗.
-- Signaler P3 « charge dépassée » (à tort) → ✗.
+- Signaler P3 « charge dépassée » (à tort) → `place-P3` ✗ (décision de Tristan), les autres jalons inchangés.
+- Kevin n'écrit qu'à la validation ; ses palettes ne montent qu'après la réponse de l'élève ; « Corriger » ne rouvre pas le rangement.
 - Une palette rangée et non scannée → `scan-P…` ✗, le reste ✓.
 - `q-plaque` corrigée au bilan ; somme des poids = 20 (cas) ; `part` 4.
 - Confirmé : P6 présente, bandeau identique, note du socle inchangée sans elle ; accompagné : somme de charge visible.
@@ -277,10 +304,13 @@ réserve », « La plaque de charge », « Toujours scanner ». Corrigé : `cont
 
 ## 11. Questions ouvertes et décisions de Cowork
 
-1. **Proposé par Cowork** : les dates (mardi 2 mars, 13 h 30, pour 8.11 ; voir §0). À confirmer par Tristan d'après sa progression CAP.
+1. **Tranché par Tristan (21/10, 18 h 12)** : **sans date**, le jour et l'heure seulement (§0).
 2. **Proposé par Cowork** : la répartition des 4 points de questions (§4 bis) et des poids à l'intérieur des blocs validés (§5).
 3. **Proposé par Cowork** : les entrées de la banque « Avant de commencer » sans ★ (§4 ter) ; les produits et colisages (§6.2) ; les plaques (§6.1).
 4. Textes de Cowork (Samia, Kevin, questions, retours, phrases) : à relire à l'écran.
+5. **Corrections du 21/10/2026 au soir** (état des lieux E-7, décisions de Tristan) : charte bleue ; Kevin écrit en premier et monte les palettes
+   après la réponse ; nouvelle adresse donnée par le terminal, Samia commente ; « Corriger » sans le rangement ; signaler à tort coûte `place-` ;
+   aide sur la charge selon le temps et le niveau ; deux scans (palette puis emplacement) ; lots 0, 1, 2.
 
 ---
 

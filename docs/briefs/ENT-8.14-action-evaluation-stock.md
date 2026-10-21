@@ -7,11 +7,12 @@
 > ```
 
 **Statut** : à implémenter
-**Date du brief** : 21/10/2026
+**Date du brief** : 21/10/2026 ; **corrigé le 21/10/2026 au soir** d'après l'état des lieux du chantier moteur E-7 et les
+décisions de Tristan (§11 n° 4).
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action, 21/10/2026 (fiche `claude/prepalog-action-cadrage-c1.5.md`), décisions
 5, 11, 12 et 13 de Tristan.
 **Modèle** : **Opus** (séance nouvelle, évaluation).
-**Place dans l'ordre** : après ENT-8.13. Attend **tout** le chantier `MOTEUR-palettier-adresse-donnee.md` (lot 6 compris).
+**Place dans l'ordre** : après ENT-8.13. Attend **tout** le chantier `MOTEUR-palettier-adresse-donnee.md` (E-7, lots 0 à 6 ; un seul entrepôt à **phases** `rangement` / `comptage`).
 **Durée estimée par Cowork** : ≈ 4 h. Ce qui prend le temps : deux plans de site, le jeu neuf tiré par élève, la copie faite de trois écrans, les
 deux témoins.
 
@@ -24,12 +25,14 @@ deux témoins.
   mauvaises réponses, plancher 0), un écran par étape, ni bonus ni niveau, jamais un élève bloqué, une erreur ne se paie qu'une fois.
 - **Même site qu'ENT-8.5 / 8.6 / 8.10** (module des sites, `contenus/action-eval-sites.js`) : **Onnaing (GXO)** ou **Belleville-en-Beaujolais
   (Kuehne+Nagel)** ; tuteur **Karim** ou **Sandrine** ; cariste **Léo** ou **Hugo** (construits) — décision 12 de Tristan.
-- **Date : mardi 9 mars, 6 h** (proposée), sans année : « De retour chez {prestataire} à {site} pour une journée. »
+- **Sans date** (décision de Tristan) : **un mardi, 6 h** ; « De retour chez {prestataire} à {site} pour une journée. »
 - **Décision 5 de Tristan** : une matinée en trois temps courts — ranger 4 à 5 palettes (dont une au-delà de la plaque, et **une adresse prise sans
   personne pour pousser**), puis compter 4 à 5 adresses dont une à écart confirmé, signalé avec une cause. ≈ 50 min, au rythme du CAP.
 - **Décision 11 + correction du 21/10** : les trois questions (adresse, colisage, éco-droit) passent dans « Avant de commencer » **noté** (4 points),
   comme en ENT-8.10.
 - **Comptage en cartons** (décision du 21/10) : la question de colisage compte des cartons.
+- **Décisions sur le moteur (21/10 au soir)** : §0 d'ENT-8.11 — charte bleue, deux scans (palette puis emplacement), « Terminal » sans voix,
+  rangement figé à « Valider » ; **de près, la plaque seule** (ni « déjà posé » ni somme) ; signaler à tort coûte le `place-` de la palette.
 
 Écrans : **Avant de commencer (noté) → Ranger (palettier) → Compter (palettier, terminal) → Signaler l'écart (fiche) → Rendre ma copie.**
 
@@ -72,7 +75,7 @@ travail. {tuteur} »
 
 ### Étape 0 — Avant de commencer (notée, 4 points) — §4 ter
 
-### Étape 1 — Ranger (palettier à adresse donnée, en copie, `rendCopie: false`)
+### Étape 1 — Ranger (mode `palettier`, phase `rangement`, en copie, `rendCopie: false`)
 
 - **Le plan du site** (§6.1) : autre nombre d'allées, de travées, de niveaux ; autres plaques de charge.
 - **5 palettes** : P1 et P2 au sol ; P3 en réserve (« Confier à {cariste} ») ; **P4** dont l'adresse **dépasserait la plaque** ; **P5** dont l'adresse
@@ -80,10 +83,10 @@ travail. {tuteur} »
 - Signaler P4 : la vue publie le signalement, **aucune nouvelle adresse** (évaluation : « C'est noté. ») ; P4 reste en réception.
 - « Valider mon rangement » (avec confirmation) → écran suivant. Aucun verdict.
 
-### Étape 2 — Compter (palettier, terminal à scanner, à l'aveugle)
+### Étape 2 — Compter (même entrepôt, phase `comptage`, « Terminal » sans voix, à l'aveugle)
 
 - Message du tuteur : « Merci. Maintenant, compte ces 4 adresses. {tuteur} »
-- 4 adresses : 3 conformes, **1 écart** (manque ou surplus, tiré) ; le terminal propose « Recompter ou confirmer ? » quand le compte diffère (§11 n° 1).
+- 4 adresses : 3 conformes, **1 écart** (manque ou surplus, tiré) ; le Terminal propose « Recompter ou confirmer ? » quand le compte diffère, comme en séance de travail (décision de Tristan, §11 n° 1).
 - « Terminer le comptage ».
 
 ### Étape 3 — Signaler l'écart (fiche)
@@ -118,11 +121,11 @@ avec une banque d'éco-droit tirée à part, à l'état des lieux)*. Personne : 
 | Bloc | Cases | Poids | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|---|
 | **Avant de commencer** | 4 questions, 1 chacune, règle du faux | **4** | moteur des questions | plancher 0 |
-| **Repérer les adresses du site** (C1.5.1) | P1, P2, P3 posées ou confiées **à leur adresse**, 1 chacune | **3** | `place-P1` … `place-P3` | non posée = faux |
+| **Repérer les adresses du site** (C1.5.1) | P1, P2, P3 posées ou confiées **à leur adresse**, 1 chacune | **3** | `place-P1` … `place-P3` | non posée = faux ; signalée à tort = faux |
 | **Ranger et voir la plaque** (C1.5.2) | aucune tentative de pose au-dessus du sol 1 · P4 signalée « charge dépassée », non posée ni confiée là 3 | **4** | `pasPoseHaut`, `signale-P4` | `pasPoseHaut` **seulement si toutes les palettes sont traitées** ; signaler à tort = faux |
 | **Adresse prise** (C1.5.2) | P5 : adresse libre demandée, rangée, scannée | **2** | `adresseLibre-P5` | restée dans l'allée ou posée à côté = 0 |
 | **Scanner** (C1.5.3) | P1, P2, P3, P5 scannées à leur adresse finale, 0,75 chacune | **3** | `scan-P…` | P5 : scannée à **son adresse libre** ; non scannée = faux |
-| **Comptages justes** (C1.5.4) | 4 adresses, 0,5 chacune | **2** | `compte-<adresse>` | rien compté = faux |
+| **Comptages justes** (C1.5.4) | 4 adresses **par rang** dans la liste, 0,5 chacune | **2** | `compte-1` … `compte-4` (jamais par adresse tirée) | rien compté = faux ; `recompte-…` rendus par la vue, **sans poids** |
 | **Écart signalé, avec une cause** (C1.5.4) | « je le signale » 1 · cause possible 1 | **2** | fiche `ecarts` | jugé sur **ses** écarts ; aucun écart confirmé = faux (il n'a rien trouvé) |
 | **Total** | | **20** | | |
 
@@ -132,15 +135,16 @@ avec une banque d'éco-droit tirée à part, à l'état des lieux)*. Personne : 
 ## 6. Contenu (données)
 
 `contenus/action-ent814.js` (+ `-donnees.js`), `contenus/questions/ENT-8.14.js`, `activites/action-evaluation-stock.js`,
-`contenus/corriges/ENT-8.14.js`. **Module des sites** : ajouter à chaque site (sans toucher à ce qu'il a déjà) **son palettier** — ou le déclarer dans
-`action-ent814-donnees.js` par clé de site si l'état des lieux le préfère (ne pas casser ENT-8.5, 8.6, 8.10).
+`contenus/corriges/ENT-8.14.js`. **Module des sites** : **lu, jamais modifié** (état des lieux §C) ; les
+deux palettiers se déclarent dans `contenus/action-ent814-donnees.js` par clé de site (`onnaing`, `belleville`), le site se lit avec
+`siteDeBase(db, id)` comme ENT-8.10 ; ENT-8.5, 8.6, 8.10 et leurs tests restent intacts.
 
 ### 6.1 Les palettiers des sites (construits)
 
 | Site | Allées | Travées | Niveaux | Plaques (N1 / N2 / N3 / N4…) |
 |---|---|---|---|---|
 | Onnaing | A, B, C (côtés 1 et 2) | 4 | 4 | 3 000 / 1 400 / 1 200 / 1 000 kg |
-| Belleville | A, B (côtés 1 et 2) | 4 | 5 | 3 000 / 1 500 / 1 300 / 1 100 / 900 kg |
+| Belleville | A, B (côtés 1 et 2) | 4 | **4** | 3 000 / 1 600 / 1 300 / 1 100 kg |
 
 Produits : ceux du §6.2 d'ENT-8.11 (désignations génériques). Contrôles d'équité : comme ENT-8.11 §6.3 et ENT-8.13 §6.1 (P4 dépasse toujours ; P5 a
 une adresse libre déclarée ; aucune autre ne dépasse).
@@ -176,10 +180,15 @@ sous-compétence.
 
 ## 11. Questions ouvertes et décisions de Cowork
 
-1. **Proposé par Cowork** : en évaluation, le terminal **propose toujours** « Recompter ou confirmer ? » (c'est l'outil, pas une aide) ; aucun jalon de
-   recomptage. Autre option : `recompte: 'jamais'` (l'élève doit penser seul à recompter). À trancher par Tristan.
-2. **Proposé par Cowork** : les deux palettiers (§6.1), la date, les poids à l'intérieur des blocs.
+1. **Tranché par Tristan (21/10, 18 h 12)** : en évaluation, le Terminal **propose « Recompter ou confirmer ? »** comme en séance de travail
+   (c'est l'outil, pas une aide ; il ne dit ni de combien ni dans quel sens) ; **aucun poids** sur le recompte, seul le compte final est noté.
+   Option `recompte: 'ecart'` (défaut), **pas** `'jamais'`.
+2. **Proposé par Cowork** : les deux palettiers (§6.1) et les poids à l'intérieur des blocs. La date : tranchée, sans date (§0).
 3. **Proposé par Cowork** : les questions d'ouverture réécrites (§4 ter).
+4. **Corrections du 21/10/2026 au soir** (état des lieux E-7, décisions de Tristan) : **Belleville à 4 niveaux** (le moteur s'arrête à 4 ; les
+   deux sites diffèrent par le nombre d'allées et les plaques) ; comptages nommés par rang ; phases `rangement` / `comptage` dans un seul
+   entrepôt ; plaque seule ; deux scans ; charte bleue. Pour la n° 1 : la règle unique du recompte s'applique (jamais « à faire »), sans poids
+   en évaluation ; reste à dire si le terminal propose le recomptage en copie.
 
 ---
 

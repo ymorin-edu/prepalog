@@ -7,11 +7,12 @@
 > ```
 
 **Statut** : à implémenter
-**Date du brief** : 21/10/2026
+**Date du brief** : 21/10/2026 ; **corrigé le 21/10/2026 au soir** d'après l'état des lieux du chantier moteur E-7 et les
+décisions de Tristan (§11 n° 5).
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action, 21/10/2026 (fiche `claude/prepalog-action-cadrage-c1.5.md`), décisions
 4 et 4 bis de Tristan.
 **Modèle** : **Opus** (séance nouvelle, deux chemins qui se rejoignent).
-**Place dans l'ordre** : après ENT-8.12. Attend les **lots 1, 2, 3 et 5** de `MOTEUR-palettier-adresse-donnee.md`.
+**Place dans l'ordre** : après ENT-8.12. Attend les **lots 0, 1, 2, 3 et 5** de `MOTEUR-palettier-adresse-donnee.md` (chantier E-7 ; un seul entrepôt à **phases** `soir` / `lendemain`).
 **Durée estimée par Cowork** : ≈ 4 h 30. Ce qui prend le temps : les deux chemins (sa palette ou celle de Kevin), le lendemain, les phrases calculées
 selon le chemin, les tests des deux témoins.
 
@@ -19,8 +20,10 @@ selon le chemin, les tests des deux témoins.
 
 ## 0. Règles communes
 
-**§0 d'ENT-8.11**. **Entraînement** : moins guidé (pas de « Les règles » ouvertes, pas d'aide de charge ; « Vérifier » dit le nom du critère seul).
-**Deux temps** : **jeudi 4 mars, 20 h 30** (fin de poste) puis **vendredi 5 mars, 6 h** (dates proposées). Personnage nouveau, construit :
+**§0 d'ENT-8.11** (dont les décisions sur le moteur du 21/10 au soir : charte bleue, deux scans palette puis emplacement, « Terminal » sans voix,
+rangement figé à « Valider »). **Entraînement** : moins guidé (pas de « Les règles » ouvertes ; **de près, la plaque seule**, sans « déjà posé » ;
+au bilan, le nom du critère seul).
+**Deux temps, sans date** (décision de Tristan) : **un jeudi, 20 h 30** (fin de poste) puis **le lendemain, 6 h**. Personnage nouveau, construit :
 **Yanis, préparateur** (sans visage).
 
 ### Décisions de Tristan (21/10/2026)
@@ -96,7 +99,7 @@ au terminal et **rend compte** des faits. Prépare l'évaluation ENT-8.14.
 - Samia (consigne) : « Trouve la palette. Puis remets-la en ordre au terminal. Samia »
 - L'élève **ouvre des emplacements** (chaque ouverture comptée) ; la palette cherchée est **à côté** : même travée ou travée voisine, niveau 1
   (tirée, §6 bis). Il voit son étiquette de près.
-- **« Transférer »** : scanner la palette, puis l'adresse où elle doit aller — **son adresse donnée, libérée pendant la nuit** (la palette à évacuer
+- **« Transférer »** : scanner la palette, puis l'emplacement où elle doit aller (même ordre qu'au rangement) — **son adresse donnée, libérée pendant la nuit** (la palette à évacuer
   est partie) ; le terminal confirme.
 
 ### Étape 3 — Rendre compte à Samia (Messagerie, phrases calculées sur son chemin)
@@ -114,9 +117,9 @@ questions qui éclaireraient l'enquête sont **corrigées au bilan**.
 
 | id | Geste | Question (juste en gras) | Type | Notée | Corrigée | Pourquoi ici |
 |---|---|---|---|---|---|---|
-| `q-rupture` | message de Yanis **lu** (ouverture de l'étape 2) | « Si personne ne retrouve la palette, que se passe-t-il pour le magasin ? » — **le produit manque en rayon : des ventes perdues** · rien, le magasin a du stock pour un an · le magasin est fermé | fil | 0,75 | tout de suite | Conséquence d'une erreur de stock |
-| `q-ou-chercher` | **première ouverture** d'emplacement | « Où chercher en premier ? » — **autour de l'adresse : les emplacements voisins, la même allée** · au hasard dans l'entrepôt · au quai | fil | 0,5 | **au bilan** (éclairerait l'enquête) | C1.5.1 |
-| `q-systeme` | 3e ouverture | « Pourquoi le système ne retrouve-t-il pas la palette tout seul ? » — **il ne sait que ce qu'on a scanné** · il est en panne · Kevin l'a effacée | fil | 0,75 | tout de suite | C1.5.3 |
+| `q-rupture` | **première ouverture** d'emplacement au lendemain (un geste, pas la lecture d'un message) | « Si personne ne retrouve la palette, que se passe-t-il pour le magasin ? » — **le produit manque en rayon : des ventes perdues** · rien, le magasin a du stock pour un an · le magasin est fermé | fil | 0,75 | tout de suite | Conséquence d'une erreur de stock |
+| `q-ou-chercher` | palette **trouvée** (`entrepot:<id>:trouvee`) | « Où chercher en premier ? » — **autour de l'adresse : les emplacements voisins, la même allée** · au hasard dans l'entrepôt · au quai | fil | 0,5 | **au bilan** (éclairerait l'enquête) | C1.5.1 |
+| `q-systeme` | **premier scan du transfert** (la palette) ; si la vue ne publie pas ce geste à part : `entrepot:<id>:trouvee` après `q-ou-chercher` | « Pourquoi le système ne retrouve-t-il pas la palette tout seul ? » — **il ne sait que ce qu'on a scanné** · il est en panne · Kevin l'a effacée | fil | 0,75 | tout de suite | C1.5.3 |
 | `q-terminal` | **transfert** fait | « Qu'as-tu fait au terminal, et pourquoi ? » — **transféré la palette à sa bonne adresse et scanné : maintenant, le système sait où elle est** · rien : Yanis la trouvera · imprimé une nouvelle étiquette | fil | 0,75 | tout de suite | C1.5.3 (après le geste : ne donne rien d'avance) |
 | `q-a-qui` | compte rendu **envoyé** | « À qui le dis-tu, et comment ? » — **à la cheffe d'équipe, en disant les faits** · à tout le monde, en nommant le coupable · à personne | fil | 0,5 | **au bilan** | C1.2.6 rappelé ; chemin « Kevin » : texte qui ajoute « sans accuser » |
 | `q-collegue` | **éco-droit** — fin | « Kevin t'a dit de ranger sans scanner. Dois-tu faire tout ce qu'un collègue te demande ? » — **non : on suit les consignes de l'employeur, données par le chef ; une procédure ne se saute pas parce qu'un collègue le dit** · oui, il a plus d'ancienneté · oui, s'il est pressé | fil | 0,75 | tout de suite | Contrat de travail ; texte joint **L4122-1** (« conformément aux instructions… de l'employeur ») |
@@ -171,6 +174,7 @@ Tirage **3 préparation + 1 image**, non notées.
 | P3 | sol, **occupée** par une palette « à évacuer cette nuit » (`EVAC`) | une **adresse libre** au sol déclarée pour le terminal ; au moins **un emplacement libre voisin** (même travée ou voisine) où « poser à côté » est possible |
 | P9 (Kevin) | sol, occupée elle aussi par une palette à évacuer | posée par Kevin à un emplacement voisin, **sans scan** ; même règle |
 | Nuit | `EVAC` partent | les deux adresses données sont **libres** le lendemain |
+| Nuit, si P3 est restée **dans l'allée** | Kevin la pose « à côté », sans scan | **déclaré dans les données du lot 5** (pas seulement dans le texte) : `nuit: { alleeVers: '<emplacement voisin libre>' }` ; l'emplacement est tiré avec ceux du §6 bis et contrôlé libre ; le lendemain part de cet état |
 
 - Produits : P3 et P9 d'un même rayon que le magasin de Yanis (tirés, §6.2 d'ENT-8.11) ; **Marseille** = magasin de la région marseillaise (Action
   livre la région marseillaise depuis Ensuès : **vérifié**, communiqué de 2023) — **aucun magasin nommé**, aucune adresse.
@@ -236,9 +240,13 @@ scanne », « Transférer », « Rendre compte : les faits ». Corrigé : `conte
 ## 11. Questions ouvertes et décisions de Cowork
 
 1. **Proposé par Cowork** : P1 non notée (échauffement) ; « retrouver » découpé 3 + 1 ; « transfert » découpé 2 + 3 ; « rendre compte » 1 + 1 + 1.
-2. **Proposé par Cowork** : l'élève qui laisse P3 dans l'allée → **Kevin la pose à côté pendant la nuit** (même enquête que s'il avait obéi).
+2. **Proposé par Cowork, validé** : l'élève qui laisse P3 dans l'allée → **Kevin la pose à côté pendant la nuit** (même enquête que s'il avait
+   obéi) ; **déclaré dans les données du lot 5** (§6.1, ligne « Nuit, si P3 est restée dans l'allée »), correction du 21/10 au soir.
 3. **Proposé par Cowork** : Yanis, préparateur (construit) ; le magasin « de Marseille » sans nom.
 4. Textes de Cowork : à relire à l'écran.
+5. **Corrections du 21/10/2026 au soir** (état des lieux E-7) : `q-rupture` sur un geste (première ouverture) ; `q-ou-chercher` et `q-systeme`
+   déplacées en conséquence (une question accrochée à la 3e ouverture ne serait jamais posée à l'élève qui trouve du premier coup) ; palette de
+   l'allée déclarée dans le lot 5 ; phases soir / lendemain ; plaque seule en entraînement ; deux scans ; charte bleue.
 
 ---
 

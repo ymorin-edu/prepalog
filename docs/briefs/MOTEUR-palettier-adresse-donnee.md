@@ -157,7 +157,8 @@ réécrit** ; une option absente = le comportement d'aujourd'hui. Le dire au com
 
 ## 6. Couleurs et dessin
 
-Charte d'Action (rouge) : la règle des chartes rouges ou vertes s'applique déjà (le moteur remplace l'accent par l'encre dans la zone de travail).
+Charte d'Action **bleue** (`#195799`, `contenus/action.js`), gardée telle quelle dans la zone de travail : la règle des chartes rouges ou vertes
+**ne joue pas** *(corrigé le 21/10/2026 d'après l'état des lieux : le brief disait « rouge » à tort)*. Le vert plein reste réservé à « juste ».
 Zone « À monter » et palettes confiées : trait ou bordure, **jamais d'aplat vert** (le vert plein ne dit que « juste »). Le refus de scan : texte
 rouge, sans aplat. Tient en 1366 × 768.
 
