@@ -28,7 +28,7 @@ import { QUESTIONS } from './questions/ENT-10.7.js';
 import { EQUIPE, LEXIQUE, MENTION, LOGO, DOC_DROIT_DEPOT, STYLE_DOCUMENTS, PIED, mailDe, heureScenario, ech, pied, entete } from './pelleau.js';
 import {
   ID, ID_VOLET, QUAI_ID, DIALOGUE, FICHES, PHRASES_ID, JOUR, BL, CLIENTS_107, NOM_DIT, nomClient, IDS_PALETTES, jeuDe, quaiDe, quaiDeBase, REPLIQUES, JUSTES_DIALOGUE,
-  FIN_DIALOGUE, LIGNES_PREPARER, nombres, RESULTATS, champRecues, champResultat, CHAMP_FEUILLE, CORRIGER, reellesDe, notees, colisNotes, resultat,
+  FIN_DIALOGUE, LIGNES_PREPARER, nombres, RESULTATS, clientDe, champRecues, champResultat, CHAMP_FEUILLE, CORRIGER, reellesDe, notees, colisNotes, resultat,
   annonce, colisAnnonces, uniteDe, typeDe, choixFeuille, justeFeuille, choixErreur, ligneRecu, SALUTATIONS, fins, SECURITE_CONSIGNE, pal,
 } from './pelleau-ent107-donnees.js';
 
@@ -150,6 +150,13 @@ export const TELEPHONE = {
 };
 
 // ─────────────────────────────────────────────────────────────── ④ la fiche « Rapprocher » (un cadre par client, puis la feuille de Loïc)
+// LE RAPPEL DES ÉTIQUETTES (décision de Tristan, 21/10/2026) : pour chaque palette, l'expéditeur lu sur son étiquette au quai, tel que la légende de pause
+// le montrait (« P1 — étiquette : Biscuiterie Ar Vag »). Le moteur ne range pas les étiquettes lues : on reprend celles des palettes RÉELLEMENT POSÉES par
+// l'élève (`db.quais[QUAI_ID].depose[id].pose`, posée sur la bonne case) ; une palette pas encore posée dit « pas encore vue ». Ce que l'élève a vu, jamais
+// la réponse : pas un mot de la feuille, aucune comparaison, aucune mise en évidence. Standard et accompagné seulement : le confirmé n'a pas ce rappel.
+export const posee = (db, id) => !!(etatQuai(db) && etatQuai(db).depose && etatQuai(db).depose[id] && etatQuai(db).depose[id].pose);
+export const lignesEtiquettes = (db) => { const jeu = jeuEleve(db);
+  return IDS_PALETTES.map((id) => (posee(db, id) ? `${id} — étiquette : ${nomClient(clientDe(jeu, id))}` : `${id} — pas encore vue`)); };
 export const FICHE_RAPPROCHER = {
   id: FICHES.rapprocher, libelle: 'Rapprocher', titre: 'Rapprocher des annonces',
   sousTitre: 'Pour chaque client : ce qui est arrivé, puis ce que ça donne par rapport à son annonce. Enfin, regarde la feuille de ramasse.',
@@ -163,6 +170,9 @@ export const FICHE_RAPPROCHER = {
       { type: 'liste', id: champRecues(c), lib: 'Palettes reçues', vide: 'Choisir…', manque: `les palettes reçues de ${NOM_DIT[c]}`, choix: nombres(5) },
       { type: 'liste', id: champResultat(c), lib: 'Résultat', vide: 'Choisir…', manque: `le résultat pour ${NOM_DIT[c]}`, choix: RESULTATS },
     ] })),
+    ...(confirme(db) ? [] : [{ type: 'cadre', titre: 'Ce que tu as lu sur les étiquettes, au quai', large: true, blocs: [
+      { type: 'encadre', texte: lignesEtiquettes(db).join('\n') },
+    ] }]),
     { type: 'cadre', titre: 'La feuille de ramasse de Loïc', large: true, blocs: [
       { type: 'liste', id: CHAMP_FEUILLE, lib: 'La feuille de ramasse est-elle juste ?', vide: 'Choisir…', manque: 'ta réponse sur la feuille de ramasse', choix: choixFeuille(jeuEleve(db)) },
     ] },

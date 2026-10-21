@@ -777,5 +777,67 @@ await v('ENT-10.7 : socle — aucune adresse hors du site, aucune erreur JavaScr
   egal(P.erreurs, [], 'erreurs JavaScript');
 });
 
+// ── Le rappel des étiquettes lues au quai (décision de Tristan, 21/10/2026) : valeurs écrites à la main, sur les témoins figés.
+//   p107-a : P1 P2 = Biscuiterie Ar Vag, P3 P4 = Agri-Kerlann ; p107-c : P1 P3 = Agri-Kerlann, P2 P4 = Biscuiterie Ar Vag.
+const TITRE_ETIQ = 'Ce que tu as lu sur les étiquettes, au quai';
+const RAPPEL = {
+  a: ['P1 — étiquette : Biscuiterie Ar Vag', 'P2 — étiquette : Biscuiterie Ar Vag', 'P3 — étiquette : Agri-Kerlann', 'P4 — étiquette : Agri-Kerlann'],
+  c: ['P1 — étiquette : Agri-Kerlann', 'P2 — étiquette : Biscuiterie Ar Vag', 'P3 — étiquette : Agri-Kerlann', 'P4 — étiquette : Biscuiterie Ar Vag'],
+};
+const rappelEcran = () => pg.$eval(`${Z} section.ent-cadre[aria-label="${TITRE_ETIQ}"] .ent-encadre`, (x) => x.innerText.split('\n').map((s) => s.trim()).filter(Boolean)).catch(() => null);
+
+await v('ENT-10.7 : le rappel des étiquettes (fiche « Rapprocher ») — l’expéditeur lu sur chaque étiquette, « pas encore vue » avant la dépose, absent chez le confirmé, jamais la feuille ni la réponse', async () => {
+  const r = await pg.evaluate(async ({ QID, TITRE }) => {
+    const C = await import('/contenus/pelleau-ent107.js');
+    const poses = (ids) => ({ [QID]: { depose: Object.fromEntries(ids.map((id) => [id, { premier: 'AV1', essais: ['AV1'], pose: 'AV1' }])) } });
+    const db = (g, aisance, ids, plus = {}) => ({ tirage: { graine: g }, aisance, quais: poses(ids), ...plus });
+    const rappel = (d) => { const b = C.FICHE_RAPPROCHER.blocs(d).find((x) => x.titre === TITRE); return b ? b.blocs.map((x) => x.texte).join('') : null; };
+    const tous = ['P4', 'P3', 'P2', 'P1'];
+    const essaiSeul = { [QID]: { depose: { P4: { premier: 'AV1', essais: ['AV1'], pose: null } } } };
+    return {
+      a: rappel(db('p107-a', 'standard', tous)), c: rappel(db('p107-c', 'standard', tous)), accompagne: rappel(db('p107-a', 'accompagne', tous)),
+      confirme: rappel(db('p107-a', 'confirme', tous)),
+      vide: rappel({ tirage: { graine: 'p107-a' } }), base0: rappel({}),
+      deux: rappel(db('p107-a', 'standard', ['P4', 'P3'])), essai: rappel({ tirage: { graine: 'p107-a' }, quais: essaiSeul }),
+      nbBlocs: [C.FICHE_RAPPROCHER.blocs(db('p107-a', 'standard', tous)).length, C.FICHE_RAPPROCHER.blocs(db('p107-a', 'confirme', tous)).length],
+    };
+  }, { QID, TITRE: TITRE_ETIQ });
+  egal(r.a, RAPPEL.a.join('\n'), 'rappel de p107-a');
+  egal(r.c, RAPPEL.c.join('\n'), 'rappel de p107-c (l’autre sens)');
+  egal(r.accompagne, r.a, 'accompagné = standard');
+  egal(r.confirme, null, 'le confirmé n’a pas le rappel');
+  egal(r.nbBlocs, [4, 3], 'un cadre de plus en standard (deux clients, rappel, feuille), pas chez le confirmé');
+  egal(r.vide, ['P1', 'P2', 'P3', 'P4'].map((p) => `${p} — pas encore vue`).join('\n'), 'rien posé : « pas encore vue » partout');
+  egal(r.base0, r.vide, 'base vide : même chose');
+  egal(r.deux, ['P1 — pas encore vue', 'P2 — pas encore vue', RAPPEL.a[2], RAPPEL.a[3]].join('\n'), 'deux palettes posées seulement');
+  egal(r.essai, r.vide, 'une palette essayée mais pas posée n’est pas « vue »');
+  for (const t of [r.a, r.c, r.deux, r.vide]) vrai(!/mal not|feuille|ramasse|juste|faux|erreur|attention|différen|écart/i.test(t), 'le rappel parle de la feuille ou de la réponse : ' + t);
+});
+
+await v('ENT-10.7 : le rappel à l’écran — standard : les quatre étiquettes lues, sans mise en évidence ; confirmé : rien ; ni l’un ni l’autre ne change le jeu ni la note', async () => {
+  for (const [E, cle] of [[ELEVES.a, 'a'], [ELEVES.c, 'c']]) {
+    await monter({ uid: E.uid });
+    await preparer(); await accueil(); await quai(E);
+    await P.ouvrirParMessage('Les palettes sont triées', `fiche:${FR}`);
+    egal(await rappelEcran(), RAPPEL[cle], `${E.uid} : rappel à l’écran`);
+    egal(await pg.$$eval(`${Z} section.ent-cadre`, (L) => L.map((x) => x.getAttribute('aria-label'))),
+      ['Biscuiterie Ar Vag', 'Agri-Kerlann', TITRE_ETIQ, 'La feuille de ramasse de Loïc'], `${E.uid} : les cadres, dans l’ordre`);
+    const cadre = `${Z} section.ent-cadre[aria-label="${TITRE_ETIQ}"]`;
+    vrai((await pg.$$eval(`${cadre} [class*="juste"], ${cadre} [class*="faux"], ${cadre} mark, ${cadre} strong, ${cadre} em, ${cadre} select`, (L) => L.length)) === 0, 'mise en évidence ou champ dans le rappel');
+    if (cle === 'a') await capture('5b-rapprocher-rappel');
+    for (const [c, x] of Object.entries(RAPP(E))) { await pg.selectOption(`${Z} [data-fiche-champ="${c}"]`, x); await pause(30); }
+    await qrep();
+    await clic('[data-fiche-envoyer]'); await confirmer(); await qrep();
+    egal(await rappelEcran(), RAPPEL[cle], `${E.uid} : le rappel reste après l’envoi`);
+  }
+  const E = ELEVES.a;
+  await monter({ uid: E.uid, aisance: 'confirme' });
+  await preparer(); await accueil(); await quai(E);
+  await P.ouvrirParMessage('Les palettes sont triées', `fiche:${FR}`);
+  egal(await rappelEcran(), null, 'confirmé : pas de rappel');
+  egal(await pg.$$eval(`${Z} section.ent-cadre`, (L) => L.map((x) => x.getAttribute('aria-label'))), ['Biscuiterie Ar Vag', 'Agri-Kerlann', 'La feuille de ramasse de Loïc'], 'confirmé : les cadres');
+  egal(P.erreurs, [], 'erreurs JavaScript');
+});
+
 await P.fermer();
 }
