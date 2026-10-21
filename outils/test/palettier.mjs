@@ -45,6 +45,12 @@ const monter = (p, o = {}) => p.evaluate(async (o) => {
       { id: 'P8', nom: 'Bougies parfumées', cartons: 20, kg: 3, adresse: 'A1-T03-N1-E1', aSignaler: true }] });
   }
   const U = C.universPalettier({ temps, entrepot: P, poids: o.scenario !== 'signaler' });
+  if (o.volet) {
+    // Un message qui attend le geste `monter` (comme Kevin dans ENT-8.11).
+    const { apresGeste } = await import('/core/declencheurs.js');
+    U.volet = { id: 'volet-essai', semer: () => ({ mails: [] }), declencheurs: [{ id: 'kevin', quand: apresGeste('entrepot:essai-palettier:monter'),
+      semer: () => ({ mails: [{ folder: 'in', ts: Date.now(), from: 'Kevin', fromMail: 'kevin@essai.example', to: 'Lea', subject: 'Kevin monte', kind: 'text', text: 'Bonjour' }] }) }] };
+  }
   const db = o.db || {};
   const moteur = creerEntreprise(U);
   window.__p = { db, P, U, temps, moteur, remis: null };
@@ -80,7 +86,12 @@ async function ouvrir(p, a) {
   await p.click(`${Z} [data-pe-emp="${a}"]`);
 }
 async function ranger(p, id, a, geste = 'poser') { await prendre(p, id); await ouvrir(p, a); await bouton(p, geste); }
-async function signaler(p, id, a, motif) { await prendre(p, id); await ouvrir(p, a); await bouton(p, 'signaler'); await p.click(`${Z} [data-pal-motif="${motif}"]`); }
+// `garder` : laisser ouverte la fenêtre « Message du système » (nouvelle adresse) ; sinon elle est fermée par « Compris ».
+async function signaler(p, id, a, motif, garder = false) {
+  await prendre(p, id); await ouvrir(p, a); await bouton(p, 'signaler'); await p.click(`${Z} [data-pal-motif="${motif}"]`);
+  if (!garder && await present(p, '[data-pal-modal]')) await p.click(`${Z} [data-pal-modal-ok]`);
+}
+const fenetre = (p) => p.$$(`${Z} [role="dialog"]`);
 async function valider(p) {
   if (await present(p, '[data-pal="retour"]')) await bouton(p, 'retour');
   await bouton(p, 'valider'); await bouton(p, 'validerOui');
@@ -109,7 +120,7 @@ await v('Palettier : la vue s’ouvre par son entrée de menu ; 5 palettes en r�
   egal(erreurs, [], 'erreurs JS');
 });
 
-await v('Palettier : `signaux` publie un geste par palette et par geste, plus `ouvrir` et `valider` ; un `apresGeste` sur chacun se charge, sur un nom inconnu non', async () => {
+await v('Palettier : `signaux` publie un geste par palette et par geste, plus `ouvrir`, `monter` et `valider` ; un `apresGeste` sur chacun se charge, sur un nom inconnu non', async () => {
   const r = await pg.evaluate(async () => {
     const { creerEntrepot } = await import('/core/types/entrepot.js');
     const { creerEntreprise } = await import('/core/types/entreprise.js');
@@ -124,7 +135,7 @@ await v('Palettier : `signaux` publie un geste par palette et par geste, plus `o
     return { S, tous: essai(S), inconnu: essai(['entrepot:essai-palettier:poser']) };
   });
   const attendus = ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'].flatMap((id) => ['prendre', 'poser', 'confier', 'signaler'].map((g) => `entrepot:essai-palettier:${g}:${id}`))
-    .concat(['entrepot:essai-palettier:ouvrir', 'entrepot:essai-palettier:valider']);
+    .concat(['entrepot:essai-palettier:ouvrir', 'entrepot:essai-palettier:monter', 'entrepot:essai-palettier:valider']);
   egal(r.S, attendus, 'signaux');
   egal(r.tous, '', 'un apresGeste sur chaque geste publié');
   vrai(r.inconnu.includes('entrepot:essai-palettier:poser'), `geste inconnu : ${r.inconnu}`);
@@ -311,6 +322,156 @@ await v('Palettier : la vérité d’un emplacement — hors service → « abî
   await valider(pg);
   const K = await jalons(pg);
   egal([K['signale-P7'], K['signale-P8']], ['ko', 'ok'], 'P8 juste (occupé), P7 faux');
+});
+
+/* =========================================================== la fenêtre du système (retour de Tristan, 21/10/2026) */
+await v('Palettier : signaler P5 (nouvelle adresse) ouvre la fenêtre « Message du système » — palette, produit, adresse, focus dedans ; rien ne répond derrière ; « Compris » la ferme et le focus revient sur la carte', async () => {
+  await monter(pg);
+  egal((await fenetre(pg)).length, 0, 'aucune fenêtre au départ');
+  await signaler(pg, 'P5', 'A1-T02-N3-E2', 'charge', true);
+  egal((await fenetre(pg)).length, 1, 'une fenêtre');
+  vrai(await pg.isVisible(`${Z} [role="dialog"]`), 'visible');
+  egal(await pg.getAttribute(`${Z} [role="dialog"]`, 'aria-modal'), 'true', 'modale');
+  egal(await texte(pg, '[role="dialog"] h3'), 'Message du système', 'titre');
+  egal(await texte(pg, '[data-pal-modal-texte]'), 'Nouvelle adresse pour P5 (Lessive liquide 3 L) : A1-T04-N2-E3.', 'texte');
+  egal(await pg.$$eval(`${Z} [role="dialog"] button`, (L) => L.map((b) => b.textContent.trim())), ['Compris'], 'un seul bouton');
+  egal(await pg.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-pal-modal-ok')), true, 'le focus est dans la fenêtre');
+  // La ligne reste dans l'encart « Système », l'étiquette de la carte a changé.
+  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'Nouvelle adresse : A1-T04-N2-E3.', 'encart Système');
+  egal(await texte(pg, '[data-pal-etiq="P5"]'), 'Nouvelle adresse A1-T04-N2-E3', 'la carte');
+  // Derrière : un vrai clic sur un emplacement, une carte, « Valider » → rien ne bouge.
+  const avant = [await etat(pg), await pg.getAttribute(`${Z} [data-pal-pres]`, 'data-pal-pres')];
+  await pg.click(`${Z} [data-pe-emp="A1-T02-N3-E1"]`, { force: true });
+  await pg.click(`${Z} .pe-bandeau [data-pe-pal="P1"]`, { force: true });
+  await pg.click(`${Z} [data-pal="valider"]`, { force: true });
+  egal([await etat(pg), await pg.getAttribute(`${Z} [data-pal-pres]`, 'data-pal-pres')], avant, 'rien n’a bougé derrière la fenêtre');
+  vrai(!(await present(pg, '[data-pal-confirme]')), 'pas de confirmation de « Valider »');
+  egal((await fenetre(pg)).length, 1, 'toujours ouverte');
+  await pg.keyboard.press('Tab');
+  egal(await pg.evaluate(() => document.activeElement && document.activeElement.hasAttribute('data-pal-modal-ok')), true, 'Tab ne sort pas de la fenêtre');
+  await pg.click(`${Z} [data-pal-modal-ok]`);
+  egal((await fenetre(pg)).length, 0, 'fermée par « Compris »');
+  egal(await pg.evaluate(() => document.activeElement && document.activeElement.dataset.pePal), 'P5', 'le focus est sur la carte de P5');
+  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'Nouvelle adresse : A1-T04-N2-E3.', 'la ligne reste');
+  // Échap la ferme aussi.
+  await monter(pg);
+  await signaler(pg, 'P5', 'A1-T02-N3-E2', 'charge', true);
+  await pg.keyboard.press('Escape');
+  egal((await fenetre(pg)).length, 0, 'Échap la ferme');
+  egal(await pg.evaluate(() => document.activeElement && document.activeElement.dataset.pePal), 'P5', 'focus sur la carte après Échap');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Palettier : pas de fenêtre sans nouvelle adresse (« Signalement enregistré. »), ni en copie (« C’est noté. »)', async () => {
+  await monter(pg, { scenario: 'signaler' });
+  await signaler(pg, 'P7', 'B1-T01-N2-E1', 'abime', true);
+  egal((await fenetre(pg)).length, 0, 'P7 : aucune fenêtre');
+  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'Signalement enregistré.', 'le système');
+  await signaler(pg, 'P1', 'A1-T03-N1-E2', 'occupe', true);
+  egal((await fenetre(pg)).length, 0, 'signalement à tort : aucune fenêtre');
+  await monter(pg, { temps: 'evaluation' });
+  await signaler(pg, 'P5', 'A1-T02-N3-E2', 'charge', true);
+  egal((await fenetre(pg)).length, 0, 'copie : aucune fenêtre');
+  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'C’est noté.', 'copie');
+});
+
+/* =========================================================== « Faire monter les palettes » */
+await v('Palettier : « Faire monter les palettes » — grisé (avec son titre) tant que rien n’attend, même largeur que « Valider », actif dès qu’une palette est confiée, grisé après « Valider »', async () => {
+  await monter(pg);
+  egal(await texte(pg, '[data-pal="monter"]'), 'Faire monter les palettes', 'libellé');
+  egal(await pg.isDisabled(`${Z} [data-pal="monter"]`), true, 'grisé sans palette à monter');
+  vrai((await pg.getAttribute(`${Z} [data-pal="monter"]`, 'title')).includes('Aucune palette n’attend Kevin'), 'le titre dit pourquoi');
+  const larg = await pg.evaluate((Z) => [...document.querySelectorAll(`${Z} [data-pal="valider"], ${Z} [data-pal="monter"]`)].map((b) => Math.round(b.getBoundingClientRect().width)), Z);
+  egal(larg[0], larg[1], 'même largeur que « Valider mon rangement »');
+  await ranger(pg, 'P3', 'A2-T02-N3-E1', 'confier');
+  egal(await pg.isDisabled(`${Z} [data-pal="monter"]`), false, 'actif avec P3 « À monter »');
+  await valider(pg);
+  egal(await pg.isDisabled(`${Z} [data-pal="monter"]`), true, 'grisé après « Valider »');
+  vrai((await pg.getAttribute(`${Z} [data-pal="monter"]`, 'title')).includes('validé'), 'titre après validation');
+});
+
+await v('Palettier : sans `monte`, « Faire monter » monte tout de suite ce qui attend (emplacement occupé, zone « À monter » vidée), publie `monter` et ouvre le message qui l’attend ; ce qui est confié ensuite attend la validation', async () => {
+  await monter(pg, { volet: true });
+  await ranger(pg, 'P3', 'A2-T02-N3-E1', 'confier');
+  await ranger(pg, 'P4', 'B1-T04-N2-E2', 'confier');
+  await bouton(pg, 'retour');
+  egal([await mini(pg, 'A2-T02-N3-E1'), await mini(pg, 'B1-T04-N2-E2')], ['libre', 'libre'], 'pas encore montées');
+  vrai(await present(pg, '[data-pal-amonter-p="P3"]') && await present(pg, '[data-pal-amonter-p="P4"]'), 'dans « À monter »');
+  egal((await gestes(pg)).includes('entrepot:essai-palettier:monter'), false, 'pas de geste avant');
+  await bouton(pg, 'monter');
+  egal([await mini(pg, 'A2-T02-N3-E1'), await mini(pg, 'B1-T04-N2-E2')], ['eleve', 'eleve'], 'montées tout de suite, emplacements occupés');
+  vrai(!(await present(pg, '[data-pal-amonter-p]')), 'la zone « À monter » est vide');
+  egal(await texte(pg, '[data-pal-amonter-liste]'), 'À monter (Kevin) : aucune', 'la liste aussi');
+  egal(await pg.isDisabled(`${Z} [data-pal="monter"]`), true, 'grisé : plus rien n’attend');
+  vrai((await gestes(pg)).includes('entrepot:essai-palettier:monter'), 'geste `monter` publié');
+  egal(await pg.evaluate(() => (window.__p.db.mails || []).filter((m) => m.subject === 'Kevin monte').length), 1, 'le message qui attend `monter` est arrivé');
+  const e = await etat(pg);
+  egal([e.monterDemande, e.monteesIds, e.valide], [true, ['P3', 'P4'], false], 'état : la demande et les palettes montées');
+  egal(await texte(pg, '[data-pal-etat="P3"]'), 'montée en A2-T02-N3-E1', 'carte');
+  // Une palette confiée APRÈS le bouton attend (la validation la montera : comportement d'avant).
+  await ranger(pg, 'P1', 'A1-T03-N1-E2'); await ranger(pg, 'P2', 'B2-T02-N1-E3');
+  await signaler(pg, 'P5', 'A1-T02-N3-E2', 'charge'); await ranger(pg, 'P5', 'A1-T04-N2-E3', 'confier');
+  await bouton(pg, 'retour');
+  egal(await mini(pg, 'A1-T04-N2-E3'), 'libre', 'P5 confiée après le bouton : pas montée');
+  egal(await pg.isDisabled(`${Z} [data-pal="monter"]`), false, 'le bouton se réactive');
+  await valider(pg);
+  egal(await mini(pg, 'A1-T04-N2-E3'), 'eleve', 'la validation monte ce qui reste (`monte: validation`)');
+  egal(await jalons(pg), tous('ok'), 'jalons');
+});
+
+await v('Palettier : avec `monte: (db) => …`, « Faire monter » envoie la demande (« Demande envoyée à Kevin. », rien ne monte), publie `monter` ; les palettes montent quand la base le dit ; la demande survit à un rechargement', async () => {
+  await monter(pg, { monte: 'base', volet: true });
+  await ranger(pg, 'P3', 'A2-T02-N3-E1', 'confier');
+  await bouton(pg, 'monter');
+  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'Demande envoyée à Kevin.', 'encart Système');
+  await bouton(pg, 'retour');
+  egal(await mini(pg, 'A2-T02-N3-E1'), 'libre', 'rien n’a monté');
+  vrai(await present(pg, '[data-pal-amonter-p="P3"]'), 'P3 attend toujours');
+  egal(await pg.isDisabled(`${Z} [data-pal="monter"]`), false, 'le bouton reste actif');
+  vrai((await gestes(pg)).includes('entrepot:essai-palettier:monter'), 'geste publié');
+  egal(await pg.evaluate(() => (window.__p.db.mails || []).filter((m) => m.subject === 'Kevin monte').length), 1, 'message arrivé');
+  const e = await etat(pg);
+  egal([e.monterDemande, e.monteesIds], [true, undefined], 'état : la demande, pas de liste (c’est la base qui décide)');
+  // Rechargement : même base, nouvelle vue (le journal de l'écran est perdu).
+  const copie = await pg.evaluate(() => JSON.parse(JSON.stringify(window.__p.db)));
+  await monter(pg, { monte: 'base', db: copie });
+  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'Demande envoyée à Kevin.', 'la demande se relit dans l’état');
+  await pg.evaluate(() => { window.__p.db.kevinRepondu = true; document.querySelector('#palTest .ent-nav[data-vue="entrepot"]').click(); });
+  egal(await mini(pg, 'A2-T02-N3-E1'), 'eleve', 'montée quand la base le dit');
+  egal(await pg.isDisabled(`${Z} [data-pal="monter"]`), true, 'grisé : plus rien n’attend');
+});
+
+await v('Palettier : « Valider » avec une palette encore à monter (`monte(db)` faux) → confirmation enrichie, place-P3 ✗ ; après « Faire monter » et la réponse de Kevin → ✓ ; avec `monte: validation`, la validation monte et rien n’est dit', async () => {
+  await monter(pg, { monte: 'base' });
+  await juste(pg, ['P3']);
+  await ranger(pg, 'P3', 'A2-T02-N3-E1', 'confier');
+  if (await present(pg, '[data-pal="retour"]')) await bouton(pg, 'retour');
+  await bouton(pg, 'valider');
+  egal(await texte(pg, '[data-pal-confirme]').then((t) => t.split('Oui, valider')[0].trim()),
+    'Des palettes attendent Kevin : elles ne compteront pas comme rangées. Valider quand même ? Tu ne pourras plus rien changer.', 'confirmation enrichie');
+  await bouton(pg, 'validerOui');
+  // Kevin n'a rien monté : les trois palettes confiées (P3, P4, et P5 à sa nouvelle adresse) ne sont pas rangées.
+  egal(await jalons(pg), Object.assign(tous('ok'), { 'place-P3': 'ko', 'place-P4': 'ko', 'signale-P5': 'ko' }), 'confiées mais pas montées : pas rangées');
+  egal(await texte(pg, '[data-pe-verd="P3"]'), '✗ adresse', 'verdict de P3');
+  egal(await mini(pg, 'A2-T02-N3-E1'), 'libre', 'toujours pas montée');
+  // Même rangement, mais Kevin a monté avant la validation : ok.
+  await monter(pg, { monte: 'base' });
+  await juste(pg, ['P3']);
+  await ranger(pg, 'P3', 'A2-T02-N3-E1', 'confier');
+  await bouton(pg, 'monter');
+  await pg.evaluate(() => { window.__p.db.kevinRepondu = true; document.querySelector('#palTest .ent-nav[data-vue="entrepot"]').click(); });
+  await valider(pg);
+  egal(await jalons(pg), tous('ok'), 'montée avant la validation : rangée');
+  egal((await etat(pg)).monteesValidation, ['P4', 'P5', 'P3'], 'état : ce que Kevin avait monté à la validation');
+  // `monte: validation` : la validation monte ce qui reste, aucun avertissement, place ✓.
+  await monter(pg);
+  await juste(pg);
+  await bouton(pg, 'retour');
+  await bouton(pg, 'valider');
+  vrai(!(await texte(pg, '[data-pal-confirme]')).includes('attendent'), 'pas d’avertissement : la validation monte');
+  await bouton(pg, 'validerOui');
+  egal(await jalons(pg), tous('ok'), 'monte: validation : tout ✓');
+  egal(await mini(pg, 'A2-T02-N3-E1'), 'eleve', 'montée par la validation');
 });
 
 /* =========================================================== garde et gel */

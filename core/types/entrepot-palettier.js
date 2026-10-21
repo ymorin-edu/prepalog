@@ -32,15 +32,20 @@
 //
 // GESTES publiés (tous inscrits dans `signaux`, préfixés `entrepot:<id>:`) : `prendre:<P>` (palette prise en main, en
 // réception ou reprise), `poser:<P>` (pose réussie au sol), `confier:<P>` (confiée au cariste), `signaler:<P>`, `ouvrir`
-// (toute ouverture d'un emplacement de près, publiée à chaque fois : `api.signal` ne retient que la première), `valider`.
+// (toute ouverture d'un emplacement de près, publiée à chaque fois : `api.signal` ne retient que la première), `monter`
+// (le bouton « Faire monter les palettes » : l'élève demande à Kevin de monter ce qui attend dans « À monter »), `valider`.
 // Après « Valider », plus aucun geste.
 //
 // L'ÉTAT, dans `db.entrepots[<id>]` (cloisonné par séance), lu par les lots 2 à 6 :
 //   { enMain: 'P1' | null, posees: { P1: 'A1-T03-N1-E2' }, confiees: { P3: 'A2-T02-N3-E1' },
 //     signalees: { P5: { motif: 'charge', adresse: 'A1-T02-N3-E2' } }, nouvelles: { P5: 'A1-T04-N2-E3' },
 //     tentativesHaut: 0, valide: false, at: null, premierGeste: null }
-// Une palette confiée est MONTÉE (dessinée à son emplacement) quand Kevin la monte : à la validation (`monte: 'validation'`),
-// ou dès que `monte(db)` est vrai, relu à chaque dessin. Ce n'est pas rangé dans l'état : c'est calculé (`montees`).
+// Une palette confiée est MONTÉE (dessinée à son emplacement) quand Kevin la monte : au bouton « Faire monter les palettes »
+// (sans `monte` ou `monte: 'validation'` : tout de suite), à la validation (`monte: 'validation'` seulement), ou dès que
+// `monte(db)` est vrai (relu à chaque dessin). Le résultat n'est pas rangé : il est calculé (`montees`). Le bouton écrit, une
+// fois pressé, `monterDemande: true` (la demande survit à un rechargement) et, sans fonction `monte`, `monteesIds` (les palettes
+// qu'il a montées) ; à la validation s'écrit `monteesValidation` (les palettes montées À CE MOMENT) : une palette confiée mais
+// pas montée alors n'est pas rangée (`place-<P>` faux). Ces clés n'existent pas dans l'état neuf.
 //
 // JALONS (ids stables ; `attente` avant « Valider », `ok` / `ko` après, jamais `attente` après) :
 //   `place-<P>`   palette à ranger : posée au sol, ou confiée, À SON ADRESSE ; signalée à tort (son adresse était possible) = ko ;
@@ -168,13 +173,17 @@ export function fautesPalette(M, e, p) {
   e = normal(e);
   const pl = placement(e), s = e.signalees[p.id], ou = pl[p.id];
   const F = [];
+  // Confiée au cariste mais PAS montée au moment de « Valider » : elle n'est pas rangée (décision de Tristan, 21/10/2026).
+  // `monteesValidation` est écrit à la validation (ce que Kevin avait monté, la validation comprise) ; un état validé sans cette
+  // clé (d'avant le bouton) garde le jugement d'avant.
+  const nonMontee = !!(e.valide && Array.isArray(e.monteesValidation) && e.confiees[p.id] && !e.monteesValidation.includes(p.id));
   if (!p.aSignaler) {
     if (s && !verite(M, pl, p, p.adresse).length) F.push('signalement');
-    if (ou !== p.adresse) F.push('adresse');
+    if (ou !== p.adresse || nonMontee) F.push('adresse');
   } else {
     if (!(s && s.adresse === p.adresse && verite(M, pl, p, p.adresse).includes(s.motif))) F.push('signalement');
     const nouvelle = e.nouvelles[p.id];
-    if (ou === p.adresse || (nouvelle && ou !== nouvelle)) F.push('adresse');
+    if (ou === p.adresse || (nouvelle && ou !== nouvelle) || nonMontee) F.push('adresse');
   }
   if (depasse(M, pl, p)) F.push('plaque de charge');
   return F;
@@ -217,14 +226,20 @@ export function attendusPalettier(M) {
   }));
 }
 
-// Les palettes que le cariste a montées : toutes les confiées, à la validation (défaut) ou dès que `monte(db)` est vrai.
+// Les palettes que le cariste a montées : avec `monte(db)`, toutes les confiées dès que la fonction est vraie ; sinon celles
+// que le bouton « Faire monter » a montées (`monteesIds`), et toutes les confiées à la validation.
 export function montees(M, e, db) {
   const C = M.cariste;
   e = normal(e);
   if (!C) return [];
-  let ok;
-  if (typeof C.monte === 'function') { try { ok = !!C.monte(db || {}); } catch (x) { ok = false; } } else ok = !!e.valide;
-  return ok ? Object.keys(e.confiees) : [];
+  if (typeof C.monte === 'function') {
+    let ok;
+    try { ok = !!C.monte(db || {}); } catch (x) { ok = false; }
+    return ok ? Object.keys(e.confiees) : [];
+  }
+  if (e.valide) return Object.keys(e.confiees);
+  const ids = Array.isArray(e.monteesIds) ? e.monteesIds : [];
+  return Object.keys(e.confiees).filter((id) => ids.includes(id));
 }
 
 // LU PAR UNE SÉANCE (exports d'`entrepot.js`) : les palettes confiées (les phrases du message à Kevin), l'état en clair.
@@ -257,12 +272,12 @@ export function declarationDe(E, db, { copie = false } = {}) {
 // (`htmlPlan`, `htmlFace`), l'état d'écran partagé (`ui` : `trav`, `anim`, `focus`, `main`), Échap, le clavier.
 export function creerPalettier(P, M, opts, O) {
   const ui = O.ui, G = O.G;
-  Object.assign(ui, { pres: null, signaler: false, journal: [], confirmer: false, msg: '', msgType: '' });
+  Object.assign(ui, { pres: null, signaler: false, journal: [], confirmer: false, msg: '', msgType: '', alerte: null });
   const COPIE = !!opts.copie;
   const C = M.cariste, NOM = C ? C.nom : 'le cariste';
   const geste = (n) => `entrepot:${P.id}:${n}`;
   const signaux = [...Object.keys(M.pal).flatMap((id) => ['prendre', 'poser', 'confier', 'signaler'].map((x) => geste(`${x}:${id}`))),
-    geste('ouvrir'), geste('valider')];
+    geste('ouvrir'), geste('monter'), geste('valider')];
 
   function regime(api, e) {
     const rendue = !!(api && api.copieRendue && api.copieRendue());
@@ -332,7 +347,11 @@ export function creerPalettier(P, M, opts, O) {
     e.signalees[p.id] = { motif, adresse: a }; e.enMain = null; ui.signaler = false;
     noterGeste(e);
     if (COPIE) direSysteme('C’est noté.');
-    else if (p.nouvelleAdresse) { e.nouvelles[p.id] = p.nouvelleAdresse; direSysteme(`Nouvelle adresse : ${p.nouvelleAdresse}.`); }
+    else if (p.nouvelleAdresse) {
+      e.nouvelles[p.id] = p.nouvelleAdresse; direSysteme(`Nouvelle adresse : ${p.nouvelleAdresse}.`);
+      // Une fenêtre que l'élève doit fermer : la nouvelle adresse ne passe pas inaperçue (retour de Tristan, 21/10/2026).
+      ui.alerte = { id: p.id, nom: p.nom, adresse: p.nouvelleAdresse };
+    }
     else direSysteme('Signalement enregistré.');
     dire(`<b>${ech(p.id)}</b> signalée : elle retourne en réception.`, 'oui');
     return `signaler:${p.id}`;
@@ -424,13 +443,22 @@ export function creerPalettier(P, M, opts, O) {
     const per = P.personnage || {};
     const txt = typeof per.texte === 'string' ? per.texte : ((per.texte || {})[R.temps] || '');
     let act;
+    const attend = Object.keys(e.confiees).filter((id) => !X.montees.includes(id));
     if (R.fige) act = `<button type="button" class="btn" disabled>${R.copie ? 'Copie rendue' : 'Rangement validé'}</button>`;
     else if (ui.confirmer) {
       const reste = X.ps.filter((p) => !traitee(e, X.pl, p.id)).length;
-      act = `<span class="pe-confirme" data-pal-confirme>Valider ? Tu ne pourras plus rien changer.${reste ? ` (${reste} palette${reste > 1 ? 's' : ''} encore en réception.)` : ''}
+      // Avec `monte: 'validation'`, la validation monte ce qui attend : aucun avertissement. Sinon, ces palettes ne comptent pas.
+      const perdent = attend.length && C && typeof C.monte === 'function';
+      act = `<span class="pe-confirme" data-pal-confirme>${perdent ? `Des palettes attendent ${ech(NOM)} : elles ne compteront pas comme rangées. Valider quand même ?` : 'Valider ?'} Tu ne pourras plus rien changer.${reste ? ` (${reste} palette${reste > 1 ? 's' : ''} encore en réception.)` : ''}
         <button type="button" class="btn btn-p" data-pal="validerOui" data-pe-cle="b:validerOui">Oui, valider</button>
         <button type="button" class="btn" data-pal="validerNon" data-pe-cle="b:validerNon">Non</button></span>`;
     } else act = '<button type="button" class="btn btn-p" data-pal="valider" data-pe-cle="b:valider">Valider mon rangement</button>';
+    // « Faire monter les palettes » : actif seulement s'il y a une palette « À monter » et que rien n'est validé.
+    if (C && !ui.confirmer) {
+      const raison = R.fige ? 'Le rangement est validé : il ne change plus.' : !attend.length ? `Aucune palette n’attend ${NOM} : confie d’abord une palette.`
+        : `${NOM} monte les palettes de la zone « À monter ».`;
+      act += `<button type="button" class="btn pal-monter" data-pal="monter" data-pe-cle="b:monter" title="${ech(raison)}" ${R.fige || !attend.length ? 'disabled' : ''}>Faire monter les palettes</button>`;
+    }
     const RG = P.regles;
     const regles = !R.copie && RG ? `<details class="pe-regles" data-pe-regles ${ui.regles ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
       <div class="pe-regles-corps"><b>${ech(RG.entete || 'Ranger à l’adresse donnée')}</b><ol>${(RG.lignes || []).map((l) => `<li>${l}</li>`).join('')}</ol>
@@ -497,7 +525,10 @@ export function creerPalettier(P, M, opts, O) {
   }
 
   function cote(e, R, X, api) {
-    const L = ui.journal.length ? ui.journal : Object.entries(e.nouvelles).map(([id, a]) => `${id} : nouvelle adresse ${a}.`);
+    // Journal vide (après un rechargement) : ce que l'état sait encore, les nouvelles adresses et la demande faite à Kevin.
+    const attend = C && typeof C.monte === 'function' && e.monterDemande && Object.keys(e.confiees).some((id) => !X.montees.includes(id));
+    const L = ui.journal.length ? ui.journal : [...Object.entries(e.nouvelles).map(([id, a]) => `${id} : nouvelle adresse ${a}.`),
+      ...(attend ? [`Demande envoyée à ${NOM}.`] : [])];
     let h = `<div class="pal-systeme" data-pal-systeme><div class="pal-systeme-t">Système</div>
       <div class="pal-systeme-e" aria-live="polite">${L.length ? L.map((l, i) => `<div class="${i === L.length - 1 ? 'pal-sys-actu' : 'pal-sys-passe'}">${ech(l)}</div>`).join('') : '<span class="pal-sys-vide">—</span>'}</div></div>`;
     if (!ui.trav) h += `<div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pal-msg role="status">${ui.msg}</div>`;
@@ -522,7 +553,7 @@ export function creerPalettier(P, M, opts, O) {
     const R = regime(api, e);
     const X = calcul(e, R, api);
     if (e.enMain && (!X.ids.has(e.enMain) || X.pl[e.enMain])) e.enMain = null;
-    if (R.fige) { ui.confirmer = false; ui.signaler = false; }
+    if (R.fige) { ui.confirmer = false; ui.signaler = false; ui.alerte = null; }
     ui.main = e.enMain;
     const VE = vueE(e, X);
     let espace;
@@ -539,7 +570,16 @@ export function creerPalettier(P, M, opts, O) {
     return `<div class="pe pal" data-entrepot="${ech(P.id)}" data-pe-mode="palettier" data-pe-temps="${R.temps}" data-pal-valide="${!!e.valide}" data-pe-ouverte="${!!ui.trav}">
       <div class="pe-adresse" data-pe-adresse>${barre(e, R, X, null)}</div>
       ${bandeau(e, R, X)}
-      <div class="pal-jeu"><section class="pe-espace">${espace}</section>${cote(e, R, X, api)}</div></div>`;
+      <div class="pal-jeu"><section class="pe-espace">${espace}</section>${cote(e, R, X, api)}</div>${fenetre()}</div>`;
+  }
+  // La fenêtre « Message du système » : au signalement d'une palette qui reçoit une nouvelle adresse, l'élève doit la fermer.
+  function fenetre() {
+    const A = ui.alerte;
+    if (!A) return '';
+    return `<div class="pal-modal-voile" data-pal-modal><div class="pal-modal" role="dialog" aria-modal="true" aria-labelledby="palModalT" aria-describedby="palModalD">
+      <h3 id="palModalT">Message du système</h3>
+      <p id="palModalD" data-pal-modal-texte>Nouvelle adresse pour <b>${ech(A.id)}</b> (${ech(A.nom)}) : <b class="pe-mono">${ech(A.adresse)}</b>.</p>
+      <button type="button" class="btn btn-p" data-pal-modal-ok>Compris</button></div></div>`;
   }
 
   function brancher(z, e, api) {
@@ -556,8 +596,13 @@ export function creerPalettier(P, M, opts, O) {
       if (el.tagName !== 'BUTTON') el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); fn(); } });
     };
     const on = (cle, fn) => racine.querySelectorAll(`[data-pal="${cle}"]`).forEach((b) => activer(b, fn));
-    // Échap : les motifs, puis la vue de près, puis la travée.
+    // La fenêtre du système se ferme : le focus revient sur la carte de la palette, à la souris comme au clavier.
+    const fermerAlerte = () => {
+      ui.focus = `pal:${ui.alerte.id}`; ui.focusForce = true; ui.alerte = null; redessiner();
+    };
+    // Échap : la fenêtre du système, puis les motifs, puis la vue de près, puis la travée.
     const fermer = () => {
+      if (ui.alerte) { fermerAlerte(); return true; }
       if (ui.signaler) { ui.signaler = false; ui.focus = 'b:signaler'; }
       else if (ui.pres) { ui.focus = `emp:${ui.pres}`; ui.pres = null; }
       else if (ui.trav) { ui.focus = `trav:${ui.trav}`; ui.trav = null; }
@@ -577,12 +622,23 @@ export function creerPalettier(P, M, opts, O) {
     caler();
     window.addEventListener('resize', caler);
     racine.addEventListener('focusin', (ev) => { const t = ev.target.closest && ev.target.closest('[data-pe-cle]'); if (t) ui.focus = t.dataset.peCle; });
+    // La fenêtre est ouverte : rien d'autre n'est branché (aucun geste derrière), tout le reste est inerte, le focus reste dedans.
+    const fenetreEl = racine.querySelector('[data-pal-modal]');
+    if (fenetreEl) {
+      [...racine.children].forEach((c) => { if (c !== fenetreEl) c.setAttribute('inert', ''); });
+      const ok = fenetreEl.querySelector('[data-pal-modal-ok]');
+      ok.addEventListener('click', fermerAlerte);
+      fenetreEl.addEventListener('keydown', (ev) => { if (ev.key === 'Tab') { ev.preventDefault(); ok.focus(); } });
+      ok.focus({ preventScroll: true });
+      return;
+    }
     const det = racine.querySelector('[data-pe-regles]');
     if (det) det.addEventListener('toggle', () => { ui.regles = det.open; });
-    if (O.clavier() && ui.focus) {
+    if ((O.clavier() || ui.focusForce) && ui.focus) {
       const el = racine.querySelector(`[data-pe-cle="${CSS.escape(ui.focus)}"]`);
       if (el) el.focus({ preventScroll: true });
     }
+    ui.focusForce = false;
     on('retour', () => { ui.focus = ui.trav ? `trav:${ui.trav}` : null; ui.pres = null; ui.trav = null; ui.signaler = false; dire(''); redessiner(); });
     // Regarder reste permis après « Valider » (ouvrir une travée, un emplacement) ; aucun geste n'est plus publié.
     racine.querySelectorAll('[data-pe-trav]').forEach((g) => activer(g, () => {
@@ -609,11 +665,26 @@ export function creerPalettier(P, M, opts, O) {
     on('signaler', () => { ui.signaler = true; dire(''); ui.focus = `motif:${MOTIF_IDS[0]}`; redessiner(); });
     on('signalerNon', () => { ui.signaler = false; ui.focus = 'b:signaler'; redessiner(); });
     racine.querySelectorAll('[data-pal-motif]').forEach((b) => activer(b, () => { const n = signaler(e, ui.pres, b.dataset.palMotif); ui.focus = `emp:${ui.pres}`; fait(n); }));
+    // Faire monter : sans fonction `monte`, Kevin monte tout de suite ce qui attend ; avec `monte(db)`, la demande part et les
+    // palettes montent quand la base le dit. Dans les deux cas, le geste `monter` est publié.
+    on('monter', () => {
+      const att = Object.keys(e.confiees).filter((id) => !X.montees.includes(id));
+      if (!att.length || !C) return;
+      noterGeste(e); e.monterDemande = true;
+      if (typeof C.monte === 'function') { direSysteme(`Demande envoyée à ${NOM}.`); ui.focus = 'b:monter'; }
+      else {
+        e.monteesIds = [...new Set([...(Array.isArray(e.monteesIds) ? e.monteesIds : []), ...att])];
+        dire(`${ech(NOM)} a monté ${att.map((id) => `<b>${ech(id)}</b>`).join(', ')}.`, 'oui');
+        ui.focus = 'b:valider';
+      }
+      fait('monter');
+    });
     on('valider', () => { ui.confirmer = true; ui.focus = 'b:validerOui'; redessiner(); });
     on('validerNon', () => { ui.confirmer = false; ui.focus = 'b:valider'; redessiner(); });
     on('validerOui', () => {
       ui.confirmer = false; ui.signaler = false; ui.pres = null; ui.trav = null;
       e.enMain = null; e.valide = true; e.at = Date.now(); noterGeste(e);
+      e.monteesValidation = montees(M, e, api.db);   // ce que Kevin a monté À CE MOMENT : le reste n'est pas rangé
       sig('valider'); api.sauver();
       if (COPIE && api.rendreCopie) api.rendreCopie();
       // Tout l'écran, menu compris : un message qui attend le geste `valider` (Kevin, ENT-8.11) arrive tout de suite.

@@ -530,4 +530,20 @@ button.vt-son-btn:focus-visible{ outline:3px solid #ffe08a; outline-offset:1px }
 .pal-motifs legend{ font-weight:700; font-size:.86rem; padding:0 4px }
 .pal-motifs .btn{ min-height:34px; padding:3px 8px; font-size:.84rem; line-height:1.15 }
 .pal-motifs .pal-annuler{ grid-column:1 / -1; min-height:30px }
+/* « Faire monter les palettes » : sous « Valider mon rangement », même largeur, bouton secondaire (grisé si rien n'attend). */
+.pal-monter{ white-space:normal }
+.pal-monter:disabled{ cursor:not-allowed }
+/* Trois boutons dans le bandeau (Valider, Faire monter, Les règles) : un peu plus étroits en marge, pour que le bandeau garde
+   sa hauteur et que tout tienne à 1280 × 720 sans défiler. */
+.pal-bandeau .pe-act{ flex-basis:164px; gap:4px }
+.pal-bandeau .pe-act .btn{ padding:5px 6px; font-size:.86rem; line-height:1.15; min-height:0 }
+.pal-bandeau .pe-regles summary{ padding:5px 8px; font-size:.86rem }
+/* La fenêtre « Message du système » (nouvelle adresse) : par-dessus tout l'écran, un seul bouton ; voile translucide, panneau du
+   thème, trait de l'accent (ni aplat vert, ni rouge). */
+.pal-modal-voile{ position:fixed; inset:0; z-index:300; display:grid; place-items:center; padding:16px; background:rgba(20,18,15,.6) }
+.pal-modal{ width:min(420px, 100%); background:var(--panneau); color:var(--encre); border:1px solid var(--filet); border-top:4px solid var(--ardoise);
+  border-radius:var(--r); padding:14px 18px 16px; box-shadow:0 8px 30px rgba(20,18,15,.45); display:flex; flex-direction:column; gap:8px }
+.pal-modal h3{ margin:0; font-size:1.05rem }
+.pal-modal p{ margin:0; font-size:1rem; line-height:1.45 }
+.pal-modal .btn{ align-self:flex-end; min-width:120px; min-height:40px }
 .pal-pres .pe-msg:empty{ display:none }

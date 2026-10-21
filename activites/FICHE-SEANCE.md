@@ -2199,23 +2199,42 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     comptée (`tentativesHaut`) ;
   - **Confier à Kevin** (au sol : « Au sol, tu poses toi-même. » ; niveau que le cariste ne dessert pas : refusé) : la palette part dans la
     zone **« À MONTER »**, dessinée au pied de chaque allée (trait de l'accent, jamais d'aplat), avec sa destination ; la travée la montre
-    réservée, en trait. Kevin la **monte** (elle occupe alors son emplacement) à la validation, ou dès que `monte(db)` est vrai (relu à chaque
-    dessin : ENT-8.11 la fait monter quand l'élève a répondu au message de Kevin) ; une palette montée ne se reprend plus ;
+    réservée, en trait. Kevin la **monte** (elle occupe alors son emplacement) quand l'élève clique **« Faire monter les palettes »** (voir plus bas), à la
+    validation (`monte: 'validation'`, le défaut), ou dès que `monte(db)` est vrai (relu à chaque dessin : ENT-8.11 la fait monter quand
+    l'élève a répondu au message de Kevin) ; une palette montée ne se reprend plus ;
+  - **Faire monter les palettes** (bouton sous « Valider mon rangement », même largeur, secondaire ; retour de Tristan du 21/10/2026) :
+    publie le geste `monter`. **Grisé** (`disabled`, titre qui dit pourquoi) s'il n'y a aucune palette « À monter » ou si le rangement est
+    validé. Sans fonction `monte` (ou `monte: 'validation'`) : Kevin monte **tout de suite** ce qui attend (l'état range `monteesIds`,
+    les palettes confiées après le clic attendent la validation, qui monte ce qui reste) ; avec `monte: (db) => …` : « Demande envoyée à
+    Kevin. » dans l'encart « Système », rien ne monte, les palettes montent quand `monte(db)` devient vrai. L'état range
+    `monterDemande: true` (la demande se relit après un rechargement). Le parcours de l'élève : poser, signaler, faire monter, valider ;
   - **Signaler : on ne peut pas ranger ici** : un motif à choisir (« C’est occupé », « La charge serait dépassée », « L’emplacement est
     abîmé », « Autre »), la palette retourne en réception, marquée « signalée ». Le **système** répond dans l'encart « Système » (colonne de
     droite, la place du Terminal du lot 2 ; la fonction `direSysteme` sera rebranchée sur lui) : « Nouvelle adresse : A1-T04-N2-E3. » si la
     palette déclare `nouvelleAdresse` (la carte la porte aussi), sinon « Signalement enregistré. » ; **en copie, « C’est noté. »** et jamais de
     nouvelle adresse. Aucun jugement à l'écran ; un nouveau signalement de la même palette remplace le précédent ;
+  - **Fenêtre « Message du système »** (21/10/2026) : au signalement d'une palette qui déclare `nouvelleAdresse`, une **fenêtre modale**
+    (`role="dialog"`, `aria-modal="true"`) s'ouvre : « Nouvelle adresse pour P5 (Lessive liquide 3 L) : A1-T04-N2-E3. » et un seul bouton
+    **« Compris »** (Échap aussi). Le focus y entre ; tout le reste est inerte (aucun geste derrière, Tab ne sort pas) ; à la fermeture, le
+    focus revient **sur la carte de la palette**. La ligne reste dans l'encart « Système », l'étiquette de la carte change. **Sans
+    `nouvelleAdresse`, ou en copie : pas de fenêtre.** Réglée dans `entrepot-palettier.js` (`ui.alerte`, classes `pal-modal*` de
+    `styles/entrepot.css`) : le moteur n'avait aucune fenêtre modale réutilisable (les confirmations de rendu sont dans la page) ;
   - **Valider mon rangement** (avec confirmation, possible avec des palettes en réception) : fige tout, Kevin monte (`'validation'`), plus
     aucun geste (regarder les travées reste permis) ; en copie, la copie est rendue. Puis, hors copie et selon `verdict`, sur chaque carte :
     « ✓ bien rangée », ou le nom des critères faux (« ✗ signalement », « ✗ adresse », « ✗ plaque de charge » ; le lot 2 ajoutera « ✗ scan »),
     avec `'adresse'` suivi de l'adresse attendue. Tous les textes nouveaux sont au « tu ».
 - **Gestes publiés** (dans `signaux`, préfixés `entrepot:<id>:`) : `prendre:<P>`, `poser:<P>` (pose réussie), `confier:<P>`,
   `signaler:<P>` — une entrée par palette déclarée, celles du confirmé comprises —, `ouvrir` (toute ouverture d'un emplacement de près ; la
-  première seule est retenue par la base) et `valider`. Ni `poser` ni `verifier` du rangement. Rien n'est publié après « Valider ».
+  première seule est retenue par la base), `monter` (le bouton « Faire monter les palettes ») et `valider`. Ni `poser` ni `verifier` du
+  rangement. Rien n'est publié après « Valider ».
 - **Jalons** (ids stables ; `attente` avant « Valider », `ok` / `ko` après, **jamais `attente` après**) :
   - `place-<P>` (palette à ranger) : posée au sol ou confiée **à son adresse** ; **signalée à tort** (son adresse était possible) = faux,
-    même posée juste ensuite (décision 6 de Tristan) ;
+    même posée juste ensuite (décision 6 de Tristan) ; **confiée mais pas montée au moment de « Valider »** = faux (décision de Tristan,
+    21/10/2026 : elle n'est pas rangée). Montée = par le bouton, par `monte(db)` devenu vrai, ou par la validation elle-même (`monte:
+    'validation'`, le cas ordinaire : ok). L'état range à la validation `monteesValidation` (les palettes montées à ce moment : la note n'a
+    pas la base sous la main). Pour `signale-<P>`, la palette rangée à sa nouvelle adresse doit être montée aussi. Quand `monte` est une
+    fonction et que des palettes attendent, la confirmation de « Valider » dit : « Des palettes attendent Kevin : elles ne compteront pas
+    comme rangées. Valider quand même ? » (avec `'validation'`, la validation les monte : aucun avertissement) ;
   - `signale-<P>` (palette avec `nouvelleAdresse` ou `aSignaler`) : signalée **depuis son adresse**, avec un **motif vrai**, non rangée à son
     adresse d'origine, puis rangée à sa nouvelle adresse si le système l'a donnée (pas en copie) ;
   - `pasPoseHaut` : aucune tentative de pose au-dessus du sol **et toutes les palettes traitées** (posée, confiée ou signalée) : sinon faux ;
@@ -2230,7 +2249,9 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     doit déclarer **les mêmes palettes à tous les niveaux** (celles du confirmé marquées) : sinon la séance ne se charge pas.
 - **État** (`db.entrepots[<id>]`, cloisonné par séance ; les lots 2 à 6 le liront) : `{ enMain, posees: { P1: adresse },
   confiees: { P3: adresse }, signalees: { P5: { motif, adresse } }, nouvelles: { P5: adresse }, tentativesHaut, valide, at, premierGeste }`.
-  Les palettes montées ne sont pas rangées : elles se calculent (`monte`).
+  Les palettes montées ne sont pas rangées : elles se calculent (`monte`). Trois clés **absentes de l'état neuf**, écrites au besoin :
+  `monterDemande: true` et `monteesIds: [P3, …]` (le bouton « Faire monter » ; `monteesIds` seulement sans fonction `monte`),
+  `monteesValidation: [P3, …]` (à la validation : les palettes montées à ce moment).
 - **Exports lisibles par une séance** (`core/types/entrepot.js`, `P` = la déclaration ou la fonction de la séance, `o.copie` en évaluation) :
   `palettesConfiees(db, P, o)` → `[{ id, nom, adresse }]` (les phrases du message à Kevin ; calculées une fois, à l'arrivée du message) ;
   `etatPalettier(db, P, o)` → `{ enMain, posees, confiees, signalees: { P5: motif }, nouvelles, montees, tentativesHaut, valide }`.
