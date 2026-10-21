@@ -164,3 +164,4 @@ doit vérifier à l'écran.
 - 19/10/2026 : maquette validée par Tristan (après deux retours : prises de la borne, aucune marque dans le vide) ; G-5 lancé ; ENT-10.5 lancée pendant l'arrêt ; sacs : dessinés ; photos Pelleau : accordées (script).
 - 20/10/2026 : phase 4 livrée (sacs, étiquette conservation, ligne de refus, ENT-10.9 à 10.12) ; douze séances construites ; suite entière finale puis push ; EN-COURS effacé.
 - 21/10/2026 : reliquats du chantier (six traits du moteur relevés par les constructeurs) soumis à Tristan un par un, six « oui » ; livrés par sous-agents Sonnet, G-9 dans `chantiers.md`, lignes du 21/10 dans `decisions.md` ; suite entière 2137/2137 ; EN-COURS effacé.
+- 21/10/2026 : relecture des décisions par Tristan (sept questions) ; retouches G-10 livrées (10.4, avertisseur sur l'engin, 10.7, 10.2) ; suite entière puis push ; EN-COURS effacé.
