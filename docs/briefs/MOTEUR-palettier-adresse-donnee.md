@@ -7,6 +7,11 @@
 > ```
 
 **Statut** : à implémenter
+**État des lieux (§3)** : **fait le 21/10/2026**, lecture seule → `docs/briefs/MOTEUR-palettier-adresse-donnee-etat-des-lieux.md` (sections A à F,
+14 décisions à prendre par Tristan, résumé en dix lignes). Ce qu'il change au brief : un **lot 0** préalable (l'entrepôt ne se tire pas encore par
+élève), un mode à part `palettier` dans son fichier (ENT-5.5 intact), des phases dans un seul entrepôt (8.13, 8.14), des ids de jalons par rang
+(pas par adresse tirée), une fuite à couper au comptage (poids affichés), la charte d'Action **bleue** et non rouge, Belleville limitée à 4 niveaux.
+**Durée revue : ≈ 22 à 26 h** (version courte lots 0, 1, 2, 4 ≈ 14 à 16 h pour ENT-8.11 et 8.12). Rien n'est écrit tant que Tristan n'a pas tranché.
 **Date du brief** : 21/10/2026
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action du 21/10/2026, 16 h 14 → 17 h 00 (13 décisions de Tristan, fiche du projet
 `claude/prepalog-action-cadrage-c1.5.md`).
