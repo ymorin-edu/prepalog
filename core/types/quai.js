@@ -363,6 +363,15 @@ const ARTICLES = { 'le': { def: 'le ', poss: 'mon', court: 'le ' }, 'la': { def:
 // son prénom à la place de « le chauffeur » (« Loïc te remet la feuille de ramasse »). (Pas `chauffeur` : ENT-8.10 y range déjà un prénom pour son dialogue.)
 // Sans ces deux clés, les textes d'avant, au vous, d'un octet à l'autre.
 const chauffeurDe = (c) => ({ nom: texteNet(c && c.prenomChauffeur), tu: !!c && c.tutoiement === true });
+// `camions[i].paroleSignee` (20/10/2026, brief ENT-10.9 « Je signe sous tes réserves. », ENT-8.8 « Je signe sous vos réserves. ») : la réplique du chauffeur une fois la feuille signée.
+// Une phrase (utilisée avec ou sans palette refusée) ou { sansRefus, avecRefus }. Sans la clé : les deux textes du moteur, inchangés.
+const PAROLE_SIGNEE = { sansRefus: 'C’est signé. J’y vais. Bonne journée !', avecRefus: 'C’est signé. Je recharge les palettes refusées et j’y vais. Bonne journée !' };
+const paroleSigneeDe = (c, refusees) => {
+  const ps = c && c.paroleSignee;
+  if (typeof ps === 'string') return texteNet(ps) || PAROLE_SIGNEE[refusees ? 'avecRefus' : 'sansRefus'];
+  if (ps && typeof ps === 'object') return texteNet(ps[refusees ? 'avecRefus' : 'sansRefus']) || PAROLE_SIGNEE[refusees ? 'avecRefus' : 'sansRefus'];
+  return PAROLE_SIGNEE[refusees ? 'avecRefus' : 'sansRefus'];
+};
 const TEXTE_ARRET_DEFAUT = 'Les palettes sont en zone de réception.';
 function arretDechargement(Q) {
   const a = Q && Q.arret;
@@ -1082,6 +1091,14 @@ function verifierDeuxSeances(Q, E) {
     if (!c || typeof c !== 'object') return;
     if (c.tutoiement !== undefined && c.tutoiement !== true) E.push(`camions[${i}].tutoiement : ne prend que la valeur true (reçu « ${c.tutoiement} »)`);
     if (c.prenomChauffeur !== undefined && !texteNet(c.prenomChauffeur)) E.push(`camions[${i}].prenomChauffeur : le prénom est vide (retirer la clé pour garder « le chauffeur »)`);
+    const ps = c.paroleSignee;
+    if (ps !== undefined) {
+      if (typeof ps === 'string') { if (!texteNet(ps)) E.push(`camions[${i}].paroleSignee : la phrase est vide (retirer la clé pour garder le texte du moteur)`); }
+      else if (ps && typeof ps === 'object' && !Array.isArray(ps)) {
+        Object.keys(ps).filter((k) => k !== 'sansRefus' && k !== 'avecRefus').forEach((k) => E.push(`camions[${i}].paroleSignee.${k} : inconnu (sansRefus, avecRefus)`));
+        ['sansRefus', 'avecRefus'].forEach((k) => { if (typeof ps[k] !== 'string' || !texteNet(ps[k])) E.push(`camions[${i}].paroleSignee.${k} : la phrase manque ou est vide (les deux clés sont demandées : sansRefus et avecRefus)`); });
+      } else E.push(`camions[${i}].paroleSignee : une phrase, ou { sansRefus, avecRefus }`);
+    }
   });
   if (arret && commence) E.push('arret et commence : on ne peut pas à la fois s’arrêter après le déchargement et partir du contrôle (il ne resterait aucune étape)');
   if ((arret || commence) && Q.mode === 'controle') E.push(`${arret ? 'arret' : 'commence'} avec mode: 'controle' : ce mode (quai déjà réceptionné) n’a ni déchargement ni étapes à raccourcir`);
@@ -2393,12 +2410,16 @@ export function creerQuai(Q, opts = {}) {
     return o;
   }
   // L'étiquette du carton cliqué, lisible, et ce qu'on voit de son état DEPUIS LA VUE ACTUELLE.
+  // 20/10/2026 (décision de Tristan, reliquat Pelleau) : l'étiquette du zoom ne dit que le numéro (« Colis 7 »), jamais « / total », pour un carton, un fût ou un sac :
+  // le total est la palette complète numérotée par le moteur, même quand la feuille dit moins (couche du dessus incomplète, piège « couche normale ») .
+  // Le petit « n/N » dessiné sur la face du carton (`etiq.no`, `palIso`) est resté : il fait partie de la référence octet pour octet de Spartoo (bloc quai-iso) ;
+  // le retirer demande de régénérer cette référence (décision de Tristan, à prendre).
   function zoomFut(p, s, cm) {
     const P = palFutsIso(p), f = s.carton ? P.futs.find((x) => x.no === s.carton && !x.absent) : null;
     if (!f) return `<span class="note">🔍 Clique sur un ${R.u.un} de la palette : son étiquette s’affiche ici (${fmtMin(C.etiquette)} la première fois).</span>`;
     const et = p.etiq || {}, vu = f.fuite && faceVisible(s.vue, f.fuite);
     return `<div class="quai-etiq quai-etiq-carton" data-q-etiquette data-q-carton-vu="${f.no}">
-        <div class="quai-etiq-l1"><b>${ech(expediteur(p, cm))}</b><span>${ech(maj(R.u.un))} <b>${f.no}</b> / ${P.total}</span></div>
+        <div class="quai-etiq-l1"><b>${ech(expediteur(p, cm))}</b><span>${ech(maj(R.u.un))} <b>${f.no}</b></span></div>
         ${Q.destinataire ? `<div class="quai-etiq-dest">→ ${ech(Q.destinataire)}</div>` : ''}
         <div class="quai-etiq-ref">${ech(et.ref)}</div><div>${ech(et.nom)}</div><div>${ech(et.poids)}</div>
         <div>${et.commande ? `Cde ${ech(et.commande)} · ` : ''}Lot ${ech(et.lot)}</div>
@@ -2426,7 +2447,7 @@ export function creerQuai(Q, opts = {}) {
     const rf = refDeCouche(p, c.k), et = (rf ? rf.etiq : p.etiq) || {};
     const vu = c.abime && facesExterieures(c, p.W, p.D).includes(c.abime) && faceVisible(s.vue, c.abime);
     return `<div class="quai-etiq quai-etiq-carton" data-q-etiquette data-q-carton-vu="${c.no}">
-        <div class="quai-etiq-l1"><b>${ech(expediteur(p, cm))}</b><span>${ech(maj(R.u.un))} <b>${c.no}</b> / ${P.total}</span></div>
+        <div class="quai-etiq-l1"><b>${ech(expediteur(p, cm))}</b><span>${ech(maj(R.u.un))} <b>${c.no}</b></span></div>
         ${Q.destinataire ? `<div class="quai-etiq-dest">→ ${ech(Q.destinataire)}</div>` : ''}
         <div class="quai-etiq-ref">${ech(et.ref)}</div><div>${ech(et.nom)}</div><div>${ech(et.poids)}</div>
         <div>${et.commande ? `Cde ${ech(et.commande)} · ` : ''}Lot ${ech(et.lot)}</div>
@@ -3451,7 +3472,7 @@ export function creerQuai(Q, opts = {}) {
     // Le chauffeur ne « recharge les palettes refusées » que s'il y en a (vu sur ENT-9.2, 18/10/2026 : des piles de vides, rien de refusé).
     const refusees = P.some((p) => st(e, p).decision === 'refuser');
     const TU = chauffeurDe(cm).tu;
-    const parole = k.paroleChauffeur || (k.signe ? (refusees ? 'C’est signé. Je recharge les palettes refusées et j’y vais. Bonne journée !' : 'C’est signé. J’y vais. Bonne journée !') : k.ecrit ? (TU ? 'Fais voir ce que tu as écrit… Je signe ?' : 'Faites voir ce que vous avez écrit… Je signe ?') : (TU ? 'J’attends tes papiers pour signer. Mes autres clients m’attendent aussi.' : 'J’attends vos papiers pour signer. Mes autres clients m’attendent aussi.'));
+    const parole = k.paroleChauffeur || (k.signe ? paroleSigneeDe(cm, refusees) : k.ecrit ? (TU ? 'Fais voir ce que tu as écrit… Je signe ?' : 'Faites voir ce que vous avez écrit… Je signe ?') : (TU ? 'J’attends tes papiers pour signer. Mes autres clients m’attendent aussi.' : 'J’attends vos papiers pour signer. Mes autres clients m’attendent aussi.'));
     const prof = api.estProf;
     const ouvert = unDecharge(e, R);
     let clore;

@@ -92,7 +92,7 @@ Kervéguen), pour que le quai ne dise rien du tirage ; (6) le premier message d'
 la ligne « palette non stockée » du compte rendu n'existe que dans les copies qui ont une palette de Kervéguen (brief §4 : « s'il y en a une »), elle arrive après la clôture du quai.
 
 **Demande au chef / au moteur** : la ligne de la feuille de ramasse pour un refus « produit » (écrite par le quai) reste à corriger par le chantier moteur en cours ; les tests de cette séance n'affirment que
-le mot « REFUSÉE » et le motif choisi. L'étiquette d'un sac affiche « Colis 5 / 32 » (alerte c d'ENT-10.11) : un élève peut y lire le total, ce qui ne dit pas le froid. « Ce que tu vois de ce colis depuis ici : intact »
+le mot « REFUSÉE » et le motif choisi. L'étiquette d'un sac affichait « Colis 5 / 32 » (alerte c d'ENT-10.11) : **fait le 20/10/2026 : l'étiquette ne dit plus de total** (« Colis 5 »). « Ce que tu vois de ce colis depuis ici : intact »
 reste affiché au zoom, en copie comme en guidage (moteur).
 
 **Sabotages joués puis remis** (bloc `pelleau-112`, 21 cas ; tout est remis, le bloc repasse à 21 / 21 et `socle dependances copie questions pelleau-111 pelleau-112` à 226 / 226) :

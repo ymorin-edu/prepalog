@@ -419,8 +419,8 @@ await v('ENT-10.10 : étiquettes lues — un sac de P4 (temoin-3) dit l’engrai
     return pg.$eval(Q('[data-q-etiquette]'), (e) => ({ l1: e.querySelector('.quai-etiq-l1 b').textContent.trim(), no: e.querySelector('.quai-etiq-l1 span').textContent.replace(/\s+/g, ' ').trim(),
       ref: e.querySelector('.quai-etiq-ref').textContent.trim() }));
   };
-  egal(await lire(3, 13), { l1: 'Expéditeur : Agri-Kerlann', no: 'Colis 13 / 40', ref: 'AK-40210' }, 'étiquette d’un sac de P4 (article différent)');
-  egal(await lire(2, 13), { l1: 'Expéditeur : Agri-Kerlann', no: 'Colis 13 / 40', ref: 'AK-31205' }, 'étiquette d’un sac de P3 (le piège : le terreau de la feuille)');
+  egal(await lire(3, 13), { l1: 'Expéditeur : Agri-Kerlann', no: 'Colis 13', ref: 'AK-40210' }, 'étiquette d’un sac de P4 (article différent)');
+  egal(await lire(2, 13), { l1: 'Expéditeur : Agri-Kerlann', no: 'Colis 13', ref: 'AK-31205' }, 'étiquette d’un sac de P3 (le piège : le terreau de la feuille)');
   egal((await lire(0, 2)).l1, 'Expéditeur : Biscuiterie Ar Vag', 'étiquette d’un carton de P1');
   await pg.click(Q('[data-q="etape"][data-n="4"]')); await pause();
   const posees = await pg.$$eval(Q('[data-q-cf] [data-iso-posee]'), (L) => Object.fromEntries(L.map((g) => [g.dataset.isoPosee, g.dataset.isoCase]).sort()));

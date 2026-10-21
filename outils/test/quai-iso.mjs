@@ -1543,7 +1543,7 @@ await v('Quai fûts : ③ — huit fûts cliquables par leur étiquette, la fuit
   await p.click(`${HOTE} [data-q="tourner"]:not([data-sens])`); await p.click(`${HOTE} [data-q="tourner"]:not([data-sens])`);   // arrière
   await p.click(`${PAL3} [data-q-carton="2"]`);
   egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-ref`, (n) => n.textContent.trim()), 'AFF-20', 'l’étiquette du fût cliqué');
-  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim()), 'Fût 2 / 8', 'le numéro du fût');
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim()), 'Fût 2', 'le numéro du fût');
   vrai(/Fuite sur cette face/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent)), 'le fût 2 vu de l’arrière : fuite sur cette face');
   await p.click(`${PAL3} [data-q-carton="1"]`);
   vrai(/intact/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent)), 'le fût 1 vu de l’arrière : intact');
@@ -1876,11 +1876,11 @@ async function parcoursTextes(p, { nb, autres = [] }) {
   return S;
 }
 
-await v('Quai unité : un quai sans unite — le parcours ①→bilan garde les mots d’aujourd’hui (« Cartons » au BL, « Nombre de cartons endommagés », « Carton 3 / 8 »…)', async () => {
+await v('Quai unité : un quai sans unite — le parcours ①→bilan garde les mots d’aujourd’hui (« Cartons » au BL, « Nombre de cartons endommagés », « Carton 3 »…)', async () => {
   const p = await pageAvec({});
   const S = await parcoursTextes(p, { nb: 8 });
   egal(S.bl.slice(0, 4), ['Palette', 'Réf.', 'Désignation', 'Cartons'], 'la colonne du BL');
-  egal(S.zoom, 'Carton 3 / 8', 'le zoom d’un carton');
+  egal(S.zoom, 'Carton 3', 'le zoom d’un carton');
   vrai(/Ce que tu vois de ce carton depuis ici : intact/.test(S.etat), `ce qu’on voit du carton : ${S.etat}`);
   vrai(/✓ P1 validée : Accepter avec réserves — Cartons endommagés/.test(S.resume), `le résumé de la palette validée : ${S.resume}`);
   egal(S.aria3, 'Palette P1 : clique sur un carton pour lire son étiquette', 'l’étiquette lue par un lecteur d’écran');
@@ -1910,7 +1910,7 @@ await v('Quai unité : une palette mixte (plusieurs références) avec une unit�
   vrai(/Colis comptés, référence par référence/.test(await p.$eval(HOTE, (h) => h.innerText)), 'le libellé du comptage par référence');
   vrai(/Clique sur un colis de la palette/.test(await p.$eval(HOTE, (h) => h.innerText)), 'la consigne avant le premier clic');
   await p.dispatchEvent(`${HOTE} svg[data-q-palette] [data-q-carton="3"]`, 'click');
-  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim()), 'Colis 3 / 12', 'le zoom d’un colis');
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim()), 'Colis 3', 'le zoom d’un colis');
   vrai(/Ce que tu vois de ce colis depuis ici : intact/.test(await p.$eval(`${HOTE} [data-q-etat-carton]`, (n) => n.textContent.replace(/\s+/g, ' '))), 'ce qu’on voit du colis');
   await p.close();
 });
@@ -1935,11 +1935,11 @@ await v('Quai unité : la zone de calcul, le rappel, les aides de comptage et le
   await q.close();
 });
 
-await v('Quai unité : un quai en fûts — « Nombre de fûts endommagés », réserve « 1 fût endommagé (fuite) », colonne « Fûts » du BL, jalon « 7 fûts », zoom « Fût 3 / 8 » ; aucun mot « carton » à l’écran', async () => {
+await v('Quai unité : un quai en fûts — « Nombre de fûts endommagés », réserve « 1 fût endommagé (fuite) », colonne « Fûts » du BL, jalon « 7 fûts », zoom « Fût 3 » ; aucun mot « carton » à l’écran', async () => {
   const p = await pageAvec({ palettes: [PALS[2], PALS[3]].map((x, i) => Object.assign({}, x, { id: `P${i + 1}`, avarie: i === 0 ? { 2: 'N' } : {} })) });
   const S = await parcoursTextes(p, { nb: 8, autres: [[1, 7]] });
   egal(S.bl.slice(0, 4), ['Palette', 'Réf.', 'Désignation', 'Fûts'], 'la colonne du BL');
-  egal(S.zoom, 'Fût 3 / 8', 'le zoom d’un fût');
+  egal(S.zoom, 'Fût 3', 'le zoom d’un fût');
   vrai(/Ce que tu vois de ce fût depuis ici : intact/.test(S.etat), `ce qu’on voit du fût : ${S.etat}`);
   vrai(/✓ P1 validée : Accepter avec réserves — Fût endommagé/.test(S.resume), `le résumé de la palette validée : ${S.resume}`);
   egal(S.aria3, 'Palette P1 : clique sur un fût pour lire son étiquette', 'l’étiquette lue par un lecteur d’écran');
@@ -2610,6 +2610,62 @@ await v('Quai chauffeur collègue : verifierQuai refuse un tutoiement qui n’es
   let levee = '';
   try { quaiMod.creerQuai(bon({ tutoiement: 'oui' })); } catch (x) { levee = x.message; }
   vrai(/camions\[0\]\.tutoiement/.test(levee), `creerQuai devrait lever l’erreur : ${levee}`);
+});
+
+/* ---- Quai : la réplique du chauffeur une fois la feuille signée (`camions[i].paroleSignee`) — décision de Tristan du 20/10/2026 (briefs ENT-10.9 et ENT-8.8).
+   Cas AJOUTÉS (aucun cas existant touché). Textes du moteur écrits à la main ; la clé est lue par l'écran (④), pas seulement validée. */
+const SIG_MOTEUR = { sans: 'C’est signé. J’y vais. Bonne journée !', avec: 'C’est signé. Je recharge les palettes refusées et j’y vais. Bonne journée !' };
+// Joue ③ puis ④ jusqu'à la signature ; `refus` : P5 est refusée (avarie) au lieu d'être acceptée. Rend la réplique affichée.
+async function parolePostSignature(camion, refus) {
+  const p = await pageDeux(DEUX({ commence: 'controle', camions: [CAM_ART(camion)] }));
+  await p.waitForSelector(`${HOTE} [data-q-palette]`);
+  const valide = async (n, compte, decision, motif) => {
+    await p.click(`${HOTE} [data-q="sel"][data-n="${n}"]`);
+    await p.fill(`${HOTE} #qCompte`, String(compte)); await p.press(`${HOTE} #qCompte`, 'Enter');
+    await p.click(`${HOTE} #qDec-${decision}`);
+    if (motif) await p.click(`${HOTE} #qMot-${motif}`);
+    await p.click(`${HOTE} [data-q="valider"]`);
+  };
+  await valide(0, 8, 'accepter'); await valide(1, 8, 'reserves', 'produit'); await valide(2, 8, 'reserves', 'avarie'); await valide(3, 7, 'accepter');
+  await (refus ? valide(4, 8, 'refuser', 'avarie') : valide(4, 8, 'accepter'));
+  await p.click(`${HOTE} [data-q="vers4"]`); await p.click(`${HOTE} [data-q="vers4"]`);
+  await p.fill(`${HOTE} #qRes-P2`, 'PEL-20'); await p.fill(`${HOTE} #qRes-P3`, '1');
+  if (refus) await p.fill(`${HOTE} #qRes-P5`, '1');
+  await p.click(`${HOTE} [data-q="ecrire"]`);
+  await p.click(`${HOTE} [data-q="signer"]`);
+  const parole = await p.$eval(`${HOTE} [data-q-parole]`, (n) => n.textContent.replace(/\s+/g, ' ').trim());
+  await p.close();
+  return parole;
+}
+
+await v('Quai paroleSignee : sans la clé, les deux textes du moteur (avec et sans palette refusée) ; une phrase, la même dans les deux cas ; un objet, chaque phrase à sa place', async () => {
+  const dit = (nom, t) => `${nom} : « ${t} »`;
+  egal(await parolePostSignature({}, false), dit('Le chauffeur', SIG_MOTEUR.sans), 'sans la clé, sans refus : le texte du moteur');
+  egal(await parolePostSignature({}, true), dit('Le chauffeur', SIG_MOTEUR.avec), 'sans la clé, avec refus : le texte du moteur');
+  egal(await parolePostSignature({ paroleSignee: 'Je signe sous vos réserves.' }, false), dit('Le chauffeur', 'Je signe sous vos réserves.'), 'une phrase, sans refus');
+  egal(await parolePostSignature({ paroleSignee: 'Je signe sous vos réserves.' }, true), dit('Le chauffeur', 'Je signe sous vos réserves.'), 'une phrase, avec refus : la même');
+  const obj = { paroleSignee: { sansRefus: 'Réserves signées. Bonne route !', avecRefus: 'Réserves signées. Je reprends le refusé. Bonne route !' }, tutoiement: true, prenomChauffeur: 'Loïc' };
+  egal(await parolePostSignature(obj, false), dit('Loïc', 'Réserves signées. Bonne route !'), 'un objet, sans refus : sa phrase, le prénom du camion');
+  egal(await parolePostSignature(obj, true), dit('Loïc', 'Réserves signées. Je reprends le refusé. Bonne route !'), 'un objet, avec refus : son autre phrase');
+});
+
+await v('Quai paroleSignee : verifierQuai refuse une phrase vide, un objet à une seule clé, une clé vide ou inconnue, un nombre ; accepte une phrase et l’objet complet ; creerQuai lève l’erreur', async () => {
+  const bon = (c = {}) => QC([PC({ id: 'P1' })], { rendu: 'iso', froid: false, camions: [Object.assign({ nom: 'A', palettes: [PC({ id: 'P1' })] }, c)] });
+  egal(quaiMod.verifierQuai(bon({ paroleSignee: 'Je signe.' })), [], 'une phrase');
+  egal(quaiMod.verifierQuai(bon({ paroleSignee: { sansRefus: 'a', avecRefus: 'b' } })), [], 'l’objet complet');
+  egal(quaiMod.verifierQuai(bon({})), [], 'aucune clé');
+  const refus = (v, re, quoi) => { const E = quaiMod.verifierQuai(bon({ paroleSignee: v })); vrai(E.some((m) => re.test(m)), `${quoi} devrait être refusé (${E.join(' | ') || 'rien'})`); };
+  refus('', /camions\[0\]\.paroleSignee : la phrase est vide/, 'paroleSignee: \'\'');
+  refus('   ', /camions\[0\]\.paroleSignee : la phrase est vide/, 'paroleSignee: espaces');
+  refus({ sansRefus: 'a' }, /camions\[0\]\.paroleSignee\.avecRefus : la phrase manque/, 'un objet sans avecRefus');
+  refus({ avecRefus: 'b' }, /camions\[0\]\.paroleSignee\.sansRefus : la phrase manque/, 'un objet sans sansRefus');
+  refus({ sansRefus: 'a', avecRefus: '' }, /paroleSignee\.avecRefus : la phrase manque ou est vide/, 'un objet à une clé vide');
+  refus({ sansRefus: 'a', avecRefus: 'b', autre: 'c' }, /paroleSignee\.autre : inconnu/, 'une clé inconnue');
+  refus(3, /camions\[0\]\.paroleSignee : une phrase, ou \{ sansRefus, avecRefus \}/, 'un nombre');
+  refus(null, /camions\[0\]\.paroleSignee : une phrase, ou/, 'null');
+  let levee = '';
+  try { quaiMod.creerQuai(bon({ paroleSignee: '' })); } catch (x) { levee = x.message; }
+  vrai(/camions\[0\]\.paroleSignee/.test(levee), `creerQuai devrait lever l’erreur : ${levee}`);
 });
 
 await v('Quai chariot : cinq palettes (ENT-8.7) — le chariot ne touche aucune palette posée, les cinq bacs tiennent dans la zone de réception, la légende et les pastilles suivent', async () => {
@@ -4007,7 +4063,7 @@ await v('Quai sacs : ② ③ ④ — les sacs dessinés partout, cliquables, l�
   await p.locator(`${PAL3} [data-q-carton="13"]`).dispatchEvent('click');
   await p.waitForSelector(`${HOTE} [data-q-etiquette]`);
   egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-ref`, (n) => n.textContent.trim()), 'AK-40210', 'l’étiquette du sac dit la référence livrée (engrais)');
-  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim()), 'Colis 13 / 20', 'le numéro du sac');
+  egal(await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim()), 'Colis 13', 'le numéro du sac');
   vrai(/ENGRAIS GRANULÉ/.test(await p.$eval(`${HOTE} [data-q-etiquette]`, (n) => n.textContent)), 'la désignation de l’étiquette');
   await p.click(`${HOTE} [data-q="sel"][data-n="1"]`);
   egal([await compte('[data-q-carton]'), await compte('[data-iso-sac]')], [8, 0], '③ P2 : huit cartons, aucun sac');
@@ -4146,6 +4202,30 @@ await v('Quai conservation : verifierQuai — un texte de 60 signes au plus, sur
   const Ep = quaiMod.verifierQuai(QPILE([PP({ conservation: 7 })]));
   if (!Ep.some((m) => /« conservation » doit être/.test(m))) fautes.push(`pile, un nombre : ${Ep.join(' | ') || 'pas refusé'}`);
   if (fautes.length) throw new Error(fautes.join(' ; '));
+});
+
+// L'étiquette du zoom ne dit que le numéro (20/10/2026, décision de Tristan) : le total est la palette complète numérotée par le moteur, même quand la feuille dit moins
+// (couche du dessus incomplète) ; l'élève n'a pas à le lire. Même gabarit pour un carton, un fût et un sac. (Le petit « n/N » dessiné sur la face du carton reste : il est dans la référence de Spartoo.)
+await v('Quai étiquette du zoom : « Colis 7 » (carton, fût, sac) — le numéro seul, jamais « / » ni le total sur l’étiquette du zoom', async () => {
+  const cas = [
+    ['carton', [Object.assign({}, PCAR, { id: 'P1' })], EXTRA_SACS, 'Colis 7', '8'],
+    ['fût', [PF()], {}, 'Fût 7', '8'],
+    ['sac', [PSAC], EXTRA_SACS, 'Colis 7', '20'],
+  ];
+  for (const [forme, palettes, extra, attendu, total] of cas) {
+    const p = await pageAvec({ palettes, extra });
+    await jusquaEtape2(p);
+    await p.click(`${HOTE} [data-q="vers3"]`);
+    await p.waitForSelector(`${HOTE} [data-q-palette]`);
+    await p.locator(`${HOTE} [data-q-palette] [data-q-carton="7"]`).dispatchEvent('click');
+    await p.waitForSelector(`${HOTE} [data-q-etiquette]`);
+    const l1 = await p.$eval(`${HOTE} [data-q-etiquette] .quai-etiq-l1 span`, (n) => n.textContent.replace(/\s+/g, ' ').trim());
+    egal(l1, attendu, `${forme} : l’étiquette du zoom`);
+    const tout = await p.$eval(`${HOTE} [data-q-etiquette]`, (n) => n.textContent);
+    vrai(!tout.includes('/'), `${forme} : un « / » traîne sur l’étiquette : ${tout.replace(/\s+/g, ' ')}`);
+    vrai(!new RegExp(`(^|[^\\d])${total}([^\\d]|$)`).test(l1), `${forme} : le total ${total} apparaît dans « ${l1} »`);
+    await p.close();
+  }
 });
 
 await v('Quai iso : la page d’essai ne demande rien hors du site et ne plante pas', async () => {

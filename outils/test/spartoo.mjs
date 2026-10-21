@@ -400,7 +400,7 @@ await v('Spartoo réception : quai en 2D iso — BL remis, palette qu’on fait 
   await page.click('[data-q="tourner"]:not([data-sens])'); await page.click('[data-q="tourner"]:not([data-sens])');
   if ((await enfonce()) !== 1) throw new Error('l’enfoncement ne se voit pas de l’arrière');
   if (!/enfoncé/.test(await page.textContent('[data-q-etat-carton]'))) throw new Error('de l’arrière, le carton 6 devrait paraître enfoncé');
-  if (!/Carton 6 \/ 12/.test(await page.textContent('[data-q-etiquette]'))) throw new Error('le n° du carton n’est pas sur son étiquette');
+  if (!/Carton 6(?!\s*\/)/.test(await page.textContent('[data-q-etiquette]'))) throw new Error('le n° du carton n’est pas sur son étiquette');
   await page.click('[data-q="tourner"][data-sens="-1"]'); await page.click('[data-q="tourner"][data-sens="-1"]');
   if (await enfonce()) throw new Error('« ⟲ Tourner » ne ramène pas à l’avant');
   for (const [ref, n] of [['PM-SUE-RG-39', 4], ['PM-RSX-BL-42', 4], ['PM-SUE-MA-41', 3]]) {

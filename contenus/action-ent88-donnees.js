@@ -165,6 +165,9 @@ export function quaiDuJeu(jeu, niveau = 'standard') {
     aides: { ...(confirme ? AIDES_CONFIRME : AIDES_GUIDAGE) },
     camions: [{
       transporteur: CAMION_HAVRE.transporteur, fournisseur: CAMION_HAVRE.provenance, bl: BL_NUMERO, arrivee: '07:00',
+      // 20/10/2026 (brief §4, « Je signe sous vos réserves. ») : la réplique de Marc après la signature, au vous. Le bon jeu signe toujours avec des réserves (deux palettes à
+      // problème, aucune à refuser) : « sous vos réserves » est la signature ordinaire ; la phrase avec refus ne s'entend que sur un mauvais choix.
+      paroleSignee: { sansRefus: 'Je signe sous vos réserves. Bonne journée !', avecRefus: 'Je signe sous vos réserves. Je recharge les palettes refusées et j’y vais. Bonne journée !' },
       parole: 'Bonjour. Voici la lettre de voiture et le bon de livraison. J’attends au local chauffeurs.',
       palettes: jeu.palettes.map((t) => {
         const p = palette(t.id), [attendu, motifAttendu] = ATTENDU[t.anomalie];

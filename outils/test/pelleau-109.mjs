@@ -332,6 +332,8 @@ await v('ENT-10.9 : parcours juste à l’écran (temoin-1) — Avant de commenc
   vrai(/P1 AV-20418 : acceptée sous réserve — manque 2 colis \(FR 40, reçu 38\)/.test(t4), 'réserve de P1');
   vrai(/P3 AK-31205 : acceptée sous réserve — 2 colis abîmés \(écrasé ou percé\)/.test(t4), 'réserve de P3');
   await pg.click(Q('[data-q="signer"]')); await pause();
+  // 20/10/2026 : la réplique de Loïc après la signature est celle du contenu (`paroleSignee`), pas « C’est signé. J’y vais. » du moteur.
+  egal((await pg.textContent(Q('[data-q-parole]'))).replace(/\s+/g, ' ').trim(), 'Loïc : « Je signe sous tes réserves. Bonne journée ! »', 'la réplique de Loïc à la signature');
   await pg.click(Q('[data-q="clore"]')); await pause();
   vrai(!!(await entrants()).find((x) => x.subject === 'Ton compte rendu'), 'le compte rendu demandé à la signature');
   await ouvrirMail('Ton compte rendu'); await pg.click(Q('[data-repondre]')); await pg.waitForSelector(Q('#formPhr:not([hidden])'));
@@ -362,7 +364,7 @@ await v('ENT-10.9 : parcours juste à l’écran (temoin-1) — Avant de commenc
   egal(erreurs, [], 'erreurs JavaScript');
 });
 
-await v('ENT-10.9 : étiquette lue — un sac de P3 (temoin-1) : « Expéditeur : Agri-Kerlann », AK-31205, « 1 sac », Colis 13 / 40 ; un carton de P1 : « Expéditeur : Biscuiterie Ar Vag » ; sacs dessinés sur P3 et P4 seulement ; à ④, chaque palette dans la zone de son client', async () => {
+await v('ENT-10.9 : étiquette lue — un sac de P3 (temoin-1) : « Expéditeur : Agri-Kerlann », AK-31205, « 1 sac », Colis 13 ; un carton de P1 : « Expéditeur : Biscuiterie Ar Vag » ; sacs dessinés sur P3 et P4 seulement ; à ④, chaque palette dans la zone de son client', async () => {
   await monter({ uid: 'temoin-1' });
   await allerV('quai');
   await pg.waitForSelector(Q('[data-q-palette]'));
@@ -374,7 +376,7 @@ await v('ENT-10.9 : étiquette lue — un sac de P3 (temoin-1) : « Expéditeur 
   const et = () => pg.$eval(Q('[data-q-etiquette]'), (e) => ({ l1: e.querySelector('.quai-etiq-l1 b').textContent.trim(), no: e.querySelector('.quai-etiq-l1 span').textContent.replace(/\s+/g, ' ').trim(),
     ref: e.querySelector('.quai-etiq-ref').textContent.trim(), tout: e.innerText.replace(/\s+/g, ' ') }));
   const e3 = await et();
-  egal([e3.l1, e3.no, e3.ref], ['Expéditeur : Agri-Kerlann', 'Colis 13 / 40', 'AK-31205'], 'étiquette du sac');
+  egal([e3.l1, e3.no, e3.ref], ['Expéditeur : Agri-Kerlann', 'Colis 13', 'AK-31205'], 'étiquette du sac');
   vrai(/TERREAU UNIVERSEL, SACS DE 40 L/.test(e3.tout) && /\b1 sac\b/.test(e3.tout), 'désignation et contenu : ' + e3.tout);
   vrai(((await base()).quais[QID].palettes.P3.etiqLues || []).length > 0, 'l’étiquette lue est rangée');
   await pg.click(Q('[data-q="sel"][data-n="0"]')); await pause(30);

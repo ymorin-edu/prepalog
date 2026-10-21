@@ -176,10 +176,10 @@ du §6.1).
 ajouté pour que la réserve du quai dise « 2 colis abîmés (écrasé ou percé) » comme le §6.1 ; la phrase « zone litiges » dit l'unité de la palette
 (« les 2 sacs abîmés de P3 ») au lieu de « colis », comme la ligne des réserves du §6.3 ; Q2 se pose quand une palette d'Agri-Kerlann est **validée**
 (lu dans l'état du quai : le geste `valider` ne dit pas quelle palette) ; images d'« Avant de commencer » : dessins en traits construits (sac percé,
-carton écrasé), aucune photo au dépôt ; `aide` et `retour` d'« Avant de commencer » et définitions du lexique écrits par Claude Code. **Non fait** :
-la réplique de Loïc à la signature reste celle du moteur (« C'est signé. J'y vais. Bonne journée ! ») : « Je signe sous tes réserves. » demanderait une
-option du quai (demande au moteur, non faite).
+carton écrasé), aucune photo au dépôt ; `aide` et `retour` d'« Avant de commencer » et définitions du lexique écrits par Claude Code. **Fait le 20/10/2026** (décision de Tristan) :
+la réplique de Loïc à la signature est « Je signe sous tes réserves. Bonne journée ! » (clé `paroleSignee` du camion, `core/types/quai.js`) ; le bon jeu signe toujours avec des
+réserves (deux palettes à problème, aucune à refuser), la variante avec refus (« …Je recharge ce que tu refuses et j'y vais. ») ne s'entend que sur un mauvais choix.
 
 **À vérifier à l'écran par Tristan** : les sacs et les cartons se distinguent bien à ③ (quai A, P3/P4) ; l'étiquette d'un colis du piège dit « Colis n / 40 »
-alors que la feuille dit 36 ou 35 (numérotation du moteur, comme ENT-8.8 : peut tromper un élève) ; le dessin du sac percé d'« Avant de commencer » ;
+alors que la feuille dit 36 ou 35 (numérotation du moteur, comme ENT-8.8 : peut tromper un élève) — **fait le 20/10/2026 : l'étiquette ne dit plus de total** (« Colis n ») ; le dessin du sac percé d'« Avant de commencer » ;
 les textes d'aide et de lexique ; la consigne d'Erwan en tête du quai.

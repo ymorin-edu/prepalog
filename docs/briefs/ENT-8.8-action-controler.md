@@ -296,8 +296,9 @@ Bloc **`action-88`** (fichier `outils/test/action-88.mjs`, ligne dans `BLOCS` et
 - **Écarts par rapport au brief** (et pourquoi) :
   1. **Niveaux** : aides de comptage **allumées pour tous**, pas de rappel « Fais le tour » propre à l'Accompagné (la vue quai ne lit pas
      `db.aisance`, décision §8.2 n° 4) ; pas de `niveauxPrevus` (aucun jalon bonus possible sans changer le socle).
-  2. **Réplique de Marc** : « Je signe sous vos réserves. » impossible, la vue écrit en dur « C'est signé. Je recharge les palettes refusées et j'y
-     vais. Bonne journée ! » (et « Le chauffeur », sans prénom). Demande au moteur possible (`parole` après signature).
+  2. **Réplique de Marc** : « Je signe sous vos réserves. » impossible, la vue écrivait en dur « C'est signé. Je recharge les palettes refusées et j'y
+     vais. Bonne journée ! » (et « Le chauffeur », sans prénom). **Fait le 20/10/2026** (décision de Tristan) : clé `paroleSignee` du camion ; Marc dit
+     « Je signe sous vos réserves. Bonne journée ! » (signature ordinaire : le bon jeu signe toujours avec des réserves, aucune palette à refuser) ; la variante avec refus ne s'entend que sur un mauvais choix.
   3. **Q1** : l'énoncé de Cowork (« palette P2, acceptée sans réserve ») serait faux chez un élève dont P2 a un problème : énoncé **calculé**
      (`selon`) : P2 quand elle est acceptée, sinon la palette conforme de l'élève ; dommages construits (bougies cassées, boîtes fendues, torchons
      déchirés).
