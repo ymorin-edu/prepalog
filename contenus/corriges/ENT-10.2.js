@@ -31,7 +31,7 @@ export const CORRIGE = {
       rep: 'Vestiaire → n° 1 · Zone de réception → n° 3 · Quai → n° 2 · Bureau → n° 6.',
       note: 'Chaque photo compte à son premier clic (0,75). Le tour lui-même ne rapporte rien.' },
     { etape: 2, etapeTitre: 'Mon poste (inspection, au premier essai)', genre: 'question', texte: 'Ce qu’il faut faire',
-      rep: 'Essayer l’avertisseur du transpalette n° 1 (il sonne : l’engin est en ordre). Aller voir le quai : marquer ce qui manque (selon l’élève, '
+      rep: 'Essayer l’avertisseur du transpalette n° 1 : cliquer le bouton à la trompe, sous la poignée du timon (il sonne : l’engin est en ordre). Aller voir le quai : marquer ce qui manque (selon l’élève, '
         + 'l’extincteur du quai B ou le plan de circulation), puis « Signaler à Erwan ». Ne rien signaler d’autre (l’engin et l’autre objet du site sont en '
         + 'ordre). Puis « C’est bon, je prends mon poste ».',
       note: 'Défaut signalé avant de prendre le poste 2,5 · avertisseur essayé 1,5 · aucun faux signalement 1,5 (faux sans aucun signal). '

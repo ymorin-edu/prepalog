@@ -70,7 +70,7 @@ const DOC_PRISE_DE_POSTE = { id: 'prise-de-poste', titre: 'Ma prise de poste', c
     <p class="pe-art"><b>2. Mon transpalette</b></p>
     <ul class="pe-ul pe-coche">
       <li>Les freins.</li>
-      <li>L’[[avertisseur]] : je l’essaie.</li>
+      <li>L’[[avertisseur]] : je l’essaie (je clique le bouton à la trompe, sous la poignée du timon).</li>
       <li>L’élévation des fourches.</li>
       <li>La batterie : chargée et bien branchée.</li>
       <li>Pas de fuite sous l’engin.</li>
@@ -320,7 +320,7 @@ export const VOLET = {
     { id: 'poste', quand: apresGeste(`entrepot:${VISITE_ID}:visite:fin`),
       semer: (prenom, db) => ({ mails: [mail(prenom, ERWAN, 'Ton poste',
         'Avant de toucher un engin, on contrôle. Prends la liste « Ma prise de poste », regarde ton poste et le transpalette n° 1. '
-          + 'Si quelque chose ne va pas, signale-le-moi. Ouvre « Mon poste ».\n\n'
+          + 'Si quelque chose ne va pas, signale-le-moi. Pour essayer l’avertisseur, clique le bouton à la trompe, sous la poignée du timon. Ouvre « Mon poste ».\n\n'
           + 'Je te joins aussi « Le droit » : ce que dit la loi sur les jeunes et les engins.\n\nErwan',
         { db, heure: '07:10', extra: { pieces: ['prise-de-poste', 'droit-102'] } })] }) },
     { id: 'attente', quand: inspectionFaite,

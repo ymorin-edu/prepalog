@@ -62,7 +62,7 @@ export function inspectionDe(graine) {
   const d = defautDe(graine), D = SITE[d], O = SITE[autre(d)];
   return {
     id: INSPECTION_ID, libelle: 'Mon poste', qui: 'Erwan',
-    consigne: 'Avec ta liste, regarde ton poste et ton transpalette. Clique ce qui ne va pas, puis signale-le.',
+    consigne: 'Avec ta liste : clique ce qui ne va pas, puis signale-le. Avertisseur : bouton à la trompe, sous le timon.',
     vues: ['charge', 'quai'],
     points: [
       { id: 'tp1', objet: 'transpalette', n: 1, etat: 'ok', ok: true, lib: 'Transpalette n° 1 en ordre' },
