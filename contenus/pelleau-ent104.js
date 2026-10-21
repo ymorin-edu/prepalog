@@ -10,7 +10,7 @@
 // l'élève prend son poste seul. Écrans, un par étape :
 //   Avant de commencer (noté, 4 / 20, sans aide) → ① Où est-ce ? (fiche, plan numéroté dont les numéros sont TIRÉS) → ② Mon poste (vue « Inspection
 //   du poste » en copie : deux défauts tirés, un point en ordre, avertisseur à essayer, « C'est noté. », rien ne se répare, pas d'arrêt) →
-//   ③ Yann (dialogue en face à face, évaluation : il presse, une réplique juste calculée sur le défaut du site) → ④ Lire le planning (fiche,
+//   ③ Yann (dialogue en face à face, évaluation : il presse, quatre réponses neutres, les mêmes pour les deux défauts du site) → ④ Lire le planning (fiche,
 //   lectures tirées) puis le planning des quais (une carte à poser ; `rendCopie: false` : l'envoi ne rend pas la copie) → ⑤ Rendre compte à Erwan
 //   par phrases → « Rendre ma copie ».
 //

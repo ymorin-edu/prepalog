@@ -40,15 +40,13 @@ export const defautEnginDe = (graine) => ENGINS[hasard(`${graine || ''}|${ID}|de
 export const defautSiteDeBase = (db) => defautSiteDe(graineDeBase(db || {}));
 export const defautEnginDeBase = (db) => defautEnginDe(graineDeBase(db || {}));
 const autreSite = (d) => (d === 'extincteur' ? 'affichage' : 'extincteur');
-// Ce que chaque défaut du site fait dire (inspection, bonne réplique à Yann, phrase du compte rendu, corrigé).
+// Ce que chaque défaut du site fait dire (inspection, phrase du compte rendu, corrigé).
 export const SITE = {
   extincteur: { objet: 'extincteur', absent: 'absent', present: 'present',
     lib: 'Extincteur absent au quai B', libOk: 'Extincteur en place au quai B',
-    refuse: 'on travaille au quai A, où il y a un extincteur',
     phrase: 'Il manque l’extincteur du quai B : je travaille au quai A.' },
   affichage: { objet: 'affichage', absent: 'absent', present: 'affiche',
     lib: 'Plan de circulation absent au quai B', libOk: 'Plan de circulation affiché au quai B',
-    refuse: 'tu me montres le sens de circulation',
     phrase: 'Le plan de circulation n’est pas affiché : je demande à Yann de me montrer le sens.' },
 };
 // Ce que chaque défaut de l'engin fait dire (le libellé sert au bilan et au corrigé, jamais à l'écran de l'élève pendant l'inspection).
@@ -85,16 +83,16 @@ export function inspectionPour(site, engin) {
 }
 export const inspectionDe = (graine) => inspectionPour(defautSiteDe(graine), defautEnginDe(graine));
 
-// ─────────────────────────────────────────────────────────────── la bonne réplique à Yann (calculée sur le défaut du site)
-export const libRefuse = (site) => `Je prends le n° 2 après l’avoir contrôlé, je mets le n° 1 de côté, et ${SITE[site].refuse}. Je préviens Erwan.`;
+// ─────────────────────────────────────────────────────────────── la bonne réplique à Yann (NEUTRE : un seul jeu de réponses pour les deux défauts du site)
+// Décision de Tristan du 21/10/2026 : aucune réponse ne nomme le défaut ni le lieu, sinon un élève qui l'a raté à l'inspection le lit ici.
+export const LIB_REFUSE = 'Il manque quelque chose au poste, je l’ai signalé à Erwan : on ne commence pas sans son accord.';
 export const REPLIQUES = [
   { id: 'presse', dit: 'On a un camion dans dix minutes. Prends le n° 1, on verra ce soir.',
-    selon: (db) => ({ libs: { refuse: libRefuse(defautSiteDeBase(db)) } }),
     choix: [
-      { v: 'refuse', juste: true, lib: libRefuse(defautSiteDe('')) },
-      { v: 'cede', lib: 'D’accord, je prends le n° 1.' },
+      { v: 'refuse', juste: true, lib: LIB_REFUSE },
+      { v: 'cede', lib: 'D’accord, on commence, on verra après.' },
       { v: 'doucement', lib: 'Je prends le n° 1, mais je roule doucement.' },
-      { v: 'sans-controle', lib: 'Je prends le n° 2 sans le contrôler : il est neuf.' },
+      { v: 'sans-controle', lib: 'Je ne sais pas, à toi de voir.' },
     ] },
 ];
 export const JUSTE_PRESSE = REPLIQUES[0].choix.find((c) => c.juste).v;

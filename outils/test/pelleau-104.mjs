@@ -146,8 +146,9 @@ const ENGIN_DIT = { fourcheTordue: 'une fourche est tordue', roueAbimee: 'une ro
   arretUrgence: 'le bouton d’arrêt d’urgence manque', fuite: 'il y a une fuite sous l’engin', avertisseur: 'l’avertisseur ne sonne pas' };
 const SITE_DIT = { extincteur: 'Il manque l’extincteur du quai B : je travaille au quai A.',
   affichage: 'Le plan de circulation n’est pas affiché : je demande à Yann de me montrer le sens.' };
-const REPONDRE = { extincteur: 'Je prends le n° 2 après l’avoir contrôlé, je mets le n° 1 de côté, et on travaille au quai A, où il y a un extincteur. Je préviens Erwan.',
-  affichage: 'Je prends le n° 2 après l’avoir contrôlé, je mets le n° 1 de côté, et tu me montres le sens de circulation. Je préviens Erwan.' };
+// Réponses proposées à Yann : UN SEUL jeu, neutre, pour les deux défauts du site (décision de Tristan du 21/10/2026 : aucune ne nomme le défaut ni le lieu).
+const REPONDRE = 'Il manque quelque chose au poste, je l’ai signalé à Erwan : on ne commence pas sans son accord.';
+const MAUVAISES_YANN = { cede: 'D’accord, on commence, on verra après.', doucement: 'Je prends le n° 1, mais je roule doucement.', 'sans-controle': 'Je ne sais pas, à toi de voir.' };
 const G = {
   'p104-a': { site: 'extincteur', engin: 'roueAbimee', ou: { 'l-reception': 4, 'l-bureau': 6, 'l-controle': 3 }, lire: { 'l-loic-heure': '07:15', 'l-fin-arvag': '10:30' }, place: ['A', 18] },
   'p104-f': { site: 'affichage', engin: 'fuite', ou: { 'l-reception': 1, 'l-controle': 6, 'l-bureau': 3 }, lire: { 'l-loic-heure': '07:15', 'l-fin-arvag': '10:30' }, place: ['B', 20] },
@@ -433,7 +434,7 @@ await v('ENT-10.4 : toute la vue — les douze inspections possibles (2 défauts
 });
 
 // ─────────────────────────────────────────────────────────── Yann (dialogue d’évaluation)
-await v('ENT-10.4 : Yann (évaluation) — la bonne réplique est calculée sur le défaut du site (p104-a : quai A et extincteur ; p104-f : le sens de circulation) ; une réponse maladroite fait avancer sans réaction, sans grisé, sans « Rappeler » ; seule la première réponse compte', async () => {
+await v('ENT-10.4 : Yann (évaluation) — les quatre réponses sont les mêmes (neutres) pour les deux défauts du site (p104-a : extincteur ; p104-f : plan) ; une réponse maladroite fait avancer sans réaction, sans grisé, sans « Rappeler » ; seule la première réponse compte', async () => {
   for (const [uid, site] of [['p104-a', 'extincteur'], ['p104-f', 'affichage']]) {
     await monter({ uid });
     await ou(G[uid].ou);
@@ -446,8 +447,8 @@ await v('ENT-10.4 : Yann (évaluation) — la bonne réplique est calculée sur 
     const libs = await pg.$$eval(`${Z} [data-dlg-choix]`, (L) => L.map((b) => [b.dataset.dlgChoix, b.textContent.replace(/\s+/g, ' ').trim()]));
     if (uid === 'p104-a') await capture('3-yann');
     egal(libs.map((x) => x[0]).sort(), ['cede', 'doucement', 'refuse', 'sans-controle'], 'quatre réponses');
-    egal(libs.find((x) => x[0] === 'refuse')[1], REPONDRE[site], `la bonne réplique de ${uid}`);
-    vrai(!libs.some((x) => x[0] !== 'refuse' && /extincteur|sens de circulation|plan de circulation/i.test(x[1])), 'une mauvaise réplique nomme le défaut du site');
+    egal(libs.find((x) => x[0] === 'refuse')[1], REPONDRE, `la bonne réplique de ${uid} (${site})`);
+    for (const [k, t] of Object.entries(MAUVAISES_YANN)) egal(libs.find((x) => x[0] === k)[1], t, `réponse « ${k} » de ${uid}`);
   }
   // Une réponse maladroite d’abord : l’appel avance, aucune réaction, aucun choix grisé ; le jalon est faux (la première compte).
   await monter({ uid: 'p104-a' });
@@ -458,13 +459,30 @@ await v('ENT-10.4 : Yann (évaluation) — la bonne réplique est calculée sur 
   await clic('[data-dlg-choix="cede"]'); await pause();
   const apres = await pg.textContent(`${Z} [data-dlg-fil]`);
   vrai(/Bon\. À tout à l’heure\./.test(apres), 'Yann ne conclut pas : ' + apres);
-  vrai(!/Euh|Attends|Non|erreur|faux/i.test(apres.replace(/On a un camion dans dix minutes[^.]*\.[^.]*\./, '').replace(REPONDRE.extincteur, '')), 'une réaction de Yann : ' + apres);
+  vrai(!/Euh|Attends|Non|erreur|faux/i.test(apres.replace(/On a un camion dans dix minutes[^.]*\.[^.]*\./, '').replace(REPONDRE, '')), 'une réaction de Yann : ' + apres);
   egal(await pg.$$eval(`${Z} [data-dlg-choix]:not([disabled])`, (L) => L.length), 0, 'des choix encore proposés après la réponse');
   await clic('[data-dlg-raccrocher]'); await pause();
   vrai(!(await present(`[data-dlg-appeler="${DID}"]`)) || !/Revenir le voir|Rappeler/.test(await pg.textContent(`${Z} [data-dlg-appeler="${DID}"]`).catch(() => '')), '« Rappeler » en évaluation');
   const d = await detail();
   egal(d.refuser, 'ko', 'réplique maladroite d’abord → ✗');
   await monter({ uid: 'p104-a', db: (await base()) });
+});
+
+await v('ENT-10.4 : Yann — AUCUNE réponse proposée ne nomme le défaut ni le lieu (« extincteur », « plan de circulation », « quai B », « affich ») : six graines (extincteur : a, b, e ; plan : f, z, s), mêmes quatre réponses pour toutes ; la juste est la même', async () => {
+  const vus = [];
+  for (const uid of ['p104-a', 'p104-b', 'p104-e', 'p104-f', 'p104-z', 'p104-s']) {
+    await monter({ uid });
+    await ou(G[uid].ou);
+    await poste();
+    await allerV('telephone');
+    await clic(`[data-dlg-appeler="${DID}"]`); await pause();
+    const libs = await pg.$$eval(`${Z} [data-dlg-choix]`, (L) => L.map((b) => b.textContent.replace(/\s+/g, ' ').trim()));
+    egal(libs.length, 4, `${uid} : quatre réponses`);
+    vrai(!libs.some((t) => /extincteur|plan de circulation|quai B|affich/i.test(t)), `${uid} : une réponse nomme le défaut ou le lieu : ${libs.join(' | ')}`);
+    vus.push(libs.slice().sort());
+  }
+  egal(vus.map((x) => JSON.stringify(x)).filter((x, i, a) => x !== a[0]), [], 'les six élèves voient les mêmes quatre réponses');
+  egal(vus[0].includes(REPONDRE), true, 'la juste est dans le jeu');
 });
 
 await v('ENT-10.4 : Yann — la bonne réplique au premier choix → « Ne pas céder » ✓ (2 points) ; une maladroite puis la bonne (le dialogue est terminé : un seul appel) → ✗ ; chacune des trois maladroites → ✗', async () => {
@@ -651,7 +669,8 @@ await v('ENT-10.4 : corrigé par élève — il suit la graine : p104-a (extinct
   egal([r.a['Lecture : À quelle heure Loïc revient-il au quai ?'], r.a['Lecture : À quelle heure la livraison pour Ar Vag libère-t-elle son quai ?']], ['7 h 15', '10 h 30'], 'p104-a : lectures');
   egal(r.a['La carte d’Agri-Kerlann'], 'places justes : Quai A à 10 h 30, Quai A à 10 h 45, Quai A à 11 h', 'p104-a : carte');
   egal(r.f['La carte d’Agri-Kerlann'], 'places justes : Quai A à 10 h 30, Quai A à 10 h 45, Quai A à 11 h, Quai B à 11 h', 'p104-f : carte');
-  vrai(r.a['La bonne réplique à Yann'] !== r.f['La bonne réplique à Yann'], 'la réplique ne suit pas le défaut');
+  egal(r.a['La bonne réplique à Yann'], REPONDRE, 'p104-a : la bonne réplique (neutre)');
+  egal(r.f['La bonne réplique à Yann'], REPONDRE, 'p104-f : la même bonne réplique (un seul jeu pour les deux défauts)');
   vrai(/pas encore ouvert/.test(r.texte) && r.communs === 6, 'corrigé commun');
   const rep = await pg.evaluate(async () => (await fetch('/contenus/corriges/ENT-10.4.js')).status);
   egal(rep, 200, 'le fichier de corrigé est servi');

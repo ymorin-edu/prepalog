@@ -8,7 +8,7 @@
 
 import {
   ID, TIRAGE, SITE, ENGIN, LECTURES, LIEUX_PLAN, CAMIONS, QUAIS, CARTE, HEURE_ARVAG, QUAI_ARVAG, DEFAUTS_SITE, ENGINS, defautSiteDe, defautEnginDe,
-  placesJustes, heureLue, minutesDe, lieuxDe, lecturesTirees, planDe, numeroDe, phraseEngin, libRefuse,
+  placesJustes, heureLue, minutesDe, lieuxDe, lecturesTirees, planDe, numeroDe, phraseEngin, LIB_REFUSE,
 } from '../pelleau-ent104-donnees.js';
 import { graineDeBase } from '../../core/tirage.js';
 
@@ -33,9 +33,9 @@ export const CORRIGE = {
       note: 'Défaut du site 2 · défaut de l’engin 2 · avertisseur essayé 0,5 · aucun faux signalement 1,5. Copie : Erwan répond toujours « C’est noté. », '
         + 'rien ne se répare, aucun arrêt. L’avertisseur muet ne se trouve qu’en l’essayant.' },
     { etape: 3, etapeTitre: 'Ne pas céder (2 points)', genre: 'question', texte: 'Yann presse : « Prends le n° 1, on verra ce soir. »',
-      rep: DEFAUTS_SITE.map((d) => `${S[d].lib} → « ${libRefuse(d)} »`).join(' || '),
-      note: 'La première réponse dite compte. Les trois autres : « D’accord, je prends le n° 1. » · « Je prends le n° 1, mais je roule doucement. » · '
-        + '« Je prends le n° 2 sans le contrôler : il est neuf. »' },
+      rep: `« ${LIB_REFUSE} » (la même pour les deux défauts du site : les réponses proposées ne nomment ni le défaut ni le lieu)`,
+      note: 'La première réponse dite compte. Les trois autres : « D’accord, on commence, on verra après. » · « Je prends le n° 1, mais je roule doucement. » · '
+        + '« Je ne sais pas, à toi de voir. »' },
     { etape: 4, etapeTitre: 'Le planning des quais (3 points, le même pour toute la classe)', genre: 'tableau', texte: 'Les camions prévus',
       entetes: ['Quai', 'Camion', 'Heures'],
       reponses: CAMIONS.map((c) => [nomQ(c.quai), c.titre, `${heureLue(minutesDe(c.de))} – ${heureLue(minutesDe(c.a))}`]),
@@ -62,7 +62,7 @@ export function corrigeEleve(base, uid) {
   const items = [
     { genre: 'fait', texte: 'Son défaut du site', rep: S[s].lib },
     { genre: 'fait', texte: 'Son défaut sur le transpalette n° 1', rep: ENGIN[e].lib + (e === 'avertisseur' ? ' (ne se trouve qu’en essayant l’avertisseur)' : '') },
-    { genre: 'fait', texte: 'La bonne réplique à Yann', rep: libRefuse(s) },
+    { genre: 'fait', texte: 'La bonne réplique à Yann', rep: LIB_REFUSE },
     { genre: 'fait', texte: 'Numéros du plan (rond du dessin → numéro de l’élève)', rep: planDe(db).map((x, i) => `${i + 1}→${x}`).join(' · ') },
     ...lieuxDe(db).map((p) => ({ genre: 'fait', texte: `Où est-ce ? : ${p.q}`, rep: `n° ${numeroDe(db, p)}` })),
     ...lecturesTirees(db).map((p) => { const [q, r] = lecture(p); return { genre: 'fait', texte: `Lecture : ${q}`, rep: r }; }),
