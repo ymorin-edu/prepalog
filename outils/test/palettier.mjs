@@ -362,17 +362,31 @@ await v('Palettier : signaler P5 (nouvelle adresse) ouvre la fenêtre « Message
   egal(erreurs, [], 'erreurs JS');
 });
 
-await v('Palettier : pas de fenêtre sans nouvelle adresse (« Signalement enregistré. »), ni en copie (« C’est noté. »)', async () => {
+await v('Palettier : chaque signalement ouvre la fenêtre — sans nouvelle adresse, un accusé de réception NEUTRE au « tu » (motif choisi, aucun jugement) ; en copie, « C’est noté. » sans adresse ; l’encart Système garde sa ligne courte', async () => {
+  const texteF = () => texte(pg, '[data-pal-modal-texte]');
+  const neutre = (id, nom, motif) => `Signalement enregistré pour ${id} (${nom}) : « ${motif} ». Le système ne donne pas d’autre adresse : la palette retourne en réception.`;
   await monter(pg, { scenario: 'signaler' });
   await signaler(pg, 'P7', 'B1-T01-N2-E1', 'abime', true);
-  egal((await fenetre(pg)).length, 0, 'P7 : aucune fenêtre');
-  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'Signalement enregistré.', 'le système');
-  await signaler(pg, 'P1', 'A1-T03-N1-E2', 'occupe', true);
-  egal((await fenetre(pg)).length, 0, 'signalement à tort : aucune fenêtre');
+  egal((await fenetre(pg)).length, 1, 'P7 : une fenêtre');
+  egal(await texteF(), neutre('P7', 'Peluches', 'L’emplacement est abîmé'), 'P7 : texte neutre');
+  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'Signalement enregistré.', 'l’encart garde sa ligne courte');
+  await pg.click(`${Z} [data-pal-modal-ok]`);
+  // Signalement à tort (P3, « occupé ») : le même texte neutre, ni « faux » ni point perdu.
+  await signaler(pg, 'P3', 'A2-T02-N3-E1', 'occupe', true);
+  egal(await texteF(), neutre('P3', 'Bougies parfumées', 'C’est occupé'), 'P3 à tort : texte neutre');
+  vrai(!/(faux|erreur|point|raté|incorrect)/i.test(await texteF()), 'aucun jugement dans le texte');
+  egal(await texte(pg, '[data-pal-etiq="P3"]'), 'Adresse A2-T02-N3-E1', 'pas de nouvelle adresse');
+  await pg.click(`${Z} [data-pal-modal-ok]`);
+  egal((await fenetre(pg)).length, 0, 'fermée');
+  // Copie : toujours une fenêtre, jamais d'adresse.
   await monter(pg, { temps: 'evaluation' });
+  await signaler(pg, 'P4', 'B1-T04-N2-E2', 'charge', true);
+  egal(await texteF(), 'Signalement enregistré pour P4 (Peluches) : « La charge serait dépassée ». C’est noté.', 'copie : texte');
+  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'C’est noté.', 'copie : encart');
+  await pg.click(`${Z} [data-pal-modal-ok]`);
   await signaler(pg, 'P5', 'A1-T02-N3-E2', 'charge', true);
-  egal((await fenetre(pg)).length, 0, 'copie : aucune fenêtre');
-  egal(await texte(pg, '[data-pal-systeme] .pal-sys-actu'), 'C’est noté.', 'copie');
+  egal(await texteF(), 'Signalement enregistré pour P5 (Lessive liquide 3 L) : « La charge serait dépassée ». C’est noté.', 'copie : P5 sans nouvelle adresse');
+  vrai(!(await texteF()).includes('A1-T04-N2-E3'), 'jamais la nouvelle adresse en copie');
 });
 
 /* =========================================================== « Faire monter les palettes » */

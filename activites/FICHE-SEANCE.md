@@ -2213,11 +2213,14 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     droite, la place du Terminal du lot 2 ; la fonction `direSysteme` sera rebranchée sur lui) : « Nouvelle adresse : A1-T04-N2-E3. » si la
     palette déclare `nouvelleAdresse` (la carte la porte aussi), sinon « Signalement enregistré. » ; **en copie, « C’est noté. »** et jamais de
     nouvelle adresse. Aucun jugement à l'écran ; un nouveau signalement de la même palette remplace le précédent ;
-  - **Fenêtre « Message du système »** (21/10/2026) : au signalement d'une palette qui déclare `nouvelleAdresse`, une **fenêtre modale**
-    (`role="dialog"`, `aria-modal="true"`) s'ouvre : « Nouvelle adresse pour P5 (Lessive liquide 3 L) : A1-T04-N2-E3. » et un seul bouton
-    **« Compris »** (Échap aussi). Le focus y entre ; tout le reste est inerte (aucun geste derrière, Tab ne sort pas) ; à la fermeture, le
-    focus revient **sur la carte de la palette**. La ligne reste dans l'encart « Système », l'étiquette de la carte change. **Sans
-    `nouvelleAdresse`, ou en copie : pas de fenêtre.** Réglée dans `entrepot-palettier.js` (`ui.alerte`, classes `pal-modal*` de
+  - **Fenêtre « Message du système »** (21/10/2026) : **chaque signalement** ouvre une **fenêtre modale** (`role="dialog"`, `aria-modal="true"`)
+    et un seul bouton **« Compris »** (Échap aussi). Trois textes, au « tu », jamais de jugement (ni « faux », ni point perdu) :
+    avec `nouvelleAdresse` : « Nouvelle adresse pour P5 (Lessive liquide 3 L) : A1-T04-N2-E3. » ; sans, hors copie : « Signalement enregistré pour
+    P3 (Bougies parfumées) : « C’est occupé ». Le système ne donne pas d’autre adresse : la palette retourne en réception. » (le libellé du motif
+    choisi) ; **en copie** : « Signalement enregistré pour P4 (Peluches) : « La charge serait dépassée ». C’est noté. » (jamais d'adresse).
+    Le focus entre dans la fenêtre ; tout le reste est inerte (aucun geste derrière, Tab ne sort pas) ; à la fermeture, le focus revient **sur la
+    carte de la palette**. L'encart « Système » garde sa ligne courte (« Nouvelle adresse : … » / « Signalement enregistré. » / « C’est noté. »),
+    l'étiquette de la carte change si une nouvelle adresse est donnée. Réglée dans `entrepot-palettier.js` (`ui.alerte`, classes `pal-modal*` de
     `styles/entrepot.css`) : le moteur n'avait aucune fenêtre modale réutilisable (les confirmations de rendu sont dans la page) ;
   - **Valider mon rangement** (avec confirmation, possible avec des palettes en réception) : fige tout, Kevin monte (`'validation'`), plus
     aucun geste (regarder les travées reste permis) ; en copie, la copie est rendue. Puis, hors copie et selon `verdict`, sur chaque carte :

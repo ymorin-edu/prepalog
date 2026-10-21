@@ -346,11 +346,14 @@ export function creerPalettier(P, M, opts, O) {
     if (!p || !MOTIF_IDS.includes(motif)) return null;
     e.signalees[p.id] = { motif, adresse: a }; e.enMain = null; ui.signaler = false;
     noterGeste(e);
+    // Chaque signalement ouvre une fenêtre que l'élève doit fermer (retours de Tristan, 21/10/2026) : la nouvelle adresse, ou un
+    // accusé de réception NEUTRE (jamais « faux », jamais un point perdu). L'encart « Système » garde sa ligne courte.
+    const lib = (MOTIFS.find((m) => m[0] === motif) || [])[1];
+    ui.alerte = { id: p.id, nom: p.nom, motif: lib, adresse: null, copie: COPIE };
     if (COPIE) direSysteme('C’est noté.');
     else if (p.nouvelleAdresse) {
       e.nouvelles[p.id] = p.nouvelleAdresse; direSysteme(`Nouvelle adresse : ${p.nouvelleAdresse}.`);
-      // Une fenêtre que l'élève doit fermer : la nouvelle adresse ne passe pas inaperçue (retour de Tristan, 21/10/2026).
-      ui.alerte = { id: p.id, nom: p.nom, adresse: p.nouvelleAdresse };
+      ui.alerte.adresse = p.nouvelleAdresse;
     }
     else direSysteme('Signalement enregistré.');
     dire(`<b>${ech(p.id)}</b> signalée : elle retourne en réception.`, 'oui');
@@ -576,9 +579,13 @@ export function creerPalettier(P, M, opts, O) {
   function fenetre() {
     const A = ui.alerte;
     if (!A) return '';
+    const qui = `<b>${ech(A.id)}</b> (${ech(A.nom)})`;
+    const texte = A.adresse ? `Nouvelle adresse pour ${qui} : <b class="pe-mono">${ech(A.adresse)}</b>.`
+      : A.copie ? `Signalement enregistré pour ${qui} : « ${ech(A.motif)} ». C’est noté.`
+        : `Signalement enregistré pour ${qui} : « ${ech(A.motif)} ». Le système ne donne pas d’autre adresse : la palette retourne en réception.`;
     return `<div class="pal-modal-voile" data-pal-modal><div class="pal-modal" role="dialog" aria-modal="true" aria-labelledby="palModalT" aria-describedby="palModalD">
       <h3 id="palModalT">Message du système</h3>
-      <p id="palModalD" data-pal-modal-texte>Nouvelle adresse pour <b>${ech(A.id)}</b> (${ech(A.nom)}) : <b class="pe-mono">${ech(A.adresse)}</b>.</p>
+      <p id="palModalD" data-pal-modal-texte>${texte}</p>
       <button type="button" class="btn btn-p" data-pal-modal-ok>Compris</button></div></div>`;
   }
 
