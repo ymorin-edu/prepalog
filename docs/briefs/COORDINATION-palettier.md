@@ -106,9 +106,10 @@ un bloc de tests par séance (`action-811` … `action-814`), bloc moteur nouvea
     Sans `cariste.monte`, le bouton fait monter tout de suite ce qui est « À monter » ; avec `monte: (db) => bool`, le bouton
     publie le geste et les palettes montent quand la base le dit (ENT-8.11 : Kevin écrit à `apresGeste('…:monter')`, l'élève lui
     répond, Kevin monte). **Le parcours de l'élève** : poser, signaler (fenêtre), faire monter, valider. « Valider » avec des
-    palettes encore « À monter » demande confirmation (« Des palettes attendent Kevin. Valider quand même ? ») ; validées sans être
-    montées, elles restent jugées « confiées à leur adresse » (`place-` ok). `monte: 'validation'` reste accepté (défaut d'avant)
-    mais le bouton existe dans tous les cas. **ENT-8.11 §4 étape 3 change** : Kevin écrit sur `monter`, plus sur `valider`.
+    palettes encore « À monter » demande confirmation (« Des palettes attendent Kevin : elles ne compteront pas comme rangées. Valider quand même ? ») ;
+    **validées sans être montées, elles perdent leur point** : `place-<P>` ko (décision de Tristan, 22 h 45 : « s'il ne fait pas
+    monter ses palettes avant validation, il perd des points »). Avec `monte: 'validation'` (défaut d'avant), la validation monte
+    ce qui reste et ces palettes sont ok ; le bouton existe dans tous les cas. **ENT-8.11 §4 étape 3 change** : Kevin écrit sur `monter`, plus sur `valider`.
 
 ## 4. Suivi
 
