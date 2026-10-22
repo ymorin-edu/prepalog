@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/ENT-8.7-action-decharger.md (§0), docs/briefs/MOTEUR-palettier-adresse-donnee.md puis docs/briefs/ENT-8.11-action-ranger.md en entier. Les lots 1 et 2 du chantier moteur doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (22/10/2026, Claude Code, Opus ; `pret: true, ouverture: 'prof'`)
 **Date du brief** : 21/10/2026 ; **corrigé le 21/10/2026 au soir** d'après l'état des lieux du chantier moteur
 (`docs/briefs/MOTEUR-palettier-adresse-donnee-etat-des-lieux.md`) et les 14 décisions de Tristan (chantier **E-7**) — §11 n° 5.
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action, 21/10/2026, 16 h 14 → 17 h 00 : **13 décisions de Tristan** (fiche du
@@ -316,9 +316,44 @@ réserve », « La plaque de charge », « Toujours scanner ». Corrigé : `cont
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+*22/10/2026, Claude Code (Opus), constructeur sous le chef de chantier (Fable) ; décisions de `COORDINATION-palettier.md` §3 appliquées.*
+
+- **Fichiers créés / modifiés** : créés `activites/action-ranger.js`, `contenus/action-ent811.js`, `contenus/action-ent811-donnees.js`,
+  `contenus/questions/ENT-8.11.js`, `contenus/corriges/ENT-8.11.js`, `outils/test/action-811.mjs` ; une ligne ajoutée dans `activites/index.js`,
+  `outils/test/socle.mjs` (`'ENT-8.11': 'CAP-C1.5'` dans `ATTENDU_CAP`), `outils/test.mjs` (`action-811` dans `BLOCS` et dans le groupe 1 de
+  `GROUPES`, alerte 7) ; une ligne réécrite dans `outils/test/action.mjs` (liste exacte des séances Action au registre : `ENT-8.11` ajoutée). Rien dans
+  `core/` ni `styles/`. Pas de trame (Cowork).
+- **Contenu (données)** : une palette = un produit, toujours le même nombre de cartons (COORDINATION n° 14) : lessive 36 × 13 kg → 493 kg, nettoyant
+  40 × 13 → 545, croquettes 32 × 12,5 → 425, cahiers 30 × 9 → 295, serviettes 40 × 6 → 265, bougies 60 × 3 → 205, boîtes 24 × 4 → 121, peluches 24 × 3 → 97
+  (+ 25 kg de palette, calculé). **Seuil « lourde » : 400 kg** (les trois lourds du brief, et eux seuls). Plaques N2 1 500 / N3 1 200 / N4 1 000 kg,
+  rien au sol (n° 6). Stock de départ FIXE pour toute la classe (règle à graine constante, 84 emplacements sur 192 ; aucun niveau déjà au-delà de sa
+  plaque), 2 emplacements hors service. Palettes tirées par élève (6 produits différents ; P3, P4, P6 et la nouvelle adresse de P5 sur quatre niveaux
+  à part, aucun sur celui de P5 : « P1 à P4 ne dépassent jamais » tient quel que soit l'ordre des gestes) ; nouvelle adresse de P5 en N2 (à confier).
+- **Rebranchements des déclencheurs** : `q-adresse` « première palette posée » → `entrepot:action-ranger:poser:P1…P6` (la première) ; `q-plaque`
+  « palette lourde posée ou confiée » → `poser:`/`confier:` d'une palette ≥ 400 kg (P5 l'est toujours) ; `q-kevin` → `confier:P1…P6` (la première) ;
+  `q-sans-scan` → `scan:P1…P6` ; `q-materiel` → `apresMail` vers Kevin ; `q-securite` « verifier » → `valider`. Samia commente le **premier signalement,
+  quel qu'il soit** (`signaler:P1…P6`) : le même texte, jamais conditionné à la justesse. Kevin écrit à `monter` (n° 17). **`monte(db)`** = le message
+  « Je monte » de Kevin est dans la base (arrivé par `apresMail` vers Kevin), sauf si le rangement a été validé avant (rien de monté à « Valider ») :
+  ses palettes restent alors « à monter », comme le jalon.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  1. Envoi de la fiche : « Bien reçu. Maintenant, au rack ! » au lieu de « C'est ça. … » (le message arrive juste ou faux : « C'est ça » mentirait).
+  2. « Les règles ▾ » **fermées** au départ (guidage et accompagné les voulaient ouvertes) : le moteur n'a pas l'option ; demande au moteur.
+  3. Kevin écrit aussi à « Valider » si l'élève n'a jamais cliqué « Faire monter » (sinon le message à Kevin ne se juge jamais : élève bloqué).
+  4. `pasPoseHaut` : `poids: 0` **et** `compte: false` (pas de ligne ✗ au bandeau pour une garde qui « n'enlève rien », §5).
+  5. **Confirmé** : le moteur (lot 1) compte P6 dans « toutes les palettes traitées » de `charge` et `pasPoseHaut` : un confirmé qui laisse P6 perdait le
+     point « plaque de charge ». La séance juge ces deux jalons comme chez un standard (bonus jamais payant). **À corriger au moteur** (`jalonsPalettier`).
+  6. P4 tirée parmi tous les produits (§6 bis) et non « légère » (§6.3) ; la plaque est respectée par construction.
+  7. « Sans date » : aucun texte ni document n'écrit de date ; la Messagerie affiche quand même l'horodatage des messages (le moteur l'écrit) : la
+     séance prend le dernier mardi, 13 h 30 + le temps passé (rien à recaler).
+  8. Le message d'accueil est dans le premier message de Samia et l'Accueil, pas dans un `sousTitre`. Les deux questions d'éco-droit finissent par
+     « (Lis « … », joint au message de Samia.) » (une question au fil ne montre pas de document).
+  9. « Le droit » : L4121-1 (en entier) et L4122-1 (alinéas 1 et 3) recopiés du Code du travail numérique (code.travail.gouv.fr, qui reprend
+     Légifrance ; Légifrance ne se lit pas par script), consulté le 22/10/2026.
+- **Vérifié / construit** : vérifié (Cowork, brief §2) Action, Geodis à Ensuès, matériel à Action / personnel Geodis (Gomet'), catégories de produits ;
+  texte du Code du travail relu le 22/10. Construit : allée, adresses, plaques, stock, hors service, produits et poids, camion, Samia, Kevin, Julie,
+  dessins (étiquette, travée, plaque, chariot sans conducteur) ; dit dans l'Accueil (`MENTION`) et en pied de chaque dessin.
+- **Tests** : bloc `action-811`, 13 cas, vert (`PORT_TESTS=8131`), livré `pret: true, ouverture: 'prof'` **contre le lot 2 (scan) encore en cours d'écriture dans l'arbre de travail**.
+  Sabotages (16, chacun restauré et vérifié par empreinte) → cas tombés : q-plaque sans `apres` → déclaration + parcours ; P5 tirée sans contrainte ou `verifier` sans contrôle de P5 → équité + parcours (6-7 cas) ; `verifier` sans contrôle des niveaux → équité ; P6 sans `niveaux` → séance refusée (10 cas) ; Kevin monte sans réponse → parcours (« rien n’est monté avant le geste ») ; Kevin écrit à la 1re confiance → parcours ; accompagné sans somme / standard avec somme → déclaration + cas du niveau ; Kevin monte après « Valider » → cas « valider sans faire monter » ; `charge` toujours juste → bases fabriquées + inaction ; poids P3/P4 inversés → déclaration + signalement à tort ; bonus qui coûte → confirmé ; demande jugée sur les adresses attendues → cas « la demande suit ce qu’il a confié » + parcours ; forme jugée avec la demande → cas du message ; « Corriger » qui rouvre le plan → cas « Corriger » ; fiche jugée sur une autre ligne → parcours. Blocs joués seuls (port 8131) : `action-811` 13/13, `action`, `dependances`, `tirage-niveaux` verts ; `socle` 76/76 (un premier passage groupé a buté sur « connexion enseignant », départ lent, vert rejoué seul).
+- **Commits** : aucun (le chef de chantier commite).
+- **Reste ouvert** : option moteur « Les règles ouvertes » ; `charge`/`pasPoseHaut` et palettes bonus au moteur ; relecture à l'écran des textes de
+  Cowork et des dessins ; trame (Cowork).

@@ -86,6 +86,7 @@ export const ACTIVITES = [
   () => import('./action-controler.js'),
   () => import('./action-palette-lucas.js'),
   () => import('./action-evaluation-reception.js'),
+  () => import('./action-ranger.js'),
   // CHEP (centre de service de Templemars) — ENT-9.x. 1re, C2.5.
   () => import('./chep-compte-palettes.js'),
   () => import('./chep-ramasse-retours.js'),
