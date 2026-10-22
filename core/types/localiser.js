@@ -60,6 +60,9 @@ const TOL_KM = 0.3;             // un point de ville en bord de mer peut tomber 
 const DUREE_ZOOM = 650;
 const PAUSE_JUSTE = 500;
 const FLASH = 700;
+// Mouvement réduit (22/10/2026) : la pause après un bon clic et le zoom animé s'appliquent d'un coup. Le flash rouge reste :
+// c'est un repère de couleur (seul retour d'une évaluation en copie), pas un mouvement.
+const reduit = () => typeof matchMedia === 'function' && matchMedia('(prefers-reduced-motion: reduce)').matches;
 export const MENTION = 'Contours : IGN Admin Express (Licence Ouverte). Positions : © contributeurs OpenStreetMap.';
 const CONSIGNES = {
   region: 'Clique la région où se trouve ce lieu.',
@@ -576,7 +579,7 @@ export function creerLocaliser(L, opts = {}) {
     const ici = { vue: vueDe(R) };
     caler(racine);
     const S = monterCadre(racine, { frame: [0, 0, F.w, F.h] }, ici, {
-      vb: vbDe, zz: () => 0, grille: false, echelle: false, duree: DUREE_ZOOM,
+      vb: vbDe, zz: () => 0, grille: false, echelle: false, duree: reduit() ? 0 : DUREE_ZOOM,
       epaisseurs: (k) => { ui.k = k; echelles(racine, k); },
     });
     placerEncart(racine, R);
@@ -679,7 +682,7 @@ export function creerLocaliser(L, opts = {}) {
           maj({ carte: false });
           rendreFocus(auClavier);
         });
-      }, PAUSE_JUSTE);
+      }, reduit() ? 0 : PAUSE_JUSTE);
     }
 
     svg.addEventListener('mousedown', (ev) => { if (ev.target.closest('[data-lc-cle]')) ev.preventDefault(); });

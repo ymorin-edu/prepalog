@@ -192,7 +192,8 @@ function htmlCadre(C, o = {}) {
 //   o.epaisseurs(k, zz) → règle les traits et les textes, `k` = mètres par pixel d'écran ;
 //   o.grille            → faux : pas de repères de quadrillage en bordure (la carte n'en a pas) ;
 //   o.aide(ui)          → le texte d'aide de la barre ;
-//   o.duree             → durée du zoom animé, en ms (520 par défaut ; la vue Localiser demande 650, 15/10/2026) ;
+//   o.duree             → durée du zoom animé, en ms (520 par défaut ; la vue Localiser demande 650, 15/10/2026 ;
+//                         0 = d'un coup, sans animation : la vue Localiser le demande en mouvement réduit, 22/10/2026) ;
 //   o.echelle           → faux : pas d'échelle en mètres (la carte de France de la vue Localiser n'en a pas).
 export function monterCadre(z, C, ui, o) {
   const $ = (s) => z.querySelector(s);
@@ -244,6 +245,7 @@ export function monterCadre(z, C, ui, o) {
   let anim = null;
   function allerA(cible, zCible, fin) {
     cancelAnimationFrame(anim);
+    if (o.duree === 0) { vb.v = cible.slice(); vb.z = zCible; appliquer(); if (fin) fin(); return; }   // mouvement réduit : d'un coup
     const v0 = vb.v.slice(), z0 = vb.z, t0 = performance.now(), T = o.duree || 520;
     const pas = (t) => {
       const u = Math.min(1, (t - t0) / T), e = u < 0.5 ? 2 * u * u : 1 - Math.pow(-2 * u + 2, 2) / 2;

@@ -1364,6 +1364,8 @@ export const ETAPES = etapesLocaliser(LOCALISER, 'action-se-situer').map((j) => 
 - **Le geste** : une erreur → trait rouge 0,7 s et « Ce n'est pas la bonne région. Essaie encore. » ; à la 2e erreur de l'étape, la bonne
   zone (ou le bon point) entourée en pointillés terre, « Regarde la zone entourée. » ; jamais le nom de la réponse. Juste → « Bien vu ! »,
   zone en vert pâle, zoom animé (650 ms) sur l'étape suivante. Les 4 points sont dans un ordre stable par élève (graine).
+  **Mouvement réduit** (`prefers-reduced-motion`, 22/10/2026) : ni la pause de 0,5 s, ni le zoom animé ; l'étape suivante et le geste
+  arrivent d'un coup (`duree: 0` côté `monterCadre`). Le trait rouge de 0,7 s reste : c'est un repère de couleur, pas un mouvement.
 - **Notation** : `etapesLocaliser(L, séance)` rend `localiser:<lieu>:region` et `localiser:<lieu>:departement`, `attente` tant que l'étape
   n'est pas trouvée, puis `ok` (du premier coup) ou `ko`. **Aucun `ecran`** (la carte ne se rejoue pas : dire pourquoi par `finFige`).
   La ville n'a pas de jalon et n'est pas au bilan. Un lieu bonus rend deux jalons `bonus: true` (`null` chez un élève qui ne l'a pas).
