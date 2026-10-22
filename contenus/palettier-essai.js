@@ -1,5 +1,5 @@
 // Contenu d'ESSAI du mode « palettier » de la vue Plan d'entrepôt (core/types/entrepot-palettier.js) — chantier E-7, lot 1,
-// 21/10/2026. Ce n'est PAS une séance : il sert à la page `outils/essai-palettier.html` et au bloc de tests
+// 21/10/2026 (et le comptage du lot 4, 22/10/2026 : `comptage()`, plus bas). Ce n'est PAS une séance : il sert à la page `outils/essai-palettier.html` et au bloc de tests
 // `outils/test/palettier.mjs`. Il imite ENT-8.11 (Action, Ensuès) : 5 palettes, 2 au sol, 2 à confier à Kevin, 1 dont l'adresse
 // ferait dépasser la plaque de charge (à signaler, nouvelle adresse donnée par le système), et une 6e au confirmé (bonus).
 //
@@ -115,6 +115,53 @@ export const POIDS = { 'place-P1': 3, 'place-P2': 3, 'place-P3': 3, 'place-P4': 
 export const POIDS_SCAN = { 'place-P1': 2, 'place-P2': 2, 'place-P3': 2, 'place-P4': 2, 'signale-P5': 3,
   'scan-P1': 1.5, 'scan-P2': 1.5, 'scan-P3': 1.5, 'scan-P4': 1.5, 'scan-P5': 1, pasPoseHaut: 1, charge: 1 };
 
+// LE COMPTAGE (lot 4, 22/10/2026) : l'inventaire tournant à l'aveugle, au Terminal, en cartons (imite ENT-8.12). Même allée, même
+// stock ; 6 adresses au sol, plus une 7e au confirmé. Écrites À LA MAIN (les tests en dépendent) :
+//   1 A1-T03-N1-E2 Lessive 3 × 3 × 4 = 36 pleins, réel 33 (couche du dessus : 6 de 9), système 36 → MANQUE (cle 'manque')
+//   2 A2-T02-N1-E2 Boîtes (stock) 2 × 4 × 4 = 32, réel 26 (dessus : 2 de 8), système 26 → conforme
+//   3 A2-T04-N1-E3 Cahiers 2 × 3 × 5 = 30, réel 27 (dessus : 3 de 6), système 27 → conforme
+//   4 B1-T02-N1-E2 Serviettes 2 × 4 × 4 = 32, réel 34 (2 cartons posés dessus), système 32 → SURPLUS (cle 'surplus')
+//   5 B1-T04-N1-E1 Bougies (stock) 3 × 3 × 4 = 36, réel 31 (dessus : 4 de 9), système 31 → conforme
+//   6 B2-T04-N1-E3 Peluches (stock) 3 × 3 × 5 = 45, réel 39 (dessus : 3 de 9), système 39 → conforme
+//   7 B2-T03-N1-E2 Nettoyant 3 × 2 × 4 = 24, réel 20 (dessus : 2 de 6), système 23 → manque, au confirmé (cle 'bonus', jalons bonus)
+// Les adresses absentes du stock (1, 3, 4, 7) sont occupées par la déclaration du comptage.
+export const ADRESSES_COMPTAGE = [
+  { adresse: 'A1-T03-N1-E2', produit: 'LES', systeme: 36, reel: 33, couche: [3, 3], couches: 4, cle: 'manque' },
+  { adresse: 'A2-T02-N1-E2', produit: 'BOI', systeme: 26, reel: 26, couche: [2, 4], couches: 4 },
+  { adresse: 'A2-T04-N1-E3', produit: 'CAH', systeme: 27, reel: 27, couche: [2, 3], couches: 5 },
+  { adresse: 'B1-T02-N1-E2', produit: 'SER', systeme: 32, reel: 34, couche: [2, 4], couches: 4, cle: 'surplus' },
+  { adresse: 'B1-T04-N1-E1', produit: 'BOU', systeme: 31, reel: 31, couche: [3, 3], couches: 4 },
+  { adresse: 'B2-T04-N1-E3', produit: 'PEL', systeme: 39, reel: 39, couche: [3, 3], couches: 5 },
+  { adresse: 'B2-T03-N1-E2', produit: 'NET', systeme: 23, reel: 20, couche: [3, 2], couches: 4, cle: 'bonus', niveaux: ['confirme'] },
+];
+export const REGLES_COMPTAGE = {
+  titre: 'Compter une palette', entete: 'Compter une palette',
+  lignes: [
+    'Une <b>couche</b> = les cartons en largeur × les cartons en profondeur.',
+    'Multiplie par le nombre de <b>couches pleines</b>, puis ajoute les cartons de la <b>couche du dessus</b>.',
+    'Le Terminal dit que ça ne colle pas : <b>recompte</b>. Toujours pareil : <b>confirme</b>.',
+  ],
+};
+// `o` : recompte ('ecart' | 'jamais'), aideCouche, verdict ('critere' | 'adresse').
+export function comptage(o = {}) {
+  const P = {
+    id: 'essai-comptage', libelle: 'Plan de l’entrepôt', mode: 'palettier',
+    personnage: { nom: 'Samia', role: 'cheffe d’équipe', date: 'mercredi, 6 h',
+      texte: 'Ce matin, on compte les adresses de la liste. Tu ne vois pas ce que dit le système : tu comptes ce que tu vois.' },
+    plan: PLAN, produits: PRODUITS, stock: STOCK,
+    terminal: { nom: 'Terminal' },
+    comptage: { adresses: ADRESSES_COMPTAGE, ...(o.recompte ? { recompte: o.recompte } : {}), ...(o.aideCouche ? { aideCouche: true } : {}) },
+    regles: REGLES_COMPTAGE,
+  };
+  if (o.verdict) P.verdict = o.verdict;
+  return P;
+}
+export const COMPTAGE = comptage({ verdict: 'critere' });
+// Les poids du comptage d'essai (somme 20 ; les jalons de l'adresse 7 sont des bonus) : 6 comptes à 5/3, les deux recomptes à écart
+// à 3, les quatre autres sans poids, scanAvant 4.
+export const POIDS_COMPTAGE = { 'compte-1': 5 / 3, 'compte-2': 5 / 3, 'compte-3': 5 / 3, 'compte-4': 5 / 3, 'compte-5': 5 / 3, 'compte-6': 5 / 3,
+  'recompte-manque': 3, 'recompte-2': 0, 'recompte-3': 0, 'recompte-surplus': 3, 'recompte-5': 0, 'recompte-6': 0, scanAvant: 4 };
+
 // L'univers d'essai : le vrai moteur d'entreprise, dans la charte d'Action. `entrepot` : une déclaration ou une fonction
 // (graine, { niveau, copie }) ; `temps` : guidage, entraînement ou évaluation (copie) ; `poids: false` : des jalons sans poids
 // (et sans bonus), pour une déclaration d'essai qui ajoute des palettes.
@@ -128,7 +175,8 @@ export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poid
     SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [], CM: {}, THEME,
     baseDeDepart: () => ({ v: 1, created: Date.now(), stock: {}, moves: [], mails: [], orders: [], receptions: [],
       customers: [], suppliers: [], seq: 1, _depart: [] }),
-    etapes: poids ? etapes.map((e) => (e.bonus ? e : Object.assign(e, { poids: (etapes.some((x) => x.id === 'scan-P1') ? POIDS_SCAN : POIDS)[e.id] }))) : etapes.filter((e) => !e.bonus),
+    etapes: poids ? etapes.map((e) => (e.bonus ? e : Object.assign(e, { poids: (etapes.some((x) => x.id === 'compte-1') ? POIDS_COMPTAGE
+      : etapes.some((x) => x.id === 'scan-P1') ? POIDS_SCAN : POIDS)[e.id] }))) : etapes.filter((e) => !e.bonus),
     exercice: 'Essai du palettier à adresse donnée',
     entrepot, copie, sansTrame: 'Tout à l’écran',
     menu: ['receptions', 'stock'],

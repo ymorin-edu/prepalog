@@ -2157,6 +2157,13 @@ d'ENT-6.7) qui l'ouvrent et lui **rédigent ses lignes** depuis le plan. Format 
   `TERM.attendre(T, phrase)` (la ligne d'attente ; le comptage du lot 4 s'en servira pour attendre le scan d'une adresse, comme `poser()`
   attend la pose). État rangé par la vue : `terminalScannerNeuf()` = `{ journal: [{ q: 't', x, ko?, h }], attente }` ; fonctions pures
   exportées `direTerminal(T, texte, { refus })` et `attendreTerminal(T, phrase)`.
+- **La saisie en mode « scanner »** (chantier E-7, lot 4, 22/10/2026 : le comptage du palettier) : `TERM.attendre(T, phrase, { saisie: true })`
+  ouvre le **champ à chiffres** du boîtier (avec « Valider », comme le terminal vocal) ; `{ choix: [['recompter', 'Recompter'], ['confirmer',
+  'Confirmer']] }` pose des **boutons** sous l'écran (le champ se ferme quand `saisie` est absent). Les deux sont rangés dans l'état (`T.saisie`,
+  `T.choix`) et **absents par défaut** : un `attendre` sans réglage les efface, le boîtier du lot 2 reste sans champ ni bouton. Ce que l'élève
+  tape ou choisit va à la vue : `TERM.brancher(racine, T, { saisir(texte), choisir(id), focus })` (`focus` : le champ, sinon le premier bouton,
+  prend le focus) ; le terminal ne juge rien. `TERM.dire(T, '33', { eleve: true })` écrit la ligne de l'élève (« › 33 », en jaune comme au
+  terminal vocal).
 
 ### Mode `palettier` : ranger à l'adresse donnée par le système (chantier E-7, lot 1, 21/10/2026) — `core/types/entrepot-palettier.js`
 
@@ -2167,8 +2174,9 @@ emprunte le plan vu de dessus, la travée de face, les adresses, la charge d'un 
 (la travée de face a gagné trois réglages, chacun absent = le dessin d'avant : `sansPoids`, `reserves`, `choisi`). Brief
 `docs/briefs/MOTEUR-palettier-adresse-donnee.md`, décisions `docs/briefs/COORDINATION-palettier.md` §3 ; exemple complet
 `contenus/palettier-essai.js` ; page d'essai **`outils/essai-palettier.html`** (aide de charge, verdict, Kevin qui monte, niveau, copie,
-enseignant, **réglage « Scan »** : deux clics / un clic / aucun) ; tests : bloc **`palettier`**. Le scan est le **lot 2** (plus bas, « Le scan »)
-et le comptage (lot 4) n'est pas encore écrit.
+enseignant, **réglage « Scan »** : deux clics / un clic / aucun ; **réglage « Cas »** : Rangement / Comptage) ; tests : bloc **`palettier`**. Le
+scan est le **lot 2** (plus bas, « Le scan ») et le comptage le **lot 4** (plus bas, « Le comptage ») ; la travée de face a gagné au lot 4 un
+quatrième réglage, `sansPlaque` (absent = le dessin d'avant).
 
 ```js
 entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lot 0, plus haut)
@@ -2303,6 +2311,76 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
   sinon la **nouvelle adresse** reçue après signalement, sinon l'adresse **donnée** (`null` si la palette n'existe pas) : c'est ce que « le
   lendemain » (lot 5) lira. `noter` rend aussi `scans` et `scansRefuses` dans `detail`.
   `bonnesReponses(P)` rend les attendus (enseignant, page d'essai) ; la note d'une copie non pondérée compte les jalons du socle seuls.
+- **Le comptage (lot 4, 22/10/2026) : compter au Terminal, à l'aveugle, en cartons** (ENT-8.12 ; ENT-8.14 en copie au lot 6). Exemple complet :
+  `comptage()` de `contenus/palettier-essai.js` ; page d'essai, réglage **« Cas : Comptage »** (recompter / jamais, aide par couche, verdict,
+  niveau, copie) ; tests : section « le comptage » du bloc `palettier`.
+
+  ```js
+  entrepot: {
+    id: 'action-compter', mode: 'palettier', plan, produits, stock,   // `palettes` facultatif avec un comptage
+    terminal: { nom: 'Terminal' },                                     // obligatoire : on compte au Terminal
+    comptage: {
+      adresses: [   // 1 à 8, dans l'ordre de la liste (rang 1 … n), TOUTES au niveau 1 (on compte depuis le sol, décision 12)
+        { adresse: 'A1-T03-N1-E2', produit: 'LES', systeme: 36, reel: 33, couche: [3, 3], couches: 4, cle: 'manque' },
+        { adresse: 'A2-T02-N1-E2', produit: 'BOI', systeme: 26, reel: 26, couche: [2, 4], couches: 4 },
+        { …, niveaux: ['confirme'] },   // au confirmé seulement, EN FIN DE LISTE : jalons bonus
+      ],
+      recompte: 'ecart' | 'jamais',   // défaut 'ecart'
+      aideCouche: true,               // la vue de près écrit « 3 × 3 = 9 par couche » (jamais le total) ; défaut false
+    },
+    verdict: 'critere' | 'adresse',   // après « Terminer », hors copie ; absent = rien
+    regles: { titre: 'Compter une palette', entete: 'Compter une palette', lignes: [ … ], ouvertes: true },   // le même volet qu'au rangement
+  }
+  ```
+  - **La palette** : `couche: [W, D]` (cartons en largeur, en profondeur, 1 à 5) et `couches` (1 à 6) donnent la palette pleine ; `reel` est
+    dessiné : couches du dessous complètes, cartons manquants **sur la couche du dessus** (au fond), cartons en trop **posés dessus** (une
+    couche au plus). Le dessin est celui de la fiche de prélèvement d'ENT-5.6, sorti de la vue sans changer un trait : **`pileCartons([W, D, L],
+    ecart, aria)`**, exporté par `entrepot.js` (le test compare ses empreintes à celles d'avant). `systeme` est ce que croit le système.
+  - **Contrôles** (une déclaration fautive ne se charge pas) : adresses connues, différentes, au niveau 1, pas hors service ; `systeme` et `reel`
+    entiers ; la couche du dessus jamais vide (`reel` > W × D × (couches − 1)) ; `cle` (un mot qui commence par une lettre) unique ; les adresses
+    du confirmé en fin de liste ; au moins une adresse pour tous ; `terminal` déclaré. **`produit`** : un code de `produits` ou une désignation ;
+    une adresse **absente du stock est occupée par le comptage** (ajoutée au stock de la vue, la déclaration de la séance n'est pas modifiée) ;
+    présente, elle garde son produit (un `produit` qui le contredit est refusé). **Une fonction** (adresses tirées) doit donner les mêmes ids à
+    tous les élèves : une `cle` posée à un rang tiré déplace les `recompte-<rang>` des autres, la séance ne se charge pas (clé partout, ou nulle part).
+  - **À l'aveugle** : `systeme` n'apparaît **jamais** dans la page avant « Terminer le comptage » (ni texte, ni attribut, ni champ : testé par une
+    recherche des nombres dans toute la page) ; la **travée de face** n'écrit ni poids ni plaque (`sansPoids`, `sansPlaque`) et n'a pas de capteur ;
+    la **vue de près** n'a ni plaque, ni capteur, ni poids (un poids donnerait le nombre de cartons). La liste ne surligne rien sur le plan.
+  - **L'écran** : en haut, la consigne neutre (« Inventaire tournant : compte les adresses de la liste ») et **« Terminer le comptage »** ; à droite,
+    la liste **« À compter »** (adresse, produit court, ☐ / ☑, **jamais un nombre**) au-dessus du **Terminal** (mode « scanner » avec son champ à
+    chiffres). La vue de près d'un emplacement au sol : son étiquette (un bouton : un clic la **scanne**), le niveau, le produit, avec `aideCouche`
+    « 3 × 3 = 9 par couche », et la **palette dessinée**, qui prend toute la hauteur qui reste (cartons ≈ 35 px en 1366 × 768 ; cadre ≥ 180 px
+    en 1280 × 720, testé). Au-dessus du sol : « Au-dessus du sol : on ne compte pas
+    d'ici. », l'étiquette ne se scanne pas.
+  - **Le dialogue** (au « tu ») : « Scanne l'adresse. » → clic sur l'étiquette → « A1-T03-N1-E2 — Lessive liquide 3 L. Combien de cartons ? » (le
+    champ prend le focus) → un nombre → **égal au système** (ou `recompte: 'jamais'`) : « Compris. », adresse cochée ; **différent** : « Quantité
+    différente. Recompter ou confirmer ? » (champ fermé, deux boutons, **ni le nombre ni le sens**) ; **Recompter** redemande « Combien de
+    cartons ? » (autant de fois qu'il veut), **Confirmer** garde le compte (« Compris. »). Refus en rouge, sans trace notée : taper sans scan
+    (« Scanne d'abord l'adresse. », compté dans `sansScan`), des lettres (« Je n'ai pas compris. Réponds avec des chiffres. »), scanner un
+    emplacement libre (« Rien à compter ici. »), scanner pendant la question (« Recompte ou confirme d'abord. »). Une adresse **hors liste**
+    (un autre stock au sol, dessiné en palette pleine) se compte (« Compris. ») et reste une **trace** (`horsListe`). Un compte se **refait** en
+    rescannant l'adresse : le dernier confirmé compte. **En copie**, tout est dit pareil (le recomptage est proposé : c'est l'outil).
+  - **« Terminer le comptage »** : s'il reste des adresses, « Il reste n adresses à compter. Terminer quand même ? » (Oui / Non) ; puis tout se fige
+    (Terminal « Terminé. », sans champ ; étiquettes inertes ; regarder reste permis), **en copie la copie est rendue**. Hors copie, avec `verdict`,
+    chaque ligne de la liste dit « ✓ » ou « ✗ compte » (`'adresse'` : « ✗ compte · réel : 31 ») ; le vert n'y est que du texte.
+  - **Avec des palettes** (ENT-8.14) : le rangement d'abord ; après « Valider mon rangement » (qui **ne rend pas** la copie), le même entrepôt passe
+    au comptage, et « Terminer le comptage » rend la copie. Les phases nommées (`phases`, `rendCopie: false`) sont le lot 6. Les adresses à compter
+    sont occupées pour le rangement aussi (une palette ne s'y pose pas).
+  - **Gestes** (dans `signaux`) : `compte:<rang>` (un compte **confirmé**, un par rang déclaré, celui du confirmé compris), `compte:scan` (une
+    adresse scannée pour compter ; la base ne retient que la première), `compte:fin` (« Terminer le comptage ») ; `ouvrir` comme au rangement. Sans
+    palettes, ni `monter` ni `valider`.
+  - **Jalons** (après ceux du rangement ; **par rang** de la liste, la même pour tous ; `attente` avant « Terminer », `ok` / `ko` après) :
+    `compte-<rang>` (dernier compte confirmé = `reel` ; non compté = ko) ; `recompte-<cle>` (ou `recompte-<rang>` sans clé) — **règle unique**
+    (décision de Tristan, 21/10/2026) : non comptée → ko ; le Terminal a **proposé** de recompter au moins une fois → ok si « Recompter » a été
+    choisi au moins une fois, ko sinon ; rien proposé (compte égal au système, ou `'jamais'`) → ok ; `scanAvant` (au moins une adresse de la liste
+    comptée : **ko si rien n'est compté**). Le confirmé : `compte-7`, `recompte-<cle>` en `bonus: true`. La séance met `poids: 0` sur les recomptes
+    qui ne l'intéressent pas. Les décimales s'écrivent telles quelles (`5 / 6`) : la somme des poids est contrôlée à 1e-6.
+  - **État** (`db.entrepots[<id>].comptage`, absent sans `comptage`) : `{ scanne, enCours: { rang, compte } | null, comptes: { 1: 33 }, premiers: { 1: 33 },
+    propositions: { 1: 2 }, recomptes: { 1: 1 }, horsListe: [{ adresse, compte }], sansScan, fini, at }` ; le journal est celui du Terminal.
+  - **Exports** (`entrepot.js`) : **`ecartsConfirmes(db, P, o)`** → `[{ rang, adresse, produit, compte, systeme, sens: 'manque' | 'surplus' }]` (les
+    adresses de **sa** liste dont le dernier compte confirmé diffère du système), **vide tant que « Terminer le comptage » n'est pas fait**, jamais
+    d'erreur sur une base vide (une fiche l'appelle au chargement) ; **`etatComptage(db, P, o)`** → `{ comptes: { 1: 33 }, recomptes: { 1: 1 },
+    horsListe, fini }` ; `noteEntrepot(…).detail.comptage` (comptes, recomptes, propositions, hors liste, `sansScan`, fini) ; `bonnesReponses(P)`
+    ajoute `compte-<rang>` : `{ adresse, produit, reel, systeme, cle? }` (l'enseignant les voit sous « Côté enseignant », l'élève jamais).
 - **Dessin** : charte de l'entreprise (Action : bleu, gardé dans la zone de travail) ; le vert plein ne dit que « juste » (texte des
   verdicts) ; palettes confiées, « À monter », emplacement vu de près : un trait ; refus en texte rouge. Tient en **1366 × 768 et
   1280 × 720 sans défiler** (plan, travée et vue de près, motifs : testé ; pendant le choix du motif, la ligne « En main » s'efface) ; la colonne de droite (300 px) garde la place du Terminal. L'enseignant voit les

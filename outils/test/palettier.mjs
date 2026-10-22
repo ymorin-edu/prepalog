@@ -21,7 +21,13 @@
 // Valeurs du scan écrites à la main : P1 « Cahiers grand format » 30 cartons, A1-T03-N1-E2 · P2 « Serviettes de bain » B2-T02-N1-E3 ·
 // P3 « Bougies parfumées » A2-T02-N3-E1 · P4 B1-T04-N2-E2 · P5 « Lessive liquide 3 L », nouvelle adresse A1-T04-N2-E3.
 
-export default async function bloc({ v, nav, BASE, egal, vrai }) {
+// LOT 4 (22/10/2026, le comptage à l'aveugle) : section « le comptage », en fin de bloc (cas « Comptage : … »), sur le cas d'essai
+// `comptage()` de `contenus/palettier-essai.js` (valeurs écrites à la main en tête de la section). `PALETTIER_SEUL=Comptage` (variable
+// d'environnement) ne joue que les cas dont le nom commence ainsi : sert à éprouver les cas dans les deux sens sans rejouer tout le bloc.
+
+export default async function bloc({ v: vTous, nav, BASE, egal, vrai }) {
+const SEUL = process.env.PALETTIER_SEUL || '';
+const v = SEUL ? (nom, fn) => (nom.startsWith(SEUL) ? vTous(nom, fn) : undefined) : vTous;
 
 const ctx = await nav.newContext({ viewport: { width: 1366, height: 768 } });
 const erreurs = [];
@@ -1161,6 +1167,455 @@ await v('Scan : la page d’essai (Terminal plein, standard et confirmé) tient 
     egal([d, await vu('.pal [data-pal-scan-emp]'), await vu('.pal .pe-bandeau [data-pal-scan-pal="P5"]'), await vu('.pal [data-vt-actu]')], [0, true, true, true], `pixels qui dépassent, étiquettes et phrase visibles à ${w} × ${h} (${niv})`);
     await pe.click('.pal [data-pal="retour"]');
     egal([await deborde(), await vu('.pal [data-vt-actu]')], [0, true], `plan, Terminal plein à ${w} × ${h} (${niv})`);
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+});
+
+/* =========================================================== le comptage (lot 4, 22/10/2026) */
+// Valeurs écrites À LA MAIN (jamais relues dans le contenu) :
+//   1 A1-T03-N1-E2 Lessive 3 × 3 × 4, réel 33, système 36 (cle manque) · 2 A2-T02-N1-E2 Boîtes (stock) 2 × 4 × 4, réel 26 = système ·
+//   3 A2-T04-N1-E3 Cahiers 2 × 3 × 5, réel 27 = système · 4 B1-T02-N1-E2 Serviettes 2 × 4 × 4, réel 34, système 32 (cle surplus) ·
+//   5 B1-T04-N1-E1 Bougies (stock) 3 × 3 × 4, réel 31 = système · 6 B2-T04-N1-E3 Peluches (stock) 3 × 3 × 5, réel 39 = système ·
+//   7 (confirmé) B2-T03-N1-E2 Nettoyant 3 × 2 × 4, réel 20, système 23 (cle bonus).
+// Hors liste : A1-T01-N1-E1 (stock, Lessive) ; libre au sol : A1-T01-N1-E2 ; au-dessus du sol : A1-T03-N2-E1 (Cahiers).
+const IDC = 'essai-comptage';
+const AC = ['A1-T03-N1-E2', 'A2-T02-N1-E2', 'A2-T04-N1-E3', 'B1-T02-N1-E2', 'B1-T04-N1-E1', 'B2-T04-N1-E3', 'B2-T03-N1-E2'];
+const REEL = [33, 26, 27, 34, 31, 39, 20];
+const SYS = [36, 26, 27, 32, 31, 39, 23];
+// Monte le cas de comptage. `o` : temps, verdict, recompte, aideCouche, aisance, role, palettes (le rangement d'essai AVANT le comptage,
+// dans le même entrepôt : ENT-8.14).
+const monterC = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const C = await import('/contenus/palettier-essai.js');
+  document.querySelector('#palTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'palTest'; document.body.appendChild(hote);
+  const temps = o.temps || 'guidage';
+  let P = C.comptage({ verdict: o.verdict === undefined ? 'critere' : o.verdict || undefined, recompte: o.recompte, aideCouche: !!o.aideCouche });
+  if (o.palettes) P = Object.assign({}, C.palettier({ aideCharge: 'pose', verdict: 'critere', terminal: true }), { id: 'essai-comptage', comptage: P.comptage });
+  const U = C.universPalettier({ temps, entrepot: P, poids: !o.palettes });
+  const db = o.db || {};
+  const moteur = creerEntreprise(U);
+  window.__p = { db, P, U, temps, moteur, remis: null };
+  moteur.rendre(hote, {
+    meta: { id: 'essai-palettier', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps, copie: temps === 'evaluation' },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-test' },
+    aisance: o.aisance,
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+    rendreCopie: async (res) => { window.__p.remis = res; return { rendu: Date.now() }; },
+  });
+  document.querySelector('#palTest .ent-nav[data-vue="entrepot"]').click();
+}, o);
+const etatC = (p) => p.evaluate((id) => JSON.parse(JSON.stringify(((window.__p.db.entrepots || {})[id] || {}).comptage || null)), IDC);
+const scanC = (p) => p.click(`${Z} [data-pal-compte-emp]`);
+const taper = async (p, n) => { await p.fill(`${Z} [data-vt-champ]`, String(n)); await p.press(`${Z} [data-vt-champ]`, 'Enter'); };
+const choisir = (p, k) => p.click(`${Z} [data-vt-choix="${k}"]`);
+const actu = (p) => texte(p, '[data-vt-actu]');
+// Compter l'adresse n° i + 1 : l'ouvrir, la scanner, taper `n`, puis la suite (« recompter », « confirmer », un autre nombre…).
+async function compter(p, i, n, suite = []) {
+  await ouvrir(p, AC[i]); await scanC(p); await taper(p, n);
+  for (const k of suite) { if (typeof k === 'number') await taper(p, k); else await choisir(p, k); }
+}
+async function terminer(p) {
+  if (await present(p, '[data-pal="retour"]')) await bouton(p, 'retour');
+  await bouton(p, 'terminer');
+  if (await present(p, '[data-pal="finOui"]')) await bouton(p, 'finOui');
+}
+// Le parcours juste : chaque adresse comptée juste ; sur les deux écarts, « Recompter », le même nombre, puis « Confirmer ».
+async function justeC(p) { for (let i = 0; i < 6; i++) await compter(p, i, REEL[i], REEL[i] !== SYS[i] ? ['recompter', REEL[i], 'confirmer'] : []); }
+const ID_C = ['compte-1', 'compte-2', 'compte-3', 'compte-4', 'compte-5', 'compte-6', 'recompte-manque', 'recompte-2', 'recompte-3', 'recompte-surplus', 'recompte-5', 'recompte-6', 'scanAvant'];
+const tousC = (j) => Object.fromEntries(ID_C.map((id) => [id, j]));
+const ecartsC = (p) => p.evaluate(async () => { const E = await import('/core/types/entrepot.js'); return E.ecartsConfirmes(window.__p.db, window.__p.P); });
+// Les nombres cherchés partout dans la page (texte, attributs, valeur des champs, scripts écrits dans la page), sauf la géométrie du dessin
+// (coordonnées SVG, tailles, style) : « 36 » n'est pas trouvé dans « 136.5 » ni dans « A1-T03 ».
+const fuite = (p, nombres) => p.evaluate((nombres) => {
+  const GEO = new Set(['points', 'x', 'y', 'x1', 'y1', 'x2', 'y2', 'width', 'height', 'viewbox', 'd', 'transform', 'rx', 'ry', 'r', 'cx', 'cy',
+    'font-size', 'stroke-width', 'stroke-dasharray', 'opacity', 'style', 'patterntransform', 'letter-spacing', 'maxlength', 'tabindex']);
+  const re = nombres.map((n) => [n, new RegExp(`(^|[^\\d.,])${n}(?![\\d.,])`)]);
+  const vus = [];
+  const test = (ou, s) => re.forEach(([n, r]) => { if (r.test(s)) vus.push(`${n} dans ${ou} : ${String(s).trim().slice(0, 70)}`); });
+  const walk = (el) => {
+    for (const a of el.attributes || []) if (!GEO.has(a.name.toLowerCase())) test(`${el.tagName.toLowerCase()}[${a.name}]`, a.value);
+    if (el.tagName === 'INPUT') test('input.value', el.value);
+    for (const c of el.childNodes) { if (c.nodeType === 3) test(`texte de ${el.tagName.toLowerCase()}`, c.nodeValue); else if (c.nodeType === 1) walk(c); }
+  };
+  walk(document.documentElement);
+  return vus;
+}, nombres);
+
+await v('Comptage : la vue s’ouvre sur le plan, la liste « À compter » (6 adresses, sans aucun nombre), « Terminer le comptage », le Terminal « Scanne l’adresse. » avec son champ ; état neuf ; 13 jalons à faire ; gestes compte:1 à 7, compte:scan, compte:fin', async () => {
+  await monterC(pg);
+  egal(await pg.$$eval(`${Z} [data-pal-acompter] li`, (L) => L.map((x) => x.querySelector('b').textContent)), AC.slice(0, 6), 'la liste, dans l’ordre (standard : pas la 7e)');
+  const liste = await texte(pg, '[data-pal-acompter]');
+  vrai(!/\d/.test(liste.replace(/[A-Z]\d-T\d\d-N\d-E\d/g, '')), `aucun nombre dans la liste hors des adresses : ${liste}`);
+  egal(await pg.$$eval(`${Z} [data-pal-acompter] li`, (L) => L.map((x) => x.dataset.palFait)), ['false', 'false', 'false', 'false', 'false', 'false'], 'rien de coché');
+  egal([await actu(pg), await present(pg, '[data-vt-champ]'), await present(pg, '[data-vt-choix]')], ['Scanne l’adresse.', true, false], 'Terminal : phrase, champ, pas de choix');
+  egal([await present(pg, '[data-pal="terminer"]'), await present(pg, '[data-pal="valider"]'), await present(pg, '.pe-bandeau [data-pe-pal]')], [true, false, false], 'Terminer le comptage ; ni Valider ni palettes');
+  egal(await pg.getAttribute(Z, 'data-pe-phase'), 'comptage', 'phase');
+  // Aucune surbrillance sur le plan : une adresse de la liste a la même marque qu'un autre emplacement occupé.
+  egal([await mini(pg, AC[0]), await mini(pg, 'A1-T01-N1-E1'), await mini(pg, 'A1-T01-N1-E2')], ['stock', 'stock', 'libre'], 'plan : une adresse à compter est un emplacement occupé comme les autres');
+  egal(await etatC(pg), { scanne: null, enCours: null, comptes: {}, premiers: {}, propositions: {}, recomptes: {}, horsListe: [], sansScan: 0, fini: false, at: null }, 'état neuf');
+  egal(await jalons(pg), tousC('attente'), 'jalons à faire');
+  const S = await pg.evaluate(async () => { const { creerEntrepot } = await import('/core/types/entrepot.js'); const C = await import('/contenus/palettier-essai.js'); return creerEntrepot(C.comptage()).signaux; });
+  egal(S, ['entrepot:essai-comptage:ouvrir', ...[1, 2, 3, 4, 5, 6, 7].map((r) => `entrepot:essai-comptage:compte:${r}`), 'entrepot:essai-comptage:compte:scan', 'entrepot:essai-comptage:compte:fin'], 'gestes publiés');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Comptage : à l’aveugle — aucun nombre du système dans la page (texte, attributs, champ), adresse par adresse ouverte et scannée ; ni « kg », ni plaque, ni capteur dans la travée et la vue de près ; l’enseignant, lui, voit le système (la recherche trouve ce qui est là)', async () => {
+  await monterC(pg);
+  egal(await fuite(pg, SYS.slice(0, 6)), [], 'plan, avant tout');
+  for (let i = 0; i < 6; i++) {
+    await ouvrir(pg, AC[i]);
+    egal(await fuite(pg, SYS.slice(0, 6)), [], `${AC[i]} ouverte de près`);
+    const vus = await pg.evaluate(() => { const f = document.querySelector('#palTest .pe-face'), q = document.querySelector('#palTest [data-pal-pres]');
+      return [/kg/i.test(f.innerHTML), /kg/i.test(q.innerHTML), !!document.querySelector('#palTest [data-pe-capteur], #palTest [data-pe-plaque], #palTest [data-pal-capteur], #palTest [data-pal-plaque], #palTest [data-pal-somme]')]; });
+    egal(vus, [false, false, false], `${AC[i]} : ni kg dans la travée, ni kg de près, ni capteur ni plaque`);
+    await scanC(pg);
+    egal(await actu(pg), `${AC[i]} — ${['Lessive liquide 3 L', 'Boîtes de rangement 10 L', 'Cahiers grand format', 'Serviettes de bain', 'Bougies parfumées', 'Peluches'][i]}. Combien de cartons ?`, 'le Terminal demande');
+    egal(await fuite(pg, SYS.slice(0, 6)), [], `${AC[i]} scannée`);
+  }
+  // Au-dessus du sol : la travée de face n'écrit pas non plus la plaque du niveau 2 (rangement : « max 1 500 kg / niveau »).
+  await ouvrir(pg, 'A1-T03-N2-E1');
+  egal(await pg.evaluate(() => /kg/i.test(document.querySelector('#palTest .pal-partage').innerHTML)), false, 'N2 ouvert : aucun kg');
+  // Les deux sens : la même recherche trouve le système chez l'enseignant (ses attendus), et le rangement écrit bien des kg.
+  await monterC(pg, { role: 'prof' });
+  vrai((await fuite(pg, [36])).length > 0, 'la recherche trouve 36 dans les attendus de l’enseignant');
+  await monter(pg, { aide: 'pose' });
+  await prendre(pg, 'P5'); await ouvrir(pg, 'A1-T02-N3-E2');
+  egal(await pg.evaluate(() => /kg/i.test(document.querySelector('#palTest .pe-face').innerHTML)), true, 'le rangement (aide « pose ») écrit des kg : le test les verrait');
+});
+
+await v('Comptage : compte égal au système → « Compris. », adresse cochée, geste compte:2 ; après « Terminer », compte-2 et recompte-2 ok', async () => {
+  await monterC(pg);
+  await compter(pg, 1, 26);
+  egal([await derniere(pg), await actu(pg)], ['Compris.', 'Scanne l’adresse.'], 'Terminal');
+  egal(await pg.getAttribute(`${Z} [data-pal-acompter-l="2"]`, 'data-pal-fait'), 'true', 'cochée');
+  vrai((await gestes(pg)).includes('entrepot:essai-comptage:compte:2'), 'geste compte:2');
+  const e = await etatC(pg);
+  egal([e.comptes, e.propositions, e.recomptes], [{ 2: 26 }, {}, {}], 'état');
+  egal((await jalons(pg))['compte-2'], 'attente', 'à faire avant la fin');
+  await terminer(pg);
+  const J = await jalons(pg);
+  egal([J['compte-2'], J['recompte-2'], J.scanAvant, J['compte-1']], ['ok', 'ok', 'ok', 'ko'], 'jalons');
+});
+
+await v('Comptage : compte différent → « Quantité différente. Recompter ou confirmer ? » sans nombre ni sens, champ fermé, deux boutons ; Recompter redemande (autant de fois) ; Confirmer garde → compte-1 et recompte-manque ok', async () => {
+  await monterC(pg);
+  await compter(pg, 0, 33);
+  egal(await actu(pg), 'Quantité différente. Recompter ou confirmer ?', 'la question');
+  egal([await present(pg, '[data-vt-champ]'), await pg.$$eval(`${Z} [data-vt-choix]`, (L) => L.map((b) => b.textContent))], [false, ['Recompter', 'Confirmer']], 'champ fermé, deux boutons');
+  const T = await texte(pg, '[data-terminal]');
+  vrai(!/plus|moins|trop|manque|surplus|36/i.test(T), `le Terminal ne dit ni le nombre ni le sens : ${T}`);
+  egal(await fuite(pg, [36]), [], 'le système nulle part');
+  egal(await pg.getAttribute(`${Z} [data-pal-acompter-l="1"]`, 'data-pal-fait'), 'false', 'pas encore cochée');
+  await choisir(pg, 'recompter');
+  egal([await actu(pg), await present(pg, '[data-vt-champ]')], ['A1-T03-N1-E2 — Lessive liquide 3 L. Combien de cartons ?', true], 'Recompter redemande');
+  await taper(pg, 34); await choisir(pg, 'recompter'); await taper(pg, 33);
+  egal(await actu(pg), 'Quantité différente. Recompter ou confirmer ?', 'toujours différent');
+  await choisir(pg, 'confirmer');
+  egal([await derniere(pg), await pg.getAttribute(`${Z} [data-pal-acompter-l="1"]`, 'data-pal-fait')], ['Compris.', 'true'], 'gardé, coché');
+  vrai((await gestes(pg)).includes('entrepot:essai-comptage:compte:1'), 'geste compte:1 à la confirmation');
+  const e = await etatC(pg);
+  egal([e.comptes, e.premiers, e.propositions, e.recomptes], [{ 1: 33 }, { 1: 33 }, { 1: 3 }, { 1: 2 }], 'état : dernier confirmé, premier compte, 3 propositions, 2 recomptes');
+  await terminer(pg);
+  const J = await jalons(pg);
+  egal([J['compte-1'], J['recompte-manque']], ['ok', 'ok'], 'jalons');
+});
+
+await v('Comptage : écart confirmé sans recompter → recompte ko (compte ok) ; premier compte égal au système sur l’écart → recompte ok, compte ko (l’erreur se paie une fois)', async () => {
+  await monterC(pg);
+  await compter(pg, 3, 34, ['confirmer']);   // le surplus, juste du premier coup, confirmé sans recompter
+  await compter(pg, 0, 36);                  // le manque, compté comme le système : rien n'est proposé
+  egal(await derniere(pg), 'Compris.', '36 = système : « Compris. »');
+  await terminer(pg);
+  const J = await jalons(pg);
+  egal([J['compte-4'], J['recompte-surplus'], J['compte-1'], J['recompte-manque']], ['ok', 'ko', 'ko', 'ok'], 'jalons');
+});
+
+await v('Comptage : rien compté puis « Terminer » → confirmation « Il reste 6 adresses à compter. Terminer quand même ? » (Non : rien ne change) ; puis tout ko, scanAvant ko, aucun jalon à faire, geste compte:fin', async () => {
+  await monterC(pg);
+  await bouton(pg, 'terminer');
+  egal(await texte(pg, '[data-pal-confirme-fin]'), 'Il reste 6 adresses à compter. Terminer quand même ? Oui, terminer Non', 'confirmation');
+  await bouton(pg, 'finNon');
+  egal([await present(pg, '[data-pal="terminer"]'), (await etatC(pg)).fini], [true, false], 'Non : rien ne change');
+  await terminer(pg);
+  egal(await jalons(pg), tousC('ko'), 'tout ko, aucun « à faire »');
+  vrai((await gestes(pg)).includes('entrepot:essai-comptage:compte:fin'), 'geste compte:fin');
+  // Toutes comptées : « Terminer » sans confirmation.
+  await monterC(pg);
+  await justeC(pg);
+  await bouton(pg, 'retour'); await bouton(pg, 'terminer');
+  egal([await present(pg, '[data-pal-confirme-fin]'), (await etatC(pg)).fini], [false, true], 'toutes comptées : terminé sans confirmation');
+  egal(await jalons(pg), tousC('ok'), 'parcours juste : tout ok');
+  egal((await pg.evaluate(() => window.__p.moteur.noter(window.__p.db))).score, 20, 'note 20/20 (poids d’essai, 6 × 5/3)');
+});
+
+await v('Comptage : taper sans scan → « Scanne d’abord l’adresse. » en rouge, rien compté, trace `sansScan` ; des lettres → « Réponds avec des chiffres. » ; une case vide ne fait rien', async () => {
+  await monterC(pg);
+  await ouvrir(pg, AC[1]);
+  await taper(pg, 26);
+  egal([await derniere(pg), (await lignesRouges(pg)).slice(-1)[0]], ['Scanne d’abord l’adresse.', 'Scanne d’abord l’adresse.'], 'refus en rouge');
+  await scanC(pg); await taper(pg, 'vingt');
+  egal(await derniere(pg), 'Je n’ai pas compris. Réponds avec des chiffres.', 'des lettres');
+  const n = (await lignesTerm(pg)).length;
+  await taper(pg, '');
+  egal((await lignesTerm(pg)).length, n, 'case vide : rien');
+  const e = await etatC(pg);
+  egal([e.comptes, e.sansScan, e.scanne], [{}, 1, AC[1]], 'rien compté, une trace, l’adresse reste scannée');
+  await terminer(pg);
+  const d = await pg.evaluate(async () => { const E = await import('/core/types/entrepot.js'); return E.noteEntrepot(window.__p.db, window.__p.P).detail; });
+  egal(d && d.comptage && d.comptage.sansScan, 1, 'la trace dans le détail de la note');
+});
+
+await v('Comptage : une adresse hors liste se compte (« Compris. »), gardée en trace `horsListe`, jamais notée ; un emplacement libre : « Rien à compter ici. » ; au-dessus du sol, l’étiquette ne se scanne pas', async () => {
+  await monterC(pg);
+  await ouvrir(pg, 'A1-T01-N1-E1'); await scanC(pg);
+  egal(await actu(pg), 'A1-T01-N1-E1 — Lessive liquide 3 L. Combien de cartons ?', 'hors liste : le Terminal demande quand même');
+  await taper(pg, 12);
+  egal(await derniere(pg), 'Compris.', 'Compris.');
+  const e = await etatC(pg);
+  egal([e.horsListe, e.comptes], [[{ adresse: 'A1-T01-N1-E1', compte: 12 }], {}], 'trace, aucun compte de la liste');
+  egal((await gestes(pg)).filter((g) => /compte:\d/.test(g)), [], 'aucun geste compte:<rang>');
+  await ouvrir(pg, 'A1-T01-N1-E2'); await scanC(pg);
+  egal([await derniere(pg), (await lignesRouges(pg)).slice(-1)[0], (await etatC(pg)).scanne], ['Rien à compter ici.', 'Rien à compter ici.', null], 'libre : refus');
+  await ouvrir(pg, 'A1-T03-N2-E1');
+  egal([await present(pg, '[data-pal-compte-emp]'), await present(pg, '[data-pal-etiq-emp]'), await present(pg, '[data-pal-pile]')], [false, true, false], 'N2 : étiquette non cliquable, aucune palette à compter');
+  vrai((await texte(pg, '[data-pal-pres]')).includes('on ne compte pas d’ici'), 'N2 : le texte le dit');
+  await terminer(pg);
+  egal(await jalons(pg), tousC('ko'), 'le hors liste ne rapporte rien (scanAvant ko)');
+  egal(await pg.evaluate(async () => { const E = await import('/core/types/entrepot.js'); return E.noteEntrepot(window.__p.db, window.__p.P).detail.comptage.horsListe; }),
+    [{ adresse: 'A1-T01-N1-E1', compte: 12 }], 'trace dans le détail');
+});
+
+await v('Comptage : un compte se refait (rescanner l’adresse) tant que le comptage n’est pas terminé ; le dernier confirmé compte', async () => {
+  await monterC(pg);
+  await compter(pg, 4, 30, ['confirmer']);
+  egal((await etatC(pg)).comptes, { 5: 30 }, 'premier compte confirmé');
+  await compter(pg, 4, 31);
+  egal(await derniere(pg), 'Compris.', 'refait juste');
+  egal([(await etatC(pg)).comptes, (await etatC(pg)).premiers], [{ 5: 31 }, { 5: 30 }], 'le dernier confirmé ; le premier compte gardé');
+  await terminer(pg);
+  const J = await jalons(pg);
+  egal([J['compte-5'], J['recompte-5']], ['ok', 'ko'], 'compte juste ; le Terminal avait proposé de recompter et l’élève a confirmé : recompte ko');
+});
+
+await v('Comptage : `recompte: \'jamais\'` → « Compris. » à tout compte, aucun bouton ; recompte-* ok dès que l’adresse est comptée', async () => {
+  await monterC(pg, { recompte: 'jamais' });
+  await compter(pg, 0, 33);
+  egal([await derniere(pg), await present(pg, '[data-vt-choix]')], ['Compris.', false], 'aucun recomptage proposé');
+  await compter(pg, 3, 30);
+  egal(await derniere(pg), 'Compris.', 'même faux');
+  await terminer(pg);
+  const J = await jalons(pg);
+  egal([J['compte-1'], J['recompte-manque'], J['compte-4'], J['recompte-surplus'], J['recompte-2']], ['ok', 'ok', 'ko', 'ok', 'ko'], 'jalons');
+});
+
+await v('Comptage : `aideCouche` → « 3 × 3 = 9 par couche » pour la palette ouverte, jamais le total ; absent → rien', async () => {
+  await monterC(pg, { aideCouche: true });
+  await ouvrir(pg, AC[0]);
+  egal(await texte(pg, '[data-pal-couche]'), '3 × 3 = 9 par couche', 'Lessive');
+  vrai(!/\b36\b|\b33\b/.test(await texte(pg, '[data-pal-pres]')), 'ni la palette pleine ni le réel');
+  await ouvrir(pg, AC[1]);
+  egal(await texte(pg, '[data-pal-couche]'), '2 × 4 = 8 par couche', 'Boîtes');
+  await monterC(pg);
+  await ouvrir(pg, AC[0]);
+  egal(await present(pg, '[data-pal-couche]'), false, 'sans aideCouche');
+});
+
+await v('Comptage : `ecartsConfirmes` vide avant « Terminer » (même avec des écarts confirmés), puis la liste exacte (rang, adresse, produit, compte, système, sens) ; vide sur une base vide ; `etatComptage`', async () => {
+  const vide = await pg.evaluate(async () => { const E = await import('/core/types/entrepot.js'); const C = await import('/contenus/palettier-essai.js');
+    return [E.ecartsConfirmes({}, C.COMPTAGE), E.ecartsConfirmes(undefined, C.COMPTAGE), E.etatComptage({}, C.COMPTAGE), E.ecartsConfirmes({}, C.PALETTIER)]; });
+  egal(vide, [[], [], { comptes: {}, recomptes: {}, horsListe: [], fini: false }, []], 'base vide, sans comptage');
+  await monterC(pg);
+  await compter(pg, 0, 33, ['recompter', 33, 'confirmer']);
+  await compter(pg, 3, 34, ['confirmer']);
+  await compter(pg, 4, 30, ['confirmer']);
+  await compter(pg, 1, 26);
+  egal(await ecartsC(pg), [], 'avant la fin : vide');
+  await terminer(pg);
+  egal(await ecartsC(pg), [
+    { rang: 1, adresse: 'A1-T03-N1-E2', produit: 'Lessive liquide 3 L', compte: 33, systeme: 36, sens: 'manque' },
+    { rang: 4, adresse: 'B1-T02-N1-E2', produit: 'Serviettes de bain', compte: 34, systeme: 32, sens: 'surplus' },
+    { rang: 5, adresse: 'B1-T04-N1-E1', produit: 'Bougies parfumées', compte: 30, systeme: 31, sens: 'manque' }], 'après : ses écarts confirmés');
+  egal(await pg.evaluate(async () => { const E = await import('/core/types/entrepot.js'); return E.etatComptage(window.__p.db, window.__p.P); }),
+    { comptes: { 1: 33, 2: 26, 4: 34, 5: 30 }, recomptes: { 1: 1 }, horsListe: [], fini: true }, 'etatComptage');
+});
+
+await v('Comptage : adresse du confirmé — absente en standard (ni ligne ni jalon), présente au confirmé, jalons compte-7 et recompte-bonus en bonus ; `cle` → recompte-manque (pas recompte-1)', async () => {
+  const L = await pg.evaluate(async () => { const E = await import('/core/types/entrepot.js'); const C = await import('/contenus/palettier-essai.js');
+    return E.etapesPalettier(C.COMPTAGE).map((x) => `${x.id}${x.bonus ? ' (bonus)' : ''}`); });
+  egal(L, ['compte-1', 'compte-2', 'compte-3', 'compte-4', 'compte-5', 'compte-6', 'compte-7 (bonus)', 'recompte-manque', 'recompte-2', 'recompte-3',
+    'recompte-surplus', 'recompte-5', 'recompte-6', 'recompte-bonus (bonus)', 'scanAvant'], 'les étapes');
+  await monterC(pg);
+  egal([(await pg.$$(`${Z} [data-pal-acompter] li`)).length, Object.keys(await jalons(pg)).includes('compte-7')], [6, false], 'standard');
+  await monterC(pg, { aisance: 'confirme' });
+  egal(await pg.$$eval(`${Z} [data-pal-acompter] li b`, (L) => L.map((x) => x.textContent)), AC, 'confirmé : 7 adresses');
+  await justeC(pg);
+  await compter(pg, 6, 20, ['recompter', 20, 'confirmer']);
+  await terminer(pg);
+  const r = await pg.evaluate(() => { const W = window.__p; const n = W.moteur.noter(W.db);
+    return [W.U.etapes.find((x) => x.id === 'compte-7').verifier(W.db), W.U.etapes.find((x) => x.id === 'recompte-bonus').verifier(W.db),
+      W.U.etapes.find((x) => x.id === 'compte-7').verifier({ entrepots: W.db.entrepots }), n.score, n.detail.bonus && n.detail.bonus.justes]; });
+  egal(r, [{ status: 'ok' }, { status: 'ok' }, null, 20, 2], 'bonus jugés, null en standard, note du socle 20, deux bonus justes');
+});
+
+await v('Comptage : après « Terminer », plus rien ne se compte (Terminal « Terminé. » sans champ, étiquette désactivée, aucun geste) ; verdict « critere » → ✓ / ✗ compte, « adresse » → « réel : n », sans verdict rien', async () => {
+  await monterC(pg);
+  await compter(pg, 1, 26);
+  await compter(pg, 4, 30, ['confirmer']);
+  await terminer(pg);
+  egal([await actu(pg), await present(pg, '[data-vt-champ]'), await present(pg, '[data-vt-choix]')], ['Terminé.', false, false], 'Terminal');
+  const avant = await gestes(pg);
+  await ouvrir(pg, AC[1]);
+  egal(await pg.isDisabled(`${Z} [data-pal-compte-emp]`), true, 'étiquette désactivée');
+  egal([await gestes(pg), await pg.getAttribute(Z, 'data-pal-fini')], [avant, 'true'], 'aucun geste');
+  egal(await pg.$$eval(`${Z} [data-pal-acompter] li`, (L) => L.map((x) => (x.querySelector('[data-pal-cverdict]') || {}).textContent || '')), ['✗ compte', '✓', '✗ compte', '✗ compte', '✗ compte', '✗ compte'], 'verdicts « critere »');
+  await monterC(pg, { verdict: 'adresse' });
+  await compter(pg, 4, 30, ['confirmer']);
+  await terminer(pg);
+  egal(await texte(pg, '[data-pal-acompter-l="5"] [data-pal-cverdict]'), '✗ compte · réel : 31', 'verdict « adresse »');
+  await monterC(pg, { verdict: null });
+  await compter(pg, 4, 30, ['confirmer']);
+  await terminer(pg);
+  egal(await present(pg, '[data-pal-cverdict]'), false, 'sans verdict : rien');
+});
+
+await v('Comptage : en copie — « Recompter ou confirmer ? » proposé quand même, aucun verdict, « Terminer » rend la copie ; jalons jugés', async () => {
+  await monterC(pg, { temps: 'evaluation' });
+  await compter(pg, 0, 33);
+  egal(await actu(pg), 'Quantité différente. Recompter ou confirmer ?', 'proposé en copie');
+  await choisir(pg, 'confirmer');
+  egal(await present(pg, '[data-pe-regles]'), false, 'pas de règles en copie');
+  egal(await pg.evaluate(() => window.__p.remis), null, 'pas encore rendue');
+  await terminer(pg);
+  await pg.waitForFunction(() => window.__p.remis !== null);
+  egal([await present(pg, '[data-pal-cverdict]'), (await jalons(pg))['compte-1'], (await jalons(pg))['recompte-manque']], [false, 'ok', 'ko'], 'aucun verdict, jalons jugés');
+});
+
+await v('Comptage : le dessin — autant de cartons dessinés que le réel (couche du dessus incomplète, cartons en trop posés dessus) ; `pileCartons` sort la palette de la préparation octet pour octet', async () => {
+  await monterC(pg);
+  const cartons = async (i) => { await ouvrir(pg, AC[i]); return pg.$$eval(`${Z} [data-pal-pile] polygon`, (L) => (L.length - 3) / 5); };
+  egal([await cartons(0), await cartons(3), await cartons(1), await cartons(5)], [33, 34, 26, 39], 'cartons dessinés (5 faces par carton, 3 pour le support)');
+  // Les cartons en trop sont posés AU-DESSUS de la palette pleine (le haut du dessin monte) ; les manquants sont pris sur la couche du
+  // dessus, au fond (le haut du dessin descend), jamais dessous.
+  const h = await pg.evaluate(async () => { const { pileCartons } = await import('/core/types/entrepot.js');
+    const n = (s) => [...s.matchAll(/fill="#e6c48f"/g)].length;
+    const haut = (s) => Math.min(...[...s.matchAll(/<polygon points="([^"]+)" fill="#e6c48f"/g)].flatMap((m) => m[1].split(' ').map((q) => Number(q.split(',')[1]))));
+    const [s1, s0, m1, m0] = [pileCartons([2, 4, 4], 2), pileCartons([2, 4, 4], 0), pileCartons([3, 3, 4], -3), pileCartons([3, 3, 4], 0)];
+    return [n(s1), n(s0), n(m1), haut(pileCartons([1, 1, 3], 1)) < haut(pileCartons([1, 1, 3], 0)), haut(pileCartons([2, 2, 3], 4)) < haut(pileCartons([2, 2, 3], 0)),
+      haut(m1) > haut(m0), n(pileCartons([3, 3, 4], -9))]; });
+  egal(h, [34, 32, 33, true, true, true, 27], 'pileCartons : 32 + 2, 32, 36 − 3 ; le carton en trop est posé dessus ; les manquants sont pris sur le dessus (une couche entière : 27)');
+  // Les empreintes du dessin AVANT la sortie de la fonction (calculées sur la version du 22/10/2026 avant le lot 4) : rien n'a bougé.
+  const E = await pg.evaluate(async () => {
+    const { pileCartons } = await import('/core/types/entrepot.js');
+    const cas = [[[3, 2, 4], 0], [[3, 2, 4], -3], [[3, 3, 4], -5], [[2, 4, 5], 2], [[3, 3, 3], 4], [[2, 3, 4], -7], [[4, 3, 5], 0], [[3, 3, 4], 11]];
+    const hex = async (s) => [...new Uint8Array(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(s)))].map((b) => b.toString(16).padStart(2, '0')).join('');
+    const r = [];
+    for (const [c, e] of cas) r.push((await hex(pileCartons(c, e))).slice(0, 16));
+    return r;
+  });
+  egal(E, ['3708cd507d1c3d7e', '65681038d9ca4442', '6a5901d6de60f4db', 'f949876205efb934', '65027d2fd5f856e9', 'bf674eda04263fb6', '44011e3469671fa0', '4f0ec8c1e84c5118'], 'empreintes identiques');
+});
+
+await v('Comptage : déclaration fautive — sans Terminal, adresse au-dessus du sol, hors service, couche du dessus vide, clé en double, bonus avant la fin, produit qui contredit le stock, système non entier, recompte inconnu ; sans comptage, les palettes restent obligatoires', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntrepot } = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const A = C.ADRESSES_COMPTAGE;
+    const essai = (Q) => { try { creerEntrepot(Object.assign({}, C.COMPTAGE, { id: `x${Math.random()}` }, Q)); return ''; } catch (e) { return e.message; } };
+    const liste = (L, o = {}) => essai({ comptage: Object.assign({ adresses: L }, o) });
+    return [essai({ terminal: undefined }), liste([{ ...A[0], adresse: 'A1-T03-N2-E2' }]), liste([{ ...A[0], adresse: 'B1-T01-N1-E1' }, A[1]]),
+      liste([{ ...A[0], reel: 27 }]), liste([A[0], { ...A[1], cle: 'manque' }]), liste([A[6], A[0]]), liste([{ ...A[1], produit: 'LES' }]),
+      liste([{ ...A[0], systeme: 35.5 }]), liste(A, { recompte: 'parfois' }), liste([{ ...A[0], reel: 46 }]),
+      essai({ comptage: undefined }), liste(A), liste([A[0], A[0]])];
+  });
+  vrai(r[0].includes('Terminal'), r[0]);
+  vrai(r[1].includes('niveau 1'), r[1]);
+  vrai(r[2] === '' , `B1-T01-N1-E1 est au sol et en stock : ${r[2]}`);
+  vrai(r[3].includes('couche du dessus vide'), r[3]);
+  vrai(r[4].includes('déjà prise'), r[4]);
+  vrai(r[5].includes('fin de liste'), r[5]);
+  vrai(r[6].includes('le stock de A2-T02-N1-E2 est BOI'), r[6]);
+  vrai(r[7].includes('systeme'), r[7]);
+  vrai(r[8].includes('comptage.recompte'), r[8]);
+  vrai(r[9].includes('une couche au plus'), r[9]);
+  vrai(r[10].includes('aucune palette'), r[10]);
+  egal(r[11], '', 'la déclaration d’essai se charge');
+  vrai(r[12].includes('déjà dans la liste'), r[12]);
+});
+
+await v('Comptage : une fonction (adresses tirées) dont la clé change de rang d’un élève à l’autre ne se charge pas ; avec une clé partout, ou aucune, elle se charge', async () => {
+  const r = await pg.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const A = C.ADRESSES_COMPTAGE.slice(0, 6);
+    const tourne = (g) => { const k = g.charCodeAt(0) % 6; return [...A.slice(k), ...A.slice(0, k)]; };
+    const F = (fn) => { try { E.etapesPalettier((g) => Object.assign({}, C.COMPTAGE, { comptage: { adresses: fn(g || 'a') } })); return ''; } catch (e) { return e.message; } };
+    return [F(tourne), F((g) => tourne(g).map((x, i) => ({ ...x, cle: `c${A.indexOf(x)}` }))), F((g) => tourne(g).map(({ cle, ...x }) => x))];
+  });
+  vrai(r[0].includes('les jalons du comptage changent d'), r[0]);
+  egal([r[1], r[2]], ['', ''], 'une clé partout, ou aucune');
+});
+
+await v('Comptage : avec des palettes (ENT-8.14), le rangement d’abord (Valider ne rend pas la copie), puis le comptage dans le même entrepôt ; jalons du rangement puis du comptage', async () => {
+  await monterC(pg, { palettes: true, temps: 'evaluation' });
+  egal([await pg.getAttribute(Z, 'data-pe-phase'), await present(pg, '[data-pal-acompter]'), await present(pg, '[data-pal="valider"]')], ['rangement', false, true], 'rangement d’abord');
+  const ids = Object.keys(await jalons(pg));
+  egal([ids.slice(0, 2), ids.slice(-3)], [['place-P1', 'scan-P1'], ['recompte-5', 'recompte-6', 'scanAvant']], 'jalons : rangement, puis comptage');
+  // (L'adresse de P1, A1-T03-N1-E2, est la n° 1 du comptage : occupée, elle ne se pose pas ; P2 se range.)
+  await ranger(pg, 'P2', 'B2-T02-N1-E3');
+  await valider(pg);
+  egal([await pg.getAttribute(Z, 'data-pe-phase'), await present(pg, '[data-pal-acompter]'), await pg.evaluate(() => window.__p.remis)], ['comptage', true, null], 'puis le comptage ; la copie n’est pas rendue');
+  const J = await jalons(pg);
+  egal([J['place-P2'], J['place-P1'], J['compte-1']], ['ok', 'ko', 'attente'], 'rangement jugé, comptage à faire');
+  await compter(pg, 1, 26);
+  await terminer(pg);
+  await pg.waitForFunction(() => window.__p.remis !== null);
+  egal((await jalons(pg))['compte-2'], 'ok', 'comptage jugé, copie rendue');
+});
+
+await v('Comptage, le Terminal : `attendre` sans réglage n’écrit ni `saisie` ni `choix` (le boîtier du lot 2 reste sans champ) ; avec, le champ et les boutons apparaissent ; `dire` de l’élève → « › 33 »', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerTerminal, terminalScannerNeuf } = await import('/core/types/terminal.js');
+    const TERM = creerTerminal({ nom: 'Terminal', mode: 'scanner' });
+    const T = terminalScannerNeuf();
+    TERM.attendre(T, 'A', { saisie: true, choix: [['oui', 'Oui']] });
+    const avec = [T.saisie, T.choix, /data-vt-champ/.test(TERM.html(T)), /data-vt-choix="oui"/.test(TERM.html(T))];
+    TERM.attendre(T, 'B');
+    TERM.dire(T, '33', { eleve: true });
+    const d = document.createElement('div'); d.innerHTML = TERM.html(T);
+    return [avec, Object.keys(T).sort(), d.querySelectorAll('input, button, form').length, d.querySelector('.vt-moi') && d.querySelector('.vt-moi').textContent];
+  });
+  egal(r, [[true, [['oui', 'Oui']], true, true], ['attente', 'journal'], 0, '› 33'], 'terminal');
+});
+
+await v('Comptage : la page d’essai (cas « Comptage », standard et confirmé, avec « Recompter ou confirmer ? ») tient en 1366 × 768 et 1280 × 720 sans défiler ; liste, étiquette, palette dessinée, champ et boutons visibles', async () => {
+  const pe = await ctx.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const [w, h, niv] of [[1366, 768, 'standard'], [1280, 720, 'standard'], [1366, 768, 'confirme'], [1280, 720, 'confirme']]) {
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-palettier.html');
+    await pe.waitForSelector('.pal');
+    await pe.selectOption('#reglages select[name="cas"]', 'comptage');
+    if (niv === 'confirme') await pe.selectOption('#reglages select[name="niveau"]', 'confirme');
+    await pe.waitForSelector('.pal[data-pe-phase="comptage"]');
+    await pe.evaluate(() => { document.querySelector('#reglages').style.display = 'none'; document.querySelector('#mention').style.display = 'none'; document.querySelector('.ent-nav[data-vue="entrepot"]').click(); });
+    const deborde = () => pe.evaluate(() => Math.max(0, document.documentElement.scrollHeight - innerHeight));
+    const vu = (s) => pe.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.right <= innerWidth && r.height > 0; }, s);
+    const d = [await deborde()];
+    egal([await vu('.pal [data-pal-acompter] li:last-child'), await vu('.pal [data-vt-champ]')], [true, true], `liste et champ à ${w} × ${h} (${niv})`);
+    await pe.click('.pal [data-pe-trav="A1-T03"]');
+    await pe.click('.pal [data-pe-emp="A1-T03-N1-E2"]');
+    await pe.click('.pal [data-pal-compte-emp]');
+    await pe.fill('.pal [data-vt-champ]', '33'); await pe.press('.pal [data-vt-champ]', 'Enter');
+    d.push(await deborde());
+    const pile = await pe.evaluate(() => { const r = document.querySelector('.pal [data-pal-pile] svg').getBoundingClientRect(); return [Math.round(r.height), r.bottom <= innerHeight]; });
+    egal([await vu('.pal [data-pal-compte-emp]'), await vu('.pal [data-vt-choix="confirmer"]'), pile[1]], [true, true, true], `étiquette, boutons, palette à ${w} × ${h} (${niv})`);
+    vrai(pile[0] >= 180, `palette dessinée assez grande (${pile[0]} px de haut) à ${w} × ${h}`);
+    egal(d, [0, 0], `pixels qui dépassent à ${w} × ${h} (${niv})`);
   }
   egal(err, [], 'erreurs JS');
   await pe.close();

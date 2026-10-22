@@ -92,7 +92,7 @@ import { compilerPicking, etatPickingNeuf, jalonsPicking, attendusPicking, creer
 import { compilerMasse, etatMasseNeuf, jalonsMasse, solutionsMasse, creerMasse, placeDe, fautesMasse as fautesM, comptageMasse } from './entrepot-masse.js';
 // Le mode PALETTIER, ranger à l'adresse donnée (chantier E-7, lot 1, 21/10/2026) : son fichier ; il emprunte le plan et la travée.
 import { compilerPalettier, etatPalettierNeuf, jalonsPalettier, detailPalettier, attendusPalettier, creerPalettier,
-  confieesPalettier, etatLisiblePalettier, declarationDe, ouSystemeCroitPalettier } from './entrepot-palettier.js';
+  confieesPalettier, etatLisiblePalettier, declarationDe, ouSystemeCroitPalettier, ecartsComptage, etatLisibleComptage } from './entrepot-palettier.js';
 import { niveauEleve } from '../tirage.js';
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
@@ -658,6 +658,18 @@ export function etatPalettier(db, P, o = {}) { const Q = declarationDe(P, db, o)
 // Lot 2 (le scan) : où le système croit la palette `id` ('P1') — l'adresse scannée si elle existe, sinon la nouvelle adresse reçue après
 // signalement, sinon l'adresse donnée (null si la palette n'existe pas). C'est ce que lira « le lendemain » (lot 5).
 export function ouSystemeCroit(db, P, id, o = {}) { const Q = declarationDe(P, db, o); return ouSystemeCroitPalettier(compiler(Q), etatDe(db, Q), id); }
+// Lot 4 (le comptage à l'aveugle) : les ÉCARTS CONFIRMÉS de l'élève, [{ rang, adresse, produit, compte, systeme, sens: 'manque' | 'surplus' }]
+// (une ligne par adresse de SA liste dont le dernier compte confirmé diffère du système), VIDE tant que « Terminer le comptage » n'est
+// pas fait (l'aveugle tient jusque-là) ; jamais d'erreur sur une base vide (une fiche l'appelle au chargement). Et l'état du comptage
+// en clair : { comptes: { 1: 33 }, recomptes: { 1: 1 }, horsListe: [{ adresse, compte }], fini }.
+export function ecartsConfirmes(db, P, o = {}) {
+  const Q = declarationDe(P, db || {}, o), M = compiler(Q);
+  return M.comptage ? ecartsComptage(M, etatDe(db, Q), niveauEleve(db, o)) : [];
+}
+export function etatComptage(db, P, o = {}) {
+  const Q = declarationDe(P, db || {}, o), M = compiler(Q);
+  return etatLisibleComptage(M, etatDe(db, Q));
+}
 // Les étapes à donner à `creerEntreprise` : la liste est celle de la déclaration de RÉFÉRENCE (graine « », standard), la même
 // pour tous les élèves ; chaque `verifier` juge la déclaration de L'ÉLÈVE. Une palette `niveaux: ['confirme']` donne des jalons
 // `bonus: true` dont le `verifier` rend null chez un élève qui ne l'a pas. Une fonction doit déclarer les mêmes palettes à tous
@@ -672,6 +684,16 @@ export function etapesPalettier(E, { copie = false } = {}) {
       if (ref(n).jalons.map((j) => j.id).join() !== ids) throw new Error(`entrepot ${R.P.id} : les jalons du niveau « ${n} » ne sont pas ceux du standard (déclarer les mêmes palettes à tous les niveaux ; celles du confirmé portent niveaux: ['confirme'])`);
     });
   }
+  // Le comptage (lot 4) : si les adresses sont tirées, une `cle` à un rang tiré déplacerait les ids `recompte-<rang>` des autres d'un
+  // élève à l'autre (la liste des jalons d'une séance est fixe). Quelques graines sont essayées : mêmes ids, ou la séance ne se charge pas.
+  if (typeof E === 'function' && R.comptage) {
+    const ids = (M) => (M.comptage ? M.jalons.filter((j) => j.comptage).map((j) => j.id).sort().join() : '');
+    const attendu = ids(R);
+    ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].forEach((g) => {
+      const autre = compiler(E(g, { niveau: 'standard', copie }));
+      if (ids(autre) !== attendu) throw new Error(`entrepot ${R.P.id} : les jalons du comptage changent d'un élève à l'autre (graine « ${g} ») : une clé (cle) à un rang tiré déplace les ids recompte-<rang> ; donner une clé à toutes les adresses, ou à aucune`);
+    });
+  }
   return R.jalons.map((j) => ({
     id: j.id, titre: j.lib, ...(j.bonus ? { bonus: true } : {}),
     verifier(db) {
@@ -679,6 +701,39 @@ export function etapesPalettier(E, { copie = false } = {}) {
       return l ? { status: l.etat } : null;
     },
   }));
+}
+
+/* ===================================================== la palette de cartons dessinée */
+// Une palette de cartons en perspective (fiche de prélèvement) : couches du dessous complètes, les
+// cartons manquants sur la couche du dessus, ceux en trop posés dessus. Repris de la maquette (`pile`).
+// Sortie de la vue de préparation le 22/10/2026 (chantier E-7, lot 4 : le comptage du palettier la dessine aussi) SANS
+// changer le dessin : `[W, D, L]` = cartons en largeur, en profondeur, couches pleines ; `ecart` = cartons en moins (< 0, pris
+// sur la couche du dessus) ou en trop (> 0, posés dessus). `aria` : l'étiquette d'accessibilité (absente = celle de la fiche).
+export function pileCartons([W, D, L], ecart, aria = 'Les cartons du picking') {
+  const cubes = [];
+  for (let z = 0; z < L; z++) for (let x = 0; x < W; x++) for (let y = 0; y < D; y++) cubes.push([x, y, z]);
+  if (ecart < 0) {
+    const hautC = [...cubes].sort((p, q) => (q[2] - p[2]) || ((p[0] + p[1]) - (q[0] + q[1]))).slice(0, -ecart);
+    hautC.forEach((h) => cubes.splice(cubes.indexOf(h), 1));
+  }
+  if (ecart > 0) for (let i = 0; i < ecart; i++) cubes.push([W - 1 - i % W, D - 1 - Math.floor(i / W) % D, L + Math.floor(i / (W * D))]);
+  const a = 30, k = 0.87, bh = 0.8;
+  const Pj = (x, y, z) => [(x - y) * a * k, (x + y) * a * 0.5 - z * bh * a];
+  const poly = (pts) => pts.map((q) => Pj(...q).map((v) => v.toFixed(1)).join(',')).join(' ');
+  const b = -0.22 / bh, trait = '#6e4a22';
+  let s = `<polygon points="${poly([[0, 0, 0], [W, 0, 0], [W, D, 0], [0, D, 0]])}" fill="#b98b55"/>`;
+  s += `<polygon points="${poly([[W, 0, b], [W, D, b], [W, D, 0], [W, 0, 0]])}" fill="#8f6532"/><polygon points="${poly([[0, D, b], [W, D, b], [W, D, 0], [0, D, 0]])}" fill="#a87b45"/>`;
+  cubes.sort((p, q) => (p[0] + p[1] + p[2]) - (q[0] + q[1] + q[2]) || p[2] - q[2]);
+  for (const [x, y, z] of cubes) {
+    s += `<polygon points="${poly([[x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]])}" fill="#e6c48f" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    s += `<polygon points="${poly([[x + 1, y, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x + 1, y, z + 1]])}" fill="#b98a50" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    s += `<polygon points="${poly([[x, y + 1, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]])}" fill="#d0a066" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
+    s += `<polygon points="${poly([[x + 0.44, y, z + 1], [x + 0.56, y, z + 1], [x + 0.56, y + 1, z + 1], [x + 0.44, y + 1, z + 1]])}" fill="#c9a571" opacity=".9"/>`;
+    s += `<polygon points="${poly([[x + 0.12, y + 1, z + 0.22], [x + 0.38, y + 1, z + 0.22], [x + 0.38, y + 1, z + 0.5], [x + 0.12, y + 1, z + 0.5]])}" fill="#fbfaf6" stroke="#9a8f80" stroke-width=".5"/>`;
+  }
+  const Lh = L + Math.max(1, Math.ceil(Math.max(0, ecart) / (W * D)));
+  const xs = [Pj(0, D, 0)[0], Pj(W, 0, 0)[0]], ys = [Pj(0, 0, Lh)[1], Pj(W, D, b)[1]], mg = 12;
+  return `<svg viewBox="${(xs[0] - mg).toFixed(1)} ${(ys[0] - mg).toFixed(1)} ${(xs[1] - xs[0] + 2 * mg).toFixed(1)} ${(ys[1] - ys[0] + 2 * mg).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${ech(aria)}">${s}</svg>`;
 }
 
 /* ================================================================ géométrie */
@@ -1042,7 +1097,8 @@ export function creerEntrepot(P, opts = {}) {
   // Réglages du mode palettier (21/10/2026), chacun ABSENT = le dessin d'avant : `R.sansPoids` (aucun poids sur les
   // emplacements : la charge déjà posée ne se déduit pas), `R.reserves` ({ adresse: palette } : emplacement réservé, la palette
   // attend le cariste, en trait), `R.choisi` (l'emplacement vu de près, cerné de l'accent, sans aplat). Le capteur se cache
-  // déjà par `R.aideCharge` faux.
+  // déjà par `R.aideCharge` faux. Lot 4 (le comptage, 22/10/2026) : `R.sansPlaque` (aucune plaque de charge sur les niveaux :
+  // un écran de comptage n'écrit aucun « kg »).
   function htmlFace(e, R) {
     const d = decoupe(`${ui.trav}-N1-E1`), c = M.cotes[d.c], g = G.racks[d.c];
     // Le capteur de charge (05/10/2026) : un boîtier fixé au montant droit, un par niveau au-dessus du sol. Il
@@ -1108,7 +1164,7 @@ export function creerEntrepot(P, opts = {}) {
       // étiquette du niveau, plaque de charge, et le capteur (voir plus haut). Au sol, ni plaque ni capteur : pas de limite.
       const py = n === 1 ? yb + 8 : yb - 2, xr = XG + M.E * PW;
       s += `<rect x="${XG + 4}" y="${py}" width="132" height="18" rx="2" fill="var(--panneau)" stroke="var(--encre-douce)"/><text x="${XG + 70}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="var(--encre)">${ech(d.c)}-T${pad2(d.t)}-N${n}</text>`;
-      if (!PREP && n > 1) s += `<rect x="${xr - 168}" y="${py}" width="164" height="18" rx="2" fill="var(--pe-plaque)" data-pe-plaque="${n}"/><text x="${xr - 86}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="#1a1915">max ${kg(c.charge[n])} / niveau</text>`;
+      if (!PREP && n > 1 && !R.sansPlaque) s += `<rect x="${xr - 168}" y="${py}" width="164" height="18" rx="2" fill="var(--pe-plaque)" data-pe-plaque="${n}"/><text x="${xr - 86}" y="${py + 14}" text-anchor="middle" class="pe-mono" font-size="12" font-weight="800" fill="#1a1915">max ${kg(c.charge[n])} / niveau</text>`;
       if (aide && n > 1) s += capteur(n, yb, xr + 6 + CG, total, c.charge[n]);
       s += `<text x="${XG - 6}" y="${yb - 52}" text-anchor="end" font-size="13" font-weight="800" fill="var(--encre-douce)" ${TXT}>N${n}</text>`;
     }
@@ -1287,34 +1343,8 @@ export function creerEntrepot(P, opts = {}) {
       <text x="${x + PW / 2}" y="${yb - 38}" text-anchor="middle" font-size="12" fill="var(--pe-sur-gris)" ${TXT}>réserve</text>`;
   }
 
-  // Une palette de cartons en perspective (fiche de prélèvement) : couches du dessous complètes, les
-  // cartons manquants sur la couche du dessus, ceux en trop posés dessus. Repris de la maquette (`pile`).
-  function pile([W, D, L], ecart) {
-    const cubes = [];
-    for (let z = 0; z < L; z++) for (let x = 0; x < W; x++) for (let y = 0; y < D; y++) cubes.push([x, y, z]);
-    if (ecart < 0) {
-      const hautC = [...cubes].sort((p, q) => (q[2] - p[2]) || ((p[0] + p[1]) - (q[0] + q[1]))).slice(0, -ecart);
-      hautC.forEach((h) => cubes.splice(cubes.indexOf(h), 1));
-    }
-    if (ecart > 0) for (let i = 0; i < ecart; i++) cubes.push([W - 1 - i % W, D - 1 - Math.floor(i / W) % D, L + Math.floor(i / (W * D))]);
-    const a = 30, k = 0.87, bh = 0.8;
-    const Pj = (x, y, z) => [(x - y) * a * k, (x + y) * a * 0.5 - z * bh * a];
-    const poly = (pts) => pts.map((q) => Pj(...q).map((v) => v.toFixed(1)).join(',')).join(' ');
-    const b = -0.22 / bh, trait = '#6e4a22';
-    let s = `<polygon points="${poly([[0, 0, 0], [W, 0, 0], [W, D, 0], [0, D, 0]])}" fill="#b98b55"/>`;
-    s += `<polygon points="${poly([[W, 0, b], [W, D, b], [W, D, 0], [W, 0, 0]])}" fill="#8f6532"/><polygon points="${poly([[0, D, b], [W, D, b], [W, D, 0], [0, D, 0]])}" fill="#a87b45"/>`;
-    cubes.sort((p, q) => (p[0] + p[1] + p[2]) - (q[0] + q[1] + q[2]) || p[2] - q[2]);
-    for (const [x, y, z] of cubes) {
-      s += `<polygon points="${poly([[x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]])}" fill="#e6c48f" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
-      s += `<polygon points="${poly([[x + 1, y, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x + 1, y, z + 1]])}" fill="#b98a50" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
-      s += `<polygon points="${poly([[x, y + 1, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]])}" fill="#d0a066" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>`;
-      s += `<polygon points="${poly([[x + 0.44, y, z + 1], [x + 0.56, y, z + 1], [x + 0.56, y + 1, z + 1], [x + 0.44, y + 1, z + 1]])}" fill="#c9a571" opacity=".9"/>`;
-      s += `<polygon points="${poly([[x + 0.12, y + 1, z + 0.22], [x + 0.38, y + 1, z + 0.22], [x + 0.38, y + 1, z + 0.5], [x + 0.12, y + 1, z + 0.5]])}" fill="#fbfaf6" stroke="#9a8f80" stroke-width=".5"/>`;
-    }
-    const Lh = L + Math.max(1, Math.ceil(Math.max(0, ecart) / (W * D)));
-    const xs = [Pj(0, D, 0)[0], Pj(W, 0, 0)[0]], ys = [Pj(0, 0, Lh)[1], Pj(W, D, b)[1]], mg = 12;
-    return `<svg viewBox="${(xs[0] - mg).toFixed(1)} ${(ys[0] - mg).toFixed(1)} ${(xs[1] - xs[0] + 2 * mg).toFixed(1)} ${(ys[1] - ys[0] + 2 * mg).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Les cartons du picking">${s}</svg>`;
-  }
+  // La palette de cartons en perspective de la fiche : `pileCartons` (plus haut, hors de la vue : le palettier la dessine aussi).
+  const pile = (couches, ecart) => pileCartons(couches, ecart);
 
   // La fiche de prélèvement d'un emplacement de picking.
   function htmlFiche(e, R) {
@@ -1555,7 +1585,7 @@ export function creerEntrepot(P, opts = {}) {
   }
   // Le palettier (chantier E-7, lot 1) emprunte de même le plan et la travée de face, avec ses réglages.
   if (M.mode === 'palettier') {
-    const V = creerPalettier(P, M, opts, { G, ui, AW, htmlPlan, htmlFace,
+    const V = creerPalettier(P, M, opts, { G, ui, AW, htmlPlan, htmlFace, pile: pileCartons,
       echap: (racine, fn) => { echap = { racine, fn }; }, clavier: auClavier });
     const temps = opts.copie ? 'evaluation' : undefined;
     V.jalons = (db) => jalonsEntrepot(db, P, temps);

@@ -47,6 +47,12 @@
 //   alimente : `TERM.dire(T, ligne, { refus })` (un refus est en texte rouge, sans aplat) et `TERM.attendre(T, phrase)` (la ligne
 //   d'attente : le comptage du lot 4 s'en servira pour attendre le scan d'une adresse, comme `poser()` attend la pose). État :
 //   `terminalScannerNeuf()` = { journal: [{ q: 't', x, ko?, h }], attente }, rangé par la vue hôte.
+// - LA SAISIE EN MODE « SCANNER » (lot 4, 22/10/2026, le comptage du palettier) : `TERM.attendre(T, phrase, { saisie: true })` ouvre
+//   le CHAMP À CHIFFRES du boîtier (avec « Valider ») ; `{ choix: [['recompter', 'Recompter'], ['confirmer', 'Confirmer']] }` pose des
+//   boutons sous l'écran (le champ se ferme si `saisie` est absent). Les deux sont rangés dans l'état (`T.saisie`, `T.choix`) et
+//   ABSENTS par défaut : sans eux, le boîtier du lot 2 (ni champ ni bouton). La vue reçoit ce que l'élève fait par
+//   `TERM.brancher(racine, T, { saisir(texte), choisir(id), focus })` (`focus` : le champ, ou le premier bouton, prend le focus) ;
+//   le terminal ne juge rien. `TERM.dire(T, texte, { eleve: true })` écrit une ligne de l'élève (« › 33 ») dans le journal.
 //
 // L'état, rangé par la vue hôte dans la base de l'élève (cloisonné par séance) :
 //   { i: n° de la ligne en cours, phase: 'code' | 'reponse' | 'combien' | 'pose', reponses: { M01: 15 }, codesFaux: { M01: 2 },
@@ -180,11 +186,18 @@ export function repondreTerminal(T, lignes, saisie, textes = {}, h = Date.now(),
 }
 
 // Mode « scanner » : la vue DIT une ligne (écrite dans le journal, un refus en rouge) ou change la phrase qu'on attend.
-export function direTerminal(T, texte, { refus = false } = {}, h = Date.now()) {
-  T.journal.push(refus ? { q: 't', x: String(texte), ko: 1, h } : { q: 't', x: String(texte), h });
+// `eleve: true` (lot 4) : la ligne est ce que l'élève a tapé ou choisi (« › 33 »).
+export function direTerminal(T, texte, { refus = false, eleve = false } = {}, h = Date.now()) {
+  const q = eleve ? 'e' : 't';
+  T.journal.push(refus ? { q, x: String(texte), ko: 1, h } : { q, x: String(texte), h });
   borner(T);
 }
-export function attendreTerminal(T, phrase) { T.attente = String(phrase == null ? '' : phrase); }
+// `saisie` (le champ à chiffres) et `choix` ([[id, libellé], …], des boutons) : lot 4, absents par défaut (rien n'est écrit dans l'état).
+export function attendreTerminal(T, phrase, { saisie = false, choix = null } = {}) {
+  T.attente = String(phrase == null ? '' : phrase);
+  if (saisie) T.saisie = true; else delete T.saisie;
+  if (Array.isArray(choix) && choix.length) T.choix = choix.map(([id, lib]) => [String(id), String(lib)]); else delete T.choix;
+}
 
 // Peut-on dire un mot maintenant ? (pendant la question d'une ligne de préparation, une seule fois par ligne)
 export function motPossible(T, lignes) {
@@ -273,18 +286,41 @@ export function creerTerminal({ lignes = [], textes = {}, titre = '', mots = [],
   };
   const ligneEnCours = (T) => lignesDuTerminal(lignes, T)[T.i];
   // Le mode « scanner » : la phrase en cours et les 5 dernières lignes, rien à taper (le scan est un clic de la vue hôte).
+  // Lot 4 : le champ à chiffres (`T.saisie`) et les boutons de choix (`T.choix`), absents par défaut.
   const htmlScanner = (T) => {
-    const passe = (T.journal || []).slice(-VU).map((j) => `<div class="vt-passe${j.ko ? ' vt-ko' : ''}">${ech(j.x)}</div>`).join('');
+    const passe = (T.journal || []).slice(-VU).map((j) => (j.q === 'e'
+      ? `<div class="vt-moi">› ${ech(j.x)}</div>`
+      : `<div class="vt-passe${j.ko ? ' vt-ko' : ''}">${ech(j.x)}</div>`)).join('');
+    const saisie = T.saisie ? `<form class="vt-saisie" data-vt-form autocomplete="off">
+            <input data-vt-champ inputmode="numeric" autocomplete="off" maxlength="6" value="${ech(ui.saisie)}" placeholder="nombre" aria-label="Ta réponse au terminal">
+            <button type="submit" class="vt-btn" data-vt-valider>Valider</button></form>` : '';
+    const choix = Array.isArray(T.choix) && T.choix.length
+      ? `<div class="vt-choix">${T.choix.map(([id, lib]) => `<button type="button" class="vt-btn" data-vt-choix="${ech(id)}">${ech(lib)}</button>`).join('')}</div>` : '';
     return `<div class="vt vt-scan" data-terminal data-vt-mode="scanner">
         <div class="vt-boitier" role="group" aria-label="${ech(nom || 'Terminal')}">
           <div class="vt-tete"><span class="vt-led" aria-hidden="true"></span>${ech(NOM)}${titre ? ` · ${ech(titre)}` : ''}</div>
-          <div class="vt-ecran" aria-live="polite">${passe}<div class="vt-actu" data-vt-actu>${ech(T.attente || '')}</div></div>
+          <div class="vt-ecran" aria-live="polite">${passe}<div class="vt-actu" data-vt-actu>${ech(T.attente || '')}</div></div>${saisie}${choix}
         </div></div>`;
+  };
+  // Lot 4 : ce que l'élève tape ou choisit en mode « scanner » va à la vue hôte (`api.saisir`, `api.choisir`) ; elle juge et redessine.
+  const brancherScanner = (el, T, api) => {
+    const champ = el.querySelector('[data-vt-champ]');
+    if (champ) {
+      champ.addEventListener('input', () => { ui.saisie = champ.value; });
+      el.querySelector('[data-vt-form]').addEventListener('submit', (ev) => {
+        ev.preventDefault();
+        const v = champ.value;
+        ui.saisie = '';
+        if (api.saisir) api.saisir(v);
+      });
+    }
+    el.querySelectorAll('[data-vt-choix]').forEach((b) => b.addEventListener('click', () => { if (api.choisir) api.choisir(b.dataset.vtChoix); }));
+    if (api.focus) { const c = champ || el.querySelector('[data-vt-choix]'); if (c) c.focus({ preventScroll: true }); }
   };
   return {
     // Mode « scanner » : la vue hôte alimente le journal et la phrase attendue (voir l'en-tête du fichier).
     dire: (T, texte, o) => direTerminal(T, texte, o),
-    attendre: (T, phrase) => attendreTerminal(T, phrase),
+    attendre: (T, phrase, o) => attendreTerminal(T, phrase, o),
     html(T, { estProf = false, son = false } = {}) {
       if (SCAN) return htmlScanner(T);
       ui.sonOk = !!son;
@@ -324,7 +360,8 @@ export function creerTerminal({ lignes = [], textes = {}, titre = '', mots = [],
     // `api` : { sauver, redessiner, signal(evt, ligne), clavier() }.
     brancher(racine, T, api) {
       const el = racine.querySelector('[data-terminal]');
-      if (!el || SCAN) return;
+      if (!el) return;
+      if (SCAN) { brancherScanner(el, T, api || {}); return; }
       const champ = el.querySelector('[data-vt-champ]');
       const apres = (evt, l) => {
         ui.saisie = '';

@@ -79,10 +79,46 @@
 // Les jalons d'une palette `niveaux: ['confirme']` sont `bonus: true`. LA VÉRITÉ d'un emplacement (`verite`) : hors service
 // → `abime` ; stock de départ ou une autre palette de l'élève (à la fin) → `occupe` ; charge du niveau (stock + toutes les
 // autres palettes de l'élève, à la fin) + la palette > plaque → `charge`. `autre` n'est jamais vrai.
+//
+// LE COMPTAGE (lot 4, 22/10/2026 : « compter au Terminal, à l'aveugle, en cartons », ENT-8.12 puis ENT-8.14 en copie). Une liste
+// d'adresses AU SOL (niveau 1 : on compte depuis le sol, décision 12), le stock que croit le système et le réel dessiné :
+//
+//   comptage: {
+//     adresses: [   // dans l'ordre de la liste (rang 1 … n, 8 au plus), toutes au niveau 1
+//       { adresse: 'A1-T03-N1-E2', produit: 'LES', systeme: 36, reel: 33, couche: [3, 3], couches: 4, cle: 'manque' },
+//       { …, niveaux: ['confirme'] },   // au confirmé seulement (en fin de liste) : jalons bonus
+//     ],
+//     recompte: 'ecart' | 'jamais',   // défaut 'ecart' : un compte différent du système propose de recompter
+//     aideCouche: true,               // la vue de près écrit « 3 × 3 = 9 par couche » (jamais le total) ; défaut false
+//   },
+//   terminal: { nom: 'Terminal' },    // obligatoire : on compte au Terminal ; `palettes` devient facultatif
+//
+// `couche: [W, D]` et `couches` donnent la palette pleine (W × D × couches) ; `reel` la dessine (`pileCartons` d'entrepot.js, le
+// dessin de la préparation) : couches du dessous complètes, cartons manquants sur la couche du dessus, cartons en trop posés
+// dessus (une couche au plus). `produit` : un code de `produits` ou une désignation ; une adresse absente du stock est OCCUPÉE par
+// la déclaration du comptage (ajoutée au stock de la vue) ; présente, elle garde son produit. `systeme` n'apparaît JAMAIS dans la
+// page avant « Terminer le comptage » ; la travée de face n'écrit ni poids ni plaque, la vue de près ni plaque ni capteur (le
+// poids d'une palette donnerait le nombre de cartons).
+// Le geste : ouvrir l'emplacement de près (la palette dessinée), cliquer son ÉTIQUETTE (le scan ; « A1-T03-N1-E2 — Lessive liquide
+// 3 L. Combien de cartons ? »), taper le nombre dans le champ du Terminal. Égal au système (ou `recompte: 'jamais'`) : « Compris. » ;
+// différent : « Quantité différente. Recompter ou confirmer ? » (deux boutons du Terminal, ni le nombre ni le sens), « Recompter »
+// redemande, « Confirmer » garde. Taper sans scan : « Scanne d'abord l'adresse. » (trace `sansScan`). Une adresse hors liste se
+// compte (« Compris. »), gardée en trace (`horsListe`). Un compte se refait en rescannant l'adresse : le dernier confirmé compte.
+// « Terminer le comptage » (confirmation s'il reste des adresses) fige tout ; avec `verdict`, hors copie, chaque ligne de la liste
+// dit « ✓ » ou « ✗ compte » (« · réel : n » avec 'adresse').
+// Avec `palettes` ET `comptage` (ENT-8.14), le comptage vient après « Valider mon rangement » (qui ne rend alors pas la copie :
+// « Terminer le comptage » la rend) ; les phases nommées sont le lot 6.
+// GESTES : `compte:<rang>` (compte confirmé), `compte:scan` (adresse scannée pour compter), `compte:fin` (« Terminer le comptage »).
+// ÉTAT : `comptage: { scanne, enCours: { rang, compte } | null, comptes: { 1: 33 }, premiers, propositions: { 1: n }, recomptes:
+// { 1: n }, horsListe: [{ adresse, compte }], sansScan, fini, at }` (absent sans `comptage`).
+// JALONS (par rang de la liste, la même pour tous ; `attente` avant « Terminer », jamais après) : `compte-<rang>` (dernier compte
+// confirmé = réel) ; `recompte-<cle ou rang>` (non comptée → ko ; le Terminal a proposé de recompter → ok si « Recompter » choisi
+// au moins une fois ; rien proposé → ok) ; `scanAvant` (ko si rien n'est compté). Exports d'entrepot.js : `ecartsConfirmes`,
+// `etatComptage`.
 
 import { ech, pad2 } from '../texte.js';
 import { niveauEleve, graineDeBase, NIVEAUX_ELEVE } from '../tirage.js';
-import { creerTerminal, terminalScannerNeuf } from './terminal.js';
+import { creerTerminal, terminalScannerNeuf, direTerminal } from './terminal.js';
 
 const nb = (n) => Number(n).toLocaleString('fr-FR');
 const kg = (n) => `${nb(n)} kg`;
@@ -97,6 +133,7 @@ const MOTIF_IDS = MOTIFS.map((m) => m[0]);
 export const AIDES_CHARGE = ['somme', 'pose', 'plaque'];
 export const VERDICTS = ['critere', 'adresse'];
 export const SCANS = ['palette-emplacement', 'emplacement'];
+export const RECOMPTES = ['ecart', 'jamais'];
 // Le support d'une palette (ENT-8.11 §6) et le poids d'une palette chargée, calculé, arrondi au centième.
 export const SUPPORT_KG = 25;
 export const poidsPalette = (cartons, kgCarton) => Math.round((cartons * kgCarton + SUPPORT_KG) * 100) / 100;
@@ -107,7 +144,9 @@ export const poidsPalette = (cartons, kgCarton) => Math.round((cartons * kgCarto
 // `M.cariste`, `M.aide`, `M.verdict`, `M.jalons`. Une déclaration fautive ne se charge pas.
 export function compilerPalettier(M, err) {
   const P = M.P;
-  if (!Array.isArray(P.palettes) || !P.palettes.length) err('aucune palette à ranger (palettes)');
+  // Avec un comptage (lot 4), les palettes à ranger sont facultatives (ENT-8.12 ne fait que compter).
+  if (P.palettes != null && !Array.isArray(P.palettes)) err('palettes : une liste');
+  if (P.comptage == null && !(P.palettes || []).length) err('aucune palette à ranger (palettes)');
   const C = P.cariste;
   let cariste = null;
   if (C) {
@@ -125,7 +164,7 @@ export function compilerPalettier(M, err) {
     if (prises.has(a)) err(`${ou} : ${quoi} ${a} est déjà celle de ${prises.get(a)}`);
     return d;
   };
-  P.palettes.forEach((p, i) => {
+  (P.palettes || []).forEach((p, i) => {
     const ou = `palette ${p && p.id ? p.id : `n° ${i + 1}`}`;
     if (!p || !p.id) err(`${ou} : il manque un id`);
     if (M.pal[p.id]) err(`${ou} déclarée deux fois`);
@@ -148,7 +187,8 @@ export function compilerPalettier(M, err) {
       adresse: p.adresse, nouvelleAdresse: p.nouvelleAdresse || null, aSignaler, niveaux: p.niveaux ? p.niveaux.slice() : null,
       bonus: !!p.niveaux };
   });
-  if (!Object.values(M.pal).some((p) => !p.bonus)) err('toutes les palettes sont des bonus du confirmé : il en faut au moins une pour tous');
+  const aPal = Object.keys(M.pal).length > 0;
+  if (aPal && !Object.values(M.pal).some((p) => !p.bonus)) err('toutes les palettes sont des bonus du confirmé : il en faut au moins une pour tous');
   const aide = P.aideCharge == null ? 'plaque' : P.aideCharge;
   if (!AIDES_CHARGE.includes(aide)) err(`aideCharge : ${AIDES_CHARGE.join(', ')} (absent = plaque)`);
   if (P.verdict != null && !VERDICTS.includes(P.verdict)) err(`verdict : ${VERDICTS.join(', ')} (absent = rien)`);
@@ -160,6 +200,7 @@ export function compilerPalettier(M, err) {
     if (T.scan != null && !SCANS.includes(T.scan)) err(`terminal.scan : ${SCANS.join(', ')} (absent = palette-emplacement)`);
     terminal = { nom: String(T.nom), scan: T.scan || 'palette-emplacement' };
   }
+  const comptage = P.comptage != null ? compilerComptage(M, P.comptage, terminal, err) : null;
   const jalons = [];
   Object.values(M.pal).forEach((p) => {
     const b = p.bonus ? { bonus: true } : {};
@@ -171,9 +212,81 @@ export function compilerPalettier(M, err) {
       jalons.push({ id: `scan-${p.id}`, type: 'scan', palette: p.id, lib: `${p.id} scannée à son adresse (${p.nom})`, ...b });
     }
   });
-  jalons.push({ id: 'pasPoseHaut', type: 'pasPoseHaut', lib: 'Aucune palette posée soi-même au-dessus du sol' });
-  jalons.push({ id: 'charge', type: 'charge', lib: 'Aucune plaque de charge dépassée' });
-  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons, terminal });
+  if (aPal) {
+    jalons.push({ id: 'pasPoseHaut', type: 'pasPoseHaut', lib: 'Aucune palette posée soi-même au-dessus du sol' });
+    jalons.push({ id: 'charge', type: 'charge', lib: 'Aucune plaque de charge dépassée' });
+  }
+  // Le comptage (lot 4) : après les jalons du rangement, par RANG de la liste (la même pour tous les élèves).
+  if (comptage) {
+    comptage.adresses.forEach((x) => jalons.push({ id: `compte-${x.rang}`, type: 'compte', comptage: true, rang: x.rang,
+      lib: `Adresse n° ${x.rang} de la liste bien comptée`, ...(x.bonus ? { bonus: true } : {}) }));
+    comptage.adresses.forEach((x) => jalons.push({ id: `recompte-${x.cle || x.rang}`, type: 'recompte', comptage: true, rang: x.rang,
+      lib: x.cle ? `Recompté quand le compte ne collait pas (${x.cle})` : `Adresse n° ${x.rang} : recomptée quand le compte ne collait pas`,
+      ...(x.bonus ? { bonus: true } : {}) }));
+    jalons.push({ id: 'scanAvant', type: 'scanAvant', comptage: true, lib: 'Adresse scannée avant de compter' });
+  }
+  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons, terminal, comptage, aPal });
+}
+
+// LE COMPTAGE (lot 4) : contrôle la liste, et OCCUPE les adresses absentes du stock (copies du stock et des produits de la vue :
+// la déclaration de la séance n'est jamais modifiée). Une déclaration fautive ne se charge pas.
+function compilerComptage(M, Q, terminal, err) {
+  if (typeof Q !== 'object' || Array.isArray(Q) || !Array.isArray(Q.adresses) || !Q.adresses.length) {
+    err('comptage : une liste d’adresses à compter (comptage: { adresses: [{ adresse, produit, systeme, reel, couche, couches }] })');
+  }
+  if (Q.adresses.length > 8) err('comptage : 8 adresses au plus (la liste tient au-dessus du Terminal)');
+  if (!terminal) err('comptage : on compte au Terminal, déclarer terminal: { nom: \'Terminal\' }');
+  if (Q.recompte != null && !RECOMPTES.includes(Q.recompte)) err(`comptage.recompte : ${RECOMPTES.join(', ')} (absent = ecart)`);
+  if (Q.aideCouche != null && typeof Q.aideCouche !== 'boolean') err('comptage.aideCouche : true ou false');
+  const stock = Object.assign({}, M.stock), produits = Object.assign({}, M.produits);
+  const vues = new Set(), cles = new Set();
+  let bonusVu = false;
+  const adresses = Q.adresses.map((x, i) => {
+    const rang = i + 1, ou = `comptage, adresse n° ${rang}`;
+    if (!x || typeof x !== 'object') err(`${ou} : un objet { adresse, produit, systeme, reel, couche, couches }`);
+    const d = decoupe(x.adresse);
+    if (!d || !M.existe.has(x.adresse)) err(`${ou} : adresse inconnue (${x.adresse})`);
+    if (d.n !== 1) err(`${ou} : ${x.adresse} n’est pas au niveau 1 (on compte depuis le sol : l’élève ne monte pas)`);
+    if (M.hs.has(x.adresse)) err(`${ou} : ${x.adresse} est hors service`);
+    if (vues.has(x.adresse)) err(`${ou} : ${x.adresse} est déjà dans la liste`);
+    vues.add(x.adresse);
+    if (!(Number.isInteger(x.systeme) && x.systeme >= 0)) err(`${ou} : systeme (le nombre entier de cartons que croit le système)`);
+    if (!(Number.isInteger(x.reel) && x.reel >= 1)) err(`${ou} : reel (le nombre entier de cartons dessinés, 1 au moins)`);
+    const pos = (n, max) => Number.isInteger(n) && n >= 1 && n <= max;
+    if (!(Array.isArray(x.couche) && x.couche.length === 2 && x.couche.every((n) => pos(n, 5)))) err(`${ou} : couche [W, D] (cartons en largeur et en profondeur, de 1 à 5)`);
+    if (!pos(x.couches, 6)) err(`${ou} : couches (le nombre de couches de la palette pleine, de 1 à 6)`);
+    const par = x.couche[0] * x.couche[1], plein = par * x.couches;
+    if (x.reel <= par * (x.couches - 1)) err(`${ou} : reel ${x.reel} laisse la couche du dessus vide (${x.couches} couches de ${par} : plus de ${par * (x.couches - 1)} cartons, ou une couche de moins)`);
+    if (x.reel > plein + par) err(`${ou} : reel ${x.reel} : une couche au plus de cartons en trop posés dessus (${plein + par} au plus)`);
+    if (x.cle != null) {
+      if (typeof x.cle !== 'string' || !/^[a-z][a-z0-9_]*$/i.test(x.cle)) err(`${ou} : cle (un mot qui commence par une lettre, ex. 'manque')`);
+      if (cles.has(x.cle)) err(`${ou} : la clé « ${x.cle} » est déjà prise`);
+      cles.add(x.cle);
+    }
+    let bonus = false;
+    if (x.niveaux != null) {
+      if (!(Array.isArray(x.niveaux) && x.niveaux.length === 1 && x.niveaux[0] === 'confirme')) err(`${ou} : niveaux — seul ['confirme'] est prévu (une adresse bonus du confirmé)`);
+      bonus = bonusVu = true;
+    } else if (bonusVu) err(`${ou} : les adresses du confirmé (niveaux: ['confirme']) viennent en fin de liste`);
+    // Le produit : celui du stock si l'adresse y est ; sinon la déclaration du comptage l'occupe (un code de `produits`, ou une
+    // désignation, qui devient un produit de la vue).
+    let code;
+    const st = stock[x.adresse];
+    if (st) {
+      if (x.produit != null && x.produit !== st.produit && x.produit !== (produits[st.produit] || {}).nom) err(`${ou} : le stock de ${x.adresse} est ${st.produit}, pas ${x.produit}`);
+      code = st.produit;
+    } else {
+      if (!x.produit || typeof x.produit !== 'string') err(`${ou} : produit (un code de produits, ou la désignation du produit)`);
+      code = x.produit;
+      if (!produits[code]) produits[code] = { nom: code, court: code.split(' ')[0] };
+      stock[x.adresse] = { produit: code, kg: 0, compte: rang };
+    }
+    return { rang, adresse: x.adresse, produit: code, nom: String(produits[code].nom), systeme: x.systeme, reel: x.reel,
+      couche: x.couche.slice(), couches: x.couches, cle: x.cle || null, bonus, niveaux: bonus ? ['confirme'] : null };
+  });
+  if (!adresses.some((x) => !x.bonus)) err('comptage : toutes les adresses sont des bonus du confirmé : il en faut au moins une pour tous');
+  M.stock = stock; M.produits = produits;
+  return { adresses, recompte: Q.recompte || 'ecart', aideCouche: Q.aideCouche === true };
 }
 
 /* ==================================================================== le modèle */
@@ -246,7 +359,13 @@ export function jalonsPalettier(M, e, niveau = 'standard') {
   // La garde « toutes les palettes traitées » ne compte pas les palettes bonus du confirmé : en laisser une en réception ne coûte pas
   // `charge` ni `pasPoseHaut` (retouche du 22/10/2026, relevée par ENT-8.11). Une palette bonus posée trop haut ou en surcharge compte quand même.
   const toutes = ps.filter((p) => !p.bonus).every((p) => traitee(e, pl, p.id));
-  return M.jalons.filter((j) => !j.palette || ids.has(j.palette)).map((j) => {
+  // Le comptage (lot 4) : ses jalons sont jugés à « Terminer le comptage » (`fini`), pas à « Valider ».
+  const C = normalC(e), liste = listeComptage(M, niveau), rangs = new Set(liste.map((x) => x.rang)), vC = !!C.fini;
+  return M.jalons.filter((j) => (!j.palette || ids.has(j.palette)) && (!j.rang || rangs.has(j.rang))).map((j) => {
+    if (j.comptage) {
+      const ok = okComptage(M, C, j, liste);
+      return { id: j.id, lib: j.lib, palette: null, rang: j.rang || null, bonus: !!j.bonus, ok: vC && ok, etat: vC ? (ok ? 'ok' : 'ko') : 'attente' };
+    }
     let ok;
     if (j.type === 'scan') ok = !fautesPalette(M, e, M.pal[j.palette]).includes('scan');
     else if (j.palette) {
@@ -261,11 +380,123 @@ export function jalonsPalettier(M, e, niveau = 'standard') {
 // Le détail rangé avec la note (l'enseignant le lit).
 export function detailPalettier(M, e, L) {
   e = normal(e);
+  const C = normalC(e);
   return { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, etat: l.etat, ...(l.bonus ? { bonus: true } : {}) })),
     posees: Object.assign({}, e.posees), confiees: Object.assign({}, e.confiees),
     signalees: Object.fromEntries(Object.entries(e.signalees).map(([id, s]) => [id, s.motif])),
     tentativesHaut: e.tentativesHaut || 0, valide: !!e.valide, premierGeste: e.premierGeste || null,
-    ...(M.terminal ? { scans: Object.assign({}, e.scan), scansRefuses: e.scansRefuses || 0 } : {}) };
+    ...(M.terminal ? { scans: Object.assign({}, e.scan), scansRefuses: e.scansRefuses || 0 } : {}),
+    // Le comptage (lot 4) : ses comptes confirmés, les « Recompter » choisis, les propositions du Terminal, la trace hors liste et
+    // les nombres tapés sans scan (jamais notés seuls).
+    ...(M.comptage ? { comptage: { comptes: Object.assign({}, C.comptes), recomptes: Object.assign({}, C.recomptes),
+      propositions: Object.assign({}, C.propositions), horsListe: C.horsListe.map((h) => Object.assign({}, h)), sansScan: C.sansScan || 0,
+      fini: !!C.fini } } : {}) };
+}
+
+/* ================================================================ le comptage (lot 4) */
+export const comptageNeuf = () => ({ scanne: null, enCours: null, comptes: {}, premiers: {}, propositions: {}, recomptes: {},
+  horsListe: [], sansScan: 0, fini: false, at: null });
+const normalC = (e) => Object.assign(comptageNeuf(), (e && e.comptage) || {});
+// La liste d'un élève : les adresses de son niveau (celles du confirmé, en fin de liste, au confirmé seulement), dans l'ordre.
+export const listeComptage = (M, niveau = 'standard') => (M.comptage ? M.comptage.adresses.filter((x) => presente(x, niveau)) : []);
+const compte = (C, r) => (C.comptes || {})[r];
+function okComptage(M, C, j, liste) {
+  if (j.type === 'scanAvant') return liste.some((x) => compte(C, x.rang) != null);
+  const x = M.comptage.adresses[j.rang - 1];
+  if (j.type === 'compte') return compte(C, j.rang) === x.reel;
+  // recompte, règle unique (décision de Tristan, 21/10/2026) : non comptée → faux ; le Terminal a proposé de recompter → juste si
+  // « Recompter » a été choisi au moins une fois ; rien proposé (compte égal au système, ou `recompte: 'jamais'`) → juste.
+  if (compte(C, j.rang) == null) return false;
+  return !((C.propositions || {})[j.rang] > 0) || (C.recomptes || {})[j.rang] > 0;
+}
+// Les ÉCARTS CONFIRMÉS : vide tant que le comptage n'est pas terminé (l'aveugle tient jusque-là).
+export function ecartsComptage(M, e, niveau = 'standard') {
+  const C = normalC(e);
+  if (!M.comptage || !C.fini) return [];
+  return listeComptage(M, niveau).filter((x) => compte(C, x.rang) != null && compte(C, x.rang) !== x.systeme).map((x) => ({
+    rang: x.rang, adresse: x.adresse, produit: x.nom, compte: compte(C, x.rang), systeme: x.systeme,
+    sens: compte(C, x.rang) < x.systeme ? 'manque' : 'surplus' }));
+}
+export function etatLisibleComptage(M, e) {
+  const C = normalC(e);
+  return { comptes: Object.assign({}, C.comptes), recomptes: Object.assign({}, C.recomptes),
+    horsListe: C.horsListe.map((h) => Object.assign({}, h)), fini: !!C.fini };
+}
+// Ce qu'il y a à compter à une adresse (le dessin de la vue de près) : une adresse de la liste (son réel), un autre stock au sol
+// (une palette pleine, format tiré de l'adresse : un compte hors liste n'est qu'une trace), une palette de l'élève posée au sol
+// (ENT-8.14 : ses cartons). Rien (null) : libre, hors service, ou au-dessus du sol.
+export function aCompter(M, e, a) {
+  const d = decoupe(a);
+  if (!d || d.n !== 1 || M.hs.has(a)) return null;
+  const x = M.comptage && M.comptage.adresses.find((y) => y.adresse === a);
+  if (x) return { nom: x.nom, couche: x.couche, couches: x.couches, reel: x.reel };
+  const h = [...a].reduce((s, c) => (s * 31 + c.charCodeAt(0)) % 9973, 7);
+  const W = 2 + (h % 2), D = 2 + ((h >> 1) % 2);
+  const st = M.stock[a];
+  if (st) { const L = 3 + ((h >> 2) % 2); return { nom: String((M.produits[st.produit] || {}).nom || st.produit), couche: [W, D], couches: L, reel: W * D * L }; }
+  const id = Object.keys((e && e.posees) || {}).find((k) => e.posees[k] === a);
+  if (id && M.pal[id]) { const p = M.pal[id]; return { nom: p.nom, couche: [W, D], couches: Math.ceil(p.cartons / (W * D)), reel: p.cartons }; }
+  return null;
+}
+// La phrase que le Terminal attend pendant le comptage.
+function phraseComptage(M, e, fige) {
+  const C = e.comptage;
+  if (fige) return 'Terminé.';
+  if (C.enCours) return 'Quantité différente. Recompter ou confirmer ?';
+  if (C.scanne) { const q = aCompter(M, e, C.scanne); return `${C.scanne} — ${q ? q.nom : ''}. Combien de cartons ?`; }
+  return 'Scanne l’adresse.';
+}
+const dit = (e, x, o) => direTerminal(e.terminal, x, o);
+// LES GESTES DU COMPTAGE, purs (l'état seul : `e.comptage` et le journal du Terminal `e.terminal`). Chacun rend le geste à publier
+// (sans le préfixe `entrepot:<id>:`) ou null.
+// Le scan d'une adresse (clic sur l'étiquette de l'emplacement vu de près, au sol).
+export function scannerComptage(M, e, a) {
+  const C = e.comptage;
+  if (C.fini) return null;
+  if (C.enCours) { dit(e, 'Recompte ou confirme d’abord.', { refus: true }); return null; }
+  if (!aCompter(M, e, a)) { dit(e, 'Rien à compter ici.', { refus: true }); return null; }
+  C.scanne = a;
+  return 'compte:scan';
+}
+// Un nombre tapé au Terminal (`v` : le texte du champ).
+export function saisirComptage(M, e, v, niveau = 'standard') {
+  const C = e.comptage;
+  const s = String(v == null ? '' : v).replace(/\s+/g, '');
+  if (C.fini || C.enCours || !s) return null;
+  const phrase = phraseComptage(M, e, false);
+  dit(e, phrase); dit(e, s, { eleve: true });
+  if (!C.scanne) { C.sansScan = (C.sansScan || 0) + 1; dit(e, 'Scanne d’abord l’adresse.', { refus: true }); return null; }
+  if (!/^\d{1,4}$/.test(s)) { dit(e, 'Je n’ai pas compris. Réponds avec des chiffres.', { refus: true }); return null; }
+  const n = Number(s), a = C.scanne;
+  const x = listeComptage(M, niveau).find((y) => y.adresse === a);
+  if (!x) { C.horsListe = [...(C.horsListe || []), { adresse: a, compte: n }]; C.scanne = null; dit(e, 'Compris.'); return null; }
+  const r = x.rang;
+  if ((C.premiers || {})[r] == null) C.premiers = Object.assign({}, C.premiers, { [r]: n });
+  if (M.comptage.recompte === 'jamais' || n === x.systeme) {
+    C.comptes = Object.assign({}, C.comptes, { [r]: n }); C.scanne = null; dit(e, 'Compris.');
+    return `compte:${r}`;
+  }
+  // Différent du système : le Terminal propose de recompter, sans dire de combien ni dans quel sens.
+  C.enCours = { rang: r, compte: n };
+  C.propositions = Object.assign({}, C.propositions, { [r]: ((C.propositions || {})[r] || 0) + 1 });
+  return null;
+}
+// « Recompter » (efface, redemande) ou « Confirmer » (garde le compte).
+export function choisirComptage(M, e, choix) {
+  const C = e.comptage, X = C.enCours;
+  if (C.fini || !X || !['recompter', 'confirmer'].includes(choix)) return null;
+  dit(e, phraseComptage(M, e, false)); dit(e, choix === 'recompter' ? 'Recompter' : 'Confirmer', { eleve: true });
+  C.enCours = null;
+  if (choix === 'recompter') { C.recomptes = Object.assign({}, C.recomptes, { [X.rang]: ((C.recomptes || {})[X.rang] || 0) + 1 }); return null; }
+  C.comptes = Object.assign({}, C.comptes, { [X.rang]: X.compte }); C.scanne = null; dit(e, 'Compris.');
+  return `compte:${X.rang}`;
+}
+// « Terminer le comptage » : tout se fige.
+export function terminerComptage(e) {
+  const C = e.comptage;
+  if (C.fini) return null;
+  Object.assign(C, { fini: true, at: Date.now(), scanne: null, enCours: null });
+  return 'compte:fin';
 }
 
 // Ce qu'attend chaque palette, sur le stock de départ (enseignant, page d'essai ; JAMAIS montré à l'élève).
@@ -277,7 +508,8 @@ export function attendusPalettier(M) {
     if (p.bonus) x.niveaux = p.niveaux.slice();
     if (aJalonScan(M, p)) x.scan = p.nouvelleAdresse || p.adresse;
     return [p.id, x];
-  }));
+  }).concat(M.comptage ? M.comptage.adresses.map((x) => [`compte-${x.rang}`, { comptage: true, rang: x.rang, adresse: x.adresse,
+    produit: x.nom, reel: x.reel, systeme: x.systeme, ...(x.cle ? { cle: x.cle } : {}), ...(x.bonus ? { niveaux: ['confirme'] } : {}) }]) : []));
 }
 
 // Les palettes que le cariste a montées : avec `monte(db)`, toutes les confiées dès que la fonction est vraie ; sinon celles
@@ -328,7 +560,8 @@ export function declarationDe(E, db, { copie = false } = {}) {
 export function creerPalettier(P, M, opts, O) {
   const ui = O.ui, G = O.G;
   // `regles: null` : « Les règles » n'ont pas encore été touchées par l'élève (le rangement, lui, part de `false`).
-  Object.assign(ui, { pres: null, signaler: false, journal: [], confirmer: false, msg: '', msgType: '', alerte: null, regles: null });
+  Object.assign(ui, { pres: null, signaler: false, journal: [], confirmer: false, msg: '', msgType: '', alerte: null, regles: null,
+    confirmerFin: false, focusTerm: false });
   const COPIE = !!opts.copie;
   const C = M.cariste, NOM = C ? C.nom : 'le cariste';
   const geste = (n) => `entrepot:${P.id}:${n}`;
@@ -336,18 +569,25 @@ export function creerPalettier(P, M, opts, O) {
   const TERM = M.terminal ? creerTerminal({ nom: M.terminal.nom, mode: 'scanner' }) : null;
   const DEUX = !!TERM && M.terminal.scan !== 'emplacement';   // deux scans (la palette, puis l'emplacement) ; sinon un seul clic
   const signaux = [...Object.keys(M.pal).flatMap((id) => ['prendre', 'poser', 'confier', 'signaler', ...(TERM ? ['scan'] : [])].map((x) => geste(`${x}:${id}`))),
-    geste('ouvrir'), geste('monter'), geste('valider')];
+    geste('ouvrir'), ...(M.aPal ? [geste('monter'), geste('valider')] : []),
+    ...(M.comptage ? [...M.comptage.adresses.map((x) => geste(`compte:${x.rang}`)), geste('compte:scan'), geste('compte:fin')] : [])];
+  // LE COMPTAGE (lot 4) est-il l'écran du moment ? Sans palettes, toujours ; avec des palettes (ENT-8.14), après « Valider mon
+  // rangement » (les phases nommées sont le lot 6).
+  const enComptage = (e) => !!M.comptage && (!M.aPal || !!e.valide);
 
   function regime(api, e) {
     const rendue = !!(api && api.copieRendue && api.copieRendue());
+    const fini = !!(e.comptage && e.comptage.fini);
     return { copie: COPIE, rendue, fige: !!e.valide || rendue, prof: !!(api && api.estProf),
       niveau: niveauEleve(api && api.db, { copie: COPIE }),
-      temps: COPIE ? 'evaluation' : (P.temps || (api && api.temps) || 'guidage') };
+      temps: COPIE ? 'evaluation' : (P.temps || (api && api.temps) || 'guidage'),
+      // le comptage : son écran, et figé à « Terminer le comptage » (ou copie rendue)
+      compte: enComptage(e), cfige: fini || rendue };
   }
-  // Ce que chaque dessin recalcule : les palettes de l'élève, où tout est rangé, ce que Kevin a monté.
+  // Ce que chaque dessin recalcule : les palettes de l'élève, où tout est rangé, ce que Kevin a monté, sa liste à compter.
   function calcul(e, R, api) {
     const ps = presentes(M, R.niveau);
-    return { ps, ids: new Set(ps.map((p) => p.id)), pl: placement(e), montees: montees(M, e, api && api.db) };
+    return { ps, ids: new Set(ps.map((p) => p.id)), pl: placement(e), montees: montees(M, e, api && api.db), liste: listeComptage(M, R.niveau) };
   }
   function normaliser(e) {
     if (!e.posees) Object.assign(e, etatPalettierNeuf(), e);
@@ -356,6 +596,10 @@ export function creerPalettier(P, M, opts, O) {
       if (!e.scan) e.scan = {};
       if (typeof e.scansRefuses !== 'number') e.scansRefuses = 0;
       if (!e.terminal) e.terminal = terminalScannerNeuf();
+    }
+    if (M.comptage) {
+      if (!e.comptage) e.comptage = comptageNeuf();
+      else Object.entries(comptageNeuf()).forEach(([k, v]) => { if (!(k in e.comptage)) e.comptage[k] = v; });
     }
   }
 
@@ -517,6 +761,7 @@ export function creerPalettier(P, M, opts, O) {
 
   function consigne(e, R, X) {
     const n = (k, t) => `<span class="pe-num">${k}</span>${t}`;
+    if (R.compte) return consigneComptage(e, R, X, n);
     if (R.fige) return n('✓', R.copie ? 'Copie rendue.' : 'Rangement validé : il ne change plus.');
     const pm = e.enMain ? M.pal[e.enMain] : null;
     if (!pm) {
@@ -569,6 +814,7 @@ export function creerPalettier(P, M, opts, O) {
     return DEUX ? `<div class="pal-cwrap">${bouton}${etiquettePalette(p, e, R, 'scanpal')}</div>` : bouton;
   }
   function bandeau(e, R, X) {
+    if (R.compte) return bandeauComptage(e, R, X);
     const per = P.personnage || {};
     const txt = typeof per.texte === 'string' ? per.texte : ((per.texte || {})[R.temps] || '');
     let act;
@@ -588,16 +834,104 @@ export function creerPalettier(P, M, opts, O) {
         : `${NOM} monte les palettes de la zone « À monter ».`;
       act += `<button type="button" class="btn pal-monter" data-pal="monter" data-pe-cle="b:monter" title="${ech(raison)}" ${R.fige || !attend.length ? 'disabled' : ''}>Faire monter les palettes</button>`;
     }
-    const RG = P.regles;
-    // « Les règles ▾ » : repliées, sauf `regles.ouvertes: true` en guidage (dépliées au chargement, jusqu'à ce que l'élève les replie).
-    const reglesOuvertes = ui.regles == null ? !!(RG && RG.ouvertes) && R.temps === 'guidage' : ui.regles;
-    const regles = !R.copie && RG ? `<details class="pe-regles" data-pe-regles ${reglesOuvertes ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
-      <div class="pe-regles-corps"><b>${ech(RG.entete || 'Ranger à l’adresse donnée')}</b><ol>${(RG.lignes || []).map((l) => `<li>${l}</li>`).join('')}</ol>
-      ${RG.encadre ? `<div class="pe-encadre">${RG.encadre}</div>` : ''}<div class="pal-regles-note">Clique pour refermer.</div></div></details>` : '';
+    const regles = reglesHtml(R);
     return `<div class="pe-bandeau pal-bandeau">
       <div class="pe-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${per.date ? ` · ${ech(per.date)}` : ''}</b>${txt}</div>
       <div class="pe-liste"><h3>${ech(P.titreListe || 'Réception : palettes à ranger')}</h3><div class="pe-cartes">${X.ps.map((p) => carte(e, p, R, X)).join('')}</div></div>
       <div class="pe-act">${act}${regles}</div></div>`;
+  }
+
+  // « Les règles ▾ » : repliées, sauf `regles.ouvertes: true` en guidage (dépliées au chargement, jusqu'à ce que l'élève les replie).
+  function reglesHtml(R) {
+    const RG = P.regles;
+    const reglesOuvertes = ui.regles == null ? !!(RG && RG.ouvertes) && R.temps === 'guidage' : ui.regles;
+    return !R.copie && RG ? `<details class="pe-regles" data-pe-regles ${reglesOuvertes ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
+      <div class="pe-regles-corps"><b>${ech(RG.entete || 'Ranger à l’adresse donnée')}</b><ol>${(RG.lignes || []).map((l) => `<li>${l}</li>`).join('')}</ol>
+      ${RG.encadre ? `<div class="pe-encadre">${RG.encadre}</div>` : ''}<div class="pal-regles-note">Clique pour refermer.</div></div></details>` : '';
+  }
+
+  /* ------------------------------------------------------------- le comptage (lot 4) : le dessin */
+  const resteAcompter = (e, X) => X.liste.filter((x) => compte(e.comptage, x.rang) == null).length;
+  function consigneComptage(e, R, X, n) {
+    if (R.cfige) return n('✓', R.copie ? 'Copie rendue.' : 'Comptage terminé : il ne change plus.');
+    const CQ = e.comptage;
+    if (CQ.enCours) return n(4, 'Le Terminal te demande : <b>recompter</b> ou <b>confirmer</b> ?');
+    if (CQ.scanne) return n(4, `Compte les cartons de <b class="pe-mono">${ech(CQ.scanne)}</b>, puis tape le nombre au <b>Terminal</b>.`);
+    if (!resteAcompter(e, X)) return n('✓', 'Toutes les adresses de la liste sont comptées. Clique <b>Terminer le comptage</b>.');
+    if (!ui.trav) return n(1, 'Lis une adresse de la liste <b>À compter</b>, puis clique sa <b>travée</b> sur le plan.');
+    if (!ui.pres) return n(2, 'Clique l’<b>emplacement</b> pour le voir de près.');
+    return n(3, '<b>Scanne</b> l’étiquette de l’emplacement (un clic), puis compte les cartons.');
+  }
+  // Le bandeau du comptage : la consigne (neutre : elle ne dit pas qu'il y a des écarts), « Terminer le comptage », les règles.
+  function bandeauComptage(e, R, X) {
+    const per = P.personnage || {};
+    const txt = typeof per.texte === 'string' ? per.texte : ((per.texte || {})[R.temps] || '');
+    let act;
+    const reste = resteAcompter(e, X);
+    if (R.cfige) act = `<button type="button" class="btn" disabled>${R.copie && R.rendue ? 'Copie rendue' : 'Comptage terminé'}</button>`;
+    else if (ui.confirmerFin) {
+      act = `<span class="pe-confirme" data-pal-confirme-fin>Il reste ${reste} adresse${reste > 1 ? 's' : ''} à compter. Terminer quand même ?
+        <button type="button" class="btn btn-p" data-pal="finOui" data-pe-cle="b:finOui">Oui, terminer</button>
+        <button type="button" class="btn" data-pal="finNon" data-pe-cle="b:finNon">Non</button></span>`;
+    } else act = '<button type="button" class="btn btn-p" data-pal="terminer" data-pe-cle="b:terminer">Terminer le comptage</button>';
+    return `<div class="pe-bandeau pal-bandeau pal-bandeau-compte">
+      <div class="pe-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${per.date ? ` · ${ech(per.date)}` : ''}</b>${txt}</div>
+      <div class="pe-liste pal-compte-consigne" data-pal-compte-consigne><h3>Inventaire tournant : compte les adresses de la liste</h3>
+        <p>Pour chaque adresse : ouvre l’emplacement, <b>scanne son étiquette</b>, compte les cartons de la palette, tape le nombre au <b>Terminal</b>.</p></div>
+      <div class="pe-act">${act}${reglesHtml(R)}</div></div>`;
+  }
+  // La liste « À compter » (au-dessus du Terminal) : les adresses dans l'ordre, cochées quand comptées, JAMAIS un nombre. Après
+  // « Terminer », hors copie et avec `verdict` : « ✓ » ou « ✗ compte » (« · réel : n » avec 'adresse').
+  function listeAcompter(e, R, X) {
+    const CQ = e.comptage;
+    const verd = (x) => {
+      if (!CQ.fini || R.copie || !M.verdict) return '';
+      if (compte(CQ, x.rang) === x.reel) return ' <span class="pe-verd pe-ok" data-pal-cverdict="ok">✓</span>';
+      return ` <span class="pe-verd pe-ko" data-pal-cverdict="ko">✗ compte${M.verdict === 'adresse' ? ` · réel : ${x.reel}` : ''}</span>`;
+    };
+    return `<div class="pal-acompter" data-pal-acompter><div class="pal-acompter-t">À compter</div><ol>${X.liste.map((x) => {
+      const fait = compte(CQ, x.rang) != null;
+      return `<li data-pal-acompter-l="${x.rang}" data-pal-fait="${fait}" aria-label="${ech(`${x.adresse}, ${x.nom} : ${fait ? 'comptée' : 'à compter'}`)}"><span class="pal-coche" aria-hidden="true">${fait ? '☑' : '☐'}</span><b class="pe-mono">${ech(x.adresse)}</b> <span class="pal-acompter-p">${ech((M.produits[x.produit] || {}).court || x.nom)}</span>${verd(x)}</li>`;
+    }).join('')}</ol></div>`;
+  }
+  // L'étiquette d'un emplacement au comptage : un bouton au sol (un clic la scanne), une simple étiquette au-dessus du sol.
+  function etiquetteComptage(a, R) {
+    if (decoupe(a).n !== 1) return `<div class="pal-etiq-emp" data-pal-etiq-emp="${ech(a)}"><b class="pe-mono">${ech(a)}</b>${codeSvg(a, 'pal-code')}</div>`;
+    return `<button type="button" class="pal-etiq-emp pal-scannable" data-pal-etiq-emp="${ech(a)}" data-pal-compte-emp="${ech(a)}" data-pe-cle="scancompte" aria-label="Scanner l’emplacement ${ech(a)}" ${R.cfige ? 'disabled' : ''}>
+      <span class="pal-etiq-l1"><b class="pe-mono">${ech(a)}</b><small class="pal-scan-lib">Scanner</small></span>${codeSvg(a, 'pal-code')}</button>`;
+  }
+  // LA VUE DE PRÈS au comptage : l'étiquette, le niveau, ce qui est là (le produit, jamais un poids), la palette dessinée en
+  // perspective (au sol) et, avec `aideCouche`, les cartons d'une couche (jamais le total). Ni plaque, ni capteur.
+  function presComptage(e, R) {
+    const a = ui.pres;
+    const msg = `<div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pal-msg role="status">${ui.msg}</div>`;
+    if (!a) return `<div class="pal-pres pal-pres-vide" data-pal-pres="">Clique un <b>emplacement</b> de la travée : tu le vois de près ici.${msg}</div>`;
+    const d = decoupe(a), q = aCompter(M, e, a), st = M.stock[a];
+    const occ = M.hs.has(a) ? ['hs', 'Emplacement hors service'] : q ? ['stock', q.nom]
+      : st ? ['stock', (M.produits[st.produit] || {}).nom || st.produit] : ['libre', 'Libre'];
+    let h = etiquetteComptage(a, R);
+    h += `<div class="pal-niv"><span>Niveau <b>N${d.n}</b> · ${d.n === 1 ? 'le sol (picking)' : 'réserve, au-dessus du sol'}</span>
+      <span class="pal-occ pal-occ-${occ[0]}" data-pal-occ="${occ[0]}">${ech(occ[1])}</span></div>`;
+    if (d.n > 1) h += '<div class="pal-sol">Au-dessus du sol : on ne compte pas d’ici.</div>';
+    else if (q) {
+      const [W, D] = q.couche;
+      if (M.comptage.aideCouche) h += `<div class="pal-couche" data-pal-couche>${W} × ${D} = ${W * D} par couche</div>`;
+      h += `<div class="pal-compte-pile" data-pal-pile="${ech(a)}">${O.pile([W, D, q.couches], q.reel - W * D * q.couches, `Palette de cartons : ${q.nom}`)}</div>`;
+    }
+    return `<div class="pal-pres pal-pres-compte" data-pal-pres="${ech(a)}">${h}${msg}</div>`;
+  }
+  // La colonne de droite au comptage : la liste, le Terminal, la légende, les attendus de l'enseignant.
+  function coteComptage(e, R, X) {
+    let h = listeAcompter(e, R, X);
+    h += `<div class="pal-term" data-pal-term>${TERM.html(e.terminal)}</div>`;
+    if (!ui.trav) h += `<div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pal-msg role="status">${ui.msg}</div>`;
+    h += `<div class="pe-legende"><span><i class="pe-puce pe-p-stock"></i>occupé</span><span><i class="pe-puce pe-p-hs"></i>hors service</span><span><i class="pe-puce"></i>libre</span></div>`;
+    if (R.prof) {
+      const CQ = e.comptage;
+      h += `<details class="pe-prof"><summary>Côté enseignant : attendus du comptage</summary>${M.comptage.adresses.map((x) => `<div><b>n° ${x.rang}</b> <span class="pe-mono">${ech(x.adresse)}</span> : réel ${x.reel}, système ${x.systeme}${x.reel < x.systeme ? ' (manque)' : x.reel > x.systeme ? ' (surplus)' : ''}${x.bonus ? ' (confirmé)' : ''}</div>`).join('')}
+        <div data-pal-trace>Hors liste (trace, non notée) : ${CQ.horsListe.length ? CQ.horsListe.map((t) => `${ech(t.adresse)} ${t.compte}`).join(' · ') : 'aucun'} · tapés sans scan : ${CQ.sansScan || 0}</div></details>`;
+    }
+    return `<aside class="pal-cote">${h}</aside>`;
   }
 
   // Un code à barres décoratif tiré d'un texte (adresse, identifiant de palette) : { bars, x } pour un `viewBox="0 0 x 22"`.
@@ -668,6 +1002,7 @@ export function creerPalettier(P, M, opts, O) {
   }
 
   function cote(e, R, X, api) {
+    if (R.compte) return coteComptage(e, R, X);
     // Journal vide (après un rechargement) : ce que l'état sait encore, les nouvelles adresses et la demande faite à Kevin.
     const attend = C && typeof C.monte === 'function' && e.monterDemande && Object.keys(e.confiees).some((id) => !X.montees.includes(id));
     const L = ui.journal.length ? ui.journal : [...Object.entries(e.nouvelles).map(([id, a]) => `${id} : nouvelle adresse ${a}.`),
@@ -699,7 +1034,13 @@ export function creerPalettier(P, M, opts, O) {
     const X = calcul(e, R, api);
     if (e.enMain && (!X.ids.has(e.enMain) || X.pl[e.enMain])) e.enMain = null;
     if (R.fige) { ui.confirmer = false; ui.signaler = false; ui.alerte = null; }
-    if (TERM) {
+    if (TERM && R.compte) {
+      // Le comptage : le champ à chiffres est ouvert tant que rien n'est figé ni en attente de « Recompter / Confirmer ».
+      const CQ = e.comptage;
+      if (R.cfige) ui.confirmerFin = false;
+      TERM.attendre(e.terminal, phraseComptage(M, e, R.cfige), { saisie: !R.cfige && !CQ.enCours,
+        choix: !R.cfige && CQ.enCours ? [['recompter', 'Recompter'], ['confirmer', 'Confirmer']] : null });
+    } else if (TERM) {
       if (e.scanAttente && !X.pl[e.scanAttente]) e.scanAttente = null;
       TERM.attendre(e.terminal, phraseScan(e, R));
     }
@@ -708,15 +1049,17 @@ export function creerPalettier(P, M, opts, O) {
     let espace;
     if (!ui.trav) {
       espace = `<div class="pe-plan">${O.htmlPlan(VE, { bandes: false, parcours: false, eval: false, aideCharge: false, g: false },
-        { dessus: dessusAMonter(e, X, R), aria: 'Plan de l’entrepôt : clique une travée pour l’ouvrir' })}</div>`;
+        { dessus: R.compte ? '' : dessusAMonter(e, X, R), aria: 'Plan de l’entrepôt : clique une travée pour l’ouvrir' })}</div>`;
     } else {
       const c = M.cotes[ui.trav.split('-')[0]];
-      const RF = { aideCharge: false, eval: false, sansPoids: M.aide === 'plaque', reserves: reserves(e, X), choisi: ui.pres };
+      // Au comptage, la travée de face n'écrit ni poids ni plaque, et n'a pas de capteur : un poids donnerait le nombre de cartons.
+      const RF = R.compte ? { aideCharge: false, eval: false, sansPoids: true, sansPlaque: true, reserves: {}, choisi: ui.pres }
+        : { aideCharge: false, eval: false, sansPoids: M.aide === 'plaque', reserves: reserves(e, X), choisi: ui.pres };
       espace = `<div class="pe-entete"><div class="pe-fil pal-fil">Plan › <b>Travée</b> <span class="pe-mono">${ech(ui.trav)}</span> <span class="pe-petit">(vue depuis l’allée ${ech(c.allee)})</span></div>
           <button type="button" class="btn btn-p pe-retour" data-pal="retour" data-pe-cle="b:retour">← Retour au plan</button></div>
-        <div class="pal-partage"><div class="pe-face">${O.htmlFace(VE, RF)}</div><div class="pal-pres-zone">${pres(e, R, X)}</div></div>`;
+        <div class="pal-partage"><div class="pe-face">${O.htmlFace(VE, RF)}</div><div class="pal-pres-zone">${R.compte ? presComptage(e, R) : pres(e, R, X)}</div></div>`;
     }
-    return `<div class="pe pal${DEUX ? ' pal-deux' : ''}" data-entrepot="${ech(P.id)}" data-pe-mode="palettier" data-pe-temps="${R.temps}" data-pal-valide="${!!e.valide}" data-pe-ouverte="${!!ui.trav}">
+    return `<div class="pe pal${DEUX && !R.compte ? ' pal-deux' : ''}${R.compte ? ' pal-compte' : ''}" data-entrepot="${ech(P.id)}" data-pe-mode="palettier" data-pe-phase="${R.compte ? 'comptage' : 'rangement'}" data-pe-temps="${R.temps}" data-pal-valide="${!!e.valide}" data-pal-fini="${!!R.cfige}" data-pe-ouverte="${!!ui.trav}">
       <div class="pe-adresse" data-pe-adresse>${barre(e, R, X, null)}</div>
       ${bandeau(e, R, X)}
       <div class="pal-jeu"><section class="pe-espace">${espace}</section>${cote(e, R, X, api)}</div>${fenetre()}</div>`;
@@ -742,7 +1085,8 @@ export function creerPalettier(P, M, opts, O) {
     const R = regime(api, e);
     const X = calcul(e, R, api);
     const redessiner = () => api.redessiner();
-    const sig = (n) => { if (n && api.signal && !R.fige) api.signal(geste(n)); };
+    const FIGE = R.compte ? R.cfige : R.fige;   // au comptage, c'est « Terminer le comptage » qui fige
+    const sig = (n) => { if (n && api.signal && !FIGE) api.signal(geste(n)); };
     const fait = (n) => { sig(n); api.sauver(); redessiner(); };
     const activer = (el, fn) => {
       el.addEventListener('click', fn);
@@ -823,6 +1167,7 @@ export function creerPalettier(P, M, opts, O) {
       g.addEventListener('mouseenter', sur); g.addEventListener('focus', sur);
       g.addEventListener('mouseleave', hors); g.addEventListener('blur', hors);
     });
+    if (R.compte) { brancherComptage(racine, e, api, R, { on, activer, fait, sig, redessiner }); return; }
     if (R.fige) return;
     racine.querySelectorAll('[data-pe-pal]').forEach((b) => activer(b, () => fait(prendre(e, b.dataset.pePal, X))));
     // Le scan (lot 2) : l'étiquette d'une palette (carte, vue de près, zone « À monter »), puis celle de l'emplacement de près.
@@ -858,10 +1203,45 @@ export function creerPalettier(P, M, opts, O) {
       e.enMain = null; e.valide = true; e.at = Date.now(); noterGeste(e);
       e.monteesValidation = montees(M, e, api.db);   // ce que Kevin a monté À CE MOMENT : le reste n'est pas rangé
       sig('valider'); api.sauver();
-      if (COPIE && api.rendreCopie) api.rendreCopie();
+      // Avec un comptage après le rangement (ENT-8.14), c'est « Terminer le comptage » qui rend la copie.
+      if (COPIE && api.rendreCopie && !M.comptage) api.rendreCopie();
       // Tout l'écran, menu compris : un message qui attend le geste `valider` (Kevin, ENT-8.11) arrive tout de suite.
       if (api.redessinerTout) api.redessinerTout(); else redessiner();
     });
+  }
+
+  // LE COMPTAGE (lot 4) : le Terminal (champ à chiffres, « Recompter » / « Confirmer »), l'étiquette d'un emplacement au sol (le
+  // scan), « Terminer le comptage ». Après « Terminer », regarder reste permis ; plus rien ne se compte.
+  function brancherComptage(racine, e, api, R, B) {
+    const niveau = R.niveau;
+    const termEl = racine.querySelector('[data-pal-term]');
+    if (termEl) {
+      TERM.brancher(termEl, e.terminal, {
+        focus: ui.focusTerm,
+        saisir: (v) => { ui.focusTerm = true; noterGeste(e); B.fait(saisirComptage(M, e, v, niveau)); },
+        choisir: (k) => { ui.focusTerm = true; B.fait(choisirComptage(M, e, k)); },
+      });
+    }
+    ui.focusTerm = false;
+    if (R.cfige) return;
+    racine.querySelectorAll('[data-pal-compte-emp]').forEach((b) => B.activer(b, () => {
+      const g = scannerComptage(M, e, b.dataset.palCompteEmp);
+      if (g) { noterGeste(e); ui.focusTerm = true; } else ui.focus = b.dataset.peCle;
+      B.fait(g);
+    }));
+    const terminer = () => {
+      ui.confirmerFin = false; noterGeste(e);
+      B.sig(terminerComptage(e)); api.sauver();
+      if (COPIE && api.rendreCopie) api.rendreCopie();
+      // Tout l'écran, menu compris : un message qui attend `compte:fin` (Samia, ENT-8.12) arrive tout de suite.
+      if (api.redessinerTout) api.redessinerTout(); else B.redessiner();
+    };
+    B.on('terminer', () => {
+      if (!resteAcompter(e, calcul(e, R, api))) { terminer(); return; }
+      ui.confirmerFin = true; ui.focus = 'b:finOui'; B.redessiner();
+    });
+    B.on('finNon', () => { ui.confirmerFin = false; ui.focus = 'b:terminer'; B.redessiner(); });
+    B.on('finOui', terminer);
   }
 
   return {

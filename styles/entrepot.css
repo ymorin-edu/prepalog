@@ -580,3 +580,27 @@ button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
 .pal-etiq-l1{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; width:100% }
 .pal-scan-lib{ font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#5a564c }
 [data-pal-scan-pal]:focus-visible{ outline:3px solid var(--ardoise); outline-offset:1px }
+
+/* Le COMPTAGE du palettier (lot 4, 22/10/2026 : à l'aveugle, en cartons). La liste « À compter » au-dessus du Terminal (cochée,
+   jamais un nombre), la palette dessinée en perspective dans la vue de près (`pileCartons`, le dessin de la préparation), « par
+   couche » en trait pointillé. Le champ à chiffres et « Recompter / Confirmer » sont ceux du boîtier (teintes fixes du terminal).
+   Le vert ne dit « juste » qu'après « Terminer le comptage », en texte. */
+.pal-acompter{ padding:4px 8px !important }
+.pal-acompter-t{ font-size:.72rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--encre-douce) }
+.pal-acompter ol{ margin:2px 0 0; padding-left:1.7em; display:flex; flex-direction:column; gap:1px }
+.pal-acompter li{ line-height:1.3; white-space:nowrap; overflow:hidden; text-overflow:ellipsis }
+.pal-acompter li::marker{ color:var(--encre-douce); font-size:.8rem }
+.pal-coche{ display:inline-block; width:1.15em; font-size:1rem; line-height:1; color:var(--encre-douce) }
+.pal-acompter li[data-pal-fait="true"] .pal-coche{ color:var(--encre) }
+.pal-acompter-p{ color:var(--encre-douce); font-size:.8rem }
+.pal-acompter .pe-verd{ display:inline; font-size:.8rem }
+.pal-compte-consigne p{ margin:2px 0 0; font-size:.86rem; line-height:1.35 }
+.pal-pres-compte{ overflow:hidden }
+.pal-couche{ align-self:flex-start; padding:2px 10px; border:1.5px dashed var(--encre-douce); border-radius:4px; font-weight:700 }
+.pal-compte-pile{ flex:1 1 0; min-height:150px; position:relative }
+.pal-compte-pile svg{ position:absolute; inset:0; display:block; width:100%; height:100% }
+/* Le bandeau du comptage n'a pas de cartes : la parole de la cheffe d'équipe s'élargit (moins de lignes, la page tient en 1280 × 720). */
+.pal-bandeau-compte .pe-perso{ flex-basis:380px; max-width:42% }
+.pal-compte .vt-scan .vt-ecran{ min-height:7.4em }
+.vt-choix{ display:flex; gap:6px; margin-top:8px }
+.vt-choix .vt-btn{ flex:1 1 0; min-height:38px }
