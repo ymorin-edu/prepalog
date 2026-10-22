@@ -593,7 +593,7 @@ export function creerPalettier(P, M, opts, O) {
     const reglesOuvertes = ui.regles == null ? !!(RG && RG.ouvertes) && R.temps === 'guidage' : ui.regles;
     const regles = !R.copie && RG ? `<details class="pe-regles" data-pe-regles ${reglesOuvertes ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
       <div class="pe-regles-corps"><b>${ech(RG.entete || 'Ranger à l’adresse donnée')}</b><ol>${(RG.lignes || []).map((l) => `<li>${l}</li>`).join('')}</ol>
-      ${RG.encadre ? `<div class="pe-encadre">${RG.encadre}</div>` : ''}</div></details>` : '';
+      ${RG.encadre ? `<div class="pe-encadre">${RG.encadre}</div>` : ''}<div class="pal-regles-note">Clique pour refermer.</div></div></details>` : '';
     return `<div class="pe-bandeau pal-bandeau">
       <div class="pe-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${per.date ? ` · ${ech(per.date)}` : ''}</b>${txt}</div>
       <div class="pe-liste"><h3>${ech(P.titreListe || 'Réception : palettes à ranger')}</h3><div class="pe-cartes">${X.ps.map((p) => carte(e, p, R, X)).join('')}</div></div>
@@ -756,6 +756,8 @@ export function creerPalettier(P, M, opts, O) {
     // Échap : la fenêtre du système, puis les motifs, puis la vue de près, puis la travée.
     const fermer = () => {
       if (ui.alerte) { fermerAlerte(); return true; }
+      const volet = racine.querySelector('[data-pe-regles][open]');
+      if (volet) { volet.open = false; ui.regles = false; return true; }
       if (ui.signaler) { ui.signaler = false; ui.focus = 'b:signaler'; }
       else if (ui.pres) { ui.focus = `emp:${ui.pres}`; ui.pres = null; }
       else if (ui.trav) { ui.focus = `trav:${ui.trav}`; ui.trav = null; }
@@ -786,7 +788,17 @@ export function creerPalettier(P, M, opts, O) {
       return;
     }
     const det = racine.querySelector('[data-pe-regles]');
-    if (det) det.addEventListener('toggle', () => { ui.regles = det.open; });
+    if (det) {
+      det.addEventListener('toggle', () => { ui.regles = det.open; });
+      // Le volet flotte au-dessus du haut de la travée, du bouton « Retour au plan » et du Terminal et RECOUVRE leurs clics (rien ne
+      // se déclenche sous un texte qu'on lit) : un clic sur le volet le referme sans rien faire d'autre ; le premier geste ailleurs que
+      // sur son bouton le replie et agit normalement. Le repli est enregistré tout de suite, sinon le dessin suivant le rouvrirait d'office.
+      const replier = (ev) => { if (det.open && !det.contains(ev.target)) { det.open = false; ui.regles = false; } };
+      racine.addEventListener('pointerdown', replier, true);
+      const corps = det.querySelector('.pe-regles-corps');
+      if (corps) corps.addEventListener('click', () => { det.open = false; ui.regles = false; });
+      racine.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') replier(ev); }, true);
+    }
     if ((O.clavier() || ui.focusForce) && ui.focus) {
       const el = racine.querySelector(`[data-pe-cle="${CSS.escape(ui.focus)}"]`);
       if (el) el.focus({ preventScroll: true });

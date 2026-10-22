@@ -2213,6 +2213,7 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     réservée, en trait. Kevin la **monte** (elle occupe alors son emplacement) quand l'élève clique **« Faire monter les palettes »** (voir plus bas), à la
     validation (`monte: 'validation'`, le défaut), ou dès que `monte(db)` est vrai (relu à chaque dessin : ENT-8.11 la fait monter quand
     l'élève a répondu au message de Kevin) ; une palette montée ne se reprend plus ;
+  - **Le volet « Les règles ▾ » déplié** flotte par-dessus le haut de la travée, « Retour au plan » et le Terminal et **recouvre leurs clics** (aucun bouton ni scan ne se déclenche sous le texte) : un clic (ou Entrée/Espace) **sur le volet** le referme sans rien faire d'autre ; un geste **ailleurs** (souris, Entrée/Espace) agit normalement et le referme ; Échap le referme avant tout le reste ; le repli est conservé par l'élève (22/10/2026).
   - **Faire monter les palettes** (bouton sous « Valider mon rangement », même largeur, secondaire ; retour de Tristan du 21/10/2026) :
     publie le geste `monter`. **Grisé** (`disabled`, titre qui dit pourquoi) s'il n'y a aucune palette « À monter » ou si le rangement est
     validé. Sans fonction `monte` (ou `monte: 'validation'`) : Kevin monte **tout de suite** ce qui attend (l'état range `monteesIds`,

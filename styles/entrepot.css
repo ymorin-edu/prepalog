@@ -538,6 +538,9 @@ button.vt-son-btn:focus-visible{ outline:3px solid #ffe08a; outline-offset:1px }
 .pal-bandeau .pe-act{ flex-basis:164px; gap:4px }
 .pal-bandeau .pe-act .btn{ padding:5px 6px; font-size:.86rem; line-height:1.15; min-height:0 }
 .pal-bandeau .pe-regles summary{ padding:5px 8px; font-size:.86rem }
+/* Déplié (d'office en guidage avec `regles.ouvertes`), le volet flotte par-dessus le haut de la travée, « Retour au plan » et le
+   Terminal et recouvre leurs clics : un clic sur le volet le referme (rien d'autre ne se déclenche), un geste ailleurs le referme aussi. */
+.pal-regles-note{ margin-top:6px; font-size:.78rem; color:var(--encre-douce) }
 /* La fenêtre « Message du système » (nouvelle adresse) : par-dessus tout l'écran, un seul bouton ; voile translucide, panneau du
    thème, trait de l'accent (ni aplat vert, ni rouge). */
 .pal-modal-voile{ position:fixed; inset:0; z-index:300; display:grid; place-items:center; padding:16px; background:rgba(20,18,15,.6) }

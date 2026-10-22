@@ -1024,6 +1024,94 @@ await v('Palettier (retouche du 22/10) : `regles.ouvertes: true` — « Les règ
   vrai(!(await present(pg, '[data-pe-regles]')), 'copie : pas de volet');
 });
 
+// Retouche du 22/10 (volet « Les règles » déplié qui bloquait « Retour au plan » et le Terminal) : le volet flotte toujours et RECOUVRE
+// les clics (rien ne se déclenche sous un texte qu'on lit) ; un clic sur lui le referme sans rien faire d'autre, un geste ailleurs le
+// referme et agit normalement.
+await v('Palettier (volet des règles déplié) : il recouvre le Terminal et « Retour au plan » ; un clic dessus le referme sans rien déclencher dessous ; un clic sur une travée visible l’ouvre et le referme ; le plan tient en 1366 × 768 et 1280 × 720, standard et confirmé', async () => {
+  const pe = await ctx.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  // Le point au centre de l'élément tombe sur le volet (il recouvre l'élément), ou sur l'élément lui-même.
+  const sur = (s) => pe.evaluate((s) => { const e = document.querySelector(s); if (!e) return 'absent'; const b = e.getBoundingClientRect();
+    const t = document.elementFromPoint(b.left + b.width / 2, b.top + b.height / 2); if (!t) return 'rien';
+    return t.closest('.pe-regles-corps') ? 'volet' : e.contains(t) ? 'lui' : 'autre'; }, s);
+  const clicCentre = (s) => pe.evaluate((s) => { const b = document.querySelector(s).getBoundingClientRect(); return [b.left + b.width / 2, b.top + b.height / 2]; }, s).then(([x, y]) => pe.mouse.click(x, y));
+  const ouvert = () => pe.$eval(`${Z} [data-pe-regles]`, (d) => d.open);
+  const deborde = () => pe.evaluate(() => Math.max(0, document.documentElement.scrollHeight - innerHeight));
+  for (const [w, h, niv] of [[1366, 768, 'standard'], [1280, 720, 'standard'], [1366, 768, 'confirme'], [1280, 720, 'confirme']]) {
+    const lib = `${w} × ${h} (${niv})`;
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-palettier.html');
+    await pe.waitForSelector('.pal');
+    await pe.evaluate(() => { for (const s of ['#reglages', '#mention', '#hote']) document.querySelector(s).style.display = 'none'; });
+    await monter(pe, { reglesOuvertes: true, terminal: 'deux', aisance: niv });
+    egal(await ouvert(), true, `volet déplié au chargement, ${lib}`);
+    egal(await sur(`${Z} .pal-term`), 'volet', `le volet recouvre le Terminal : le clic tombe sur lui, ${lib}`);
+    egal(await sur(`${Z} [data-pe-trav="A1-T03"]`), 'lui', `une travée visible reçoit le clic, ${lib}`);
+    egal(await deborde(), 0, `plan, volet déplié : rien ne dépasse, ${lib}`);
+    // Un clic sur le volet (là où est le Terminal) : il se referme, rien d'autre ne bouge.
+    const avant = await pe.evaluate(() => JSON.stringify(window.__p.db));
+    await clicCentre(`${Z} .pal-term`);
+    egal([await ouvert(), await pe.getAttribute(Z, 'data-pe-ouverte'), await pe.evaluate(() => JSON.stringify(window.__p.db))], [false, 'false', avant], `un clic sur le volet le referme, sans rien d'autre, ${lib}`);
+    egal(await sur(`${Z} .pal-term`), 'lui', `le volet replié, le Terminal reçoit le clic, ${lib}`);
+    // Un geste sur une travée visible : elle s'ouvre ET le volet se replie.
+    await pe.click(`${Z} [data-pe-regles] summary`);
+    egal(await ouvert(), true, `volet rouvert par le bouton, ${lib}`);
+    await pe.click(`${Z} [data-pe-trav="A1-T03"]`);
+    egal([await ouvert(), await pe.getAttribute(Z, 'data-pe-ouverte')], [false, 'true'], `le clic sur la travée visible l'ouvre et replie le volet, ${lib}`);
+    await pe.click(`${Z} [data-pe-emp="A1-T03-N1-E2"]`);
+    // Rouvert sur la travée : « Retour au plan » est recouvert ; un clic dessus ne le déclenche pas.
+    await pe.click(`${Z} [data-pe-regles] summary`);
+    egal(await ouvert(), true, `volet rouvert sur la travée, ${lib}`);
+    egal(await sur(`${Z} [data-pal="retour"]`), 'volet', `le volet recouvre « Retour au plan », ${lib}`);
+    egal(await deborde(), 0, `travée et vue de près, volet déplié : rien ne dépasse, ${lib}`);
+    const bas = await pe.evaluate(() => Math.max(...[...document.querySelectorAll('#palTest .pe-espace, #palTest .pal-cote')].map((x) => x.getBoundingClientRect().bottom)));
+    vrai(bas <= h, `le plan et la colonne de droite tiennent dans la fenêtre (bas à ${Math.round(bas)} px), ${lib}`);
+    await clicCentre(`${Z} [data-pal="retour"]`);
+    egal([await ouvert(), await pe.getAttribute(Z, 'data-pe-ouverte')], [false, 'true'], `un clic sur le volet ne déclenche pas « Retour au plan » dessous : la travée reste ouverte, ${lib}`);
+    await pe.click(`${Z} [data-pal="retour"]`);
+    egal(await pe.getAttribute(Z, 'data-pe-ouverte'), 'false', `le volet replié, « Retour au plan » fonctionne, ${lib}`);
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+});
+
+await v('Palettier (volet des règles déplié) : le premier geste ailleurs le replie (souris ou clavier), Échap le replie d’abord, et le repli est conservé', async () => {
+  await monter(pg, { reglesOuvertes: true });
+  const ouvert = () => pg.$eval(`${Z} [data-pe-regles]`, (d) => d.open);
+  const trav = () => pg.getAttribute(Z, 'data-pe-ouverte');
+  egal([await ouvert(), await trav()], [true, 'false'], 'départ : volet déplié, plan');
+  await pg.click(`${Z} [data-pe-trav="A1-T03"]`);
+  egal([await ouvert(), await trav()], [false, 'true'], 'souris : la travée s’ouvre et le volet se replie');
+  await pg.click(`${Z} [data-pe-emp="A1-T03-N1-E2"]`);
+  egal(await ouvert(), false, 'le repli est conservé après un nouveau dessin');
+  // Échap : d'abord le volet (la vue de près et la travée restent ouvertes), puis la vue de près, puis la travée.
+  await pg.click(`${Z} [data-pe-regles] summary`);
+  egal(await ouvert(), true, 'rouvert');
+  await pg.keyboard.press('Escape');
+  egal([await ouvert(), await trav(), await present(pg, '[data-pal-pres="A1-T03-N1-E2"]')], [false, 'true', true], 'Échap replie le volet, la vue de près et la travée restent ouvertes');
+  await pg.keyboard.press('Escape');
+  egal([await trav(), await present(pg, '[data-pal-pres="A1-T03-N1-E2"]')], ['true', false], 'le second Échap ferme la vue de près');
+  await pg.keyboard.press('Escape');
+  egal(await trav(), 'false', 'le troisième Échap ferme la travée');
+  // Clavier : Entrée sur un élément du plan (sous le volet) l'ouvre ET replie le volet.
+  await pg.click(`${Z} [data-pe-regles] summary`);
+  egal(await ouvert(), true, 'rouvert pour le clavier');
+  await pg.focus(`${Z} [data-pe-trav="A1-T02"]`);
+  await pg.keyboard.press('Enter');
+  egal([await ouvert(), await trav()], [false, 'true'], 'clavier : Entrée ouvre la travée et replie le volet');
+  // Un clic sur le volet lui-même (son texte) le referme, la travée reste telle quelle.
+  await pg.click(`${Z} [data-pe-regles] summary`);
+  egal(await ouvert(), true, 'rouvert pour le clic sur le texte');
+  await pg.click(`${Z} .pe-regles-corps b`);
+  egal([await ouvert(), await trav()], [false, 'true'], 'un clic sur le volet le referme, la travée reste ouverte');
+  // Le bouton du volet, lui, ne se replie pas tout seul : cliquer sa propre bascule fait ce qu'elle dit.
+  await pg.click(`${Z} [data-pe-regles] summary`);
+  egal(await ouvert(), true, 'le bouton déplie');
+  await pg.click(`${Z} [data-pe-regles] summary`);
+  egal(await ouvert(), false, 'le bouton replie');
+});
+
 await v('Scan : après « Valider », les étiquettes ne se cliquent plus, aucun geste de plus, le Terminal dit « Terminé. »', async () => {
   await monter(pg, { terminal: 'deux' });
   await ranger(pg, 'P1', AD.P1);
