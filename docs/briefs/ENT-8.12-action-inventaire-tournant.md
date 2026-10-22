@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/ENT-8.11-action-ranger.md (§0, §6), docs/briefs/MOTEUR-palettier-adresse-donnee.md (lot 4) puis docs/briefs/ENT-8.12-action-inventaire-tournant.md en entier. Le lot 4 du chantier moteur doit être livré. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré
 **Date du brief** : 21/10/2026 ; **corrigé le 21/10/2026 au soir** d'après l'état des lieux du chantier moteur E-7 et les
 décisions de Tristan (§11 n° 4).
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action, 21/10/2026 (fiche `claude/prepalog-action-cadrage-c1.5.md`).
@@ -242,9 +242,22 @@ l'aveugle », « Écart : recompter, puis signaler ». Corrigé : `contenus/corr
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `contenus/action-ent812.js`, `contenus/action-ent812-donnees.js`, `contenus/questions/ENT-8.12.js`, `contenus/corriges/ENT-8.12.js`,
+  `activites/action-inventaire-tournant.js` (`pret: true, ouverture: 'prof'`) ; une ligne dans `activites/index.js`, `outils/test.mjs` (`BLOCS` et `GROUPES`, groupe 4),
+  `outils/test/socle.mjs` (`ATTENDU_CAP`) et `outils/test/action.mjs` (liste du registre : cas réécrit) ; bloc `outils/test/action-812.mjs`.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - **Guidage** (`temps: 'guidage'`, comme le brief) : « Les règles » (« Compter une palette ») dépliées au chargement en standard et accompagné, repliées au confirmé ; verdict `'critere'` après « Terminer » (« ✓ » / « ✗ compte », jamais le nombre réel) pour tous ; `aideCouche` à l'accompagné seulement.
+  - **Fiche des écarts** : calculée sur la base (`blocs(db)`), donc vide au chargement : la séance **déclare elle-même** ses jalons, `fiche-signaler` (3, toutes les lignes de SA fiche disent
+    « je le signale ») et `fiche-cause` (2, une cause juste pour le sens de chaque ligne) ; fiche sans ligne : les deux faux. Remplace le « 1,5 × 2 / 1 × 2 » (mêmes totaux).
+    La ligne de la 7e adresse du confirmé (bonus) est dans sa fiche mais **jamais jugée** (un bonus ne retire rien au socle).
+  - **Clés** : le moteur refuse le tiret dans une clé ; `ok-1` … `ok-4` deviennent `ok1` … `ok4` (jalons `recompte-ok1` … `recompte-ok4`, à poids 0, sans ligne au bandeau).
+  - **Causes de la fiche** : trois choix de Cowork étaient eux-mêmes des causes possibles (« on a livré trop au magasin » pour un manque, « le magasin a rendu des cartons vendus »
+    pour un surplus, et « une réception mal saisie » ambigu) : remplacés par des causes qui vont dans l'autre sens ; à relire par Tristan.
+  - L'accueil dit « quelques adresses » (la liste a 6 adresses, 7 au confirmé). La Messagerie date les messages du dernier mercredi (même compromis qu'ENT-8.11).
+  - `q-robot` à « Terminer le comptage » ; `q-aveugle` et `q-colisage` sur les comptes **confirmés** (`compte:<rang>`).
+- **Décisions prises en route** : banque des 12 adresses prise dans le stock au sol d'ENT-8.11 (sans les bougies : 3 × 4 × 5 sort des formats du brief) ; six produits distincts sur
+  sept par élève (le 7e est celui de la 7e adresse) ; surplus = palette pleine + 1 à 3 cartons dessus ; manque : 2 à 4 cartons de moins, 2 au moins restent sur le dessus ;
+  conformes : couche du dessus de 2 cartons ou plus, jamais pleine.
+- **Tests** : bloc `action-812` (vert ; 17 cas, dont un par réglage du guidage ; quatorze sabotages, chacun fait tomber au moins un cas, fichiers restaurés à l'identique) ; `socle`, `action`, `dependances`, `tirage-niveaux`, `questions` verts.
+- **Commits** : (par le chef de chantier)
+- **Reste ouvert** : textes de Cowork et choix de la fiche à relire à l'écran ; trame de Cowork ; date affichée par la Messagerie.

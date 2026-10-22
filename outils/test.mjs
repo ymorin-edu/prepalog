@@ -53,6 +53,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'action-89',
   'action-810',
   'action-811',
+  'action-812',
   'chep-91',
   'chep-92',
   'chep-93',
@@ -119,7 +120,7 @@ const GROUPES = {
     'chep-94',
     'pelleau-107',
     'pelleau-108',
-    'action-810'],
+    'action-810', 'action-812'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne
 // tournerait pas sur GitHub (ou deux fois), sans que rien ne le dise.
