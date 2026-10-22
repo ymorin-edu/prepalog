@@ -400,5 +400,158 @@ await v('copie : aucune erreur JavaScript', async () => {
   if (erreursCp.length) throw new Error(erreursCp.slice(0, 3).join(' / '));
 });
 
+/* ---------------------------------------------------------- l'espace enseignant lit le catalogue (chantier 23, lot 3) */
+// Le Suivi, les Compétences, la Conduite de séance, les Corrigés et les Niveaux ne lisent que les `meta` : ils passent
+// par `catalogue()` et ne téléchargent le code d'aucune séance. Seuls Ramasser / Tout ramasser / Vérifier ont besoin
+// du module (il sait noter) : il se charge AU CLIC, et lui seul. « Vérifier » est grisé d'après les `exports` du catalogue.
+//
+// Piège de ces cas : un module déjà importé ne fait plus de requête. Chaque cas ouvre donc son propre contexte (cache
+// vide), et la première chose qu'il vérifie est que l'accueil lui-même n'a rien téléchargé : sinon il ne jugerait rien.
+const FICHIER_SEANCE = /\/activites\/(?!index\.js$|catalogue\.js$)[^/]+\.js$/;
+const FICHIER_CONTENU = /\/contenus\/.+\.js$/;
+const COPIE_AID = 'picard-ent44';
+
+// Contexte neuf, enseignant connecté, un groupe de `n` élèves, journal de toutes les requêtes de la page.
+const espaceCatalogue = async (nom, n, avant) => {
+  const ctx = await nav.newContext({ viewport: { width: 1366, height: 900 } });
+  const p = await ctx.newPage();
+  p.setDefaultTimeout(6000);
+  const reqs = [];
+  const erreurs = [];
+  p.on('request', (r) => reqs.push(new URL(r.url()).pathname));
+  p.on('pageerror', (e) => erreurs.push('PAGEERROR: ' + e.message));
+  if (avant) await avant(ctx);
+  await p.goto(BASE); await p.waitForSelector('#btnProf', { timeout: 8000 });
+  await p.click('#btnProf'); await p.waitForSelector('#btnProfEspace'); await p.click('#btnProfEspace');
+  await p.waitForSelector('#gNom');
+  await p.fill('#gNom', nom); await p.selectOption('#gNiveau', '1re'); await p.click('#btnCreerG'); await p.waitForTimeout(300);
+  const ids = await p.evaluate(async ({ nom, n }) => {
+    const { B } = await import('/core/backend.js');
+    const g = Object.entries(JSON.parse(localStorage.getItem('prepalog:groupes') || '{}')).find(([, x]) => x.nom === nom)[0];
+    await B.creerEleves(g, Array.from({ length: n }, (_, i) => ({ nom: 'Cat' + i, prenom: 'Zoé', matricule: '960' + i, code: 'ct9' + i })));
+    const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+    return { gid: g, uids: Array.from({ length: n }, (_, i) => Object.keys(u).find((k) => u[k].matricule === '960' + i)) };
+  }, { nom, n });
+  return { ctx, p, reqs, erreurs, ...ids };
+};
+const seancesTelechargees = (reqs, depuis = 0) => reqs.slice(depuis).filter((u) => FICHIER_SEANCE.test(u));
+const ongletPret = (p) => p.waitForFunction(() => {
+  const t = (document.getElementById('contenuProf')?.textContent || '').trim();
+  return t.length > 0 && !/^Chargement/.test(t);
+});
+
+await v('espace enseignant : Suivi, Compétences, Conduite de séance, Corrigés, Niveaux — aucun fichier de séance téléchargé', async () => {
+  const e = await espaceCatalogue('Catalogue onglets', 2);
+  const { p, reqs } = e;
+  try {
+    // Condition de validité : l'accueil et la création du groupe n'ont rien chargé (sinon le cache du navigateur cache tout).
+    const dejaLa = seancesTelechargees(reqs);
+    if (dejaLa.length) throw new Error(`l'accueil enseignant a déjà téléchargé ${dejaLa.length} séance(s) (${dejaLa.slice(0, 2).join(', ')}…) : ce cas ne peut rien juger`);
+    const depuis = reqs.length;
+    // Chaque onglet est ouvert, rendu, et contient ce que le catalogue seul permet d'afficher.
+    await p.click('[data-ong="suivi"]'); await ongletPret(p);
+    await p.waitForSelector(`#contenuProf [data-copie-verifier="${COPIE_AID}"]`);
+    const colonnes = await p.$$eval('#contenuProf thead th', (L) => L.map((x) => x.textContent).join(' '));
+    if (!/ENT-4\.4/.test(colonnes)) throw new Error('Suivi : colonne ENT-4.4 absente : ' + colonnes.slice(0, 200));
+    await p.click('[data-ong="competences"]'); await ongletPret(p);
+    if (!/Compétences?|compétence/.test(await p.textContent('#contenuProf'))) throw new Error('Compétences : onglet vide');
+    await p.click('[data-ong="seance"]'); await p.waitForSelector(`#contenuProf [data-ouvre="${COPIE_AID}"]`);
+    await p.click('[data-ong="niveaux"]'); await ongletPret(p);
+    await p.click('[data-ong="corriges"]'); await p.waitForSelector('#contenuProf [data-corrige]');
+    const avantCorrige = reqs.slice(depuis);
+    const fautifs = avantCorrige.filter((u) => FICHIER_SEANCE.test(u) || FICHIER_CONTENU.test(u));
+    if (fautifs.length) throw new Error(`${fautifs.length} fichier(s) de séance ou de contenu téléchargé(s) par les onglets : ${fautifs.slice(0, 4).join(', ')}`);
+    // Ouvrir un corrigé charge le corrigé (contenus/corriges/…), jamais le fichier d'une séance.
+    await p.click('#contenuProf [data-corrige]'); await p.waitForTimeout(400);
+    const apres = seancesTelechargees(reqs, depuis);
+    if (apres.length) throw new Error('un corrigé ouvert a téléchargé une séance : ' + apres.join(', '));
+    if (e.erreurs.length) throw new Error(e.erreurs.slice(0, 2).join(' / '));
+  } finally { await e.ctx.close(); }
+});
+
+await v('espace enseignant : ramasser une copie charge la séance au clic (elle seule) et note comme avant ; « Tout ramasser » de même', async () => {
+  const e = await espaceCatalogue('Catalogue ramasser', 2);
+  const { p, reqs } = e;
+  const toast = () => p.evaluate(() => document.getElementById('toast')?.textContent || '');
+  try {
+    if (seancesTelechargees(reqs).length) throw new Error('l\'accueil enseignant a déjà téléchargé des séances : ce cas ne peut rien juger');
+    // Deux élèves ont ouvert la séance (une base presque vide : tous les jalons « en attente », 0 sur 20) ; aucune copie rendue.
+    await p.evaluate(async ({ uids, aid }) => {
+      const { B } = await import('/core/backend.js');
+      for (const u of uids) await B.ecrireJeuPrive(u, aid, { v: 1 });
+    }, { uids: e.uids, aid: COPIE_AID });
+    await p.click('[data-ong="suivi"]'); await ongletPret(p);
+    const bouton = `[data-copie-ramasser][data-uid="${e.uids[0]}"][data-aid="${COPIE_AID}"]`;
+    await p.waitForSelector(bouton);
+    // Avant le clic : le tableau est dessiné, aucun fichier de séance n'est venu.
+    const avant = seancesTelechargees(reqs);
+    if (avant.length) throw new Error('fichier de séance téléchargé avant tout clic : ' + avant.join(', '));
+    await p.click(bouton);
+    // Le geste aboutit (la copie apparaît) ou dit pourquoi pas (« Rien à ramasser… ») : dans les deux cas on lit le bilan.
+    await p.waitForFunction((uid) => document.querySelector(`td.copie-cell [data-copie-rouvrir][data-uid="${uid}"]`) || /Rien à ramasser|impossible/.test(document.getElementById('toast')?.textContent || ''), e.uids[0]);
+    if (!/Copie de Zoé ramassée/.test(await toast())) throw new Error('bilan : ' + await toast());
+    const charges = seancesTelechargees(reqs);
+    if (charges.length !== 1 || !charges[0].endsWith(`/activites/${COPIE_AID}.js`)) throw new Error('après le clic, seul ' + COPIE_AID + '.js devait venir : ' + JSON.stringify(charges));
+    const t = await p.evaluate(async ({ gid, uid, aid }) => (await import('/core/backend.js')).B.lireScore(gid, uid, aid), { gid: e.gid, uid: e.uids[0], aid: COPIE_AID });
+    // 0 sur 20 et chaque jalon « en attente » : ce que donne le `noter` de la séance sur cette base, au nom de l'élève.
+    if (!t || t.score !== 0 || t.max !== 20 || t.ramasse !== true || !t.rendu) throw new Error('note : ' + JSON.stringify(t));
+    if (t.nom !== 'Cat0' || t.prenom !== 'Zoé') throw new Error('pas au nom de l\'élève : ' + JSON.stringify(t));
+    if (!t.detail || t.detail.j1 !== 'attente' || t.detail.j20 !== 'attente') throw new Error('ce n\'est pas le noter de la séance : ' + JSON.stringify(t.detail).slice(0, 160));
+    const mention = await p.$eval(`td.copie-cell [data-copie-rouvrir][data-uid="${e.uids[0]}"]`, (b) => b.closest('td').querySelector('[data-copie-mention]').textContent.trim());
+    if (mention !== 'ramassée') throw new Error('mention : ' + mention);
+    // « Tout ramasser » : le second élève est ramassé, le premier est déjà rendu.
+    await p.click(`[data-copie-tout="${COPIE_AID}"]`);
+    await p.waitForFunction((uid) => document.querySelector(`td.copie-cell [data-copie-rouvrir][data-uid="${uid}"]`), e.uids[1]);
+    if (!/ENT-4\.4 : 1 copie\(s\) ramassée\(s\), 1 déjà rendue\(s\), 0 élève\(s\) sans travail/.test(await toast())) throw new Error('bilan global : ' + await toast());
+    if (e.erreurs.length) throw new Error(e.erreurs.slice(0, 2).join(' / '));
+  } finally { await e.ctx.close(); }
+});
+
+await v('espace enseignant : « Vérifier » est grisé pour une séance dont les exports du catalogue n\'ont pas `noter`, actif sinon', async () => {
+  const { formaterCatalogue } = await import('../catalogue.mjs');
+  const { CATALOGUE } = await import('../../activites/catalogue.js');
+  const copies = CATALOGUE.filter((x) => x.meta.copie && x.meta.bareme);
+  if (copies.length < 2) throw new Error('il faut au moins deux évaluations en copie au catalogue');
+  const lire = async (entrees) => {
+    const e = await espaceCatalogue('Catalogue vérifier', 1, entrees ? (ctx) => ctx.route('**/activites/catalogue.js', (r) => r.fulfill({
+      status: 200, contentType: 'text/javascript', body: formaterCatalogue(entrees) })) : null);
+    try {
+      await e.p.click('[data-ong="suivi"]'); await ongletPret(e.p);
+      await e.p.waitForSelector('#contenuProf [data-copie-verifier]');
+      const etat = await e.p.$$eval('#contenuProf [data-copie-verifier]', (L) => Object.fromEntries(L.map((b) => [b.dataset.copieVerifier, b.disabled])));
+      const titre = await e.p.$eval(`#contenuProf [data-copie-verifier="${COPIE_AID}"]`, (b) => b.title);
+      if (e.erreurs.length) throw new Error(e.erreurs.slice(0, 2).join(' / '));
+      return { etat, titre };
+    } finally { await e.ctx.close(); }
+  };
+  // Catalogue tel quel : toutes les évaluations en copie savent noter, tous les boutons sont actifs.
+  const normal = await lire(null);
+  const ids = copies.map((x) => x.meta.id);
+  const grises = Object.keys(normal.etat).filter((id) => normal.etat[id]);
+  if (Object.keys(normal.etat).length !== ids.length || grises.length) throw new Error(`catalogue réel : ${Object.keys(normal.etat).length} boutons pour ${ids.length} évaluations, grisés : ${grises.join(', ') || 'aucun'}`);
+  // Catalogue servi sans `noter` pour UNE évaluation (son vrai module sait pourtant noter) : seul son bouton se grise.
+  const sans = await lire(CATALOGUE.map((x) => (x.meta.id === COPIE_AID ? { ...x, exports: x.exports.filter((n) => n !== 'noter') } : x)));
+  if (sans.etat[COPIE_AID] !== true) throw new Error('bouton actif alors que le catalogue ne déclare pas `noter` : ' + JSON.stringify(sans.etat));
+  if (!/ne sait pas se recalculer/.test(sans.titre)) throw new Error('infobulle : ' + sans.titre);
+  const autres = ids.filter((id) => id !== COPIE_AID && sans.etat[id] !== false);
+  if (autres.length) throw new Error('boutons grisés à tort : ' + autres.join(', '));
+});
+
+await v('espace enseignant : séance qui ne se charge pas au clic sur « ramasser » → message à l\'enseignant, bouton rendu, aucune erreur de page', async () => {
+  const e = await espaceCatalogue('Catalogue séance cassée', 1, (ctx) => ctx.route(`**/activites/${COPIE_AID}.js`, (r) => r.abort()));
+  const { p } = e;
+  try {
+    await p.evaluate(async ({ uid, aid }) => { await (await import('/core/backend.js')).B.ecrireJeuPrive(uid, aid, { v: 1 }); }, { uid: e.uids[0], aid: COPIE_AID });
+    await p.click('[data-ong="suivi"]'); await ongletPret(p);
+    const bouton = `[data-copie-ramasser][data-uid="${e.uids[0]}"][data-aid="${COPIE_AID}"]`;
+    await p.waitForSelector(bouton);
+    await p.click(bouton);
+    await p.waitForFunction(() => /ne s'ouvre pas pour l'instant/.test(document.getElementById('toast')?.textContent || ''));
+    if (await p.$('td.copie-cell')) throw new Error('une copie est apparue alors que la séance ne se charge pas');
+    if (await p.$eval(bouton, (b) => b.disabled)) throw new Error('le bouton « ramasser » est resté bloqué');
+    if (e.erreurs.length) throw new Error(e.erreurs.slice(0, 2).join(' / '));
+  } finally { await e.ctx.close(); }
+});
+
 await ctxCp.close();
 }

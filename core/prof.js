@@ -7,7 +7,7 @@ import { responsable, gardeSuppressionEleve, lisible } from './collegues.js';
 import { NIVEAUX as NIVEAUX_ELEVE, amenagements, niveauScenario, niveauxApres, scenarioDe, proposition, PROPOSITION,
   libelleNiveauEleve } from './amenagements.js';
 import { seancesDepuis, memeBase } from './parcours.js';
-import { chargerActivites, activitesEnEchec, activite, entreprisesDe, estSimulog, ENTREPRISES } from '../activites/index.js';
+import { catalogue, activitesEnEchec, activite, entreprisesDe, estSimulog, ENTREPRISES } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu, cheminDe } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf,
   demisDe, nomDemi, forcage } from './niveaux.js';
@@ -97,7 +97,7 @@ export async function rendreEspaceProf(hote, ctx) {
   // `classements/{aid}/{uid}` d'un élève supprimé, et ne connaît pas le registre lui-même.
   // Les séances écartées au chargement (activites/index.js) y restent : un élève supprimé ne doit pas laisser
   // derrière lui, invisible, un classement dans une séance qui refuse de se charger aujourd'hui.
-  const aidsConnus = async () => [...(await chargerActivites()).map((x) => x.meta.id), ...activitesEnEchec().map((e) => e.id)];
+  const aidsConnus = async () => [...(await catalogue()).map((x) => x.meta.id), ...activitesEnEchec().map((e) => e.id)];
   // Le backend a retiré l'élève de `demiDe` et `equipes` dans tous les groupes de l'enseignant ;
   // on aligne la copie en mémoire (sans réécrire quoi que ce soit).
   const oublierEleve = (uid) => groupes.forEach((gr) => {
@@ -153,7 +153,7 @@ export async function rendreEspaceProf(hote, ctx) {
   async function vueCorriges(z) {
     // Au changement de séance, on garde l'écran en place pendant le chargement (pas de saut).
     if (!z.querySelector('#corrSommaire')) z.innerHTML = `<div class="note">Chargement des corrigés…</div>`;
-    const mods = (await chargerActivites()).filter((x) => x.meta.corrige);
+    const mods = (await catalogue()).filter((x) => x.meta.corrige);
     if (!mods.length) {
       z.innerHTML = `<div class="vide">Aucun corrigé n'est publié pour l'instant.</div>`;
       return;
@@ -423,7 +423,7 @@ export async function rendreEspaceProf(hote, ctx) {
       const id = b.dataset.retirerDemi;
       const nom = nomDemi(gActif, id);
       const eleves = (await B.elevesDuGroupe(gActif.id)).filter((e) => (gActif.demiDe || {})[e.uid] === id);
-      const bases = [...new Map((await chargerActivites()).map((x) => x.meta)
+      const bases = [...new Map((await catalogue()).map((x) => x.meta)
         .filter((m) => m.portee === 'groupe').map((m) => [m.jeuId || m.id, m])).values()];
       const noms = eleves.map((e) => `${e.prenom} ${e.nom}`);
       if (!confirmer(`Retirer le demi-groupe « ${nom} » de ${gActif.nom} ?\n\n`
@@ -778,7 +778,7 @@ export async function rendreEspaceProf(hote, ctx) {
   // classe (projetable), pas dans l'export de la liste d'élèves. L'élève ne voit jamais son niveau.
   async function vueNiveaux(z, g) {
     z.innerHTML = `<div class="panneau"><div class="vide">Chargement des niveaux…</div></div>`;
-    const [tous, mods, travaux] = await Promise.all([B.elevesDuGroupe(g.id), chargerActivites(),
+    const [tous, mods, travaux] = await Promise.all([B.elevesDuGroupe(g.id), catalogue(),
       B.suivi(g.id).catch(() => [])]);
     const eleves = tous.filter((e) => dansDemi(g, e))
       .sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, 'fr'));
@@ -1006,7 +1006,7 @@ export async function rendreEspaceProf(hote, ctx) {
   async function vueSuivi(z, g) {
     z.innerHTML = `<div class="panneau"><div class="vide">Chargement du suivi…</div></div>`;
     const [tous, travaux, mods] = await Promise.all([
-      B.elevesDuGroupe(g.id), B.suivi(g.id), chargerActivites(),
+      B.elevesDuGroupe(g.id), B.suivi(g.id), catalogue(),
     ]);
     // Sous un demi-groupe, seuls ses élèves : tableau, repérage, ramassage des copies et export.
     const eleves = tous.filter((e) => dansDemi(g, e));
@@ -1304,7 +1304,7 @@ ${so.phrase}` : ''}`)}"
           b.cols.forEach((m, i) => {
             // Évaluation en copie : « Vérifier » recalcule les copies rendues depuis le travail enregistré (à la demande).
             const verifBtn = !estCopie(m) ? '' : (() => {
-              const sait = typeof mods.find((x) => x.meta.id === m.id)?.noter === 'function';
+              const sait = !!mods.find((x) => x.meta.id === m.id)?.exports?.includes('noter');
               return ` <button type="button" class="btn-copie-verifier" data-copie-verifier="${ech(m.id)}"${sait ? '' : ' disabled'}
                 title="${sait ? 'Recalcule chaque copie rendue à partir du travail enregistré de l\'élève et signale les écarts'
                   : 'Cette séance ne sait pas se recalculer'}"
@@ -1462,13 +1462,21 @@ ${so.phrase}` : ''}`)}"
 
       // Les copies (core/copie.js). Le module de l'activité sait noter une base : c'est lui qui
       // ramasse, avec les mêmes jalons que la remise par l'élève.
-      const moduleDe = (aid) => mods.find((x) => x.meta.id === aid);
+      // Le tableau ne lit que le catalogue : le code de la séance (qui sait noter) ne se télécharge qu'au clic.
+      // Séance qui ne se charge pas : un message à l'enseignant, pas d'erreur de page.
+      const moduleDe = async (aid) => {
+        let m = null;
+        try { m = await activite(aid); } catch (e) { m = null; }
+        if (!m) toast("Cette séance ne s'ouvre pas pour l'instant : impossible de lire ses copies.");
+        return m;
+      };
       const MOTIF = { rendue: 'déjà rendue', vide: "l'élève n'a pas ouvert la séance", module: "cette activité ne sait pas se noter" };
       racine.querySelectorAll('[data-copie-ramasser]').forEach((b) => b.addEventListener('click', async () => {
-        const module = moduleDe(b.dataset.aid);
         const eleve = eleves.find((x) => x.uid === b.dataset.uid);
-        if (!module || !eleve) return;
+        if (!eleve) return;
         b.disabled = true;
+        const module = await moduleDe(b.dataset.aid);
+        if (!module) { b.disabled = false; return; }
         try {
           const r = await ramasser(B, { gid: g.id, eleve, module });
           toast(r.ok ? `Copie de ${eleve.prenom} ramassée.` : `Rien à ramasser : ${MOTIF[r.raison] || r.raison}.`);
@@ -1476,9 +1484,9 @@ ${so.phrase}` : ''}`)}"
         } catch (e) { b.disabled = false; toast("La copie n'a pas pu être ramassée."); }
       }));
       racine.querySelectorAll('[data-copie-tout]').forEach((b) => b.addEventListener('click', async () => {
-        const module = moduleDe(b.dataset.copieTout);
-        if (!module) return;
         b.disabled = true;
+        const module = await moduleDe(b.dataset.copieTout);
+        if (!module) { b.disabled = false; return; }
         const n = { ok: 0, rendue: 0, vide: 0, erreur: 0 };
         for (const eleve of eleves) {
           try {
@@ -1494,10 +1502,10 @@ ${so.phrase}` : ''}`)}"
       // Le résultat est gardé dans `verifs` ; seul le tableau est redessiné, sans relire les travaux.
       racine.querySelectorAll('[data-copie-verifier]').forEach((b) => b.addEventListener('click', async (ev) => {
         const clavier = ev.detail === 0;
-        const module = moduleDe(b.dataset.copieVerifier);
-        if (!module || typeof module.noter !== 'function') return;
-        const aid = module.meta.id;
         b.disabled = true;
+        const module = await moduleDe(b.dataset.copieVerifier);
+        if (!module || typeof module.noter !== 'function') { b.disabled = false; return; }
+        const aid = module.meta.id;
         const resultats = new Map();
         const n = { ok: 0, ecart: 0, 'sans-base': 0, erreur: 0 };
         for (const eleve of eleves) {
@@ -1619,7 +1627,7 @@ ${so.phrase}` : ''}`)}"
   async function vueCompetences(z, g) {
     z.innerHTML = `<div class="panneau"><div class="vide">Chargement des compétences…</div></div>`;
     const [tous, travaux, mods] = await Promise.all([
-      B.elevesDuGroupe(g.id), B.suivi(g.id), chargerActivites(),
+      B.elevesDuGroupe(g.id), B.suivi(g.id), catalogue(),
     ]);
     const eleves = tous.filter((e) => dansDemi(g, e));
     const deDemi = demiActif ? ` — ${nomDemi(g, demiActif)}` : '';
@@ -1841,7 +1849,7 @@ ${so.phrase}` : ''}`)}"
   }
 
   async function vueSeance(z, g) {
-    const mods = await chargerActivites();
+    const mods = await catalogue();
     const metas = mods.map((m) => m.meta);
     const partagees = metas.filter((m) => m.portee !== 'eleve');
     const duNiveau = metas.filter((m) => !horsNiveau(m, g));
