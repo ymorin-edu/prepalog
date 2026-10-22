@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/ENT-8.11-action-ranger.md (§0, §6), docs/briefs/MOTEUR-palettier-adresse-donnee.md (lots 3 et 5) puis docs/briefs/ENT-8.13-action-palette-a-cote.md en entier. Les lots 1, 2, 3 et 5 du chantier moteur doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré (22/10/2026, `pret: true, ouverture: 'prof'` ; compte rendu en fin de brief)
 **Date du brief** : 21/10/2026 ; **corrigé le 21/10/2026 au soir** d'après l'état des lieux du chantier moteur E-7 et les
 décisions de Tristan (§11 n° 5).
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action, 21/10/2026 (fiche `claude/prepalog-action-cadrage-c1.5.md`), décisions
@@ -252,9 +252,42 @@ scanne », « Transférer », « Rendre compte : les faits ». Corrigé : `conte
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+*(Claude Code, Opus, 22/10/2026 ; décisions du chef de chantier : `COORDINATION-palettier.md` §3 et §4.)*
+
+- **Fichiers créés / modifiés** : créés `activites/action-palette-a-cote.js`, `contenus/action-ent813.js`, `contenus/action-ent813-donnees.js`,
+  `contenus/questions/ENT-8.13.js`, `contenus/corriges/ENT-8.13.js`, `outils/test/action-813.mjs` ; une ligne ajoutée dans `activites/index.js`,
+  `outils/test/socle.mjs` (`ATTENDU_CAP`), `outils/test.mjs` (`BLOCS` et `GROUPES`, groupe 3 ; alerte 7) ; une ligne réécrite dans `outils/test/action.mjs`
+  (la liste du registre gagne `ENT-8.13`). Rien dans `core/` ni `styles/`.
+- **Notation (16 + 4 = 20)** : le bon geste face à Kevin 3 = `adresseLibre-P3` 2 + `scan-P3` 1 · retrouver 4 = `retrouvee` 3 + `trouveeVite` 1 ·
+  remettre en ordre 5 = `transfert-place` 2 + `transfert-scan` 3 · rendre compte 3 = `cr-passe`, `cr-ou`, `cr-fait` 1 chacun · le ton 1 = `cr-forme`
+  (salutation, fin, pas d'accusation) · questions 4 (0,75 / 0,5 / 0,75 / 0,75 / 0,5 / 0,75). P1 (`place-P1`, `scan-P1`), `pasPoseHaut` et `charge` :
+  jugés, poids 0, sans ligne au bandeau (une P3 laissée en réception rend les deux gardes fausses, sans rien coûter). Chemin A 20, B et C 17, inaction 0.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  1. `q-terminal` sur « Valider mon transfert » (et non au transfert) et `q-collegue` à l'envoi du compte rendu (après `q-a-qui`) : le transfert ouvre la
+     fenêtre « Message du système », qui couvre le panneau de la question pendant que la question gèle son bouton « Compris » ; à la souris l'élève est
+     bloqué (seul Échap en sort). Voir « Reste ouvert ».
+  2. Trois chemins, trois phrases « ce qui s'est passé » : le brief n'en écrivait que deux ; P3 laissée en réception reçoit « Hier soir, j'ai laissé P3 en
+     réception : elle a été posée cette nuit à côté de son adresse, sans scan. ». « Ce que j'ai fait » juste pour qui n'a pas transféré : « Je l'ai laissée
+     là. » (trouvée) ou « Je n'ai rien pu transférer. » (pas trouvée). À qui n'a pas trouvé, l'adresse réelle n'est jamais proposée.
+  3. Samia écrit son « C'est réglé ? » au transfert **ou** à « Valider mon transfert » (sinon un élève qui ne trouve pas n'aurait jamais de compte rendu).
+  4. Un message de Samia le matin (« Yanis t'a écrit. Trouve la palette… ») qui joint « Le droit » (C. trav. L4122-1, texte repris d'ENT-8.11, recopié
+     le 22/10/2026, pas reconsulté) ; la consigne est aussi en haut du plan.
+  5. Confirmé : pas de seconde palette (COORDINATION n° 10) ; « retrouvée vite » en 3 ouvertures au lieu de 4. Accompagné : Yanis ajoute « Elle doit être
+     pas loin. C'est une palette de <produit>. » (la vue n'a pas d'aide de côté pour ça) et le verdict donne l'adresse attendue.
+  6. Test §8 « transfert vers une autre adresse libre » impossible (cible fausse refusée, lot 5) : remplacé par « confiée à Kevin et pas montée →
+     `transfert-place` ✗, `transfert-scan` ✓ », sur base fabriquée (dans la séance, l'adresse donnée est toujours libérée la nuit et au sol).
+- **Décisions prises en route** : tirage par élève (P3 et P9 au sol dans deux allées, chacune sur un emplacement libre du stock d'ENT-8.11 qui reçoit une
+  palette « À évacuer cette nuit » ; `alleeVers` et la place de Kevin dans la même travée que l'adresse vide, donc trouvables en 3 ouvertures ; l'adresse
+  libre de P3 dans son allée, hors de ses voisines ; P1 loin des deux) ; Messagerie datée du dernier vendredi (le lendemain) et de la veille au soir, jamais
+  une date à venir (même compromis qu'ENT-8.11, question déjà posée à Tristan) ; « Les règles » repliées (entraînement), une ligne y dit que le Terminal
+  peut donner une adresse libre (à relire : le piège est la pression de Kevin, pas l'ignorance).
+- **Vérifié / construit** : vérifié par Cowork (§2) ; construit et dit dans `MENTION` : l'allée, le stock, les palettes à évacuer, Samia, Kevin, **Yanis**
+  (nouveau, préparateur, sans visage), la fin de poste et le lendemain, le magasin de Marseille (aucun nommé). Définitions du lexique et `aide` des
+  questions d'ouverture écrites par Claude Code (à relire) ; deux dessins en traits nouveaux (allée encombrée, emplacement vide), sans personne.
+- **Tests** : bloc `action-813`, 12 cas (déclaration ; 200 graines ; équité ; jalons et phrases sur bases fabriquées ; chemins A, B, C à l'écran ; « faute
+  de Kevin » ; jamais trouvée et inaction ; confirmé et accompagné), 14 sabotages tous tombés, fichiers remis à l'identique (empreintes) ; `action-813`,
+  `socle`, `action`, `dependances`, `tirage-niveaux`, `questions` : 225/225. Suite entière non lancée (lot 6 en cours dans le moteur).
+- **Commits** : aucun (le chef de chantier commite).
+- **Reste ouvert** : **demande au moteur** — une question au fil accrochée à un geste qui ouvre la fenêtre « Message du système » (`transfert`,
+  `adresseLibre:<P>`, `signaler:<P>`) bloque l'élève à la souris. Deux options : (a) le moteur des questions attend que la fenêtre soit fermée (ou la
+  fenêtre passe au-dessus du gel) ; (b) règle d'écriture dans `FICHE-SEANCE.md` : jamais de question sur ces gestes (ENT-8.14 à surveiller).
