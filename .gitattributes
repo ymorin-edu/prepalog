@@ -1,2 +1,4 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+# Généré par outils/catalogue.mjs et comparé à l'octet par la suite de tests : toujours LF, même avec autocrlf=true.
+activites/catalogue.js text eol=lf

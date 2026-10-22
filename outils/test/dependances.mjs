@@ -971,4 +971,92 @@ await v('docs/EN-COURS.md : trois colonnes remplies, date jj/mm/aaaa, chemins ci
   if (problemes.length) throw new Error(problemes.join(' | '));
 });
 
+// ---------- chantier 23 (22/10/2026) : le catalogue des séances (activites/catalogue.js, fabriqué par outils/catalogue.mjs)
+// L'accueil lira ce catalogue au lieu de charger le code de chaque séance. Il ne vaut que s'il est EXACTEMENT ce que les
+// séances disent d'elles-mêmes : une séance ajoutée, retirée, déplacée ou une `meta` modifiée sans relancer le script
+// doit faire tomber la suite. Chaque cas s'ouvre dans un contexte neuf (aucune route héritée d'un autre cas).
+const { pathToFileURL } = await import('node:url');
+const CATALOGUE_MJS = await import(pathToFileURL(path.join(ROOT, 'outils', 'catalogue.mjs')).href);
+const ouvrirNeuve = async (surRequete) => {
+  const c = await nav.newContext();
+  const p = await c.newPage();
+  p.setDefaultTimeout(8000);
+  if (surRequete) p.on('request', (r) => surRequete(new URL(r.url()).pathname));
+  await p.goto(BASE);
+  await p.waitForSelector('#btnProf');
+  await p.waitForLoadState('networkidle');
+  return { c, p };
+};
+
+await v('catalogue : activites/catalogue.js est à jour (texte recalculé depuis les séances = fichier, à l\'octet)', async () => {
+  const { c, p } = await ouvrirNeuve();
+  try {
+    const { entrees, echecs, problemes } = await p.evaluate(CATALOGUE_MJS.RELEVE_PAGE);
+    if (echecs.length) throw new Error('séance qui refuse de se charger : ' + echecs.map((e) => `${e.fichier} (${e.erreur})`).join(' ; '));
+    if (problemes.length) throw new Error('meta non sérialisable en JSON : ' + problemes.join(' ; '));
+    if (entrees.length < 80) throw new Error(`seulement ${entrees.length} séances relevées : le relevé ne lit plus le registre`);
+    const attendu = CATALOGUE_MJS.formaterCatalogue(entrees);
+    const disque = fs.readFileSync(CATALOGUE_MJS.FICHIER_CATALOGUE);
+    if (!disque.equals(Buffer.from(attendu, 'utf8'))) {
+      throw new Error('Catalogue périmé : ' + (CATALOGUE_MJS.diagnostiquer(attendu, disque.toString('utf8')) || 'octets différents (fins de ligne ou encodage) — lancer `node outils/catalogue.mjs`.'));
+    }
+  } finally { await c.close(); }
+});
+
+await v('catalogue() : mêmes séances, même ordre, mêmes exports que chargerActivites(), sans télécharger de fichier de séance', async () => {
+  const requetes = [];
+  const { c, p } = await ouvrirNeuve((chemin) => requetes.push(chemin));
+  try {
+    requetes.length = 0;   // seul compte ce que catalogue() demande, après le chargement de la page
+    const par = await p.evaluate(async () => {
+      const I = await import('/activites/index.js');
+      const lu = (await I.catalogue()).map((e) => ({ id: e.meta.id, code: e.meta.code, fichier: e.fichier, exports: e.exports }));
+      return lu;
+    });
+    const telechargees = requetes.filter((r) => /^\/contenus\//.test(r) || /^\/activites\/(?!index\.js$|catalogue\.js$)/.test(r));
+    if (telechargees.length) throw new Error(`catalogue() a téléchargé ${telechargees.length} fichier(s) de séance ou de contenu : ${telechargees.slice(0, 4).join(', ')}`);
+    if (!requetes.includes('/activites/catalogue.js')) throw new Error('catalogue() n\'a pas lu activites/catalogue.js (requêtes : ' + requetes.join(', ') + ')');
+    const modules = await p.evaluate(async () => {
+      const I = await import('/activites/index.js');
+      const fichiers = new Map((await I.releverCatalogue()).map((e) => [e.meta.id, e.fichier]));
+      return (await I.chargerActivites()).map((m) => ({ id: m.meta.id, code: m.meta.code, fichier: fichiers.get(m.meta.id), exports: Object.keys(m).sort() }));
+    });
+    if (modules.length < 80) throw new Error(`chargerActivites() ne rend que ${modules.length} séances`);
+    if (par.length !== modules.length) throw new Error(`catalogue() rend ${par.length} séances, chargerActivites() en rend ${modules.length}`);
+    const i = par.findIndex((e, k) => JSON.stringify(e) !== JSON.stringify(modules[k]));
+    if (i >= 0) throw new Error(`à la position ${i + 1}, catalogue() rend ${JSON.stringify(par[i])} et chargerActivites() ${JSON.stringify(modules[i])}`);
+  } finally { await c.close(); }
+});
+
+await v('catalogue absent : catalogue() se replie sur le chargement des séances, avec une erreur de console qui nomme le catalogue', async () => {
+  const c = await nav.newContext();
+  const consoles = [];
+  const horsAttendu = [];
+  // Ce 404 est provoqué ici : on le retire du relevé de la suite entière (« aucun fichier introuvable »), sauf s'il y
+  // figurait déjà avant ce cas (un vrai 404 du catalogue, lui, doit continuer à faire tomber la suite).
+  const dejaVu = introuvables.has('/activites/catalogue.js');
+  try {
+    await c.route('**/activites/catalogue.js*', (route) => route.fulfill({ status: 404, contentType: 'text/plain', body: '404' }));
+    const p = await c.newPage();
+    p.setDefaultTimeout(8000);
+    p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource.*\b404\b/.test(m.text())) consoles.push(m.text()); });
+    p.on('pageerror', (e) => horsAttendu.push(e.message));
+    await p.goto(BASE);
+    await p.waitForSelector('#btnProf');
+    const r = await p.evaluate(async () => {
+      const I = await import('/activites/index.js');
+      const lu = await I.catalogue();
+      return { n: lu.length, attendu: I.ACTIVITES.length, ids: lu.map((e) => e.meta.id), fichiers: lu.map((e) => e.fichier), echecs: I.activitesEnEchec().length };
+    });
+    if (r.n < 80 || r.n !== r.attendu) throw new Error(`catalogue() rend ${r.n} séances au lieu des ${r.attendu} du registre`);
+    if (new Set(r.ids).size !== r.n || r.fichiers.some((f) => !/\.js$/.test(f || ''))) throw new Error('le repli rend des entrées incomplètes (id en double ou fichier manquant)');
+    if (r.echecs) throw new Error(`${r.echecs} séance(s) en échec dans le repli`);
+    if (!consoles.some((t) => /catalogue/i.test(t))) throw new Error('aucune erreur de console ne nomme le catalogue : ' + JSON.stringify(consoles));
+    if (horsAttendu.length) throw new Error('erreur de page : ' + horsAttendu.join(' | '));
+  } finally {
+    if (!dejaVu) introuvables.delete('/activites/catalogue.js');
+    await c.close();
+  }
+});
+
 }

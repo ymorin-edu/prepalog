@@ -135,7 +135,7 @@ export const meta = {
 };
 ```
 
-Ajouter une activité = un fichier + **une ligne** dans `activites/index.js`.
+Ajouter une activité = un fichier + une ligne dans `activites/index.js`, **puis `node outils/catalogue.mjs`** (et commiter `activites/catalogue.js` avec la séance ; même commande après toute modification d'une `meta` ou d'un contenu dont dépend un `bareme` déduit).
 
 - **Notation des séances d'entreprise** : **Toute séance d'entreprise (ENT-x.y) est notée par jalons pondérés, total 20** (`bareme: 20`, un `poids` par jalon du socle, jalons regroupés par `groupe`) : le poids va au cœur de la compétence, la forme (ton, politesse, présentation) ne dépasse pas ~15 %, aucun jalon à 0 ; les poids de chaque séance sont **validés par Tristan avant d'être codés** (règle du 10/10/2026, `docs/briefs/NOTATION-ponderation.md`). Hors règle : QUI, TAB, DEC-1, SCE, ACT-1.
 La liste complète des champs de `meta` (parcours, jeuId, corrige, immersif…), des exports et de
@@ -212,6 +212,7 @@ modifier une séance**, et la corriger si le code a changé.
 - **Lancer la suite entière avant tout push** qui touche `core/`, `styles/` ou `activites/`.
   Un échec massif et incompréhensible (`page.click: Timeout` dès `#btnProf`) = d'abord un
   fichier manquant ou un serveur de test muet, avant d'être un bug.
+- Avant un push qui touche `activites/` ou `contenus/` : `node outils/catalogue.mjs --verifier`.
 - **Toucher `outils/test.mjs`, `outils/test/commun.mjs` ou réécrire un cas existant : toujours
   le dire explicitement à Tristan.** Une conversation écrit dans le bloc de son entreprise/vue ;
   une entreprise nouvelle crée son fichier de bloc et une ligne dans `BLOCS`.

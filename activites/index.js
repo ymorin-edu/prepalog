@@ -7,6 +7,9 @@
 // des `code` (voir `ordonner` plus bas). Une activité se déplace en changeant son numéro
 // de module, pas en déplaçant sa ligne ici. L'ordre de la liste reste quand même rangé
 // comme l'affichage, pour que le fichier ne raconte pas autre chose que l'écran.
+//
+// Le CATALOGUE (chantier 23) : `catalogue()` rend les `meta` des séances SANS charger leur code
+// (contenus, vues), en lisant `activites/catalogue.js`, fichier GÉNÉRÉ par `node outils/catalogue.mjs`.
 
 export const ACTIVITES = [
   () => import('./chaine-logistique.js'),
@@ -305,7 +308,12 @@ async function charger() {
   enEchec.length = 0;
   const mods = [];
   resultats.forEach((r, i) => {
-    if (r.status === 'fulfilled') { mods.push(r.value); return; }
+    if (r.status === 'fulfilled') {
+      mods.push(r.value);
+      // De quoi fabriquer le catalogue (`releverCatalogue`) : le fichier d'où vient la séance et ses exports.
+      infosParId.set(r.value.meta.id, { fichier: nomDuFichier(ACTIVITES[i], i), exports: Object.keys(r.value).sort() });
+      return;
+    }
     const fichier = nomDuFichier(ACTIVITES[i], i);
     const erreur = (r.reason && r.reason.message) || String(r.reason);
     enEchec.push({ fichier, id: fichier.replace(/\.js$/, ''), erreur });
@@ -320,6 +328,44 @@ async function charger() {
 export async function activite(id) {
   await chargerActivites();
   return cache.get(id) || null;
+}
+
+// ------------------------------------------------------------------- le catalogue (chantier 23)
+//
+// `{ meta, fichier, exports }` pour chaque séance, dans l'ordre de `chargerActivites()` : `fichier` est le nom du
+// fichier de séance (`spartoo.js`), `exports` les noms de ses exports (`meta`, `rendre`, parfois `noter`).
+const infosParId = new Map();
+
+// Relevé fait avec les VRAIS modules (donc en les chargeant tous) : c'est ce que lit `outils/catalogue.mjs` pour
+// fabriquer `catalogue.js`, ce que relit le test « le catalogue est à jour », et le repli de `catalogue()`.
+export async function releverCatalogue() {
+  const mods = await chargerActivites();
+  return mods.map((m) => ({ meta: m.meta, ...infosParId.get(m.meta.id) }));
+}
+
+// `catalogue.js` est importé à la demande (l'écran de connexion ne le télécharge pas) et passe par `ordonner` :
+// même ordre que `chargerActivites()`, quelle que soit la façon dont le fichier a été rangé. Un cache À PART
+// de celui des modules : lire le catalogue ne doit jamais faire croire que les séances sont chargées.
+let cacheCatalogue = null;
+let chargementCatalogue = null;
+
+export function catalogue() {
+  if (cacheCatalogue) return Promise.resolve(cacheCatalogue.slice());
+  if (!chargementCatalogue) chargementCatalogue = lireCatalogue().finally(() => { chargementCatalogue = null; });
+  return chargementCatalogue.then((l) => l.slice());
+}
+
+async function lireCatalogue() {
+  try {
+    const { CATALOGUE } = await import('./catalogue.js');
+    if (!Array.isArray(CATALOGUE) || CATALOGUE.some((e) => !e || !e.meta || !e.meta.id)) throw new Error('le contenu n\'est pas un tableau d\'entrées { meta, fichier, exports }.');
+    cacheCatalogue = ordonner(CATALOGUE);
+  } catch (e) {
+    // Filet : sans catalogue lisible, le site marche comme avant le chantier 23 (plus lent, rien de cassé).
+    console.error(`Catalogue des séances illisible (activites/catalogue.js) : ${(e && e.message) || e}. Repli sur le chargement de toutes les séances ; relancer « node outils/catalogue.mjs ».`);
+    cacheCatalogue = await releverCatalogue();
+  }
+  return cacheCatalogue;
 }
 
 // Activités d'une rubrique : dans l'ordre déclaré pour `ids`, par numéro de module pour

@@ -3,9 +3,17 @@
 À lire avant d'écrire ou de modifier une activité. Tout ce qui suit est relevé dans le code
 au 08/10/2026 ; en cas d'écart, c'est le code qui a raison, et cette fiche est à corriger.
 
-Une séance, c'est **un fichier** `activites/<id>.js` et **une ligne** dans `activites/index.js`.
-L'accueil, les droits, la sauvegarde des scores, le suivi de classe et le tableau par compétence
-suivent tout seuls.
+Une séance, c'est **un fichier** `activites/<id>.js` et **une ligne** dans `activites/index.js`,
+**puis `node outils/catalogue.mjs`** (commiter `activites/catalogue.js` avec la séance ; même commande après toute
+modification d'une `meta` ou d'un contenu dont dépend un `bareme` déduit). L'accueil, les droits, la sauvegarde des
+scores, le suivi de classe et le tableau par compétence suivent tout seuls.
+
+`activites/catalogue.js` est **généré** (ne jamais le modifier à la main) : une entrée `{ fichier, exports, meta }` par
+séance, dans l'ordre de `chargerActivites()`, fabriquée en faisant tourner le vrai registre dans Chromium
+(`outils/catalogue.mjs`, ≈ 2 s ; `--verifier` compare sans écrire). Il est lu par `catalogue()` (`activites/index.js`), qui
+rend les `meta` sans télécharger le code des séances, et se replie sur le chargement complet si le fichier est illisible.
+Pour l'instant, personne ne le lit hors des tests ; le lot 2 du chantier 23 y branchera l'accueil. Un cas de la suite
+(bloc `dependances`) tombe si le fichier n'est plus exactement ce que les séances disent d'elles-mêmes.
 
 ## Ce que le fichier doit exporter
 
