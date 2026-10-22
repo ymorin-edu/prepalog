@@ -16,6 +16,8 @@ import { catalogueSimple } from './entreprise-commun.js';
 import { THEME } from './action.js';
 import { etapesPalettier, paletteCherchee } from '../core/types/entrepot.js';
 import { apresGeste } from '../core/declencheurs.js';
+import { siteDe } from './action-eval-sites.js';
+import { hasard } from '../core/tirage.js';
 
 export const MENTION = 'Essai du moteur (palettier à adresse donnée). Réels : Action et ses catégories de produits. <b>Construits pour l’exercice</b> : '
   + 'le plan de l’allée, les plaques de charge, le stock, les poids, les palettes, Samia et Kevin.';
@@ -223,6 +225,114 @@ export function soirPrerempli(chemin) {
     scan, scansRefuses: 0, libres, monteesValidation: [], phase: 'soir' };
 }
 
+// L'ÉVALUATION (lot 6, 22/10/2026) : imite ENT-8.14 (« mettre en stock dans un autre site »), en copie. UN entrepôt à deux phases
+// (`rangement`, puis `comptage` derrière le bouton « Passer au comptage »), `rendCopie: false` (la copie se rend ailleurs : le bouton
+// « Rendre ma copie » du moteur, hors de la vue) et UN PLAN PAR SITE : une fonction de la graine (celle de l'élève ; `siteDe` du module des
+// sites des évaluations CAP d'Action, `contenus/action-eval-sites.js`, lu, jamais modifié) donne Onnaing (3 allées de 2 côtés, plaques
+// N2 / N3 / N4 = 1 400 / 1 200 / 1 000 kg) ou Belleville-en-Beaujolais (2 allées de 2 côtés, 1 600 / 1 300 / 1 100 kg), 4 travées, 4 niveaux
+// et 3 emplacements aux deux. Mêmes palettes et mêmes jalons aux deux sites (ids fixes) ; les adresses et le stock changent.
+// CONSTRUIT (essai, pas une séance) : les deux plans, les plaques, les adresses, le stock, le cariste. Écrit À LA MAIN (le test le recopie) :
+//   P1 « Cahiers grand format » 30 × 9 kg, au sol · P2 « Serviettes de bain » 40 × 6 kg, au sol · P3 « Bougies parfumées » 60 × 3 kg = 205 kg, en
+//   réserve (N3, à confier) · P4 « Lessive liquide 3 L » 40 × 13 + 25 = 545 kg, à SIGNALER sans nouvelle adresse : son niveau N2 porte déjà
+//   940 kg à Onnaing (CRO 40 ctn 525 + NET 30 ctn 415 ; 940 + 545 = 1 485 > 1 400) et 1 220 kg à Belleville (LES 50 ctn 675 + NET 40 ctn 545 ;
+//   1 220 + 545 = 1 765 > 1 600) · P5 « Bougies parfumées » 24 × 3 kg, adresse donnée PRISE (au sol, croquettes), adresse libre au sol.
+//   Onnaing (cariste Léo) : P1 C1-T03-N1-E2 · P2 B2-T02-N1-E3 · P3 A2-T02-N3-E1 · P4 A1-T02-N2-E2 · P5 A1-T03-N1-E1, libre A1-T01-N1-E2 ;
+//   à compter B1-T02-N1-E2, C2-T02-N1-E1, C1-T04-N1-E3, B2-T04-N1-E2 (réel 26, 31, 27, 29).
+//   Belleville (cariste Hugo) : P1 B1-T03-N1-E2 · P2 A2-T04-N1-E1 · P3 B2-T02-N3-E3 · P4 A1-T03-N2-E2 · P5 B1-T02-N1-E1, libre A2-T01-N1-E3 ;
+//   à compter A1-T02-N1-E3, A2-T03-N1-E2, B2-T04-N1-E1, B1-T04-N1-E3 (réel 29, 38, 30, 26).
+//   L'écart est au rang 2 : le système croit réel + 3 (il MANQUE) ou réel − 2 (SURPLUS), tiré par la graine (`sensEcartEval`).
+const PLAQUES_EVAL = { onnaing: { 2: 1400, 3: 1200, 4: 1000 }, belleville: { 2: 1600, 3: 1300, 4: 1100 } };
+const COTES_EVAL = { onnaing: ['A1', 'A2', 'B1', 'B2', 'C1', 'C2'], belleville: ['A1', 'A2', 'B1', 'B2'] };
+export const SITES_EVAL = {
+  onnaing: {
+    cariste: 'Léo', p1: 'C1-T03-N1-E2', p2: 'B2-T02-N1-E3', p3: 'A2-T02-N3-E1', p4: 'A1-T02-N2-E2', p5: 'A1-T03-N1-E1', p5Libre: 'A1-T01-N1-E2',
+    lots: { 'A1-T02-N2-E1': lot('CRO', 40), 'A1-T02-N2-E3': lot('NET', 30), 'A2-T02-N3-E2': lot('CAH', 30), 'A2-T02-N3-E3': null,
+      'A1-T03-N1-E1': lot('CRO', 30), 'A1-T01-N1-E2': null },
+    compter: [['B1-T02-N1-E2', 'LES', [2, 4], 4, 26], ['C2-T02-N1-E1', 'BOI', [3, 3], 4, 31], ['C1-T04-N1-E3', 'CAH', [2, 3], 5, 27], ['B2-T04-N1-E2', 'BOU', [3, 3], 4, 29]],
+  },
+  belleville: {
+    cariste: 'Hugo', p1: 'B1-T03-N1-E2', p2: 'A2-T04-N1-E1', p3: 'B2-T02-N3-E3', p4: 'A1-T03-N2-E2', p5: 'B1-T02-N1-E1', p5Libre: 'A2-T01-N1-E3',
+    lots: { 'A1-T03-N2-E1': lot('LES', 50), 'A1-T03-N2-E3': lot('NET', 40), 'B2-T02-N3-E1': lot('BOI', 40), 'B2-T02-N3-E2': null,
+      'B1-T02-N1-E1': lot('CRO', 30), 'A2-T01-N1-E3': null },
+    compter: [['A1-T02-N1-E3', 'SER', [2, 4], 4, 29], ['A2-T03-N1-E2', 'PEL', [3, 3], 5, 38], ['B2-T04-N1-E1', 'BOU', [3, 3], 4, 30], ['B1-T04-N1-E3', 'LES', [2, 3], 5, 26]],
+  },
+};
+export const P4_EVAL = { id: 'P4', nom: 'Lessive liquide 3 L', cartons: 40, kg: 13 };
+// Une graine (identifiant d'élève) qui tombe sur le site demandé : la première `u<n>` que `siteDe` y envoie (même fonction que les séances).
+const GRAINES_SITES = {};
+export function graineDeSite(site) {
+  for (let i = 0; i < 200 && !GRAINES_SITES[site]; i++) { const s = siteDe(`u${i}`); if (!GRAINES_SITES[s]) GRAINES_SITES[s] = `u${i}`; }
+  return GRAINES_SITES[site];
+}
+const stockEval = (site) => {
+  const S = SITES_EVAL[site], st = {}, salt = site === 'onnaing' ? 3 : 5;
+  COTES_EVAL[site].forEach((c, ci) => {
+    for (let t = 1; t <= 4; t++) for (let n = 1; n <= 4; n++) for (let e = 1; e <= 3; e++) {
+      const k = ci * 48 + t * 12 + n * 3 + e + salt;
+      if ((k * 7) % 11 < 5) st[`${c}-T0${t}-N${n}-E${e}`] = lot(CODES[k % 8], 12 + (k * 5) % 13);
+    }
+  });
+  Object.entries(S.lots).forEach(([a, x]) => { if (x) st[a] = x; else delete st[a]; });
+  [S.p1, S.p2, S.p3, S.p4].forEach((a) => delete st[a]);
+  S.compter.forEach(([a]) => delete st[a]);   // les adresses à compter sont occupées par le comptage lui-même
+  return st;
+};
+const planEval = (site) => ({
+  allees: site === 'onnaing' ? [{ id: 'A', cotes: ['A1', 'A2'] }, { id: 'B', cotes: ['B1', 'B2'] }, { id: 'C', cotes: ['C1', 'C2'] }]
+    : [{ id: 'A', cotes: ['A1', 'A2'] }, { id: 'B', cotes: ['B1', 'B2'] }],
+  cotes: Object.fromEntries(COTES_EVAL[site].map((c) => [c, { charge: PLAQUES_EVAL[site] }])),
+  travees: 4, niveaux: 4, emplacements: 3, horsService: [], zones: { quais: ['QUAI 2'] },
+});
+// L'écart du comptage : le rang 2 de la liste, un manque ou un surplus tiré par la graine ; les trois autres adresses sont conformes.
+export const RANG_ECART_EVAL = 2;
+export const sensEcartEval = (graine) => (hasard(`${graine || ''}|ecart-evaluation`).reel() < 0.5 ? 'manque' : 'surplus');
+// Rend la FONCTION `(graine, { copie }) => déclaration` d'une évaluation. `o.sansRendCopie` : la même sans `rendCopie: false` (l'ancien comportement).
+export function evaluation(o = {}) {
+  return (graine, { copie = true } = {}) => {
+    const site = siteDe(graine), S = SITES_EVAL[site], sens = sensEcartEval(graine);
+    const adresses = S.compter.map(([adresse, produit, couche, couches, reel], i) => {
+      const x = { adresse, produit, couche, couches, reel, systeme: reel };
+      if (i + 1 === RANG_ECART_EVAL) x.systeme = sens === 'manque' ? reel + 3 : reel - 2;
+      return x;
+    });
+    const P = {
+      id: 'essai-evaluation', libelle: 'Plan de l’entrepôt', mode: 'palettier',
+      personnage: { nom: 'Samia', role: 'cheffe d’équipe', date: 'mardi, 6 h',
+        texte: { evaluation: 'La réception d’hier est à ranger, puis quelques adresses à compter. Tu connais le travail.' } },
+      plan: planEval(site), produits: PRODUITS, stock: stockEval(site),
+      palettes: [
+        { id: 'P1', nom: 'Cahiers grand format', cartons: 30, kg: 9, adresse: S.p1 },
+        { id: 'P2', nom: 'Serviettes de bain', cartons: 40, kg: 6, adresse: S.p2 },
+        { id: 'P3', nom: 'Bougies parfumées', cartons: 60, kg: 3, adresse: S.p3 },
+        { ...P4_EVAL, adresse: S.p4, aSignaler: true },
+        { id: 'P5', nom: 'Bougies parfumées', cartons: 24, kg: 3, adresse: S.p5, adresseLibre: S.p5Libre },
+      ],
+      cariste: { nom: S.cariste, niveaux: [2, 3, 4] },
+      terminal: { nom: 'Terminal' },
+      comptage: { adresses },
+      phases: [{ id: 'rangement' }, { id: 'comptage', bouton: 'Passer au comptage', consigne: 'Compte les adresses de la liste « À compter », avec le Terminal.' }],
+    };
+    if (copie && !o.sansRendCopie) P.rendCopie = false;
+    return P;
+  };
+}
+export const EVALUATION = evaluation();
+// Poids d'essai (somme 20) à la manière d'ENT-8.14 : ranger P1 à P3 (2 chacune), signaler P4 (3), l'adresse prise P5 (2), scanner (4 × 1), compter
+// (4 × 0,75), une garde (1) et scanAvant (1) ; `charge` et les recomptes sans poids (le Terminal propose le recomptage : l'outil, rien de noté).
+export const POIDS_EVAL = { 'place-P1': 2, 'place-P2': 2, 'place-P3': 2, 'signale-P4': 3, 'adresseLibre-P5': 2,
+  'scan-P1': 1, 'scan-P2': 1, 'scan-P3': 1, 'scan-P5': 1, pasPoseHaut: 1, charge: 0,
+  'compte-1': 0.75, 'compte-2': 0.75, 'compte-3': 0.75, 'compte-4': 0.75,
+  'recompte-1': 0, 'recompte-2': 0, 'recompte-3': 0, 'recompte-4': 0, scanAvant: 1 };
+
+// DES QUESTIONS AU FIL accrochées à des gestes de la vue (essai, 22/10/2026 : une question sur un geste qui ouvre la fenêtre « Message du système »
+// ne doit s'ouvrir qu'APRÈS la fermeture de la fenêtre). `gestes` : les noms des gestes, une question par geste (q0, q1…), non notées.
+export const questionsFil = (gestes, part = 4) => ({   // `part` : 20 moins le nombre de jalons sans poids (la somme des poids doit valoir 20)
+  id: 'essai-palettier', part,
+  personnes: { samia: { nom: 'Samia', role: 'cheffe d’équipe', appel: 'Samia', registre: 'tu' } },
+  liste: gestes.map((g, i) => ({ id: `q${i}`, type: 'fil', de: 'samia', quand: apresGeste(g), poids: 1, groupe: 'Les questions de Samia',
+    enonce: `Question ${i} ?`, choix: [{ v: 'a', lib: 'Oui' }, { v: 'b', lib: 'Non' }], juste: 'a', retour: 'Oui.' })),
+});
+
 // L'univers d'essai : le vrai moteur d'entreprise, dans la charte d'Action. `entrepot` : une déclaration ou une fonction
 // (graine, { niveau, copie }) ; `temps` : guidage, entraînement ou évaluation (copie) ; `poids: false` : des jalons sans poids
 // (et sans bonus), pour une déclaration d'essai qui ajoute des palettes. Lot 5 : `yanis` (son message arrive au passage au
@@ -246,6 +356,7 @@ export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poid
   ];
   const valide = (db) => !!((db.entrepots || {})[idE] || {}).valide;
   const lValide = (db) => !!(((db.entrepots || {})[idE] || {}).lendemain || {}).valide;
+  const cFini = (db) => !!(((db.entrepots || {})[idE] || {}).comptage || {}).fini;
   return {
     ENTREPRISE: { id: 'essai-palettier', nom: 'Action — essai du palettier', sousTitre: 'Entrepôt d’Ensuès-la-Redonne (13) — allées A et B', exercice: 'Essai du palettier à adresse donnée' },
     VOCAB: { unit: 'palette', unitPl: 'palettes', sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton', mailDomain: 'essai.example' },
@@ -253,7 +364,8 @@ export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poid
     SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [], CM: {}, THEME,
     baseDeDepart: () => ({ v: 1, created: Date.now(), stock: {}, moves: [], mails: [], orders: [], receptions: [],
       customers: [], suppliers: [], seq: 1, _depart: [] }),
-    etapes: poids ? etapes.map((e) => (e.bonus ? e : Object.assign(e, { poids: (etapes.some((x) => x.id === 'retrouvee') ? POIDS_LENDEMAIN
+    etapes: poids ? etapes.map((e) => (e.bonus ? e : Object.assign(e, { poids: (etapes.some((x) => x.id === 'adresseLibre-P5') ? POIDS_EVAL
+      : etapes.some((x) => x.id === 'retrouvee') ? POIDS_LENDEMAIN
       : etapes.some((x) => x.id === 'compte-1') ? POIDS_COMPTAGE
       : etapes.some((x) => x.id === 'adresseLibre-P8') ? (etapes.some((x) => x.id === 'scan-P1') ? POIDS_SCAN_LIBRE : POIDS_LIBRE)
       : etapes.some((x) => x.id === 'scan-P1') ? POIDS_SCAN : POIDS)[e.id] }))) : etapes.filter((e) => !e.bonus),
@@ -261,7 +373,9 @@ export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poid
     entrepot, copie, sansTrame: 'Tout à l’écran',
     menu: ['receptions', 'stock'],
     ...(declencheurs.length ? { volet: { id: 'volet-essai-kevin', semer: () => ({ mails: [] }), declencheurs } } : {}),
-    ...(suite ? { suite: [{ vue: 'entrepot', libelle: 'Fin de poste : range les palettes', fait: valide },
-      { vue: 'entrepot', libelle: 'Le lendemain : retrouve la palette', fait: lValide }] } : {}),
+    ...(suite === 'evaluation' ? { suite: [{ vue: 'entrepot', libelle: 'Range les palettes', fait: valide },
+      { vue: 'entrepot', libelle: 'Compte les adresses', fait: cFini }] }
+      : suite ? { suite: [{ vue: 'entrepot', libelle: 'Fin de poste : range les palettes', fait: valide },
+        { vue: 'entrepot', libelle: 'Le lendemain : retrouve la palette', fait: lValide }] } : {}),
   };
 }

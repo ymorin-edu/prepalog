@@ -21,6 +21,9 @@
 // Valeurs du scan écrites à la main : P1 « Cahiers grand format » 30 cartons, A1-T03-N1-E2 · P2 « Serviettes de bain » B2-T02-N1-E3 ·
 // P3 « Bougies parfumées » A2-T02-N3-E1 · P4 B1-T04-N2-E2 · P5 « Lessive liquide 3 L », nouvelle adresse A1-T04-N2-E3.
 
+// LOT 6 (22/10/2026, l'évaluation en copie) : section « l'évaluation en copie », en fin de bloc (cas « Évaluation : … »), sur `evaluation()` de
+// `contenus/palettier-essai.js` (valeurs des deux sites écrites à la main en tête de la section). `PALETTIER_SEUL='Évaluation'` ne joue que ces cas.
+
 // LOT 4 (22/10/2026, le comptage à l'aveugle) : section « le comptage », en fin de bloc (cas « Comptage : … »), sur le cas d'essai
 // `comptage()` de `contenus/palettier-essai.js` (valeurs écrites à la main en tête de la section). `PALETTIER_SEUL=Comptage` (variable
 // d'environnement) ne joue que les cas dont le nom commence ainsi : sert à éprouver les cas dans les deux sens sans rejouer tout le bloc.
@@ -59,13 +62,14 @@ const monter = (p, o = {}) => p.evaluate(async (o) => {
       { id: 'P7', nom: 'Peluches', cartons: 20, kg: 3, adresse: 'B1-T01-N2-E1', aSignaler: true },
       { id: 'P8', nom: 'Bougies parfumées', cartons: 20, kg: 3, adresse: 'A1-T03-N1-E1', aSignaler: true }] });
   }
-  const U = C.universPalettier({ temps, entrepot: P, poids: o.scenario !== 'signaler' && !o.extra });
+  const U = C.universPalettier({ temps, entrepot: P, poids: o.scenario !== 'signaler' && !o.extra && !o.fil });
   if (o.volet) {
     // Un message qui attend le geste `monter` (comme Kevin dans ENT-8.11), ou celui que `o.volet` nomme (lot 2 : `scan:P1`).
     const { apresGeste } = await import('/core/declencheurs.js');
     U.volet = { id: 'volet-essai', semer: () => ({ mails: [] }), declencheurs: [{ id: 'kevin', quand: apresGeste(typeof o.volet === 'string' ? o.volet : 'entrepot:essai-palettier:monter'),
       semer: () => ({ mails: [{ folder: 'in', ts: Date.now(), from: 'Kevin', fromMail: 'kevin@essai.example', to: 'Lea', subject: 'Kevin monte', kind: 'text', text: 'Bonjour' }] }) }] };
   }
+  if (o.fil) U.questions = C.questionsFil(o.fil, o.filPart);   // lot 6 : des questions au fil accrochées à des gestes (une par geste) ; filPart : 20 − nombre de jalons
   const db = o.db || {};
   const moteur = creerEntreprise(U);
   window.__p = { db, P, U, temps, moteur, remis: null };
@@ -1695,9 +1699,11 @@ await v('Adresse libre : ouvrir l’adresse donnée avec P8 en main → « Occup
   vrai((await lignesRouges(pg)).length === 0, 'aucun refus en rouge');
   const e = await etat(pg);
   egal([e.libres, e.enMain, e.signalees, e.scansRefuses], [{ P8: AL.libre }, 'P8', {}, 0], 'état : l’adresse libre est donnée, P8 toujours en main, rien signalé');
-  egal((await gestes(pg)).filter((g) => /adresseLibre/.test(g)), ['entrepot:essai-palettier:adresseLibre:P8'], 'geste publié');
+  // (Recalé le 22/10/2026 : le geste qui ouvre la fenêtre part à sa FERMETURE, pas à l'ouverture.)
+  egal((await gestes(pg)).filter((g) => /adresseLibre/.test(g)), [], 'geste pas encore publié : la fenêtre est ouverte');
   egal(await croitL(pg, 'P8'), AL.libre, 'le système attend maintenant l’adresse libre');
   await compris(pg);
+  egal((await gestes(pg)).filter((g) => /adresseLibre/.test(g)), ['entrepot:essai-palettier:adresseLibre:P8'], 'geste publié à « Compris »');
   egal(await pg.evaluate(() => document.activeElement && document.activeElement.dataset.peCle), 'pal:P8', 'le focus revient sur la carte');
   egal([await texte(pg, '[data-pal-etiq="P8"]'), await present(pg, '[data-pal-etiq="P8"].pal-nouvelle')], ['Nouvelle adresse A1-T01-N1-E2', true], 'la carte porte la nouvelle adresse');
   await ouvrir(pg, AL.libre); await bouton(pg, 'poser');
@@ -1804,7 +1810,10 @@ await v('Adresse libre : `occupe:P8` publié quand l’adresse donnée est ouver
   await p8Occupe(pg);
   egal(await kevinL(pg), 0, 'ouvrir l’adresse ne publie pas adresseLibre');
   await demander(pg);
-  egal([await kevinL(pg), (await gestes(pg)).filter((g) => /adresseLibre/.test(g))], [1, ['entrepot:essai-palettier:adresseLibre:P8']], 'la demande le publie');
+  // (Recalé le 22/10/2026 : la demande ouvre la fenêtre, le geste part à « Compris ».)
+  egal([await kevinL(pg), (await gestes(pg)).filter((g) => /adresseLibre/.test(g))], [0, []], 'la fenêtre est ouverte : pas encore publié');
+  await compris(pg);
+  egal([await kevinL(pg), (await gestes(pg)).filter((g) => /adresseLibre/.test(g))], [1, ['entrepot:essai-palettier:adresseLibre:P8']], 'la demande le publie, à « Compris »');
 });
 
 await v('Adresse libre : sur une palette sans adresse libre, « Demander » dit « Pas d’autre adresse : A1-T03-N1-E2 est libre. » (Terminal et fenêtre), rien d’écrit, aucun geste ; si son adresse est prise sans `adresseLibre` : « Pas d’autre adresse pour P9 (Peluches). »', async () => {
@@ -1947,7 +1956,8 @@ const monterL = (p, o = {}) => p.evaluate(async (o) => {
   const temps = o.temps || 'guidage';
   const P = C.lendemain({ verdict: o.verdict === undefined ? 'critere' : o.verdict || undefined, haut: !!o.haut,
     monte: o.monte === 'base' ? (db) => !!(db && db.kevinRepondu) : undefined });
-  const U = C.universPalettier({ temps, entrepot: P, kevinPousse: !!o.kevin, yanis: !!o.yanis, suite: !!o.suite });
+  const U = C.universPalettier({ temps, entrepot: P, kevinPousse: !!o.kevin, yanis: !!o.yanis, suite: !!o.suite, poids: !o.fil });
+  if (o.fil) U.questions = C.questionsFil(o.fil, o.filPart);   // lot 6 : des questions au fil accrochées à des gestes
   const db = o.chemin ? { entrepots: { 'essai-lendemain': Object.assign(C.soirPrerempli(o.chemin), o.prerempli || {}) } } : {};
   const moteur = creerEntreprise(U);
   window.__p = { db, P, U, temps, moteur, remis: null };
@@ -2326,6 +2336,484 @@ await v('Le lendemain : la page d’essai (cas « Le lendemain ») tient en 1366
   }
   egal(err, [], 'erreurs JS');
   await pe.close();
+});
+
+/* =========================================================== l'évaluation en copie (lot 6, 22/10/2026) */
+// Cas « Évaluation : … », sur le cas d'essai `evaluation()` de `contenus/palettier-essai.js` (imite ENT-8.14) : EN COPIE, un entrepôt à deux
+// phases (`rangement`, puis `comptage` derrière « Passer au comptage »), `rendCopie: false`, un plan PAR SITE (fonction de la graine).
+// `PALETTIER_SEUL='Évaluation'` ne joue que cette section. Valeurs écrites À LA MAIN (jamais relues dans le contenu) :
+//   Onnaing (cariste Léo, 6 côtés A1 à C2 = 24 travées, plaques N2 1 400 / N3 1 200 kg) : P1 C1-T03-N1-E2 · P2 B2-T02-N1-E3 · P3 A2-T02-N3-E1 (à confier) ·
+//     P4 A1-T02-N2-E2 (à signaler : 940 kg déjà là + 545 = 1 485 > 1 400) · P5 A1-T03-N1-E1 (prise), adresse libre A1-T01-N1-E2 ;
+//     à compter B1-T02-N1-E2, C2-T02-N1-E1, C1-T04-N1-E3, B2-T04-N1-E2 ; réel 26, 31, 27, 29 ; l'écart est au rang 2 : système 34 (manque) ou 29 (surplus).
+//   Belleville (cariste Hugo, 4 côtés = 16 travées, plaques N2 1 600 / N3 1 300 kg) : P1 B1-T03-N1-E2 · P2 A2-T04-N1-E1 · P3 B2-T02-N3-E3 ·
+//     P4 A1-T03-N2-E2 (1 220 + 545 = 1 765 > 1 600) · P5 B1-T02-N1-E1 (prise), adresse libre A2-T01-N1-E3 ;
+//     à compter A1-T02-N1-E3, A2-T03-N1-E2, B2-T04-N1-E1, B1-T04-N1-E3 ; réel 29, 38, 30, 26 ; rang 2 : système 41 (manque) ou 36 (surplus).
+//   Poids d'essai (somme 20) : place-P1 à P3 2, signale-P4 3, adresseLibre-P5 2, scan-P1 P2 P3 P5 1, pasPoseHaut 1, charge 0, compte 0,75 × 4, scanAvant 1.
+const IDE = 'essai-evaluation';
+const SE = {
+  onnaing: { cariste: 'Léo', p1: 'C1-T03-N1-E2', p2: 'B2-T02-N1-E3', p3: 'A2-T02-N3-E1', p4: 'A1-T02-N2-E2', p5: 'A1-T03-N1-E1', libre: 'A1-T01-N1-E2',
+    compter: ['B1-T02-N1-E2', 'C2-T02-N1-E1', 'C1-T04-N1-E3', 'B2-T04-N1-E2'], reel: [26, 31, 27, 29], travees: 24, allees: ['A', 'B', 'C'],
+    plaqueP3: 'Charge max 1 200 kg par niveau', plaqueP4: 'Charge max 1 400 kg par niveau', systeme: { manque: 34, surplus: 29 } },
+  belleville: { cariste: 'Hugo', p1: 'B1-T03-N1-E2', p2: 'A2-T04-N1-E1', p3: 'B2-T02-N3-E3', p4: 'A1-T03-N2-E2', p5: 'B1-T02-N1-E1', libre: 'A2-T01-N1-E3',
+    compter: ['A1-T02-N1-E3', 'A2-T03-N1-E2', 'B2-T04-N1-E1', 'B1-T04-N1-E3'], reel: [29, 38, 30, 26], travees: 16, allees: ['A', 'B'],
+    plaqueP3: 'Charge max 1 300 kg par niveau', plaqueP4: 'Charge max 1 600 kg par niveau', systeme: { manque: 41, surplus: 36 } },
+};
+// Les adresses de palettes (adresse donnée, adresse libre) de chaque site : aucune n'est à compter.
+const ADRESSES_PAL = (S) => [S.p1, S.p2, S.p3, S.p4, S.p5, S.libre];
+// Dans l'ordre de `jalons` : chaque scan juste après son place / adresseLibre ; P4 (à signaler, sans nouvelle adresse) n'a pas de scan ; les gardes ; le comptage.
+const IDS_E = ['place-P1', 'scan-P1', 'place-P2', 'scan-P2', 'place-P3', 'scan-P3', 'signale-P4', 'adresseLibre-P5', 'scan-P5', 'pasPoseHaut', 'charge',
+  'compte-1', 'compte-2', 'compte-3', 'compte-4', 'recompte-1', 'recompte-2', 'recompte-3', 'recompte-4', 'scanAvant'];
+const RANGEMENT_E = IDS_E.slice(0, 11), COMPTAGE_E = IDS_E.slice(11);
+const toutE = (ids, j) => Object.fromEntries(ids.map((id) => [id, j]));
+// Une graine (identifiant d'élève) qui tombe sur le site et le sens d'écart demandés : la première `u<n>` qui convient.
+const uidE = (p, site, sens) => p.evaluate(async ([site, sens]) => {
+  const C = await import('/contenus/palettier-essai.js');
+  const { siteDe } = await import('/contenus/action-eval-sites.js');
+  for (let i = 0; i < 400; i++) { const u = `u${i}`; if (siteDe(u) === site && C.sensEcartEval(u) === sens) return u; }
+  return null;
+}, [site, sens]);
+// Monte l'environnement de l'évaluation. `o` : site + sens (la graine), uid, variante ('sansRendCopie' : l'ancien comportement ; 'sansBouton' : phases
+// sans bouton ; 'sansPhases' : ni phases ni bouton ; 'palettes' : le rangement seul, avec `rendCopie: false` ; 'palettesSans' : le rangement seul, sans ;
+// 'lendemain' / 'lendemainSans' : le cas du lendemain en copie, avec / sans `rendCopie: false` ; 'tout' : la séance déclare TOUT ce qui parle — `verdict`, `regles`
+// dépliées — et la copie doit tout taire), role, db.
+const monterE = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const { declarationDe } = await import('/core/types/entrepot-palettier.js');
+  const C = await import('/contenus/palettier-essai.js');
+  document.querySelector('#palTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'palTest'; document.body.appendChild(hote);
+  const f = C.evaluation({ sansRendCopie: o.variante === 'sansRendCopie' });
+  let P = f;
+  if (o.variante === 'sansBouton') P = (g, x) => Object.assign(f(g, x), { phases: [{ id: 'rangement' }, { id: 'comptage' }] });
+  else if (o.variante === 'tout') P = (g, x) => Object.assign(f(g, x), { verdict: 'adresse', regles: { titre: 'Les règles', lignes: ['Une règle d’essai.'], ouvertes: true } });
+  else if (o.variante === 'sansPhases') P = (g, x) => { const D = f(g, x); delete D.phases; return D; };
+  else if (o.variante === 'palettes' || o.variante === 'palettesSans') {
+    P = (g, x) => { const D = f(g, x); delete D.phases; delete D.comptage; if (o.variante === 'palettesSans') delete D.rendCopie; return D; };
+  } else if (o.variante === 'lendemain' || o.variante === 'lendemainSans') {
+    P = C.lendemain(); if (o.variante === 'lendemain') P.rendCopie = false;
+  }
+  const lend = typeof P !== 'function';
+  // Le rangement seul n'a pas les 20 points du cas complet : jalons sans poids (la note est alors proportionnelle, sur 20).
+  const U = C.universPalettier({ temps: 'evaluation', entrepot: P, suite: lend ? false : 'evaluation', poids: !String(o.variante).startsWith('palettes') });
+  const db = lend ? { entrepots: { 'essai-lendemain': C.soirPrerempli('scanne') } } : (o.db || {});
+  const moteur = creerEntreprise(U);
+  window.__p = { db, P, U, temps: 'evaluation', moteur, remis: null, D: () => declarationDe(P, db, { copie: true }) };
+  moteur.rendre(hote, {
+    meta: { id: 'essai-palettier', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps: 'evaluation', copie: true },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: o.uid || C.graineDeSite(o.site || 'onnaing') },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+    rendreCopie: async (res) => { window.__p.remis = res; return { rendu: Date.now() }; },
+  });
+  document.querySelector('#palTest .ent-nav[data-vue="entrepot"]').click();
+}, o);
+const etatE = (p) => p.evaluate(() => JSON.parse(JSON.stringify((window.__p.db.entrepots || {})[window.__p.D().id] || null)));
+const jalonsE = (p) => p.evaluate(async () => {
+  const E = await import('/core/types/entrepot.js');
+  const W = window.__p;
+  return Object.fromEntries(E.jalonsEntrepot(W.db, W.D(), 'evaluation').L.map((l) => [l.id, l.etat]));
+});
+const gestesE = (p) => p.evaluate(() => Object.keys((window.__p.db.gestes || {})['essai-palettier'] || {}).sort());
+const remisE = (p) => p.evaluate(() => window.__p.remis);
+// « Rendre ma copie » : le bouton du bandeau du moteur, hors de la vue (un premier clic arme, le second rend).
+const rendreE = async (p) => {
+  await p.click('#palTest [data-copie-rendre]'); await p.click('#palTest [data-copie-rendre]');
+  await p.waitForFunction(() => window.__p.remis !== null);
+};
+// Le rangement juste de la matinée : P1 et P2 au sol, P3 confiée, P4 signalée (charge), P5 : adresse prise → adresse libre demandée, posée là.
+async function rangerE(p, S) {
+  await ranger(p, 'P1', S.p1); await ranger(p, 'P2', S.p2); await ranger(p, 'P3', S.p3, 'confier');
+  await signaler(p, 'P4', S.p4, 'charge');
+  await prendre(p, 'P5'); await ouvrir(p, S.p5); await bouton(p, 'libre'); await p.click(`${Z} [data-pal-modal-ok]`);
+  await ouvrir(p, S.libre); await bouton(p, 'poser');
+}
+async function scansE(p, S) {
+  for (const [id, a] of [['P1', S.p1], ['P2', S.p2], ['P3', S.p3], ['P5', S.libre]]) { await scanPal(p, id); await ouvrir(p, a); await scanEmp(p); }
+}
+const versComptage = async (p) => { await bouton(p, 'phase'); await bouton(p, 'phaseOui'); };
+// Compter la liste : les trois adresses justes d'un coup ; l'écart (rang 2) : « Recompter », le même nombre, puis « Confirmer ».
+async function compterE(p, S) {
+  for (let i = 0; i < 4; i++) {
+    await ouvrir(p, S.compter[i]); await scanC(p);
+    if (i === 1) { await taper(p, S.reel[1]); await choisir(p, 'recompter'); await taper(p, S.reel[1]); await choisir(p, 'confirmer'); } else await taper(p, S.reel[i]);
+  }
+}
+// Rien du système dans le DOM (hors enseignant) : aucun verdict, aucun « attendu », aucune réponse.
+const sansSysteme = (p) => p.evaluate(() => {
+  const z = document.querySelector('#palTest'), h = z.innerHTML, t = z.innerText;
+  return [/✗/, /✓ bien rangée/, /✓ remise en ordre/, /bien rangée/, /adresse attendue/, /· réel/, /data-pal-verdict/, /data-pal-cverdict/, /pe-verd pe-/, /pe-prof/, /Côté enseignant/, /Les règles/, /data-pe-regles/]
+    .filter((r) => r.test(h) || r.test(t)).map(String);
+});
+
+await v('Évaluation : une déclaration fautive ne se charge pas (`rendCopie` autre que false, phases mal écrites, sans palettes ou sans comptage, bouton ou consigne qui ne sont pas du texte, un lendemain en même temps, une adresse à compter qui est celle d’une palette) ; sans bouton ni `rendCopie`, elle se charge', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntrepot } = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const D0 = C.evaluation()('u0', { copie: true });
+    const essai = (o) => { try { creerEntrepot(Object.assign({}, D0, { id: `x${Math.random()}` }, o)); return ''; } catch (e) { return e.message; } };
+    const adr = (i, a) => ({ comptage: { adresses: D0.comptage.adresses.map((x, k) => (k === i ? Object.assign({}, x, { adresse: a }) : x)) } });
+    return [essai({}),
+      essai({ rendCopie: true }), essai({ rendCopie: 'oui' }), essai({ rendCopie: undefined }),
+      essai({ phases: [{ id: 'rangement' }] }), essai({ phases: [{ id: 'rangement' }, { id: 'lendemain', bouton: 'x' }] }),
+      essai({ comptage: undefined }), essai({ palettes: undefined }),
+      essai({ phases: [{ id: 'rangement' }, { id: 'comptage', bouton: 42 }] }), essai({ phases: [{ id: 'rangement' }, { id: 'comptage', bouton: ' ' }] }),
+      essai({ phases: [{ id: 'rangement' }, { id: 'comptage', consigne: 5 }] }),
+      essai({ lendemain: { kevin: {} } }),
+      essai(adr(0, D0.palettes[0].adresse)), essai(adr(2, D0.palettes[4].adresseLibre)),
+      essai({ phases: [{ id: 'rangement' }, { id: 'comptage' }] })];
+  });
+  egal(r[0], '', `l’évaluation d’essai se charge : ${r[0]}`);
+  vrai(r[1].includes('rendCopie : ne prend que la valeur false') && r[2].includes('rendCopie : ne prend que la valeur false'), `rendCopie true / « oui » : ${r[1]} / ${r[2]}`);
+  egal(r[3], '', '`rendCopie` absent : se charge (l’ancien comportement)');
+  vrai(r[4].includes('seconde phase s’appelle « comptage »') && r[5].includes('seconde phase s’appelle « comptage »'), `phases mal écrites : ${r[4]} / ${r[5]}`);
+  vrai(r[6].includes('il faut des palettes à ranger ET un comptage') && r[7].includes('il faut des palettes à ranger ET un comptage'), `sans comptage ou sans palettes : ${r[6]} / ${r[7]}`);
+  vrai(r[8].includes('le bouton de la phase « comptage » est un texte') && r[9].includes('le bouton de la phase « comptage » est un texte'), `bouton : ${r[8]} / ${r[9]}`);
+  vrai(r[10].includes('la consigne de la phase « comptage » est un texte'), r[10]);
+  vrai(r[11].includes('pas de lendemain'), r[11]);
+  vrai(r[12].includes('est l’adresse donnée de la palette P1') && r[13].includes('est l’adresse donnée de la palette P5'),
+    `une adresse à compter qui est celle d’une palette (donnée ou libre) : ${r[12]} / ${r[13]}`);
+  egal(r[14], '', 'phases sans bouton : se charge');
+});
+
+await v('Évaluation : les jalons sont les mêmes pour toutes les graines (20 jalons dans l’ordre : le rangement, puis le comptage ; P4 à signaler n’a pas de scan) et les deux sites sont tirés ; en copie les étapes (`etapesPalettier`) sont les mêmes', async () => {
+  const r = await pg.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const { siteDe } = await import('/contenus/action-eval-sites.js');
+    const f = C.evaluation(), ids = new Set(), sites = new Set();
+    for (let i = 0; i < 60; i++) {
+      const g = `u${i}`; sites.add(siteDe(g));
+      ids.add(E.jalonsEntrepot({}, f(g, { copie: true }), 'evaluation').L.map((l) => l.id).join());
+    }
+    return { ids: [...ids], sites: [...sites].sort(), etapes: E.etapesPalettier(f, { copie: true }).map((e) => e.id) };
+  });
+  egal(r.ids, [IDS_E.join()], 'les mêmes ids pour 60 graines');
+  egal(r.sites, ['belleville', 'onnaing'], 'les deux sites sont tirés');
+  egal(r.etapes, IDS_E, '`etapesPalettier` en copie : mêmes ids, rangement puis comptage');
+});
+
+await v('Évaluation : deux sites, deux plans — Onnaing 24 travées, 3 allées, plaques 1 400 / 1 200 kg, cariste Léo ; Belleville 16 travées, 2 allées, plaques 1 600 / 1 300 kg, cariste Hugo ; mêmes cartes P1 à P5 aux deux', async () => {
+  const lu = [];
+  for (const site of ['onnaing', 'belleville']) {
+    const S = SE[site];
+    await monterE(pg, { site });
+    egal(await pg.$$eval(`${Z} .pe-bandeau [data-pe-pal]`, (L) => L.map((b) => b.dataset.pePal)), ['P1', 'P2', 'P3', 'P4', 'P5'], `${site} : les cartes`);
+    egal(await pg.$$eval(`${Z} [data-pe-trav]`, (L) => L.length), S.travees, `${site} : travées`);
+    egal(await pg.$$eval(`${Z} [data-pal-amonter]`, (L) => L.map((g) => g.dataset.palAmonter)), S.allees, `${site} : une zone « À monter » par allée`);
+    egal(await texte(pg, '[data-pal-amonter-liste]'), `À monter (${S.cariste}) : aucune`, `${site} : le cariste`);
+    egal(await texte(pg, '[data-pal-etiq="P1"]'), `Adresse ${S.p1}`, `${site} : l’adresse de P1`);
+    await ouvrir(pg, S.p3); const a = await texte(pg, '[data-pal-plaque]');
+    await ouvrir(pg, S.p4); const b = await texte(pg, '[data-pal-plaque]');
+    egal([a, b], [S.plaqueP3, S.plaqueP4], `${site} : les plaques de charge`);
+    lu.push([S.travees, a, b, await texte(pg, '[data-pal-amonter-liste]')]);
+  }
+  vrai(lu[0].join('|') !== lu[1].join('|'), 'les deux plans diffèrent');
+});
+
+await v('Évaluation, Onnaing (le système croit 34 : il MANQUE) : le rangement (P3 confiée, P4 signalée, P5 adresse libre) et ses scans, « Valider » ne rend PAS la copie, le bouton « Passer au comptage » prend la place, le comptage vient après (stock de départ), « Terminer » ne rend pas non plus ; « Rendre ma copie » (le bandeau) rend 20 / 20', async () => {
+  const S = SE.onnaing;
+  await monterE(pg, { uid: await uidE(pg, 'onnaing', 'manque') });
+  egal(await jalonsE(pg), toutE(IDS_E, 'attente'), 'tout à faire');
+  egal(await pg.getAttribute(Z, 'data-pe-phase'), 'rangement', 'phase : rangement');
+  await rangerE(pg, S); await scansE(pg, S);
+  await valider(pg);
+  egal([await remisE(pg), await pg.getAttribute(Z, 'data-pe-phase'), await texte(pg, '[data-pal="phase"]'), await present(pg, '[data-pal-acompter]'), await present(pg, '[data-pal="valider"]')],
+    [null, 'rangement', 'Passer au comptage', false, false], '« Valider » : pas de copie rendue, le bouton de phase, pas encore de comptage');
+  vrai((await texte(pg, '[data-pe-consigne]')).endsWith('Rangement validé. Pour la suite, clique Passer au comptage.'), 'la consigne');
+  egal(await texte(pg, '[data-pal-etat="P1"]'), 'posée en C1-T03-N1-E2 · scannée', 'la carte : posée, scannée');
+  egal(await texte(pg, '[data-vt-actu]'), 'Terminé.', 'le Terminal : le rangement est terminé');
+  egal(await jalonsE(pg), { ...toutE(RANGEMENT_E, 'ok'), ...toutE(COMPTAGE_E, 'attente') }, 'le rangement jugé, le comptage à faire');
+  egal(await etatE(pg).then((e) => [e.phase, e.valide, 'comptage' in e]), ['rangement', true, true], 'état : phase « rangement » (le comptage est créé vide au premier dessin)');
+  vrai((await gestesE(pg)).includes('entrepot:essai-evaluation:valider') && !(await gestesE(pg)).includes('entrepot:essai-evaluation:phase:comptage'), 'valider publié, phase:comptage pas encore');
+  await bouton(pg, 'phase');
+  egal(await texte(pg, '[data-pal-confirme-phase]').then((t) => t.startsWith('Passer au comptage ?')), true, 'confirmation');
+  await bouton(pg, 'phaseNon');
+  egal([await present(pg, '[data-pal="phase"]'), await present(pg, '[data-pal-acompter]')], [true, false], '« Non » : toujours au rangement');
+  await versComptage(pg);
+  egal([await pg.getAttribute(Z, 'data-pe-phase'), await present(pg, '[data-pal="phase"]'), await present(pg, '[data-pal="terminer"]'), await actu(pg)], ['comptage', false, true, 'Scanne l’adresse.'], 'le comptage');
+  egal(await pg.$$eval(`${Z} [data-pal-acompter] li b`, (L) => L.map((x) => x.textContent)), S.compter, 'la liste : quatre adresses du stock de départ');
+  vrai(ADRESSES_PAL(S).every((a) => !S.compter.includes(a)), 'aucune adresse à compter n’est une adresse de palette');
+  egal(await texte(pg, '.pal-compte-consigne p'), 'Compte les adresses de la liste « À compter », avec le Terminal.', 'la consigne de la phase');
+  vrai((await gestesE(pg)).includes('entrepot:essai-evaluation:phase:comptage'), 'phase:comptage publié');
+  egal((await etatE(pg)).phase, 'comptage', 'état : phase « comptage »');
+  // Le comptage : le Terminal propose de recompter sur l'écart (rang 2), sans dire de combien ni dans quel sens.
+  await ouvrir(pg, S.compter[0]); await scanC(pg); await taper(pg, 26);
+  egal(await actu(pg), 'Scanne l’adresse.', 'compté juste : « Compris. », adresse suivante');
+  await ouvrir(pg, S.compter[1]); await scanC(pg); await taper(pg, 31);
+  egal(await actu(pg), 'Quantité différente. Recompter ou confirmer ?', 'le Terminal parle en copie : il propose de recompter');
+  await choisir(pg, 'recompter'); await taper(pg, 31); await choisir(pg, 'confirmer');
+  for (const i of [2, 3]) { await ouvrir(pg, S.compter[i]); await scanC(pg); await taper(pg, S.reel[i]); }
+  egal(await jalonsE(pg), { ...toutE(RANGEMENT_E, 'ok'), ...toutE(COMPTAGE_E, 'attente') }, 'le comptage n’est jugé qu’à « Terminer le comptage »');
+  await terminer(pg);
+  egal([await remisE(pg), await texte(pg, '.pe-act .btn[disabled]')], [null, 'Comptage terminé'], '« Terminer » ne rend pas la copie : le bouton dit « Comptage terminé », pas « Copie rendue »');
+  egal(await jalonsE(pg), toutE(IDS_E, 'ok'), 'tout jugé');
+  const ec = await pg.evaluate(async () => (await import('/core/types/entrepot.js')).ecartsConfirmes(window.__p.db, window.__p.D()));
+  egal(ec.map((x) => [x.rang, x.adresse, x.compte, x.systeme, x.sens]), [[2, S.compter[1], 31, 34, 'manque']], 'un écart confirmé : l’adresse n° 2, il manque');
+  await rendreE(pg);
+  const r = await remisE(pg);
+  egal([r.score, r.max], [20, 20], 'la copie rendue par le bandeau : 20 sur 20');
+  egal([await texte(pg, '.pe-act .btn[disabled]'), (await texte(pg, '[data-pe-consigne]')).endsWith('Copie rendue.')], ['Copie rendue', true], 'après la remise : « Copie rendue »');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Évaluation, Belleville (le système croit 36 : il y a un SURPLUS) : le même parcours sur un autre plan (2 allées, plaques 1 600 / 1 300), mêmes jalons, 20 / 20 ; l’écart confirmé dit « surplus »', async () => {
+  const S = SE.belleville;
+  await monterE(pg, { uid: await uidE(pg, 'belleville', 'surplus') });
+  egal(await jalonsE(pg), toutE(IDS_E, 'attente'), 'mêmes jalons');
+  await rangerE(pg, S); await scansE(pg, S);
+  await valider(pg); await versComptage(pg);
+  egal(await pg.$$eval(`${Z} [data-pal-acompter] li b`, (L) => L.map((x) => x.textContent)), S.compter, 'la liste de Belleville');
+  await compterE(pg, S);
+  await terminer(pg);
+  egal([await remisE(pg), await jalonsE(pg)], [null, toutE(IDS_E, 'ok')], 'pas de copie rendue, tout juste');
+  const ec = await pg.evaluate(async () => (await import('/core/types/entrepot.js')).ecartsConfirmes(window.__p.db, window.__p.D()));
+  egal(ec.map((x) => [x.rang, x.adresse, x.compte, x.systeme, x.sens]), [[2, S.compter[1], 38, 36, 'surplus']], 'l’écart : surplus');
+  await rendreE(pg);
+  egal([(await remisE(pg)).score, (await remisE(pg)).max], [20, 20], '20 sur 20');
+});
+
+await v('Évaluation, l’inaction ne rapporte rien : copie rendue sans rien faire → 0 / 20 ; rangement validé vide, comptage « Terminé » vide → 0 / 20, tous les jalons faux', async () => {
+  await monterE(pg, { site: 'onnaing' });
+  await rendreE(pg);
+  egal((await remisE(pg)).score, 0, 'rien fait : 0');
+  await monterE(pg, { site: 'belleville' });
+  await valider(pg); await versComptage(pg); await terminer(pg);
+  const J = await jalonsE(pg);
+  egal(J, toutE(IDS_E, 'ko'), 'tout faux (les gardes aussi : aucune palette traitée)');
+  await rendreE(pg);
+  egal((await remisE(pg)).score, 0, 'rangement et comptage vides : 0');
+});
+
+await v('Évaluation : rien du système dans le DOM, à aucune phase — ni verdict, ni « attendu », ni les règles, ni le nombre du système (34 à Onnaing, 36 à Belleville), même quand la séance déclare `verdict` et `regles` (Belleville) : au rangement, rangement validé, au comptage (avant et après « Terminer »), copie rendue ; et l’enseignant, lui, les voit', async () => {
+  for (const [site, sens] of [['onnaing', 'manque'], ['belleville', 'surplus']]) {
+    const S = SE[site], N = S.systeme[sens];
+    await monterE(pg, { uid: await uidE(pg, site, sens), variante: site === 'belleville' ? 'tout' : undefined });
+    const aChaque = async (quand) => { egal(await sansSysteme(pg), [], `${site}, ${quand} : aucun verdict ni attendu`); egal(await fuite(pg, [N]), [], `${site}, ${quand} : le nombre du système (${N}) n’apparaît pas`); };
+    await aChaque('rangement, au départ');
+    await rangerE(pg, S); await scansE(pg, S);
+    await aChaque('rangement fait');
+    await valider(pg);
+    await aChaque('rangement validé');
+    await versComptage(pg);
+    await aChaque('comptage, au départ');
+    await compterE(pg, S);
+    await aChaque('comptage fait, avant « Terminer »');
+    await terminer(pg);
+    await aChaque('comptage terminé');
+    await rendreE(pg);
+    await aChaque('copie rendue');
+  }
+  // Dans les deux sens : l'enseignant voit les attendus (la même recherche trouve le nombre du système).
+  await monterE(pg, { uid: await uidE(pg, 'onnaing', 'manque'), role: 'prof', variante: 'sansPhases' });
+  await valider(pg);
+  vrai((await fuite(pg, [34])).length > 0, 'l’enseignant voit le nombre du système au comptage');
+  vrai((await sansSysteme(pg)).length > 0, 'et les attendus (Côté enseignant)');
+});
+
+await v('Évaluation : le Terminal parle en copie — « Ce n’est pas l’adresse de cette palette. » (rouge), « Confirmé. », « C’est noté. » au signalement (avec la fenêtre du système, sans nouvelle adresse), l’adresse libre de P5 à la demande ; au comptage « Quantité différente. Recompter ou confirmer ? »', async () => {
+  const S = SE.onnaing;
+  await monterE(pg, { uid: await uidE(pg, 'onnaing', 'manque') });
+  await ranger(pg, 'P1', S.p1); await scanPal(pg, 'P1'); await ouvrir(pg, S.p2); await scanEmp(pg);
+  egal(await lignesRouges(pg), ['Ce n’est pas l’adresse de cette palette.'], 'refus, en rouge');
+  await ouvrir(pg, S.p1); await scanEmp(pg);
+  egal(await derniere(pg), 'C1-T03-N1-E2 — Cahiers grand format — 30 cartons. Confirmé.', 'confirmé');
+  await prendre(pg, 'P4'); await ouvrir(pg, S.p4); await bouton(pg, 'signaler'); await pg.click(`${Z} [data-pal-motif="charge"]`);
+  egal(await texte(pg, '[data-pal-modal-texte]'), 'Signalement enregistré pour P4 (Lessive liquide 3 L) : « La charge serait dépassée ». C’est noté.', 'la fenêtre du système : jamais une nouvelle adresse');
+  await pg.click(`${Z} [data-pal-modal-ok]`);
+  egal(await derniere(pg), 'C’est noté.', 'le Terminal : « C’est noté. »');
+  await prendre(pg, 'P5'); await ouvrir(pg, S.p5); await bouton(pg, 'libre');
+  egal([await texte(pg, '[data-pal-modal-texte]'), await derniere(pg)], ['Adresse libre pour P5 (Bougies parfumées) : A1-T01-N1-E2.', 'Adresse libre pour P5 (Bougies parfumées) : A1-T01-N1-E2.'], 'l’adresse libre de P5, au Terminal et dans la fenêtre');
+  await pg.click(`${Z} [data-pal-modal-ok]`);
+  egal(await sansSysteme(pg), [], 'aucun verdict');
+});
+
+await v('Évaluation, P4 à signaler (sans nouvelle adresse) : signalée « charge » → « C’est noté. », elle reste en réception, `signale-P4` ok, pas de `scan-P4` ; confiée là → `signale-P4` et `charge` ko ; mauvais motif → ko', async () => {
+  const S = SE.onnaing;
+  await monterE(pg, { uid: await uidE(pg, 'onnaing', 'manque') });
+  await signaler(pg, 'P4', S.p4, 'charge');
+  const e = await etatE(pg);
+  egal([e.signalees, e.nouvelles, e.posees, e.confiees], [{ P4: { motif: 'charge', adresse: S.p4 } }, {}, {}, {}], 'signalée, aucune nouvelle adresse, ni posée ni confiée');
+  egal(await texte(pg, '[data-pal-etat="P4"]'), 'signalée', 'la carte : signalée, en réception');
+  await valider(pg);
+  const J = await jalonsE(pg);
+  egal([J['signale-P4'], J['scan-P4']], ['ok', undefined], 'signale-P4 ok, aucun scan-P4');
+  egal(await texte(pg, '[data-pal-etat="P4"]'), 'signalée', 'après « Valider » : toujours signalée, en réception');
+  // Confiée à son adresse (qui dépasse la plaque) : signale-P4 ko et charge ko.
+  await monterE(pg, { uid: await uidE(pg, 'onnaing', 'manque') });
+  await ranger(pg, 'P4', S.p4, 'confier'); await valider(pg);
+  const K = await jalonsE(pg);
+  egal([K['signale-P4'], K.charge, K.pasPoseHaut], ['ko', 'ko', 'ko'], 'P4 confiée là : signale-P4 ko, charge ko (et la garde : les autres palettes ne sont pas traitées)');
+  // Signalée avec un motif faux (« c'est occupé » : l'emplacement est libre).
+  await monterE(pg, { uid: await uidE(pg, 'belleville', 'manque') });
+  await signaler(pg, 'P4', SE.belleville.p4, 'occupe'); await valider(pg);
+  egal((await jalonsE(pg))['signale-P4'], 'ko', 'mauvais motif : ko');
+});
+
+await v('Évaluation, les phases : avec un bouton, geste `phase:comptage` (un `apresGeste` dessus se charge), état `phase` « rangement » puis « comptage », exportée par `etatPalettier` ; sans bouton, le comptage suit « Valider » et il n’y a pas de geste ; sans `phases`, l’ancien comportement (le comptage suit « Valider », pas d’état `phase`)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntrepot, etatPalettier } = await import('/core/types/entrepot.js');
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const { apresGeste } = await import('/core/declencheurs.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const f = C.evaluation();
+    const D = f('u0', { copie: true });
+    const sans = Object.assign({}, D, { id: 'x1', phases: [{ id: 'rangement' }, { id: 'comptage' }] });
+    const aucune = Object.assign({}, D); delete aucune.phases; aucune.id = 'x2';
+    const essai = (nom) => {
+      const U = C.universPalettier({ temps: 'evaluation', entrepot: f, poids: false });
+      U.volet = { semer: () => ({ mails: [] }), declencheurs: [{ id: 'd', quand: apresGeste(nom), semer: () => ({ mails: [] }) }] };
+      try { creerEntreprise(U); return ''; } catch (e) { return e.message; }
+    };
+    return { avec: creerEntrepot(D).signaux.filter((g) => g.includes('phase')), sans: creerEntrepot(sans).signaux.filter((g) => g.includes('phase')),
+      aucune: creerEntrepot(aucune).signaux.filter((g) => g.includes('phase')), nb: [creerEntrepot(D).signaux.length, creerEntrepot(sans).signaux.length],
+      ok: essai('entrepot:essai-evaluation:phase:comptage'), inconnu: essai('entrepot:essai-evaluation:phase:lendemain'),
+      lisible: Object.keys(etatPalettier({}, D, { copie: true })) };
+  });
+  egal(r.avec, ['entrepot:essai-evaluation:phase:comptage'], 'avec bouton : un geste de phase');
+  egal([r.sans, r.aucune], [[], []], 'sans bouton ou sans phases : aucun geste de phase');
+  egal(r.nb, [r.nb[1] + 1, r.nb[1]], 'un seul geste de plus');
+  egal([r.ok, r.inconnu.includes('phase:lendemain')], ['', true], 'un apresGeste sur phase:comptage se charge, sur phase:lendemain non');
+  vrai(r.lisible.includes('phase'), `etatPalettier rend la phase : ${r.lisible}`);
+  // Sans bouton : « Valider » ouvre aussitôt le comptage, aucun état `phase`.
+  await monterE(pg, { site: 'onnaing', variante: 'sansBouton' });
+  await valider(pg);
+  egal([await pg.getAttribute(Z, 'data-pe-phase'), await present(pg, '[data-pal="phase"]'), 'phase' in (await etatE(pg)), await remisE(pg)], ['comptage', false, false, null], 'sans bouton : le comptage suit « Valider », pas d’état `phase` ; pas de copie rendue');
+  await monterE(pg, { site: 'onnaing', variante: 'sansPhases' });
+  await valider(pg);
+  egal([await pg.getAttribute(Z, 'data-pe-phase'), await present(pg, '[data-pal="phase"]'), 'phase' in (await etatE(pg)), await remisE(pg)], ['comptage', false, false, null], 'sans phases : pareil, pas d’état `phase` ; `rendCopie: false` : pas de copie rendue');
+});
+
+await v('Évaluation, `rendCopie` : absent, « Terminer le comptage » rend la copie (et « Valider » non, un comptage suit) ; `rendCopie: false` sur le rangement seul : « Valider » ne rend pas, sans l’option il rend ; sur le lendemain : « Valider mon transfert » ne rend pas, sans l’option il rend (comme avant)', async () => {
+  const S = SE.onnaing;
+  // 1. Phases + comptage, SANS rendCopie : l'ancien comportement (le comptage rend la copie).
+  await monterE(pg, { site: 'onnaing', variante: 'sansRendCopie' });
+  await rangerE(pg, S); await valider(pg); await versComptage(pg);
+  egal(await remisE(pg), null, 'sans rendCopie : « Valider » ne rend pas (un comptage suit)');
+  await ouvrir(pg, S.compter[0]); await scanC(pg); await taper(pg, 26);
+  await terminer(pg);
+  await pg.waitForFunction(() => window.__p.remis !== null);
+  egal(await texte(pg, '.pe-act .btn[disabled]'), 'Copie rendue', 'sans rendCopie : « Terminer » rend la copie, le bouton dit « Copie rendue »');
+  // 2. Le rangement seul.
+  await monterE(pg, { site: 'onnaing', variante: 'palettes' });
+  await ranger(pg, 'P1', S.p1); await valider(pg);
+  egal([await remisE(pg), await texte(pg, '.pe-act .btn[disabled]')], [null, 'Rangement validé'], 'rangement seul, rendCopie false : pas de copie rendue, « Rangement validé »');
+  await rendreE(pg);
+  egal((await remisE(pg)).max, 20, 'la copie se rend par le bandeau');
+  await monterE(pg, { site: 'onnaing', variante: 'palettesSans' });
+  await ranger(pg, 'P1', S.p1); await valider(pg);
+  await pg.waitForFunction(() => window.__p.remis !== null);
+  egal(await texte(pg, '.pe-act .btn[disabled]'), 'Copie rendue', 'rangement seul, sans rendCopie : « Valider » rend la copie');
+  // 3. Le lendemain (soir déjà validé, on cherche P9).
+  for (const [variante, attendu, bouton2] of [['lendemain', false, 'Transfert validé'], ['lendemainSans', true, 'Copie rendue']]) {
+    await monterE(pg, { variante });
+    await bouton(pg, 'phase'); await bouton(pg, 'phaseOui');
+    await bouton(pg, 'lvalider'); await bouton(pg, 'lvaliderOui');
+    if (attendu) await pg.waitForFunction(() => window.__p.remis !== null);
+    egal([(await remisE(pg)) !== null, await texte(pg, '.pe-act .btn[disabled]')], [attendu, bouton2], `lendemain, ${variante} : « Valider mon transfert »`);
+  }
+});
+
+await v('Évaluation : la page d’essai (cas « Évaluation », Onnaing et Belleville) tient en 1366 × 768 et 1280 × 720 sans défiler — plan, travée et vue de près (étiquettes, boutons), phase « comptage » — et « Rendre ma copie » (bandeau) affiche la note des jalons', async () => {
+  const pe = await ctx.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const site of ['onnaing', 'belleville']) {
+    const S = SE[site];
+    for (const [w, h] of [[1366, 768], [1280, 720]]) {
+      await pe.setViewportSize({ width: w, height: h });
+      await pe.goto(BASE + 'outils/essai-palettier.html');
+      await pe.waitForSelector('.pal');
+      await pe.selectOption('#reglages select[name="cas"]', 'evaluation');
+      await pe.selectOption('#reglages select[name="site"]', site);
+      await pe.waitForSelector('.pal [data-pe-pal="P5"]');
+      egal(await pe.$$eval('.pal [data-pe-trav]', (L) => L.length), S.travees, `${site} : le bon plan`);
+      await pe.addStyleTag({ content: '#reglages, #mention, #essaiNote { display: none !important }' });
+      const deborde = () => pe.evaluate(() => Math.max(0, document.documentElement.scrollHeight - innerHeight));
+      const vu = (s) => pe.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.right <= innerWidth && r.height > 0; }, s);
+      const plan = await pe.evaluate(() => { const r = document.querySelector('.pal .pe-plan svg').getBoundingClientRect(); return [Math.round(r.width), Math.round(r.height), r.right <= innerWidth && r.bottom <= innerHeight]; });
+      egal([await deborde(), plan[2]], [0, true], `${site} ${w} × ${h} : le plan tient (${plan[0]} × ${plan[1]} px)`);
+      await pe.click('.pal [data-pe-pal="P1"]');
+      await pe.click(`.pal [data-pe-trav="${S.p1.slice(0, 6)}"]`);
+      await pe.click(`.pal [data-pe-emp="${S.p1}"]`);
+      egal([await vu('.pal [data-pal="poser"]'), await vu('.pal [data-pal="signaler"]'), await vu('.pal [data-pal-scan-emp]'), await deborde()], [true, true, true, 0], `${site} ${w} × ${h} : travée et vue de près (étiquette, boutons)`);
+      // Le comptage : phase suivante, la liste, la palette dessinée.
+      await pe.click('.pal [data-pal="retour"]');
+      await pe.click('.pal [data-pal="valider"]'); await pe.click('.pal [data-pal="validerOui"]');
+      await pe.click('.pal [data-pal="phase"]'); await pe.click('.pal [data-pal="phaseOui"]');
+      await pe.waitForSelector('.pal[data-pe-phase="comptage"]');
+      await pe.click(`.pal [data-pe-trav="${S.compter[0].slice(0, 6)}"]`);
+      await pe.click(`.pal [data-pe-emp="${S.compter[0]}"]`);
+      await pe.click('.pal [data-pal-compte-emp]');
+      await pe.fill('.pal [data-vt-champ]', '99'); await pe.press('.pal [data-vt-champ]', 'Enter');
+      egal([await vu('.pal [data-pal-acompter] li:last-child'), await vu('.pal [data-vt-choix="confirmer"]'), await vu('.pal [data-pal-pile] svg'), await deborde()], [true, true, true, 0], `${site} ${w} × ${h} : le comptage (liste, boutons du Terminal, palette dessinée)`);
+    }
+  }
+  // « Rendre ma copie » : la note des jalons sous les réglages.
+  await pe.setViewportSize({ width: 1366, height: 768 });
+  await pe.goto(BASE + 'outils/essai-palettier.html');
+  await pe.waitForSelector('.pal');
+  await pe.selectOption('#reglages select[name="cas"]', 'evaluation');
+  await pe.waitForSelector('.pal [data-pe-pal="P5"]');
+  await pe.click('[data-copie-rendre]'); await pe.click('[data-copie-rendre]');
+  await pe.waitForSelector('#essaiNote:not([hidden])');
+  vrai((await pe.textContent('#essaiNote')).includes('COPIE RENDUE : note 0 / 20'), `la note affichée : ${await pe.textContent('#essaiNote')}`);
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+});
+
+/* =========================================================== la fenêtre « Message du système » et les questions au fil (22/10/2026) */
+// Un geste qui OUVRE la fenêtre (signaler, adresse libre, transfert) ne part qu'à sa FERMETURE (« Compris » ou Échap) : une question au fil
+// accrochée dessus (`apresGeste`) s'ouvrirait sinon SOUS la fenêtre, et son gel empêcherait de cliquer « Compris ». Retour du constructeur d'ENT-8.13.
+const panneauQ = (p) => p.$('#palTest [data-q-panneau]').then((e) => !!e);
+const repondreQ = async (p, id) => {
+  await p.click(`#palTest [data-q-choix="a"][data-q="${id}"]`); await p.click(`#palTest [data-q-repondre="${id}"]`);
+  await p.click('#palTest [data-q-reprendre]');
+};
+const GQ = 'entrepot:essai-palettier:';
+async function fenetreAvantQuestion(p, { ferme, geste, ouvrirFenetre }) {
+  await ouvrirFenetre();
+  egal([(await fenetre(p)).length, await panneauQ(p), (await gestes(p)).includes(geste)], [1, false, false], 'la fenêtre est seule visible : la question n’est pas là, le geste n’est pas encore publié');
+  await ferme();
+  await p.waitForSelector('#palTest [data-q-panneau]');
+  egal([(await fenetre(p)).length, (await gestes(p)).includes(geste)], [0, true], 'fenêtre fermée : le geste est publié, la question est là');
+  await repondreQ(p, 'q0');
+  egal(await panneauQ(p), false, 'la question répondue, on reprend le travail');
+}
+
+await v('Fenêtre du système : `signaler` — une question au fil sur ce geste ne s’ouvre qu’après « Compris » (cliqué à la souris) ; Échap fait de même ; l’état (signalement) est écrit tout de suite', async () => {
+  const g = `${GQ}signaler:P5`;
+  const ouvrirF = async () => { await prendre(pg, 'P5'); await ouvrir(pg, 'A1-T02-N3-E2'); await bouton(pg, 'signaler'); await pg.click(`${Z} [data-pal-motif="charge"]`); };
+  await monter(pg, { terminal: 'deux', fil: [g], filPart: 8 });   // 12 jalons + 8 points de question = 20
+  await fenetreAvantQuestion(pg, { geste: g, ouvrirFenetre: ouvrirF, ferme: async () => {
+    egal((await etat(pg)).signalees.P5.motif, 'charge', 'le signalement est déjà écrit pendant que la fenêtre est ouverte');
+    await pg.click(`${Z} [data-pal-modal-ok]`); } });
+  await monter(pg, { terminal: 'deux', fil: [g], filPart: 8 });
+  await fenetreAvantQuestion(pg, { geste: g, ouvrirFenetre: ouvrirF, ferme: () => pg.keyboard.press('Escape') });
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Fenêtre du système : `adresseLibre:<P>` — la question au fil s’ouvre après « Compris » ; un geste sans fenêtre (prendre une palette) part tout de suite', async () => {
+  const g = `${GQ}adresseLibre:P8`;
+  await monter(pg, { terminal: 'deux', libre: true, fil: [g], filPart: 6 });   // 14 jalons
+  await fenetreAvantQuestion(pg, { geste: g, ferme: () => pg.click(`${Z} [data-pal-modal-ok]`),
+    ouvrirFenetre: async () => { await prendre(pg, 'P8'); await ouvrir(pg, 'A1-T03-N1-E1'); await bouton(pg, 'libre'); } });
+  egal((await etat(pg)).libres.P8, 'A1-T01-N1-E2', 'l’adresse libre est écrite');
+  // Un geste SANS fenêtre part tout de suite : prendre une palette publie `prendre:P1` à l'instant, sans attendre rien.
+  await monter(pg, { terminal: 'deux', fil: [`${GQ}prendre:P1`], filPart: 8 });
+  await prendre(pg, 'P1');
+  await pg.waitForSelector('#palTest [data-q-panneau]');
+  egal((await gestes(pg)).includes(`${GQ}prendre:P1`), true, 'sans fenêtre, le geste part tout de suite');
+});
+
+await v('Fenêtre du système : `transfert` (le lendemain) — la question au fil s’ouvre après « Compris », le transfert est écrit tout de suite', async () => {
+  const g = `${GQ.replace('palettier', 'lendemain')}transfert`;
+  await monterL(pg, { chemin: 'scanne', fil: [g], filPart: 10 });   // 10 jalons
+  await passer(pg);
+  await fenetreAvantQuestion(pg, { geste: g, ferme: async () => {
+    egal((await etatL(pg)).lendemain.transfert.vers, LA.p9, 'le transfert est écrit pendant que la fenêtre est ouverte');
+    await pg.click(`${Z} [data-pal-modal-ok]`); },
+  ouvrirFenetre: async () => { await ouvrir(pg, LA.p9Posee); await scanPalL(pg, 'P9'); await ouvrir(pg, LA.p9); await scanEmpL(pg); } });
 });
 
 await v('Palettier : aucune erreur JavaScript', async () => { egal(erreurs, []); });

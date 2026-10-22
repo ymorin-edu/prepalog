@@ -124,7 +124,7 @@
 // « Terminer le comptage » (confirmation s'il reste des adresses) fige tout ; avec `verdict`, hors copie, chaque ligne de la liste
 // dit « ✓ » ou « ✗ compte » (« · réel : n » avec 'adresse').
 // Avec `palettes` ET `comptage` (ENT-8.14), le comptage vient après « Valider mon rangement » (qui ne rend alors pas la copie :
-// « Terminer le comptage » la rend) ; les phases nommées sont le lot 6.
+// « Terminer le comptage » la rend, sauf `rendCopie: false`) ; les phases nommées et `rendCopie` sont le lot 6 (plus bas).
 // GESTES : `compte:<rang>` (compte confirmé), `compte:scan` (adresse scannée pour compter), `compte:fin` (« Terminer le comptage »).
 // ÉTAT : `comptage: { scanne, enCours: { rang, compte } | null, comptes: { 1: 33 }, premiers, propositions: { 1: n }, recomptes:
 // { 1: n }, horsListe: [{ adresse, compte }], sansScan, fini, at }` (absent sans `comptage`).
@@ -133,10 +133,22 @@
 // au moins une fois ; rien proposé → ok) ; `scanAvant` (ko si rien n'est compté). Exports d'entrepot.js : `ecartsConfirmes`,
 // `etatComptage`.
 
+// L'ÉVALUATION EN COPIE (lot 6, 22/10/2026, ENT-8.14) : deux options, chacune absente = le comportement d'avant.
+//   rendCopie: false      comme le planning et le quai : en copie, « Valider mon rangement », « Terminer le comptage » et « Valider mon transfert »
+//                         figent leur phase sans RENDRE la copie (le bouton dit « Rangement validé » / « Comptage terminé » / « Transfert
+//                         validé », jamais « Copie rendue » avant la remise) ; la séance la rend par un autre écran (« Rendre ma copie » du moteur).
+//   phases: [{ id: 'rangement' }, { id: 'comptage', bouton: 'Passer au comptage', consigne: '…' }]   avec des palettes ET un comptage :
+//                         avec un `bouton`, le comptage commence quand l'élève le clique après « Valider mon rangement » (confirmation, geste
+//                         `phase:comptage`, état `phase` 'rangement' puis 'comptage') ; sans bouton, il suit « Valider » (le lot 4, aucun geste de phase).
+//                         `consigne` remplace la phrase du comptage (neutre : elle ne dit rien du système). Le comptage porte sur le stock de départ :
+//                         aucune adresse à compter n'est l'adresse (donnée, nouvelle ou libre) d'une palette (la déclaration ne se charge pas sinon).
+// Un plan par site : rien de neuf au moteur, `entrepot` est une fonction de la graine (lot 0) ; mêmes jalons pour tous les élèves (ids fixes).
+// En copie rien ne dit juste ou faux (ni verdict, ni « Les règles »), le Terminal et la fenêtre du système parlent (c'est l'outil).
+//
 // LE LENDEMAIN (lot 5, 22/10/2026 : « retrouver une palette et la transférer », ENT-8.13). Un seul entrepôt à deux phases (clé `phase`
 // de l'état : 'soir' puis 'lendemain') :
 //
-//   phases: [{ id: 'soir' }, { id: 'lendemain', bouton: 'Le lendemain, 6 h', date?, consigne? }],
+//   phases: [{ id: 'soir' }, { id: 'lendemain', bouton: 'Le lendemain, 6 h', date?, consigne? }],   // (lot 6 : aussi rangement / comptage, voir plus haut)
 //   lendemain: {
 //     kevin: { palette: { id: 'P9', nom, cartons, kg, adresse, adresseLibre? }, posee: 'B1-T03-N1-E3' },   // posée par Kevin dès le soir, sans scan
 //     nuit: { evacuees: ['A1-T02-N1-E3', …], alleeVers: 'A1-T02-N1-E2' | [ … ] },   // le stock évacué part ; une palette en réception est posée
@@ -243,8 +255,12 @@ export function compilerPalettier(M, err) {
     terminal = { nom: String(T.nom), scan: T.scan || 'palette-emplacement' };
   }
   const comptage = P.comptage != null ? compilerComptage(M, P.comptage, terminal, err) : null;
+  // Lot 6 : `rendCopie: false` (comme le planning et le quai) : en copie, aucune validation ne rend la copie, la séance la rend ailleurs.
+  if (P.rendCopie !== undefined && P.rendCopie !== false) err(`rendCopie : ne prend que la valeur false (reçu « ${P.rendCopie} »)`);
+  // Lot 6 : les phases `rangement` puis `comptage` (ENT-8.14) ; sinon les phases `soir` puis `lendemain` du lot 5.
+  const phaseC = compilerPhaseComptage(M, P, { comptage, aPal: Object.keys(M.pal).length > 0, prises }, err);
   // Lot 5 (le lendemain) : la palette de Kevin est posée dès le soir (le stock de la vue la porte : l'élève voit un emplacement occupé).
-  const lendemain = compilerLendemain(M, P, { terminal, cariste, comptage, prises }, err);
+  const lendemain = phaseC ? null : compilerLendemain(M, P, { terminal, cariste, comptage, prises }, err);
   // Lot 3, une fois le stock complet (le comptage l'a peut-être augmenté) : l'adresse donnée est OCCUPÉE, l'adresse libre est LIBRE.
   Object.values(M.pal).filter((p) => p.adresseLibre).forEach((p) => {
     const ou = `palette ${p.id}`;
@@ -285,7 +301,30 @@ export function compilerPalettier(M, err) {
     jalons.push({ id: 'transfert-place', type: 'transfertPlace', lendemain: true, lib: 'Palette remise à son adresse (ou à l’adresse libre demandée)' });
     jalons.push({ id: 'transfert-scan', type: 'transfertScan', lendemain: true, lib: 'Transfert scanné : le système sait où elle est' });
   }
-  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons, terminal, comptage, aPal, aLibre, lendemain });
+  // La phase suivante, quand la séance en déclare une avec un bouton (« Le lendemain, 6 h » ; « Passer au comptage ») : `depart` est la
+  // phase d'où l'on part (l'état `phase` y est créé), `id` celle où l'on va (geste `phase:<id>`).
+  const suite = lendemain ? { id: 'lendemain', depart: 'soir', bouton: lendemain.bouton, confirmation: `Passer à « ${lendemain.bouton} » ?` }
+    : phaseC && phaseC.bouton ? { id: 'comptage', depart: 'rangement', bouton: phaseC.bouton, confirmation: `${phaseC.bouton} ?` } : null;
+  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons, terminal, comptage, aPal, aLibre, lendemain, phaseC, suite, sansRendu: P.rendCopie === false });
+}
+
+// LES PHASES RANGEMENT / COMPTAGE (lot 6, ENT-8.14) : `phases: [{ id: 'rangement' }, { id: 'comptage', bouton?, consigne? }]`, avec des
+// palettes ET un comptage dans le même entrepôt. Avec un `bouton`, le comptage commence quand l'élève le clique après « Valider mon
+// rangement » (geste `phase:comptage`) ; sans bouton, il commence aussitôt après « Valider » (le lot 4). `consigne` remplace la phrase de
+// la consigne du comptage (neutre : elle ne dit rien du système). Le comptage se fait sur le stock de départ : AUCUNE adresse à compter
+// n'est une adresse donnée à une palette (adresse, nouvelle adresse, adresse libre). Rend null sans ces phases.
+function compilerPhaseComptage(M, P, { comptage, aPal, prises }, err) {
+  const PH = P.phases;
+  if (!Array.isArray(PH) || !PH[0] || PH[0].id !== 'rangement') return null;
+  if (PH.length !== 2 || !PH[1] || PH[1].id !== 'comptage') err('phases : [{ id: \'rangement\' }, { id: \'comptage\', bouton?, consigne? }] (lot 6), la seconde phase s’appelle « comptage »');
+  if (P.lendemain != null) err('phases rangement / comptage : pas de lendemain dans le même entrepôt (phases soir / lendemain, lot 5)');
+  if (!aPal || !comptage) err('phases rangement / comptage : il faut des palettes à ranger ET un comptage dans le même entrepôt');
+  if (PH[1].bouton != null && (typeof PH[1].bouton !== 'string' || !PH[1].bouton.trim())) err('phases : le bouton de la phase « comptage » est un texte (ex. « Passer au comptage »), ou rien (le comptage suit « Valider »)');
+  if (PH[1].consigne != null && typeof PH[1].consigne !== 'string') err('phases : la consigne de la phase « comptage » est un texte');
+  comptage.adresses.forEach((x) => {
+    if (prises.has(x.adresse)) err(`phases rangement / comptage : l’adresse à compter n° ${x.rang} (${x.adresse}) est l’adresse donnée de la palette ${prises.get(x.adresse)} (le comptage porte sur le stock de départ, jamais sur une adresse de palette)`);
+  });
+  return { bouton: PH[1].bouton ? PH[1].bouton.trim() : null, consigne: PH[1].consigne || '' };
 }
 
 // LE LENDEMAIN (lot 5) : `phases` et `lendemain` vont ensemble. Contrôle la déclaration, pose la palette de Kevin dans une COPIE du
@@ -295,7 +334,7 @@ function compilerLendemain(M, P, { terminal, cariste, comptage, prises }, err) {
   if (P.phases == null && P.lendemain == null) return null;
   const PH = P.phases;
   if (!Array.isArray(PH) || PH.length !== 2 || !PH[0] || PH[0].id !== 'soir' || !PH[1] || PH[1].id !== 'lendemain') {
-    err('phases : seule [{ id: \'soir\' }, { id: \'lendemain\', bouton, consigne }] est écrite (lot 5), avec « lendemain »');
+    err('phases : seule [{ id: \'soir\' }, { id: \'lendemain\', bouton, consigne }] est écrite (lot 5), avec « lendemain » ; ou [{ id: \'rangement\' }, { id: \'comptage\' }] (lot 6), avec palettes et comptage');
   }
   if (!PH[1].bouton || typeof PH[1].bouton !== 'string') err('phases : la phase « lendemain » a un bouton (son libellé, ex. « Le lendemain, 6 h »)');
   const LD = P.lendemain;
@@ -607,7 +646,9 @@ export function detailPalettier(M, e, L) {
       propositions: Object.assign({}, C.propositions), horsListe: C.horsListe.map((h) => Object.assign({}, h)), sansScan: C.sansScan || 0,
       fini: !!C.fini } } : {}),
     // Le lendemain (lot 5) : la palette cherchée, les ouvertures, le transfert, les scans refusés (trace).
-    ...(M.lendemain ? { phase: e.phase || 'soir', lendemain: lisibleL(M, e) } : {}) };
+    ...(M.lendemain ? { phase: e.phase || 'soir', lendemain: lisibleL(M, e) } : {}),
+    // Lot 6 : la phase d'un entrepôt rangement / comptage avec un bouton de phase.
+    ...(M.suite && M.phaseC ? { phase: e.phase || 'rangement' } : {}) };
 }
 // Le lendemain en clair (détail de la note, `etatPalettier`) : null avant le passage au lendemain.
 function lisibleL(M, e, niveau = 'standard') {
@@ -764,7 +805,8 @@ export function etatLisiblePalettier(M, e, db) {
     nouvelles: Object.assign({}, e.nouvelles), montees: montees(M, e, db), tentativesHaut: e.tentativesHaut || 0, valide: !!e.valide,
     ...(M.terminal ? { scans: Object.assign({}, e.scan), scansRefuses: e.scansRefuses || 0 } : {}),
     ...(M.aLibre ? { libres: Object.assign({}, e.libres) } : {}),
-    ...(M.lendemain ? { phase: e.phase || 'soir', lendemain: lisibleL(M, e, niveauEleve(db)) } : {}) };
+    ...(M.lendemain ? { phase: e.phase || 'soir', lendemain: lisibleL(M, e, niveauEleve(db)) } : {}),
+    ...(M.suite && M.phaseC ? { phase: e.phase || 'rangement' } : {}) };
 }
 
 // La déclaration d'un élève quand la séance passe une FONCTION `(graine, { niveau, copie })` (lot 0) : la même que celle
@@ -799,10 +841,14 @@ export function creerPalettier(P, M, opts, O) {
     geste('ouvrir'), ...(M.aPal ? [geste('monter'), geste('valider')] : []),
     ...(M.comptage ? [...M.comptage.adresses.map((x) => geste(`compte:${x.rang}`)), geste('compte:scan'), geste('compte:fin')] : []),
     // Le lendemain (lot 5) : le passage à la phase, les ouvertures du matin, la palette trouvée, son scan, le transfert, la validation.
-    ...(M.lendemain ? ['phase:lendemain', 'ouvrir:lendemain', 'trouvee', 'transfert:scan', 'transfert', 'valider:lendemain'].map(geste) : [])];
+    ...(M.lendemain ? ['phase:lendemain', 'ouvrir:lendemain', 'trouvee', 'transfert:scan', 'transfert', 'valider:lendemain'].map(geste) : []),
+    // Lot 6 : le bouton de la phase « comptage » (ENT-8.14) publie `phase:comptage`.
+    ...(M.suite && M.phaseC ? [geste('phase:comptage')] : [])];
   // LE COMPTAGE (lot 4) est-il l'écran du moment ? Sans palettes, toujours ; avec des palettes (ENT-8.14), après « Valider mon
-  // rangement » (les phases nommées sont le lot 6).
-  const enComptage = (e) => !!M.comptage && (!M.aPal || !!e.valide);
+  // rangement » (lot 6 : avec un bouton de phase, après ce bouton).
+  const enComptage = (e) => !!M.comptage && (!M.aPal || (!!e.valide && (!M.phaseC || !M.phaseC.bouton || e.phase === 'comptage')));
+  // La copie est-elle dite « rendue » ? En copie, la dernière validation la rend, sauf `rendCopie: false` (la séance la rend ailleurs).
+  const rendu = (R) => R.copie && (R.rendue || !M.sansRendu);
 
   function regime(api, e) {
     const rendue = !!(api && api.copieRendue && api.copieRendue());
@@ -835,8 +881,8 @@ export function creerPalettier(P, M, opts, O) {
       else Object.entries(comptageNeuf()).forEach(([k, v]) => { if (!(k in e.comptage)) e.comptage[k] = v; });
     }
     // Lot 5 : la phase (absente sans `phases`) ; l'état du lendemain naît au passage à la phase.
+    if (M.suite && !e.phase) e.phase = M.suite.depart;
     if (M.lendemain) {
-      if (!e.phase) e.phase = 'soir';
       if (e.phase === 'lendemain') {
         if (!e.lendemain) e.lendemain = lendemainNeuf();
         else Object.entries(lendemainNeuf()).forEach(([k, v]) => { if (!(k in e.lendemain)) e.lendemain[k] = v; });
@@ -996,13 +1042,15 @@ export function creerPalettier(P, M, opts, O) {
 
   /* ------------------------------------------------------------- le lendemain (lot 5) : les gestes */
   // `X` : le matin calculé (`matinPalettier`). Chaque geste rend le geste à publier (sans le préfixe), ou null.
-  // Passer au lendemain (après « Valider mon rangement », avec confirmation) : l'état du lendemain naît, l'écran revient au plan.
-  function passerLendemain(e) {
-    if (!M.lendemain || !e.valide || e.phase === 'lendemain') return null;
-    e.phase = 'lendemain'; e.lendemain = lendemainNeuf();
-    Object.assign(ui, { trav: null, pres: null, signaler: false, confirmer: false, confirmerPhase: false, alerte: null, marque: null });
+  // Passer à la phase suivante (après « Valider mon rangement », avec confirmation) : le lendemain (l'état du lendemain naît) ou le comptage
+  // (lot 6, l'état du comptage naît au dessin) ; l'écran revient au plan.
+  function passerPhase(e) {
+    if (!M.suite || !e.valide || e.phase === M.suite.id) return null;
+    e.phase = M.suite.id;
+    if (M.lendemain) e.lendemain = lendemainNeuf();
+    Object.assign(ui, { trav: null, pres: null, signaler: false, confirmer: false, confirmerPhase: false, alerte: null, marque: null, focusTerm: false });
     dire('');
-    return 'phase:lendemain';
+    return `phase:${M.suite.id}`;
   }
   // Ouvrir un emplacement de près, le matin : chaque ouverture compte ; celle de l'emplacement où est la palette cherchée la TROUVE.
   function ouvrirLendemain(e, a, X) {
@@ -1105,8 +1153,8 @@ export function creerPalettier(P, M, opts, O) {
     const n = (k, t) => `<span class="pe-num">${k}</span>${t}`;
     if (R.compte) return consigneComptage(e, R, X, n);
     if (R.lendemain) return consigneLendemain(e, R, n);
-    if (R.fige && M.lendemain) return n('✓', `Rangement validé. Pour la suite, clique <b>${ech(M.lendemain.bouton)}</b>.`);
-    if (R.fige) return n('✓', R.copie ? 'Copie rendue.' : 'Rangement validé : il ne change plus.');
+    if (R.fige && M.suite && !R.rendue) return n('✓', `Rangement validé. Pour la suite, clique <b>${ech(M.suite.bouton)}</b>.`);
+    if (R.fige) return n('✓', rendu(R) ? 'Copie rendue.' : 'Rangement validé : il ne change plus.');
     const pm = e.enMain ? M.pal[e.enMain] : null;
     if (!pm) {
       if (X.ps.every((p) => traitee(e, X.pl, p.id))) return n('✓', 'Toutes les palettes sont traitées. Relis, puis clique <b>Valider mon rangement</b>.');
@@ -1166,12 +1214,12 @@ export function creerPalettier(P, M, opts, O) {
     let act;
     const attend = Object.keys(e.confiees).filter((id) => !X.montees.includes(id));
     // Lot 5 : le rangement validé, le bouton de la phase suivante prend la place de « Valider » (avec confirmation).
-    if (R.fige && M.lendemain && !R.rendue && ui.confirmerPhase) {
-      act = `<span class="pe-confirme" data-pal-confirme-phase>Passer à « ${ech(M.lendemain.bouton)} » ?
+    if (R.fige && M.suite && !R.rendue && ui.confirmerPhase) {
+      act = `<span class="pe-confirme" data-pal-confirme-phase>${ech(M.suite.confirmation)}
         <button type="button" class="btn btn-p" data-pal="phaseOui" data-pe-cle="b:phaseOui">Oui</button>
         <button type="button" class="btn" data-pal="phaseNon" data-pe-cle="b:phaseNon">Non</button></span>`;
-    } else if (R.fige && M.lendemain && !R.rendue) act = `<button type="button" class="btn btn-p" data-pal="phase" data-pe-cle="b:phase">${ech(M.lendemain.bouton)}</button>`;
-    else if (R.fige) act = `<button type="button" class="btn" disabled>${R.copie ? 'Copie rendue' : 'Rangement validé'}</button>`;
+    } else if (R.fige && M.suite && !R.rendue) act = `<button type="button" class="btn btn-p" data-pal="phase" data-pe-cle="b:phase">${ech(M.suite.bouton)}</button>`;
+    else if (R.fige) act = `<button type="button" class="btn" disabled>${rendu(R) ? 'Copie rendue' : 'Rangement validé'}</button>`;
     else if (ui.confirmer) {
       const reste = X.ps.filter((p) => !traitee(e, X.pl, p.id)).length;
       // Avec `monte: 'validation'`, la validation monte ce qui attend : aucun avertissement. Sinon, ces palettes ne comptent pas.
@@ -1181,7 +1229,7 @@ export function creerPalettier(P, M, opts, O) {
         <button type="button" class="btn" data-pal="validerNon" data-pe-cle="b:validerNon">Non</button></span>`;
     } else act = '<button type="button" class="btn btn-p" data-pal="valider" data-pe-cle="b:valider">Valider mon rangement</button>';
     // « Faire monter les palettes » : actif seulement s'il y a une palette « À monter » et que rien n'est validé.
-    if (C && !ui.confirmer && !(R.fige && M.lendemain)) {
+    if (C && !ui.confirmer && !(R.fige && M.suite)) {
       const raison = R.fige ? 'Le rangement est validé : il ne change plus.' : !attend.length ? `Aucune palette n’attend ${NOM} : confie d’abord une palette.`
         : `${NOM} monte les palettes de la zone « À monter ».`;
       act += `<button type="button" class="btn pal-monter" data-pal="monter" data-pe-cle="b:monter" title="${ech(raison)}" ${R.fige || !attend.length ? 'disabled' : ''}>Faire monter les palettes</button>`;
@@ -1205,7 +1253,7 @@ export function creerPalettier(P, M, opts, O) {
   /* ------------------------------------------------------------- le comptage (lot 4) : le dessin */
   const resteAcompter = (e, X) => X.liste.filter((x) => compte(e.comptage, x.rang) == null).length;
   function consigneComptage(e, R, X, n) {
-    if (R.cfige) return n('✓', R.copie ? 'Copie rendue.' : 'Comptage terminé : il ne change plus.');
+    if (R.cfige) return n('✓', rendu(R) ? 'Copie rendue.' : 'Comptage terminé : il ne change plus.');
     const CQ = e.comptage;
     if (CQ.enCours) return n(4, 'Le Terminal te demande : <b>recompter</b> ou <b>confirmer</b> ?');
     if (CQ.scanne) return n(4, `Compte les cartons de <b class="pe-mono">${ech(CQ.scanne)}</b>, puis tape le nombre au <b>Terminal</b>.`);
@@ -1220,7 +1268,7 @@ export function creerPalettier(P, M, opts, O) {
     const txt = typeof per.texte === 'string' ? per.texte : ((per.texte || {})[R.temps] || '');
     let act;
     const reste = resteAcompter(e, X);
-    if (R.cfige) act = `<button type="button" class="btn" disabled>${R.copie && R.rendue ? 'Copie rendue' : 'Comptage terminé'}</button>`;
+    if (R.cfige) act = `<button type="button" class="btn" disabled>${R.copie && R.rendue ? 'Copie rendue' : 'Comptage terminé'}</button>`;   // (rendue : la copie l'est vraiment)
     else if (ui.confirmerFin) {
       act = `<span class="pe-confirme" data-pal-confirme-fin>Il reste ${reste} adresse${reste > 1 ? 's' : ''} à compter. Terminer quand même ?
         <button type="button" class="btn btn-p" data-pal="finOui" data-pe-cle="b:finOui">Oui, terminer</button>
@@ -1229,7 +1277,7 @@ export function creerPalettier(P, M, opts, O) {
     return `<div class="pe-bandeau pal-bandeau pal-bandeau-compte">
       <div class="pe-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${per.date ? ` · ${ech(per.date)}` : ''}</b>${txt}</div>
       <div class="pe-liste pal-compte-consigne" data-pal-compte-consigne><h3>Inventaire tournant : compte les adresses de la liste</h3>
-        <p>Pour chaque adresse : ouvre l’emplacement, <b>scanne son étiquette</b>, compte les cartons de la palette, tape le nombre au <b>Terminal</b>.</p></div>
+        <p>${M.phaseC && M.phaseC.consigne ? ech(M.phaseC.consigne) : 'Pour chaque adresse : ouvre l’emplacement, <b>scanne son étiquette</b>, compte les cartons de la palette, tape le nombre au <b>Terminal</b>.'}</p></div>
       <div class="pe-act">${act}${reglesHtml(R)}</div></div>`;
   }
   // La liste « À compter » (au-dessus du Terminal) : les adresses dans l'ordre, cochées quand comptées, JAMAIS un nombre. Après
@@ -1297,7 +1345,7 @@ export function creerPalettier(P, M, opts, O) {
   }
   function consigneLendemain(e, R, n) {
     const L = e.lendemain;
-    if (R.lfige) return n('✓', R.copie ? 'Copie rendue.' : 'Transfert validé : il ne change plus.');
+    if (R.lfige) return n('✓', rendu(R) ? 'Copie rendue.' : 'Transfert validé : il ne change plus.');
     if (L.transfert && L.confiee && !L.montee) return n(4, `Clique <b>Faire monter les palettes</b>, puis <b>Valider mon transfert</b>.`);
     if (L.transfert) return n('✓', 'Transfert enregistré. Relis, puis clique <b>Valider mon transfert</b>.');
     if (L.scanAttente) return n(3, 'Va à l’emplacement où elle doit aller et <b>scanne son étiquette</b>.');
@@ -1329,7 +1377,7 @@ export function creerPalettier(P, M, opts, O) {
   function bandeauLendemain(e, R, X) {
     const per = P.personnage || {}, LD = M.lendemain, L = e.lendemain;
     let act;
-    if (R.lfige) act = `<button type="button" class="btn" disabled>${R.copie ? 'Copie rendue' : 'Transfert validé'}</button>`;
+    if (R.lfige) act = `<button type="button" class="btn" disabled>${rendu(R) ? 'Copie rendue' : 'Transfert validé'}</button>`;
     else if (ui.confirmerL) {
       const perdent = X.attente && C && typeof C.monte === 'function';
       act = `<span class="pe-confirme" data-pal-confirme-l>${perdent ? `La palette attend ${ech(NOM)} : elle ne comptera pas comme remise en ordre. Valider quand même ?` : 'Valider ?'} Tu ne pourras plus rien changer.${L.transfert ? '' : ' (Aucun transfert enregistré.)'}
@@ -1579,7 +1627,13 @@ export function creerPalettier(P, M, opts, O) {
     // au comptage, c'est « Terminer le comptage » qui fige ; le lendemain, « Valider mon transfert »
     const FIGE = R.lendemain ? R.lfige : R.compte ? R.cfige : R.fige;
     const sig = (n) => { if (n && api.signal && !FIGE) api.signal(geste(n)); };
-    const fait = (n) => { sig(n); api.sauver(); redessiner(); };
+    // Un geste qui OUVRE la fenêtre « Message du système » (signaler, adresse libre, transfert) ne part qu'à sa FERMETURE (« Compris » ou Échap) :
+    // une question au fil accrochée dessus (`apresGeste`) s'ouvre sous la fenêtre, que le gel de la question empêche alors de fermer à la souris.
+    // L'état, lui, est déjà écrit. Sans fenêtre, le geste part tout de suite.
+    const fait = (n) => {
+      if (n && ui.alerte && !FIGE) ui.alerte.geste = n; else sig(n);
+      api.sauver(); redessiner();
+    };
     const activer = (el, fn) => {
       el.addEventListener('click', fn);
       if (el.tagName !== 'BUTTON') el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); fn(); } });
@@ -1587,7 +1641,10 @@ export function creerPalettier(P, M, opts, O) {
     const on = (cle, fn) => racine.querySelectorAll(`[data-pal="${cle}"]`).forEach((b) => activer(b, fn));
     // La fenêtre du système se ferme : le focus revient sur la carte de la palette, à la souris comme au clavier.
     const fermerAlerte = () => {
-      ui.focus = ui.alerte.focus || `pal:${ui.alerte.id}`; ui.focusForce = true; ui.alerte = null; redessiner();
+      const g = ui.alerte.geste;
+      ui.focus = ui.alerte.focus || `pal:${ui.alerte.id}`; ui.focusForce = true; ui.alerte = null;
+      if (g) { sig(g); api.sauver(); }   // le geste retenu à l'ouverture de la fenêtre part maintenant
+      redessiner();
     };
     // Échap : la fenêtre du système, puis les motifs, puis la vue de près, puis la travée.
     const fermer = () => {
@@ -1607,7 +1664,7 @@ export function creerPalettier(P, M, opts, O) {
       if (!espace.isConnected) { window.removeEventListener('resize', caler); return; }
       const haut = espace.getBoundingClientRect().top + window.scrollY;
       const entete = racine.querySelector('.pe-entete');
-      const reste = window.innerHeight - haut - 22 - (entete ? entete.offsetHeight + 6 : 0), min = entete ? 340 : 380;
+      const reste = window.innerHeight - haut - 22 - (entete ? entete.offsetHeight + 6 : 0), min = entete ? 320 : 380;   // (340 avant le lot 6 : en copie, l'en-tête du moteur est 13 px plus haut — « Évaluation », « Rendre ma copie » — et la page défilait à 1280 × 720)
       racine.style.setProperty('--pe-dispo', `${Math.max(min, Math.round(reste))}px`);
     };
     caler();
@@ -1666,11 +1723,11 @@ export function creerPalettier(P, M, opts, O) {
     if (R.lendemain) { brancherLendemain(racine, e, api, R, { on, activer, fait, sig, redessiner }); return; }
     if (R.fige) {
       // Lot 5 : le rangement validé, le bouton de la phase suivante (avec confirmation) publie `phase:lendemain` et passe au matin.
-      if (M.lendemain && !R.rendue) {
+      if (M.suite && !R.rendue) {
         on('phase', () => { ui.confirmerPhase = true; ui.focus = 'b:phaseOui'; redessiner(); });
         on('phaseNon', () => { ui.confirmerPhase = false; ui.focus = 'b:phase'; redessiner(); });
         on('phaseOui', () => {
-          const g = passerLendemain(e);
+          const g = passerPhase(e);
           if (g && api.signal) api.signal(geste(g));
           api.sauver();
           // Tout l'écran, menu compris : un message qui attend `phase:lendemain` (Yanis, ENT-8.13) arrive tout de suite.
@@ -1720,7 +1777,7 @@ export function creerPalettier(P, M, opts, O) {
       sig('valider'); api.sauver();
       // Avec un comptage après le rangement (ENT-8.14), c'est « Terminer le comptage » qui rend la copie ; avec un lendemain (lot 5),
       // « Valider mon transfert ».
-      if (COPIE && api.rendreCopie && !M.comptage && !M.lendemain) api.rendreCopie();
+      if (COPIE && api.rendreCopie && !M.comptage && !M.lendemain && !M.sansRendu) api.rendreCopie();
       // Tout l'écran, menu compris : un message qui attend le geste `valider` (Kevin, ENT-8.11) arrive tout de suite.
       if (api.redessinerTout) api.redessinerTout(); else redessiner();
     });
@@ -1748,7 +1805,7 @@ export function creerPalettier(P, M, opts, O) {
     const terminer = () => {
       ui.confirmerFin = false; noterGeste(e);
       B.sig(terminerComptage(e)); api.sauver();
-      if (COPIE && api.rendreCopie) api.rendreCopie();
+      if (COPIE && api.rendreCopie && !M.sansRendu) api.rendreCopie();
       // Tout l'écran, menu compris : un message qui attend `compte:fin` (Samia, ENT-8.12) arrive tout de suite.
       if (api.redessinerTout) api.redessinerTout(); else B.redessiner();
     };
@@ -1782,7 +1839,7 @@ export function creerPalettier(P, M, opts, O) {
       if (X.attente && !(C && typeof C.monte === 'function')) L.montee = true;
       Object.assign(L, { valide: true, at: Date.now(), scanAttente: null });
       B.sig('valider:lendemain'); api.sauver();
-      if (COPIE && api.rendreCopie) api.rendreCopie();
+      if (COPIE && api.rendreCopie && !M.sansRendu) api.rendreCopie();
       if (api.redessinerTout) api.redessinerTout(); else B.redessiner();
     });
   }

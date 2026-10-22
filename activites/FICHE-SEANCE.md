@@ -2198,6 +2198,8 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
   verdict: 'critere' | 'adresse',            // absent = rien après « Valider »
   regles: { titre?, entete?, lignes: [html…], encadre?, ouvertes?: true },   // « Les règles ▾ », jamais en copie ; `ouvertes: true` : dépliées au chargement en guidage (absent : repliées)
   terminal: { nom: 'Terminal', scan: 'palette-emplacement' | 'emplacement' },   // lot 2 : le scan ; absent = pas de scan (le lot 1 tel quel)
+  rendCopie: false,   // lot 6 : en copie, aucune validation ne rend la copie (la séance la rend ailleurs) ; absent = comme avant
+  phases: [{ id: 'rangement' }, { id: 'comptage', bouton: 'Passer au comptage', consigne: '…' }],   // lot 6 : avec `comptage` ; ou soir / lendemain (lot 5)
 }
 ```
 
@@ -2240,7 +2242,9 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     P3 (Bougies parfumées) : « C’est occupé ». Le système ne donne pas d’autre adresse : la palette retourne en réception. » (le libellé du motif
     choisi) ; **en copie** : « Signalement enregistré pour P4 (Peluches) : « La charge serait dépassée ». C’est noté. » (jamais d'adresse).
     Le focus entre dans la fenêtre ; tout le reste est inerte (aucun geste derrière, Tab ne sort pas) ; à la fermeture, le focus revient **sur la
-    carte de la palette**. L'encart « Système » garde sa ligne courte (« Nouvelle adresse : … » / « Signalement enregistré. » / « C’est noté. »),
+    carte de la palette**. **Le geste qui ouvre la fenêtre** (`signaler:<P>`, `adresseLibre:<P>`, `transfert`) **n'est publié qu'à sa fermeture** (« Compris » ou Échap) : l'état
+    (signalement, adresse libre, transfert) est écrit tout de suite, mais une question au fil ou un message accroché à ce geste (`apresGeste`) n'arrive qu'après (22/10/2026 : sous la fenêtre, le gel de
+    la question empêchait de cliquer « Compris »). Un geste sans fenêtre part tout de suite. L'encart « Système » garde sa ligne courte (« Nouvelle adresse : … » / « Signalement enregistré. » / « C’est noté. »),
     l'étiquette de la carte change si une nouvelle adresse est donnée. Réglée dans `entrepot-palettier.js` (`ui.alerte`, classes `pal-modal*` de
     `styles/entrepot.css`) : le moteur n'avait aucune fenêtre modale réutilisable (les confirmations de rendu sont dans la page) ;
   - **Valider mon rangement** (avec confirmation, possible avec des palettes en réception) : fige tout, Kevin monte (`'validation'`), plus
@@ -2301,7 +2305,8 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
   première seule est retenue par la base), `monter` (le bouton « Faire monter les palettes »), `valider`, et **avec `terminal`** `scan:<P>`
   (une entrée par palette : le second scan réussi, jamais le premier), et, **pour chaque palette à `adresseLibre`**, `occupe:<P>` et `adresseLibre:<P>`
   (lot 3, plus haut). Ni `poser` ni `verifier` du rangement. Rien n'est publié après « Valider » (sauf, avec un `lendemain`, ses
-  propres gestes : plus bas, « Phases et le lendemain »).
+  propres gestes : plus bas, « Phases et le lendemain » ; et, avec des phases rangement / comptage et un bouton, `phase:comptage` : plus bas,
+  « L'évaluation en copie »).
 - **Jalons** (ids stables ; `attente` avant « Valider », `ok` / `ko` après, **jamais `attente` après**) :
   - `place-<P>` (palette à ranger) : posée au sol ou confiée **à son adresse** ; **signalée à tort** (son adresse était possible) = faux,
     même posée juste ensuite (décision 6 de Tristan) ; **confiée mais pas montée au moment de « Valider »** = faux (décision de Tristan,
@@ -2396,8 +2401,8 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     (Terminal « Terminé. », sans champ ; étiquettes inertes ; regarder reste permis), **en copie la copie est rendue**. Hors copie, avec `verdict`,
     chaque ligne de la liste dit « ✓ » ou « ✗ compte » (`'adresse'` : « ✗ compte · réel : 31 ») ; le vert n'y est que du texte.
   - **Avec des palettes** (ENT-8.14) : le rangement d'abord ; après « Valider mon rangement » (qui **ne rend pas** la copie), le même entrepôt passe
-    au comptage, et « Terminer le comptage » rend la copie. Les phases nommées (`phases`, `rendCopie: false`) sont le lot 6. Les adresses à compter
-    sont occupées pour le rangement aussi (une palette ne s'y pose pas).
+    au comptage, et « Terminer le comptage » rend la copie (sauf `rendCopie: false`). Les phases nommées (`phases: [rangement, comptage]`) et
+    `rendCopie` sont le lot 6 (plus bas, « L'évaluation en copie »). Les adresses à compter sont occupées pour le rangement aussi (une palette ne s'y pose pas).
   - **Gestes** (dans `signaux`) : `compte:<rang>` (un compte **confirmé**, un par rang déclaré, celui du confirmé compris), `compte:scan` (une
     adresse scannée pour compter ; la base ne retient que la première), `compte:fin` (« Terminer le comptage ») ; `ouvrir` comme au rangement. Sans
     palettes, ni `monter` ni `valider`.
@@ -2498,9 +2503,50 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     `entrepot-palettier.js`). La déclaration de la séance n'est jamais modifiée (copies du stock et des produits).
   - **La barre « Étape suivante »** accepte deux étapes sur le même écran (`suite: [{ vue: 'entrepot', … fait: soir validé }, { vue: 'entrepot', …
     fait: lendemain validé }]`) : elle prend la première non faite (testé).
+- **L'évaluation en copie (lot 6, 22/10/2026) : rangement + comptage dans un même entrepôt, `rendCopie: false`, un plan par site** (ENT-8.14).
+  Exemple complet : `evaluation()` de `contenus/palettier-essai.js` ; page d'essai, réglage **« Cas : Évaluation »** (réglage « Site » : Onnaing, 3 allées,
+  ou Belleville, 2 allées ; le bouton « Rendre ma copie » du bandeau affiche la note des jalons sous les réglages) ; tests : section « l'évaluation en copie »
+  du bloc `palettier`. Deux options, **chacune absente = le comportement d'avant** :
+
+  ```js
+  entrepot: (graine, { copie }) => {     // un plan par site : le site se lit de la graine (siteDe / siteDeGraine, comme ENT-8.10)
+    const S = SITES[siteDe(graine)];
+    return { id: 'action-evaluation-stock', mode: 'palettier', plan: S.plan, produits, stock: S.stock,
+      palettes: [ { id: 'P1', … }, { id: 'P4', …, aSignaler: true }, { id: 'P5', …, adresseLibre: '…' } ],   // mêmes ids pour tous les sites
+      cariste: { nom: S.cariste, niveaux: [2, 3, 4] }, terminal: { nom: 'Terminal' },
+      comptage: { adresses: [ … ] },     // 4 adresses au sol, jamais l'adresse d'une palette
+      phases: [{ id: 'rangement' }, { id: 'comptage', bouton: 'Passer au comptage', consigne: 'Compte les adresses de la liste « À compter ».' }],
+      ...(copie ? { rendCopie: false } : {}) };
+  }
+  ```
+
+  - **`rendCopie: false`** (seule valeur ; toute autre est refusée au chargement), comme le planning et le quai : **en copie**, « Valider mon rangement »,
+    « Terminer le comptage » et « Valider mon transfert » **figent leur phase sans rendre la copie** ; le bouton figé dit « Rangement validé » /
+    « Comptage terminé » / « Transfert validé » (« Copie rendue » seulement une fois la copie vraiment remise). **La copie se rend ailleurs** : le bouton
+    « Rendre ma copie » du bandeau du moteur (ou un écran de la séance qui appelle `api.rendreCopie`). `entreprise.js` n'a rien à savoir : la barre
+    « Étape suivante » (`suite: [{ vue: 'entrepot', fait: (db) => … }]`) lit l'état de la séance (`valide`, `comptage.fini`, `lendemain.valide`). Absent : la
+    dernière validation rend la copie, comme avant. Hors copie, sans effet.
+  - **`phases: [{ id: 'rangement' }, { id: 'comptage', bouton?, consigne? }]`**, **avec des palettes ET un `comptage`** (sinon la déclaration ne se charge
+    pas ; pas non plus avec un `lendemain`) : avec un `bouton`, « Valider mon rangement » fige le rangement (aucun verdict en copie) et **le bouton prend la
+    place de « Valider »** ; un clic demande confirmation (« Passer au comptage ? » Oui / Non), puis le comptage du lot 4 s'ouvre, geste
+    **`phase:comptage`**, état `phase` : `'rangement'` puis `'comptage'` (créé au premier dessin ; lu par `etatPalettier`). **Sans `bouton`** : le comptage suit
+    « Valider » comme au lot 4, aucun geste de phase, aucun état `phase`. `consigne` remplace la phrase sous « Inventaire tournant » (neutre : elle ne dit rien
+    du système). **Le comptage porte sur le stock de départ** : aucune adresse à compter n'est l'adresse donnée, nouvelle ou libre d'une palette (la déclaration
+    ne se charge pas sinon) ; les palettes posées par l'élève n'entrent pas dans la liste. Jalons dans l'ordre : le rangement (palettes, gardes), puis le comptage.
+  - **En copie, tout est dit par le Terminal, rien par l'écran** : aucun verdict (cartes, liste « À compter »), pas de « Les règles » même si la séance les déclare,
+    aucun bilan ; le Terminal dit « Confirmé. », « Ce n'est pas l'adresse de cette palette. », « Quantité différente. Recompter ou confirmer ? » ; la fenêtre
+    « Message du système » s'ouvre à chaque message (signalement : « C'est noté. », jamais de nouvelle adresse ; adresse libre demandée). Une palette
+    `aSignaler` **sans nouvelle adresse** reste en réception, n'a **pas de jalon `scan-<P>`** (elle ne se range pas) et est jugée par `signale-<P>` seul ; une palette
+    avec `nouvelleAdresse` garde son `scan-<P>`, toujours ko en copie (la nouvelle adresse n'y est jamais donnée) : la séance lui met `poids: 0`. Les `recompte-…`
+    se pèsent à 0 (le Terminal propose le recomptage : c'est l'outil).
+  - **Un plan par site** : rien à construire dans le moteur. `entrepot` est une fonction de la graine (lot 0) ; les **ids des jalons sont les mêmes pour tous les
+    élèves** (mêmes palettes, mêmes rangs de comptage, une `cle` partout ou nulle part). `etapesPalettier` ne compare, d'une graine à l'autre, que les ids du
+    comptage (huit graines) : **ceux du rangement ne sont pas contrôlés au chargement**, la séance les garde égaux (le test de la séance les compare sur 60 graines,
+    comme le fait le cas « les jalons sont les mêmes pour toutes les graines » du bloc `palettier`).
 - **Dessin** : charte de l'entreprise (Action : bleu, gardé dans la zone de travail) ; le vert plein ne dit que « juste » (texte des
   verdicts) ; palettes confiées, « À monter », emplacement vu de près : un trait ; refus en texte rouge. Tient en **1366 × 768 et
-  1280 × 720 sans défiler** (plan, travée et vue de près, motifs : testé ; pendant le choix du motif, la ligne « En main » s'efface) ; la colonne de droite (300 px) garde la place du Terminal. L'enseignant voit les
+  1280 × 720 sans défiler** (plan, travée et vue de près, motifs : testé ; pendant le choix du motif, la ligne « En main » s'efface ; **en copie**, l'en-tête du moteur est 13 px plus haut :
+  la hauteur minimale de la travée et de la vue de près est donc de 320 px, 340 avant le lot 6) ; la colonne de droite (300 px) garde la place du Terminal. L'enseignant voit les
   attendus (« Côté enseignant : attendus »).
 
 ## Vue « animation à questions » (scène isométrique, arrêt, question) — `core/types/animation.js`
