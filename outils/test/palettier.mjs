@@ -32,7 +32,10 @@ export default async function bloc({ v: vTous, nav, BASE, egal, vrai }) {
 const SEUL = process.env.PALETTIER_SEUL || '';
 const v = SEUL ? (nom, fn) => (nom.startsWith(SEUL) ? vTous(nom, fn) : undefined) : vTous;
 
-const ctx = await nav.newContext({ viewport: { width: 1366, height: 768 } });
+// Mouvement réduit : l'animation de 0,6 s du redressement de la travée (`.pe-releve.pe-anim`, styles/entrepot.css) est attendue par
+// Playwright avant chaque clic sur un emplacement ; mesuré le 22/10/2026 : bloc de 640 s à 144 s. Aucun cas du bloc (ni de la suite,
+// `git grep pe-anim outils/test` ne trouve rien) ne teste cette animation.
+const ctx = await nav.newContext({ viewport: { width: 1366, height: 768 }, reducedMotion: 'reduce' });
 const erreurs = [];
 const pg = await ctx.newPage();
 pg.setDefaultTimeout(6000);
