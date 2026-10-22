@@ -43,6 +43,7 @@
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | **livré** (09/10, 9310e5e à 197c9ba) |
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | **livré** (09/10, cd622f5) |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
+| 23 | Accueil léger : catalogue des séances séparé du code | mesure du 22/10 | moyen (≈ 7 h, 4 lots) | Opus cadrage, Sonnet construction | oui | — | cadré le 22/10/2026, en cours |
 | **Lot D — France Boissons (scénario S2, ENT-6.1 → 6.10)** : relevé du 09/10/2026, ordre de la refonte du 07/10 (Q2) | | | | | | | |
 | D-A | Questions au fil (lots 1 à 4) | brief `MOTEUR-questions-au-fil` | gros | Opus | oui | — | **livré le 08/10, vue validée par Tristan le 09/10** (page d'essai ; lot 4 à revoir avec ENT-6.1) ; **banques « Avant de commencer » d'ENT-6.1 et 6.2 + calculette sur l'écran d'ouverture livrées (étape A, 10/10)**, avec trois questions au fil d'ENT-6.1 ; geste `messagerie:transfert:<clé>` et réflexion corrigée au bilan ajoutés au moteur |
 | D-B | « Jugé au premier essai » | SMOBY-notation lot 3 | — | — | oui | — | **livré** (visite ENT-5.3 ; l'animation garde la première réponse) |
@@ -525,6 +526,219 @@ s'aligner.
 - **Non fait, à part** : les aides plus grosses recopiées (connexion enseignant x6 dans smoby, création de page avec
   écouteurs x6, `ouvrir`/`jalons` par séance dans boost), les cas « aucune erreur » des blocs (gardés tels quels, ils jugent
   toujours), et le point 2 des propositions du 09/10 (chaînes de cas sans remise à zéro dans boost : lot B).
+
+### 23. Accueil léger : catalogue des séances (mesure du 22/10/2026)
+
+**(a) Le problème.** À l'ouverture de l'accueil, `vueAccueil` (`core/app.js:209-211`) appelle `chargerActivites()`
+(`activites/index.js:297`), qui importe **tous** les fichiers de séance de `ACTIVITES` (`activites/index.js:11`) pour lire
+leur `meta`. Chaque fichier de séance tire ses contenus (`contenus/<entreprise>.js`, `contenus/<séance>.js`,
+`contenus/questions/*`, les cartes `*-carte.js` de 160 à 700 Ko) et ses vues (`core/types/*`). Mesure en mode démonstration,
+serveur local sans compression (VÉRIFIÉ, deux mesures concordantes le 22/10) : écran de connexion **40 requêtes, 0,65 Mo** ;
+accueil de l'enseignant **359 requêtes, 8,9 Mo bruts** (≈ 3,2 Mo compressés), graphe d'imports profond de 13 niveaux. Sur le
+réseau d'un lycée, ce sont les allers-retours en cascade qui font attendre, et ça grossit à chaque séance ajoutée. Le registre
+compte **86 séances** (86 lignes dans `ACTIVITES`, 86 fichiers ; `activites/` contient 87 `.js` avec `index.js`).
+
+**But.** L'accueil, et tout ce qui ne lit que les `meta`, lit un **catalogue léger** ; le code d'une séance (contenus, vues)
+ne se télécharge que **quand on l'ouvre**. Cible : accueil ≈ 50 requêtes et < 1 Mo brut. Rien ne change pour l'élève sauf la
+vitesse ; aucune étape pour Tristan ; pas de build.
+
+**(b) État des lieux.**
+
+*1. Qui consomme le registre, et de quoi a-t-il besoin* (VÉRIFIÉ, `git grep` sur `core/`, `activites/`, `outils/`) :
+
+| Consommateur | Appel | A besoin de | Après le chantier |
+|---|---|---|---|
+| Accueil, pastilles, tuiles, entreprises (`core/app.js:211`, `:226`, `:269`) | `chargerActivites()` | `meta` seule (visibilité, rubriques, `entreprisesDe`, verrous, « validée ») | `catalogue()` |
+| Avis « séance écartée » de l'accueil enseignant (`core/app.js:232`) | `activitesEnEchec()` | la liste des échecs | inchangé, mais la liste ne se remplit plus qu'à l'ouverture (voir 4) |
+| Ouverture d'une séance (`core/app.js:385`) | `activite(aid)` | **le module** : `m.rendre(...)` (`core/app.js:592`) | `activite(aid)` **à la demande** (un seul fichier) |
+| Verrou de parcours, version de base, reprise, séance suivante (`core/app.js:394`, `:443`, `:477`, `:505`) | `chargerActivites()` puis `.map(x => x.meta)` | `meta` seule ; `verrou`, `seancesDuParcours`, `versionDuParcours`, `appliquerReprise` (`core/parcours.js:32`, `:51`, `:64`, `:90`) ne lisent que des champs de `meta` | `catalogue()` (même forme `{ meta }`, rien à changer dans `parcours.js`) |
+| `aidsConnus` (suppression d'élève, `core/prof.js:100`) | `chargerActivites()` + `activitesEnEchec()` | les `id` | `catalogue()` (il porte déjà les séances qui échoueraient : `activitesEnEchec()` reste ajouté par prudence) |
+| Corrigés (`core/prof.js:153-166`) | `chargerActivites()` | `meta.corrige` (un chemin, le fichier de corrigé est importé à part) | `catalogue()` |
+| Retrait d'un demi-groupe (`core/prof.js:426`) | `chargerActivites()` | `meta.portee`, `jeuId`, `code` | `catalogue()` |
+| Niveaux (`core/prof.js:779-785`) | `chargerActivites()` | `meta` seule | `catalogue()` |
+| Suivi de classe (`core/prof.js:1006-1034`) | `chargerActivites()` | `meta` pour les colonnes ; **le module** pour savoir si la séance « sait se noter » (`core/prof.js:1307`) et pour ramasser / vérifier les copies (`core/prof.js:1465-1498` → `ramasser`, `verifierCopie`, `core/copie.js:56`, `:78`, qui appellent `module.noter`) | `catalogue()` pour le tableau ; le bouton « Vérifier » lit `exports` du catalogue ; `activite(aid)` **au clic** sur Ramasser / Vérifier |
+| Tableau des compétences (`core/prof.js:1619-1628`) | `chargerActivites()` | `meta` seule | `catalogue()` |
+| Conduite de séance (`core/prof.js:1843-1845`) | `chargerActivites()` | `meta` seule | `catalogue()` |
+| Semer / Geler / Réinitialiser (`core/prof.js:2020-2048`) | `activite(aid)` | `meta.tables`, `jeuId`, `portee` ; **le module** pour `graines` (Semer, seul `magasin` l'exporte) | `activite(aid)` à la demande (déjà au clic) |
+| `core/parcours.js:23`, `core/competences.js`, `core/niveaux.js` | `estSimulog` seulement / rien | — | inchangé |
+
+Exports vus sur les 86 modules (VÉRIFIÉ dans le navigateur) : `meta` et `rendre` partout, `noter` sur 11 (les évaluations en
+copie), `graines` sur 1 (`magasin`). Aucun autre export n'est lu par `core/`.
+
+*2. Ce que contient `meta`* (VÉRIFIÉ : les 86 `meta` vivants inspectés dans le navigateur, récursivement). 31 clés : `id`,
+`code`, `titre`, `desc`, `rubrique`, `competences`, `portee`, `pret` (86 chacune), `bareme` (85), `tables` (74), `immersif`
+(68), `corrige` (67), `ouverture` (65), `niveaux` (56), `competencesCap` (47), `parcours` (46), `questions` (44),
+`precedente` (39), `correction` (35), `niveauxPrevus` (26), `bilanDetail` (19), `domaines` (18), `reinitialisable` (14),
+`coeur` (12), `copie` (11), `suiteAuBilan` (7), `jeuId` (6), `notation` (5), `volume` (4), `versionBase` (1), `temps` (80).
+**Tout est sérialisable en JSON** : aucune fonction, classe, `Set`, `Map`, valeur `undefined` ni nombre non fini ; l'aller-retour
+JSON redonne la même chose ; aucun objet partagé entre deux `meta`. Le tout pèse **47 Ko bruts, 9 Ko compressés**.
+**Mais les `meta` ne sont pas des littéraux** : 68 fichiers font `export const meta = s.meta` (fabrique `seanceEntreprise`,
+`core/types/seance-entreprise.js:79-89`, qui **déduit** `rubrique`, `immersif`, `portee`, `tables`, `corrige` et, quand il
+n'est pas écrit, `bareme` = nombre de jalons du contenu, cas de `activites/picard-ent44.js`) ; parmi les 18 `meta` écrits à la
+main, 7 calculent `bareme` depuis le contenu importé (`bareme: EXERCICES.length`, `GENERATEURS.length`, `CORRIGEABLES` :
+`activites/calculs-commerciaux.js:26`, `entr-arrondis.js:22`, `entr-conversions.js:25`, `entr-proportionnalite.js:22`,
+`excel-pas-a-pas.js:27`, `excel-stock.js:21`, `journee-entrepot.js:52`) ; les séances Cdiscount mettent un objet importé dans
+`meta` (`volume: SEANCE.VOLUME`, `activites/cdiscount-chiffres.js:29`, et trois autres). `verifier()` (`activites/index.js:284`)
+ne contrôle que la présence d'un `meta` objet avec un `id` ; `ordonner()` (`activites/index.js:247`) range par code **segment
+par segment**, mais le rang d'une **famille** (ENT, TAB, QUI…) est celui de sa première apparition **dans l'ordre de
+`ACTIVITES`**, et deux codes égaux gardent l'ordre de la liste : le catalogue doit donc garder l'ordre de `ACTIVITES`.
+
+*3. Les tests* (VÉRIFIÉ par lecture). Une cinquantaine d'appels à `chargerActivites()`, `activitesEnEchec()` ou
+`ACTIVITES.map(f => f())` dans 38 blocs (`dependances`, `socle` dont `ATTENDU` / `ATTENDU_CAP` / tri par code, `action` « au
+registre », `smoby`, `cdiscount`, `chep-9x`, `pelleau-10x`, `fb-6.x`, `copie`, `questions`, `tirage-niveaux`…) : ils **passent
+tels quels** si `chargerActivites()`, `activitesEnEchec()` et le tableau `ACTIVITES` (fonctions d'import) gardent leur sens.
+Les trois lectures du texte de `activites/index.js` (`outils/test/cdiscount.mjs:402`, `:1149`, `:1531` : « la ligne
+`import('./…')` existe ») aussi, si `ACTIVITES` garde sa forme. **Ce qui casse** : les contextes qui **réécrivent le fichier
+d'une séance** au vol pour changer sa `meta` et regardent ensuite l'accueil ou l'espace enseignant, car ces écrans liront le
+catalogue et plus le fichier :
+- `outils/test/demi-groupes.mjs:21` (`quiz-flux` servi avec `ouverture: 'prof'`) ;
+- `outils/test/socle.mjs:2177` (ENT-3.2 servie `pret: false`) ;
+- `outils/test/visibilite.mjs:30-44` (trois séances Cdiscount : `pret`, `ouverture`) ;
+- `outils/test/tirage-niveaux.mjs:33` (`picard-ent42` avec `niveauxPrevus`, lu par l'onglet Niveaux) et `:329` (une séance
+  d'essai **injectée dans `ACTIVITES`**, cherchée à l'accueil et dans les Corrigés) ;
+- `outils/test/dependances.mjs:658-730`, cas 45 « séance refusée » : l'élève ne doit **pas** voir la séance cassée (voir 4).
+Les réécritures de `core/app.js` (`outils/test/amenagements.mjs:22`, `tirage-niveaux.mjs:22`) s'accrochent au texte exact
+`m.rendre(document.getElementById('hoteActivite'), ctx);` (`core/app.js:592`) : **cette ligne ne doit pas changer**. La
+réécriture de `ENTREPRISES` (`outils/test/socle.mjs:2365`) reste valable si `ENTREPRISES` reste dans `activites/index.js`.
+
+*4. Une séance qui échoue.* Aujourd'hui (`activites/index.js:303-318`, `activites/FICHE-SEANCE.md:2814-2820`) : le fichier
+fautif est écarté au chargement global, l'élève ne voit ni tuile ni message, l'enseignant lit un avis rouge
+`data-seance-ecartee` en haut de l'accueil (`core/app.js:232`), la suite tombe (`outils/test/dependances.mjs:471`). Avec un
+catalogue, **l'échec n'est connu qu'à l'ouverture** : la tuile est là (le catalogue dit que la séance existe), le clic
+échoue. Proposé : message « Cette séance ne s'ouvre pas pour l'instant : préviens ton enseignant », l'élève reste sur la
+liste, l'échec entre dans `activitesEnEchec()` (l'avis de l'enseignant s'affiche donc après une tentative), `console.error`
+comme avant. Ce cas ne peut arriver qu'après un push sans suite verte (le catalogue n'est fabriqué qu'à partir de séances qui
+se chargent) ou sur une coupure réseau en cours de chargement (aujourd'hui, la même coupure écarte la séance sans rien dire).
+**Décision de Tristan à prendre** (une question, avant le lot 2) : accepter ce changement visible.
+
+**(c) Les options.**
+
+- **A. Catalogue extrait du texte par un script Node** (`outils/catalogue.mjs` lit `export const meta = {…}` sans importer).
+  **Impossible ici** : 68 `meta` sur 86 sont fabriqués par `seanceEntreprise`, 7 calculent `bareme` depuis le contenu, 4
+  embarquent un objet importé (point 2). Il faudrait réécrire la fabrique en Node ou importer les modules dans Node (fichiers
+  `.js` sans `"type": "module"`, vues qui supposent le navigateur) : on recalculerait autrement que le site, donc on se
+  tromperait autrement. Écartée.
+- **B. Catalogue fabriqué dans le navigateur** par `node outils/catalogue.mjs` : petit serveur local, Playwright (déjà
+  installé pour la suite), mode démonstration, appel au vrai `chargerActivites()`, écriture de `activites/catalogue.js`
+  (une ligne par séance, dans l'ordre de `ACTIVITES`, clés triées, LF, sortie identique d'un lancer à l'autre : alerte 11).
+  Un cas de la suite recalcule le texte attendu à partir des `meta` vivants et le compare **au fichier** : une séance
+  ajoutée, retirée, déplacée ou une `meta` modifiée sans relancer le script = suite rouge = pas de push. Fichiers : 2
+  nouveaux (`outils/catalogue.mjs`, `activites/catalogue.js`), `activites/index.js`, `core/app.js`, `core/prof.js`, les
+  tests du point 3. Pour une séance nouvelle : **une commande de plus** (≈ 15 s, SUPPOSÉ), aucune pour Tristan. Accueil
+  attendu : ≈ 41 à 45 requêtes, ≈ 0,7 Mo brut (connexion + catalogue de 47 Ko). Risque de désynchronisation : attrapé par
+  la suite ; reste le push « contenus seulement » sans suite (CLAUDE.md le permet) qui changerait un `bareme` déduit du
+  contenu : couvert par la vérification rapide `node outils/catalogue.mjs --verifier` avant tout push qui touche
+  `activites/` ou `contenus/`, et par la garde à l'ouverture (lot 2).
+- **C. `meta` déclarée à la main hors du fichier de séance** (dans le registre, ou un `activites/<id>.meta.js` par séance que
+  la séance réimporte). Pas de génération, mais : 86 fichiers réécrits ; la fabrique doit être coupée en deux (une part
+  « déduire `rubrique`, `immersif`, `corrige`… » sans contenu) et `bareme` devient obligatoire partout (8 séances le
+  calculent aujourd'hui) ; en fichiers séparés, **86 requêtes de plus** à l'accueil (≈ 130 en tout, cible manquée) ; dans le
+  registre, un `index.js` de 50 Ko écrit à la main où une virgule casse tout le site. Désynchronisation : impossible pour les
+  clés écrites, possible pour les déduites. Coût ≈ 2 fois B, risque plus grand pendant la conversion. Écartée.
+- *Écartées aussi* : alléger chaque fichier de séance en n'important ses contenus que dans `rendre` (86 fichiers et la
+  fabrique touchés, et `bareme` dépend du contenu) ; un service worker (n'enlève pas la cascade au premier chargement).
+
+**Recommandation : B.** C'est la seule qui calcule le catalogue **avec le code même du site** (aucune deuxième façon de
+déduire une `meta`), qui ne touche à aucun fichier de séance, et dont l'oubli est attrapé par la suite. Le prix est une
+commande de plus pour Claude à chaque séance, écrite dans la procédure et rappelée par le message du test.
+
+Forme proposée (dans `activites/index.js`, à côté de l'existant qui reste) :
+```
+export async function catalogue()   // → [{ meta, fichier, exports }] rangés comme chargerActivites() ; lit catalogue.js à la demande
+export async function activite(id)  // → le module d'UNE séance, importé à la demande (null + avis si échec)
+export function chargerActivites()  // inchangée : tout charger (tests, script du catalogue)
+```
+
+**(d) Les lots, pour Sonnet** (un à la fois, suite verte et commit entre deux ; aucun ne laisse l'accueil cassé).
+
+*Lot 1 — le catalogue et sa garde, sans rien brancher* (≈ 1 h 30).
+Fichiers : `outils/catalogue.mjs` (nouveau : serveur local, Playwright, écrit `activites/catalogue.js` ; option `--verifier`
+qui compare sans écrire et sort en erreur ; la fonction de mise en forme est exportée et le script ne s'exécute pas quand on
+l'importe), `activites/catalogue.js` (généré : en-tête « généré par outils/catalogue.mjs, ne pas modifier à la main », un
+tableau `CATALOGUE` d'entrées `{ fichier, exports, meta }`), `activites/index.js` (ajoute `catalogue()` : import dynamique
+de `catalogue.js`, passage dans `ordonner()` ; **filet** : catalogue illisible → `console.error` et repli sur
+`chargerActivites()`), `outils/test/dependances.mjs` (cas nouveaux), `CLAUDE.md` et `activites/FICHE-SEANCE.md` (la
+commande, **dès ce lot**, sinon une autre session qui ajoute une séance tombe sans comprendre).
+Tests, dans les deux sens :
+- « le catalogue est à jour » : texte recalculé depuis `chargerActivites()` = fichier, à l'octet ; le message nomme la séance,
+  la clé et dit « lancer `node outils/catalogue.mjs` ». Sabotages qui doivent le faire tomber : changer un `titre` dans un
+  fichier de séance ; ajouter une ligne à `ACTIVITES` ; retirer une entrée du catalogue à la main ; intervertir deux
+  entrées ; une fin de ligne CRLF.
+- « `catalogue()` rend les mêmes séances, dans le même ordre, que `chargerActivites()` » (ids, codes, `exports`). Sabotage :
+  `catalogue()` qui oublie `ordonner()` → rouge.
+- « catalogue absent → repli » : `catalogue.js` servi en 404 dans un contexte à part, `catalogue()` rend quand même les 86
+  séances. Sabotage : retirer le repli → rouge.
+- Reproductibilité : deux lancers du script donnent un fichier identique (empreinte) — vérifié à la main au lot 1, dit
+  dans le compte rendu.
+
+*Lot 2 — accueil et ouverture sur le catalogue* (≈ 2 h 30).
+Fichiers : `activites/index.js` (`activite(id)` importe **le seul** fichier demandé, par la fonction de `ACTIVITES` qui
+porte ce nom de fichier ; **piège** : `chargerActivites()` croit tout chargé dès que `cache.size` est non nul
+(`activites/index.js:298`) : les modules chargés un par un vont dans un autre `Map`, ou un drapeau « tout chargé » remplace
+le test de taille), `core/app.js` (`vueAccueil` et les quatre lectures de `meta` de `vueActivite` passent à `catalogue()` ;
+**garde à l'ouverture** : pour un élève, `activiteVisible(m.meta…)` relu sur la `meta` du module avant de dessiner, refus
+sinon — aujourd'hui `vueActivite` ne revérifie pas la visibilité, VÉRIFIÉ ; message d'échec du point 4 ; la ligne
+`m.rendre(...)` inchangée), les tests du point 3 : chaque contexte qui réécrit une séance réécrit **aussi** son entrée du
+catalogue, par une aide commune `forcerCatalogue(ctx, (entrees) => …)` dans `outils/test/commun.mjs` (**à dire à
+Tristan** : `commun.mjs` touché) ; le cas 45 de `dependances.mjs` réécrit (**à dire**) : l'élève voit la tuile, le clic donne
+le message, aucune erreur de page, l'enseignant lit ensuite l'avis.
+Tests, dans les deux sens :
+- « accueil élève : aucun fichier de séance téléchargé » (aucune requête `activites/<séance>.js` ni `contenus/*.js` avant
+  un clic sur une tuile ; requêtes de l'accueil ≤ 55). Sabotage : remettre `chargerActivites()` dans `vueAccueil` → rouge.
+- « ouvrir une séance ne télécharge qu'elle » (la requête de son fichier, pas celle d'une autre séance). Sabotage :
+  `activite()` qui appelle `chargerActivites()` → rouge.
+- « catalogue périmé : une séance `pret: false` dans son fichier mais `pret: true` au catalogue ne s'ouvre pas pour
+  l'élève ». Sabotage : retirer la garde → rouge.
+- « séance cassée à l'ouverture » (cas 45 réécrit). Sabotage : laisser l'erreur remonter → erreur de page → rouge.
+
+*Lot 3 — espace enseignant sur le catalogue* (≈ 2 h).
+Fichiers : `core/prof.js` (`aidsConnus`, Corrigés, demi-groupe, Niveaux, Suivi, Compétences, Conduite de séance sur
+`catalogue()` ; « Vérifier » actif selon `exports` contient `noter` ; Ramasser / Tout ramasser / Vérifier font
+`activite(aid)` au clic ; Semer / Réinitialiser déjà à la demande), tests de `copie.mjs` / `socle.mjs` relus.
+Tests, dans les deux sens :
+- « Suivi, Compétences, Conduite : aucun fichier de séance téléchargé ». Sabotage : une vue qui rappelle
+  `chargerActivites()` → rouge.
+- « Ramasser une copie charge la séance au clic et note comme avant » (les cas existants de `copie.mjs` gardent la note).
+  Sabotage : `ramasser` sans module → rouge.
+- « Vérifier est grisé pour une séance sans `noter` » : entrée de catalogue servie sans `noter` → bouton désactivé.
+
+*Lot 4 — mesure, fiches, clôture* (≈ 45 min).
+`outils/mesure-accueil.mjs` (ou un cas de `dependances`) qui compte requêtes et octets connexion / accueil / ouverture ;
+compte rendu ici, ligne dans `docs/decisions.md`, `docs/EN-COURS.md` effacé. Suite entière (≈ 4 min 30 en parallèle) à
+chaque lot.
+
+Total ≈ 7 h, dont la moitié en essais et en adaptation des tests ; version courte possible : lots 1 et 2 seuls (≈ 4 h), qui
+règlent l'attente des **élèves** ; le lot 3 ne sert que l'espace enseignant.
+
+**(e) Fini quand.**
+- Tristan, à l'écran (Ctrl+Maj+R) : la connexion, l'accueil, la pastille Simulog et ses logos, une séance d'entreprise, une
+  séance de quiz, le Suivi, les Compétences, la Conduite de séance et les Corrigés s'affichent comme avant ; une séance
+  fermée ne s'ouvre pas pour un élève ; l'accueil arrive nettement plus vite sur le réseau du lycée.
+- Mesure (mode démonstration, serveur local) : accueil **≤ 50 requêtes et < 1 Mo brut** (attendu ≈ 41-45 et ≈ 0,7 Mo, contre
+  359 et 8,9 Mo) ; ouvrir une séance d'entreprise ≈ 55 requêtes et 0,3 à 0,6 Mo de plus (VÉRIFIÉ sur ENT-8.11, ENT-3.1,
+  ENT-6.9 : 53 à 55 requêtes, 271 à 556 Ko), une séance de quiz 3 requêtes ; Suivi ouvert sans aucun fichier de séance.
+- Suite entière verte ; `node outils/catalogue.mjs --verifier` vert ; deux lancers du script, même empreinte.
+
+**(f) Ce qui change dans les fiches.** `CLAUDE.md` (« Ajouter une activité = un fichier + une ligne ») et
+`activites/FICHE-SEANCE.md:6` deviennent : un fichier, une ligne dans `ACTIVITES`, **puis `node outils/catalogue.mjs`** et
+commit de `activites/catalogue.js` avec la séance ; même commande après toute modification d'une `meta` (code, titre, `pret`,
+`ouverture`, niveaux, compétences…) ou d'un contenu dont dépend un `bareme` déduit. `FICHE-SEANCE.md:2814-2820` (séance qui
+refuse de se charger) réécrit selon le point 4. Section Tests de `CLAUDE.md` : `forcerCatalogue` dans `commun.mjs`, et
+« avant un push qui touche `activites/` ou `contenus/` : `node outils/catalogue.mjs --verifier` ».
+
+**(g) Risques, et ce qui ne change pas.**
+- Ne changent pas : les `id` (chemins Firebase, scores, classements), les `code` et l'ordre d'affichage (même `ordonner()`,
+  même ordre de liste), `ENTREPRISES` et `RUBRIQUES` (restent dans `index.js`), le mode réel, les règles Firebase (rien à
+  publier), les fichiers de séance (aucun touché), `chargerActivites()` et `ACTIVITES`.
+- Catalogue périmé en production (push sans suite, ou cache du navigateur : GitHub Pages garde les fichiers quelques
+  minutes, SUPPOSÉ ≈ 10 min, catalogue et séances pouvant être d'âges différents) : au pire une tuile en trop ou en moins,
+  ou un titre ancien ; **jamais une séance fermée ouverte à un élève** grâce à la garde à l'ouverture du lot 2.
+- Changement visible (point 4, à valider par Tristan) : une séance cassée montre sa tuile et refuse de s'ouvrir.
+- Ce chantier n'allège pas **l'ouverture** d'une séance d'entreprise : `core/types/entreprise.js` importe toutes ses vues
+  (38 imports), d'où ≈ 55 requêtes par séance ouverte. Un chantier à part pourra charger les vues à la demande si la mesure
+  en classe le justifie.
+- Non vérifié : la durée du script (≈ 15 s supposées), le temps réel gagné sur le réseau du lycée, la compression réelle de
+  GitHub Pages sur le catalogue.
 
 ### Lot D. France Boissons : les chantiers avant chaque séance (relevé du 09/10/2026)
 - **D'où ça vient.** Lecture des dix briefs `docs/briefs/ENT-6.1` à `ENT-6.10`, du brief `MOTEUR-vue-tournee-camion`
