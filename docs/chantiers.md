@@ -43,7 +43,7 @@
 | 18 | Deux sessions à la fois : port, `git grep`, `EN-COURS` | C17 | petit | Sonnet | non (`commun.mjs`) | — | **livré** (09/10, 9310e5e à 197c9ba) |
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | **livré** (09/10, cd622f5) |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
-| 23 | Accueil léger : catalogue des séances séparé du code | mesure du 22/10 | moyen (≈ 7 h, 4 lots) | Opus cadrage, Sonnet construction | oui | — | cadré le 22/10/2026, en cours |
+| 23 | Accueil léger : catalogue des séances séparé du code | mesure du 22/10 | moyen (≈ 7 h, 4 lots) | Opus cadrage, Sonnet construction | oui | — | **livré** (22/10/2026, 4df8283, 40ca64e, b592008 ; accueil élève 41 requêtes / 0,7 Mo au lieu de 359 / 8,9 Mo) |
 | **Lot D — France Boissons (scénario S2, ENT-6.1 → 6.10)** : relevé du 09/10/2026, ordre de la refonte du 07/10 (Q2) | | | | | | | |
 | D-A | Questions au fil (lots 1 à 4) | brief `MOTEUR-questions-au-fil` | gros | Opus | oui | — | **livré le 08/10, vue validée par Tristan le 09/10** (page d'essai ; lot 4 à revoir avec ENT-6.1) ; **banques « Avant de commencer » d'ENT-6.1 et 6.2 + calculette sur l'écran d'ouverture livrées (étape A, 10/10)**, avec trois questions au fil d'ENT-6.1 ; geste `messagerie:transfert:<clé>` et réflexion corrigée au bilan ajoutés au moteur |
 | D-B | « Jugé au premier essai » | SMOBY-notation lot 3 | — | — | oui | — | **livré** (visite ENT-5.3 ; l'animation garde la première réponse) |
@@ -739,6 +739,35 @@ refuse de se charger) réécrit selon le point 4. Section Tests de `CLAUDE.md` :
   en classe le justifie.
 - Non vérifié : la durée du script (≈ 15 s supposées), le temps réel gagné sur le réseau du lycée, la compression réelle de
   GitHub Pages sur le catalogue.
+
+**Compte rendu (22/10/2026, livré).** Lots 1 à 3 construits le soir même, un Sonnet par lot (lots 2 et 3 en parallèle sur
+des fichiers disjoints), Opus pour le cadrage, Fable chef de chantier ; commits 4df8283 (lot 1), 40ca64e (lot 2), b592008 (lot 3).
+Le lot 4 n'a pas de script de mesure à part : la mesure vit dans les cas de `dependances` (« accueil élève : au plus 55
+requêtes, aucun fichier de séance ni de contenu ») et de `copie` (onglets de l'espace enseignant sans aucune séance téléchargée).
+- **Mesuré** (mode démonstration, serveur local, sans compression) : connexion 40 requêtes / 652 Ko (inchangé) ; accueil
+  élève **41 requêtes / 707 Ko** (contre 359 / 8,9 Mo) ; liste des séances d'une entreprise 44 / 744 Ko ; ouvrir une séance
+  de quiz : son seul fichier. Ouvrir ENT-2.1 (Cdiscount) ajoute 53 requêtes et ≈ 2,1 Mo, là où le cadrage mesurait 271 à
+  556 Ko sur ENT-8.11, 3.1 et 6.9 : écart **non expliqué**, à regarder si un chantier « vues à la demande » s'ouvre un jour.
+  Le script `node outils/catalogue.mjs` prend 1,2 s (le cadrage supposait 15 s) ; deux lancers, même empreinte.
+- **Écarts au cadrage** : `.gitattributes` fixe `activites/catalogue.js` en LF (comparé à l'octet par la suite, il serait
+  revenu en CRLF au prochain `pull` sur ce poste) ; `releverCatalogue()` exporté par le registre (le relevé fait avec les vrais
+  modules, lu par le script, le test et le repli) ; dans `vueActivite`, la lecture du groupe est faite une fois, avant la garde ;
+  `tirage-niveaux` : la garde `picardDeclare` (le fichier de la séance est téléchargé) devient `picardAuCatalogue` ; le cas
+  « suivi, compétences, conduite » de `dependances` perd son affirmation « sans sa tuile » (ces onglets lisent le catalogue) ;
+  le cas 45 devient trois cas (tuile gardée et message pour l'élève, cause au clic puis avis rouge pour l'enseignant, pas
+  d'avis avant la tentative). `outils/test/commun.mjs` reçoit `forcerCatalogue` (dit à Tristan).
+- **Suite** : 2327/2328 en parallèle (1 377 s) ; le seul rouge, `quai-iso` (animation du chariot, bloc que le chantier ne
+  touche pas), est vert rejoué seul (134/134) : cas trop pressé en parallèle. `node outils/catalogue.mjs --verifier` vert.
+- **Surprise à retenir** : l'accueil est maintenant assez rapide pour finir **avant** le rechargement de page des anciens cas ;
+  un cas qui sème des données depuis le site (`B.connexionProf` puis `deconnexion`) peut lever « démarrage interrompu :
+  profil null » dans la console. Vu dans le cas 45, contourné en semant depuis une page `styles/base.css`.
+- **Ce qui n'est pas fait, et ne relève pas de ce chantier** : ouvrir une séance d'entreprise coûte toujours ≈ 55 requêtes
+  (`core/types/entreprise.js` importe ses 38 vues en statique) ; les 15 feuilles CSS restent séparées ; `core/prof.js`
+  (136 Ko) reste dans la chaîne statique d'`app.js`, donc téléchargé par les élèves. Petits gains, à prendre si la mesure
+  en classe le demande.
+- **À vérifier par Tristan à l'écran** (Ctrl+Maj+R) : connexion, accueil, pastille Simulog et ses logos, une séance
+  d'entreprise, une séance de quiz, le Suivi (Ramasser, Vérifier), les Compétences, la Conduite de séance, les Corrigés ;
+  une séance fermée ne s'ouvre pas pour un élève ; et surtout l'accueil **sur le réseau du lycée** (F12, onglet Réseau).
 
 ### Lot D. France Boissons : les chantiers avant chaque séance (relevé du 09/10/2026)
 - **D'où ça vient.** Lecture des dix briefs `docs/briefs/ENT-6.1` à `ENT-6.10`, du brief `MOTEUR-vue-tournee-camion`
