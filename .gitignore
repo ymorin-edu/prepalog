@@ -4,6 +4,7 @@ push_auto.vbs
 node_modules/
 outils/paquets/
 outils/.rtdb-emulateur.json
+outils/.durees-blocs.json
 firebase-debug.log
 database-debug.log
 firestore-debug.log
