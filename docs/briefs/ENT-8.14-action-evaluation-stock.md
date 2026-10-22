@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/ENT-8.5-action-evaluation-se-situer.md (§0 bis, §2), docs/briefs/ENT-8.10-action-evaluation-reception.md (§0, §4 ter), docs/briefs/ENT-8.11-action-ranger.md (§0, §6), docs/briefs/MOTEUR-palettier-adresse-donnee.md (lot 6) puis docs/briefs/ENT-8.14-action-evaluation-stock.md en entier. Tout le chantier moteur doit être livré. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter
+**Statut** : livré
 **Date du brief** : 21/10/2026 ; **corrigé le 21/10/2026 au soir** d'après l'état des lieux du chantier moteur E-7 et les
 décisions de Tristan (§11 n° 4).
 **Conversation d'origine** : Cowork (Opus), cadrage de C1.5 chez Action, 21/10/2026 (fiche `claude/prepalog-action-cadrage-c1.5.md`), décisions
@@ -194,9 +194,23 @@ sous-compétence.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
+- **Fichiers créés / modifiés** : `contenus/action-ent814.js`, `contenus/action-ent814-donnees.js`, `contenus/questions/ENT-8.14.js`, `contenus/corriges/ENT-8.14.js`,
+  `activites/action-evaluation-stock.js` (`pret: true, ouverture: 'prof'`) ; une ligne dans `activites/index.js`, `outils/test.mjs` (`BLOCS` et `GROUPES`, groupe 1),
+  `outils/test/socle.mjs` (`ATTENDU_CAP`) et `outils/test/action.mjs` (liste du registre : cas réécrit) ; bloc `outils/test/action-814.mjs`.
 - **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+  - **Pas de clé sur les adresses à compter** (le chef de chantier en demandait une par rôle) : le rang de l'écart est tiré, donc `recompte-ecart` / `recompte-ok1`… changeraient de
+    place d'un élève à l'autre et le contrôle « mêmes jalons pour toutes les graines » (correctif en cours dans `entrepot.js`) refuserait la séance. Les ids sont `compte-<rang>` et `recompte-<rang>`, les mêmes pour tous.
+  - **Poids** (brief §5 corrigé) : repérer P1 à P3 = 3 (1 chacune), `pasPoseHaut` 1 + `signale-P4` 3, `adresseLibre-P5` 2, scans P1, P2, P3, P5 = 0,75 chacun, `compte-1` à `compte-4` = 0,5 chacun,
+    `fiche-signaler` 1 + `fiche-cause` 1 ; **sans point** : `charge`, `recompte-1` à `recompte-4`, `scanAvant`. Somme 16 + ouverture 4 = 20. Pas de plaque au sol (décision n° 6).
+  - **`pasPoseHaut` et P4** : la garde « toutes les palettes traitées » compte une palette **signalée** comme traitée : P4 signalée (elle reste en réception) ne coûte rien. Une P4 jamais touchée coûte
+    `signale-P4` (3) **et** `pasPoseHaut` (1) : voulu (l'inaction), dit dans les tests.
+  - L'écran « Avant de commencer » : 10 notions (5 préparation, 3 éco-droit, 2 image), 2 + 1 + 1 tirées ; formulations neutres ; `e-adresse` dans l'allée A ou B ; valeurs tirées pour les adresses, les couches
+    et la plaque ; bonnes réponses réécrites (aucune identique à ENT-8.11 à 8.13, testé). « Le droit » : C. trav. L4122-1, alinéas 1 et 3, recopié d'ENT-8.11 (relu le 22/10/2026).
+  - Le texte du personnage (« Ce matin : la réception d'hier à ranger, puis quelques adresses à compter. ») reste affiché au comptage : le moteur ne le change pas, il est donc écrit pour les deux phases.
+  - Les produits sont recopiés d'ENT-8.11 (rien importé d'une séance de travail) ; seuls `siteDeGraine`, `COLLEGUES` et `equipeDe` viennent d'ENT-8.10. La Messagerie date les messages du dernier mardi (même compromis qu'ENT-8.11 et 8.12).
+- **Décisions prises en route** : stock de départ fixe par site (règle à graine constante, deux emplacements hors service) ; P4 : produit lourd en N3 ou N4 dont le niveau porte deux palettes lourdes (jamais déjà surchargé) ;
+  P3 sur un autre niveau que P4 ; P5 : adresse prise au sol, adresse libre dans une autre travée ; 4 adresses à compter au sol, 4 produits distincts, un écart (manque 2 à 4 cartons, ou surplus 1 à 3) à un rang tiré ;
+  fiche : causes réécrites (aucune cause plausible donnée pour fausse), `incomplet: true` (la fiche part même à moitié remplie).
+- **Tests** : bloc `action-814` (18 cas, vert ; quatorze sabotages, chacun fait tomber le cas visé, fichiers restaurés à l'identique) ; `socle`, `action`, `dependances`, `tirage-niveaux`, `copie`, `questions` verts.
+- **Commits** : (par le chef de chantier)
+- **Reste ouvert** : causes de la fiche et questions d'ouverture à relire à l'écran ; fiche enseignant (Cowork) ; date affichée par la Messagerie.
