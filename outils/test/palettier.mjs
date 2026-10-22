@@ -42,7 +42,7 @@ const ID = 'essai-palettier';
 const Z = '#palTest .pal';
 // Monte l'environnement sur le cas d'essai. `o` : temps, aide (aideCharge), verdict, monte ('base' : Kevin monte quand
 // `db.kevinRepondu` est vrai), aisance, role, uid, db, scenario ('signaler' : deux palettes à signaler de plus, P7 sur un
-// emplacement hors service, P8 sur un emplacement occupé).
+// emplacement hors service, P8 sur un emplacement occupé), libre (lot 3 : la palette P8 à adresse libre, voir plus bas), extra (palettes de plus).
 const monter = (p, o = {}) => p.evaluate(async (o) => {
   const { creerEntreprise } = await import('/core/types/entreprise.js');
   const C = await import('/contenus/palettier-essai.js');
@@ -51,13 +51,15 @@ const monter = (p, o = {}) => p.evaluate(async (o) => {
   const temps = o.temps || 'guidage';
   let P = C.palettier({ aideCharge: o.aide || 'pose', verdict: o.verdict === undefined ? 'critere' : o.verdict || undefined,
     monte: o.monte === 'base' ? (db) => !!(db && db.kevinRepondu) : undefined,
-    terminal: !!o.terminal, scan: o.terminal === 'un' ? 'emplacement' : undefined, reglesOuvertes: !!o.reglesOuvertes });
+    terminal: !!o.terminal, scan: o.terminal === 'un' ? 'emplacement' : undefined, reglesOuvertes: !!o.reglesOuvertes, libre: !!o.libre });
+  // Lot 3 : `o.extra` ajoute des palettes (jalons sans poids, comme le scénario « signaler »).
+  if (o.extra) P = Object.assign({}, P, { palettes: [...P.palettes, ...o.extra] });
   if (o.scenario === 'signaler') {
     P = Object.assign({}, P, { palettes: [...P.palettes,
       { id: 'P7', nom: 'Peluches', cartons: 20, kg: 3, adresse: 'B1-T01-N2-E1', aSignaler: true },
       { id: 'P8', nom: 'Bougies parfumées', cartons: 20, kg: 3, adresse: 'A1-T03-N1-E1', aSignaler: true }] });
   }
-  const U = C.universPalettier({ temps, entrepot: P, poids: o.scenario !== 'signaler' });
+  const U = C.universPalettier({ temps, entrepot: P, poids: o.scenario !== 'signaler' && !o.extra });
   if (o.volet) {
     // Un message qui attend le geste `monter` (comme Kevin dans ENT-8.11), ou celui que `o.volet` nomme (lot 2 : `scan:P1`).
     const { apresGeste } = await import('/core/declencheurs.js');
@@ -1616,6 +1618,308 @@ await v('Comptage : la page d’essai (cas « Comptage », standard et confirmé
     egal([await vu('.pal [data-pal-compte-emp]'), await vu('.pal [data-vt-choix="confirmer"]'), pile[1]], [true, true, true], `étiquette, boutons, palette à ${w} × ${h} (${niv})`);
     vrai(pile[0] >= 180, `palette dessinée assez grande (${pile[0]} px de haut) à ${w} × ${h}`);
     egal(d, [0, 0], `pixels qui dépassent à ${w} × ${h} (${niv})`);
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+});
+
+/* =========================================================== adresse prise, adresse libre (lot 3, 22/10/2026) */
+// Cas « Adresse libre : … », sur le cas d'essai `palettier({ libre: true })` : une palette de plus, P8, dont l'adresse donnée est OCCUPÉE.
+// `PALETTIER_SEUL='Adresse libre'` ne joue que cette section. Valeurs écrites à la main :
+//   P8 « Bougies parfumées », 24 cartons × 3 kg, adresse donnée A1-T03-N1-E1 (au sol, occupée : croquettes, 30 cartons, 400 kg),
+//   adresse libre A1-T01-N1-E2 (au sol, libre) ; deux autres adresses libres au sol : A1-T02-N1-E1 (« à côté », hors de toute adresse de
+//   palette : A1-T03-N1-E2, la voisine, est celle de P1) et A1-T01-N1-E3 (« ailleurs »).
+const AL = { donnee: 'A1-T03-N1-E1', libre: 'A1-T01-N1-E2', cote: 'A1-T02-N1-E1', ailleurs: 'A1-T01-N1-E3' };
+const TXT_LIBRE = 'Adresse libre pour P8 (Bougies parfumées) : A1-T01-N1-E2.';
+const demander = (p) => bouton(p, 'libre');
+const compris = async (p) => { if (await present(p, '[data-pal-modal]')) await p.click(`${Z} [data-pal-modal-ok]`); };
+const texteFen = (p) => texte(p, '[data-pal-modal-texte]');
+const p8Occupe = async (p) => { await prendre(p, 'P8'); await ouvrir(p, AL.donnee); };
+// Sans Terminal, l'ordre de `jalons` : P1 à P4, signale-P5, adresseLibre-P8 (jamais place-P8), les deux gardes.
+const tousL = (j) => ({ 'place-P1': j, 'place-P2': j, 'place-P3': j, 'place-P4': j, 'signale-P5': j, 'adresseLibre-P8': j, pasPoseHaut: j, charge: j });
+const tousLS = (j) => ({ 'place-P1': j, 'scan-P1': j, 'place-P2': j, 'scan-P2': j, 'place-P3': j, 'scan-P3': j, 'place-P4': j, 'scan-P4': j,
+  'signale-P5': j, 'scan-P5': j, 'adresseLibre-P8': j, 'scan-P8': j, pasPoseHaut: j, charge: j });
+const croitL = (p, id) => p.evaluate(async (id) => { const E = await import('/core/types/entrepot.js'); return E.ouSystemeCroit(window.__p.db, window.__p.P, id); }, id);
+const kevinL = (p) => p.evaluate(() => (window.__p.db.mails || []).filter((m) => m.subject === 'Kevin monte').length);
+
+await v('Adresse libre : une palette à `adresseLibre` n’a pas de place-P mais adresseLibre-P ; P8 est en réception, sa carte porte l’adresse donnée ; `libres` est créé vide (absent de l’état neuf) ; sans `adresseLibre`, ni bouton ni clé `libres` ; 33 gestes (40 avec le Terminal), dont occupe:P8 et adresseLibre:P8', async () => {
+  await monter(pg, { libre: true });
+  egal(await pg.$$eval(`${Z} .pe-bandeau [data-pe-pal]`, (L) => L.map((b) => b.dataset.pePal)), ['P1', 'P2', 'P3', 'P4', 'P5', 'P8'], 'cartes (standard : pas de P6)');
+  egal(await texte(pg, '[data-pal-etiq="P8"]'), 'Adresse A1-T03-N1-E1', 'la carte porte l’adresse donnée');
+  egal(await jalons(pg), tousL('attente'), 'jalons à faire : adresseLibre-P8, pas de place-P8');
+  egal((await etat(pg)).libres, {}, '`libres` créé vide au premier dessin');
+  const r = await pg.evaluate(async () => {
+    const { creerEntrepot, etatPalettier, ouSystemeCroit } = await import('/core/types/entrepot.js');
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const { apresGeste } = await import('/core/declencheurs.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const essai = (P, nom) => {
+      const U = C.universPalettier({ entrepot: P, poids: false });
+      U.volet = { semer: () => ({ mails: [] }), declencheurs: [{ id: 'd', quand: apresGeste(nom), semer: () => ({ mails: [] }) }] };
+      try { creerEntreprise(U); return ''; } catch (e) { return e.message; }
+    };
+    const L = C.palettier({ libre: true }), L2 = C.palettier({ libre: true, terminal: true }), N = C.PALETTIER;
+    return { s: creerEntrepot(L).signaux, s2: creerEntrepot(L2).signaux, sN: creerEntrepot(N).signaux,
+      occupe: essai(L, 'entrepot:essai-palettier:occupe:P8'), libre: essai(L, 'entrepot:essai-palettier:adresseLibre:P8'),
+      sansL: essai(N, 'entrepot:essai-palettier:occupe:P8'), sansL2: essai(L, 'entrepot:essai-palettier:occupe:P1'),
+      lisible: Object.keys(etatPalettier(window.__p.db, window.__p.P)), croit: ouSystemeCroit(window.__p.db, window.__p.P, 'P8') };
+  });
+  egal([r.s.length, r.s2.length, r.sN.length], [33, 40, 27], 'nombre de gestes (le cas ordinaire n’a gagné aucun geste)');
+  egal(r.s.filter((g) => /occupe|adresseLibre/.test(g)), ['occupe:P8', 'adresseLibre:P8'].map((g) => `entrepot:essai-palettier:${g}`), 'un occupe et un adresseLibre, pour P8 seulement');
+  egal([r.occupe, r.libre], ['', ''], 'un apresGeste sur chacun se charge');
+  vrai(r.sansL.includes('occupe:P8') && r.sansL2.includes('occupe:P1'), `sans adresseLibre, ou pour une autre palette, le geste n’existe pas : ${r.sansL} / ${r.sansL2}`);
+  egal([r.lisible.includes('libres'), r.croit], [true, AL.donnee], '`etatPalettier` rend `libres` ; avant toute demande le système croit l’adresse donnée');
+  // Le cas ordinaire : l'emplacement occupé est ouvert avec une palette en main, aucun bouton ; ni `libres` dans l'état ni dans `etatPalettier`.
+  await monter(pg);
+  await prendre(pg, 'P1'); await ouvrir(pg, AL.donnee);
+  egal([(await texte(pg, '[data-pal-occ]')).startsWith('Occupé'), await present(pg, '[data-pal="libre"]')], [true, false], 'emplacement occupé, aucun bouton « Demander »');
+  const e = await etat(pg);
+  egal('libres' in e, false, 'pas de clé `libres` dans l’état');
+  egal(await pg.evaluate(async () => Object.keys((await import('/core/types/entrepot.js')).etatPalettier(window.__p.db, window.__p.P)).includes('libres')), false, 'pas de `libres` dans etatPalettier');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Adresse libre : ouvrir l’adresse donnée avec P8 en main → « Occupé » et le bouton « Demander une adresse libre » ; le bouton → fenêtre « Message du système » et Terminal au texte exact, carte « Nouvelle adresse », `libres`, geste adresseLibre:P8 ; ranger là + scanner → tout juste, 20 sur 20', async () => {
+  await monter(pg, { libre: true, terminal: 'deux', aide: 'plaque' });
+  await p8Occupe(pg);
+  egal([await texte(pg, '[data-pal-occ]'), await pg.getAttribute(`${Z} [data-pal-occ]`, 'data-pal-occ')], ['Occupé : Croquettes pour chien 4 kg', 'stock'], 'l’emplacement est occupé');
+  egal(await pg.$$eval(`${Z} .pal-boutons [data-pal]`, (L) => L.map((b) => b.dataset.pal)), ['poser', 'confier', 'libre', 'signaler'], 'les boutons, « Demander » avant « Signaler »');
+  egal(await texte(pg, '[data-pal="libre"]'), 'Demander une adresse libre', 'libellé');
+  egal((await gestes(pg)).filter((g) => /adresseLibre/.test(g)), [], 'pas encore demandée');
+  egal([(await etat(pg)).libres, await croitL(pg, 'P8')], [{}, AL.donnee], 'rien demandé : le système croit l’adresse donnée');
+  await demander(pg);
+  const fen = await fenetre(pg);
+  egal(fen.length, 1, 'la fenêtre s’ouvre');
+  egal([await texte(pg, '[role="dialog"] h3'), await texteFen(pg), await pg.getAttribute(`${Z} [role="dialog"]`, 'aria-modal')], ['Message du système', TXT_LIBRE, 'true'], 'fenêtre : texte exact');
+  egal(await derniere(pg), TXT_LIBRE, 'le Terminal dit la même chose');
+  vrai((await lignesRouges(pg)).length === 0, 'aucun refus en rouge');
+  const e = await etat(pg);
+  egal([e.libres, e.enMain, e.signalees, e.scansRefuses], [{ P8: AL.libre }, 'P8', {}, 0], 'état : l’adresse libre est donnée, P8 toujours en main, rien signalé');
+  egal((await gestes(pg)).filter((g) => /adresseLibre/.test(g)), ['entrepot:essai-palettier:adresseLibre:P8'], 'geste publié');
+  egal(await croitL(pg, 'P8'), AL.libre, 'le système attend maintenant l’adresse libre');
+  await compris(pg);
+  egal(await pg.evaluate(() => document.activeElement && document.activeElement.dataset.peCle), 'pal:P8', 'le focus revient sur la carte');
+  egal([await texte(pg, '[data-pal-etiq="P8"]'), await present(pg, '[data-pal-etiq="P8"].pal-nouvelle')], ['Nouvelle adresse A1-T01-N1-E2', true], 'la carte porte la nouvelle adresse');
+  await ouvrir(pg, AL.libre); await bouton(pg, 'poser');
+  egal((await etat(pg)).posees, { P8: AL.libre }, 'posée à l’adresse libre');
+  await scanPal(pg, 'P8'); await scanEmp(pg);
+  egal(await derniere(pg), 'A1-T01-N1-E2 — Bougies parfumées — 24 cartons. Confirmé.', 'scan accepté à l’adresse libre');
+  egal([(await etat(pg)).scan.P8, await croitL(pg, 'P8')], [AL.libre, AL.libre], 'le système la sait là');
+  await justeScan(pg);
+  await valider(pg);
+  egal(await jalons(pg), tousLS('ok'), 'tout juste, dont adresseLibre-P8 et scan-P8');
+  egal(await pg.$$eval(`${Z} [data-pal-verdict]`, (L) => L.map((s) => s.textContent.trim())), Array(6).fill('✓ bien rangée'), 'verdicts');
+  egal((await pg.evaluate(() => window.__p.moteur.noter(window.__p.db))).score, 20, 'note : 20 (poids écrits à la main : somme 20)');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Adresse libre : posée « à côté » sans rien demander → adresseLibre-P8 ko, scan refusé (« Ce n’est pas l’adresse de cette palette. », trace), le système la croit à l’adresse donnée ; posée à l’adresse libre SANS l’avoir demandée : ko aussi', async () => {
+  await monter(pg, { libre: true, terminal: 'deux' });
+  await p8Occupe(pg);
+  await ouvrir(pg, AL.cote); await bouton(pg, 'poser');
+  egal((await etat(pg)).posees, { P8: AL.cote }, 'posée à côté : la vue le permet');
+  await scanPal(pg, 'P8'); await scanEmp(pg);
+  egal(await lignesRouges(pg), ['Ce n’est pas l’adresse de cette palette.'], 'refus du scan : ce n’est pas l’adresse du système');
+  const e = await etat(pg);
+  egal([e.scan, e.scansRefuses, e.libres], [{}, 1, {}], 'rien confirmé, un refus en trace, rien demandé');
+  egal(await croitL(pg, 'P8'), AL.donnee, 'le système la croit à l’adresse donnée (occupée)');
+  await justeScan(pg);
+  await valider(pg);
+  egal(await jalons(pg), Object.assign(tousLS('ok'), { 'adresseLibre-P8': 'ko', 'scan-P8': 'ko' }), 'jalons : seuls adresseLibre-P8 et scan-P8 sont ko');
+  egal(await texte(pg, '[data-pe-verd="P8"]'), '✗ adresse, scan', 'verdict de la carte');
+  // Posée à l'adresse libre sans l'avoir demandée.
+  await monter(pg, { libre: true, terminal: 'deux' });
+  await prendre(pg, 'P8'); await ouvrir(pg, AL.libre); await bouton(pg, 'poser');
+  await scanPal(pg, 'P8'); await scanEmp(pg);
+  egal(await lignesRouges(pg), ['Ce n’est pas l’adresse de cette palette.'], 'scan refusé : l’adresse libre n’a pas été demandée');
+  await justeScan(pg);
+  await valider(pg);
+  egal(await jalons(pg), Object.assign(tousLS('ok'), { 'adresseLibre-P8': 'ko', 'scan-P8': 'ko' }), 'ko : la bonne adresse, mais sans la demande');
+});
+
+await v('Adresse libre : demandée puis posée ailleurs → ko, scan refusé ; demandée, posée à côté, scan refusé puis reprise et rangée à l’adresse libre → tout juste (le dernier geste compte)', async () => {
+  await monter(pg, { libre: true, terminal: 'deux' });
+  await p8Occupe(pg); await demander(pg); await compris(pg);
+  await ouvrir(pg, AL.ailleurs); await bouton(pg, 'poser');
+  await scanPal(pg, 'P8'); await scanEmp(pg);
+  egal(await lignesRouges(pg), ['Ce n’est pas l’adresse de cette palette.'], 'scan refusé : posée ailleurs que l’adresse libre');
+  egal(await croitL(pg, 'P8'), AL.libre, 'le système attend l’adresse libre une fois demandée');
+  await justeScan(pg);
+  await valider(pg);
+  egal(await jalons(pg), Object.assign(tousLS('ok'), { 'adresseLibre-P8': 'ko', 'scan-P8': 'ko' }), 'demandée mais posée ailleurs : ko');
+  // Posée à côté après la demande, refusée au scan ; reprise, rangée à l'adresse libre, scannée.
+  await monter(pg, { libre: true, terminal: 'deux' });
+  await p8Occupe(pg); await demander(pg); await compris(pg);
+  await ouvrir(pg, AL.cote); await bouton(pg, 'poser');
+  await scanPal(pg, 'P8'); await scanEmp(pg);
+  egal((await lignesRouges(pg)).length, 1, 'refusé : à côté, même après la demande');
+  await prendre(pg, 'P8');
+  egal([(await etat(pg)).libres, (await etat(pg)).posees], [{ P8: AL.libre }, {}], 'reprise : la demande reste, la pose disparaît');
+  await ouvrir(pg, AL.libre); await bouton(pg, 'poser');
+  await scanPal(pg, 'P8'); await scanEmp(pg);
+  egal((await etat(pg)).scan, { P8: AL.libre }, 'scan accepté à l’adresse libre');
+  await justeScan(pg);
+  await valider(pg);
+  egal(await jalons(pg), tousLS('ok'), 'tout juste');
+});
+
+await v('Adresse libre : P8 restée en réception → « Valider » reste possible (confirmation « encore en réception ») ; adresseLibre-P8 ko, demandée ou non ; les autres jalons jugés comme avant', async () => {
+  for (const demande of [false, true]) {
+    await monter(pg, { libre: true });
+    if (demande) { await p8Occupe(pg); await demander(pg); await compris(pg); await prendre(pg, 'P8'); }
+    await juste(pg);
+    egal(await jalons(pg), tousL('attente'), 'avant la validation');
+    if (await present(pg, '[data-pal="retour"]')) await bouton(pg, 'retour');
+    await bouton(pg, 'valider');
+    egal(await present(pg, '[data-pal-confirme]'), true, 'confirmation');
+    vrai((await texte(pg, '[data-pal-confirme]')).includes('1 palette encore en réception'), `la confirmation le dit : ${await texte(pg, '[data-pal-confirme]')}`);
+    await bouton(pg, 'validerOui');
+    // (P8 en réception : les deux gardes « toutes les palettes traitées », pasPoseHaut et charge, sont ko aussi, règle du lot 1.)
+    egal(await jalons(pg), Object.assign(tousL('ok'), { 'adresseLibre-P8': 'ko', pasPoseHaut: 'ko', charge: 'ko' }), `après la validation (demandée : ${demande})`);
+    egal(await texte(pg, '[data-pal-etat="P8"]'), 'en réception', 'P8 est restée en réception');
+  }
+});
+
+await v('Adresse libre : `occupe:P8` publié quand l’adresse donnée est ouverte avec P8 en main (un message qui l’attend arrive), pas pour une autre palette ni sans palette ; aussi quand P8 est prise alors que l’emplacement est ouvert ; `adresseLibre:P8` publié à la demande seulement', async () => {
+  await monter(pg, { libre: true, volet: 'entrepot:essai-palettier:occupe:P8' });
+  await ouvrir(pg, AL.donnee);
+  egal([await kevinL(pg), (await gestes(pg)).filter((g) => /occupe/.test(g))], [0, []], 'emplacement ouvert sans palette en main : rien');
+  await prendre(pg, 'P1');
+  egal([await kevinL(pg), (await gestes(pg)).filter((g) => /occupe/.test(g))], [0, []], 'P1 en main (ce n’est pas son adresse) : rien');
+  await ouvrir(pg, AL.cote); await ouvrir(pg, AL.donnee);
+  egal(await kevinL(pg), 0, 'P1 en main, adresse de P8 rouverte : toujours rien');
+  await prendre(pg, 'P8');   // l'emplacement de P8 est déjà ouvert : prendre P8 publie le geste
+  egal([await kevinL(pg), (await gestes(pg)).filter((g) => /occupe/.test(g))], [1, ['entrepot:essai-palettier:occupe:P8']], 'P8 prise, emplacement déjà ouvert : publié, le message arrive');
+  egal((await gestes(pg)).filter((g) => /adresseLibre/.test(g)), [], 'rien n’est demandé');
+  // L'autre ordre : P8 en main, puis l'emplacement ouvert.
+  await monter(pg, { libre: true, volet: 'entrepot:essai-palettier:occupe:P8' });
+  await prendre(pg, 'P8');
+  egal(await kevinL(pg), 0, 'P8 en main, rien d’ouvert : rien');
+  await ouvrir(pg, AL.libre);
+  egal(await kevinL(pg), 0, 'un autre emplacement : rien');
+  await ouvrir(pg, AL.donnee);
+  egal([await kevinL(pg), (await gestes(pg)).filter((g) => /occupe/.test(g))], [1, ['entrepot:essai-palettier:occupe:P8']], 'ouvrir l’adresse de P8 avec P8 en main : publié');
+  // La demande publie son geste (un message qui l'attend arrive à ce moment, pas avant).
+  await monter(pg, { libre: true, volet: 'entrepot:essai-palettier:adresseLibre:P8' });
+  await p8Occupe(pg);
+  egal(await kevinL(pg), 0, 'ouvrir l’adresse ne publie pas adresseLibre');
+  await demander(pg);
+  egal([await kevinL(pg), (await gestes(pg)).filter((g) => /adresseLibre/.test(g))], [1, ['entrepot:essai-palettier:adresseLibre:P8']], 'la demande le publie');
+});
+
+await v('Adresse libre : sur une palette sans adresse libre, « Demander » dit « Pas d’autre adresse : A1-T03-N1-E2 est libre. » (Terminal et fenêtre), rien d’écrit, aucun geste ; si son adresse est prise sans `adresseLibre` : « Pas d’autre adresse pour P9 (Peluches). »', async () => {
+  await monter(pg, { libre: true, terminal: 'deux' });
+  await prendre(pg, 'P1'); await ouvrir(pg, AL.donnee);
+  egal(await present(pg, '[data-pal="libre"]'), true, 'le bouton est là sur tout emplacement occupé, palette en main');
+  const avant = await etat(pg);
+  await demander(pg);
+  egal([await texteFen(pg), await derniere(pg)], ['Pas d’autre adresse : A1-T03-N1-E2 est libre.', 'Pas d’autre adresse : A1-T03-N1-E2 est libre.'], 'fenêtre et Terminal');
+  await compris(pg);
+  const e = await etat(pg);
+  egal([e.libres, e.enMain, e.premierGeste === avant.premierGeste, (await gestes(pg)).filter((g) => /adresseLibre|occupe/.test(g))], [{}, 'P1', true, []], 'rien d’écrit, aucun geste (pas même un premier geste noté)');
+  egal(await texte(pg, '[data-pal-etiq="P1"]'), 'Adresse A1-T03-N1-E2', 'la carte ne change pas');
+  egal(await croitL(pg, 'P1'), 'A1-T03-N1-E2', 'le système croit toujours l’adresse donnée');
+  // Une palette dont l'adresse est prise (stock) sans `adresseLibre`.
+  await monter(pg, { libre: true, extra: [{ id: 'P9', nom: 'Peluches', cartons: 20, kg: 3, adresse: 'A1-T03-N1-E3', aSignaler: true }] });
+  await prendre(pg, 'P9'); await ouvrir(pg, 'A1-T03-N1-E3'); await demander(pg);
+  egal(await texteFen(pg), 'Pas d’autre adresse pour P9 (Peluches).', 'adresse prise, rien à donner');
+  egal((await etat(pg)).libres, {}, 'rien d’écrit');
+});
+
+await v('Adresse libre : sans Terminal, le bouton existe, la fenêtre et l’encart « Système » disent l’adresse libre ; ranger là → adresseLibre-P8 ok', async () => {
+  await monter(pg, { libre: true });
+  egal(await present(pg, '[data-terminal]'), false, 'pas de Terminal');
+  await p8Occupe(pg); await demander(pg);
+  egal(await texteFen(pg), TXT_LIBRE, 'fenêtre');
+  await compris(pg);
+  egal(await pg.$$eval(`${Z} [data-pal-systeme] .pal-sys-actu`, (L) => L.map((x) => x.textContent.trim())), [TXT_LIBRE], 'encart « Système »');
+  await ouvrir(pg, AL.libre); await bouton(pg, 'poser');
+  await juste(pg);
+  await valider(pg);
+  egal(await jalons(pg), tousL('ok'), 'tout juste');
+});
+
+await v('Adresse libre : en copie, aucun verdict, mais le Terminal et la fenêtre donnent l’adresse libre (P5 d’ENT-8.14 : l’élève décide seul) ; la copie est rendue à « Valider » ; jalons jugés', async () => {
+  await monter(pg, { libre: true, terminal: 'deux', temps: 'evaluation' });
+  await p8Occupe(pg); await demander(pg);
+  egal([await texteFen(pg), await derniere(pg)], [TXT_LIBRE, TXT_LIBRE], 'fenêtre et Terminal, en copie aussi');
+  await compris(pg);
+  await ouvrir(pg, AL.libre); await bouton(pg, 'poser');
+  await scanPal(pg, 'P8'); await scanEmp(pg);
+  await justeScan(pg);
+  await valider(pg);
+  egal(await pg.$$eval(`${Z} [data-pal-verdict]`, (L) => L.length), 0, 'aucun verdict');
+  await pg.waitForFunction(() => window.__p.remis !== null);
+  const J = await jalons(pg);
+  egal([J['adresseLibre-P8'], J['scan-P8']], ['ok', 'ok'], 'adresseLibre-P8 et scan-P8 jugés');
+});
+
+await v('Adresse libre : une déclaration fautive ne se charge pas (adresse libre occupée, adresse donnée libre, avec nouvelleAdresse, inconnue, déjà celle d’une autre palette, hors service, niveau que le cariste ne dessert pas) ; une déclaration juste se charge', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntrepot } = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const P0 = C.palettier({ libre: true });
+    const essai = (x) => { try { creerEntrepot(Object.assign({}, P0, { id: `x${Math.random()}`, palettes: P0.palettes.map((p) => (p.id === 'P8' ? Object.assign({}, p, x) : p)) })); return ''; } catch (e) { return e.message; } };
+    return [
+      essai({}),
+      essai({ adresseLibre: 'A1-T03-N1-E3' }),
+      essai({ adresse: 'A1-T01-N1-E3' }),
+      essai({ nouvelleAdresse: 'A1-T04-N2-E1' }),
+      essai({ adresseLibre: 'A1-T09-N1-E1' }),
+      essai({ adresseLibre: 'A1-T03-N1-E2' }),
+      essai({ adresseLibre: 'B1-T01-N2-E1' }),
+      essai({ aSignaler: true }),
+      essai({ adresseLibre: 'A1-T01-N2-E2' }),
+      (() => { try { creerEntrepot(Object.assign({}, P0, { id: 'y', cariste: { nom: 'Kevin', niveaux: [2, 3] },
+        palettes: P0.palettes.filter((p) => p.id !== 'P6').map((p) => (p.id === 'P8' ? Object.assign({}, p, { adresseLibre: 'A1-T01-N4-E2' }) : p)) })); return ''; } catch (e) { return e.message; } })(),
+    ];
+  });
+  egal(r[0], '', `la déclaration juste se charge : ${r[0]}`);
+  vrai(r[1].includes('adresse libre A1-T03-N1-E3 est occupée dans le stock de départ'), r[1]);
+  vrai(r[2].includes('doit être occupée dans le stock de départ'), r[2]);
+  vrai(r[3].includes('adresseLibre ne va pas avec nouvelleAdresse'), r[3]);
+  vrai(r[4].includes('adresse libre inconnue (A1-T09-N1-E1)'), r[4]);
+  vrai(r[5].includes('adresse libre A1-T03-N1-E2 est déjà celle de P1'), r[5]);
+  vrai(r[6].includes('adresse libre B1-T01-N2-E1 est hors service'), r[6]);
+  vrai(r[7].includes('adresseLibre ne va pas avec nouvelleAdresse ni aSignaler'), r[7]);
+  egal(r[8], '', `une adresse libre au niveau N2, que le cariste dessert, se charge : ${r[8]}`);
+  vrai(r[9].includes('que le cariste ne dessert pas'), r[9]);
+});
+
+await v('Adresse libre : la page d’essai (cas « Rangement », P8 occupée, Kevin qui pousse) tient en 1366 × 768 et 1280 × 720 sans défiler avec le bouton « Demander » visible ; Kevin écrit au premier « Occupé », la demande ouvre la fenêtre', async () => {
+  const pe = await ctx.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const [w, h] of [[1366, 768], [1280, 720]]) {
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-palettier.html');
+    await pe.waitForSelector('.pal');
+    const deborde = () => pe.evaluate(() => Math.max(0, document.documentElement.scrollHeight - innerHeight));
+    const vu = (s) => pe.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.right <= innerWidth && r.height > 0; }, s);
+    const kevin = () => pe.evaluate(() => (window.__essai.db.mails || []).filter((m) => m.from === 'Kevin').length);
+    const ouvrirP8 = async () => {
+      await pe.click('.pal .pe-bandeau [data-pe-pal="P8"]');
+      await pe.click('.pal [data-pe-trav="A1-T03"]');
+      await pe.click('.pal [data-pe-emp="A1-T03-N1-E1"]');
+    };
+    egal(await pe.$$eval('.pal .pe-bandeau [data-pe-pal]', (L) => L.map((b) => b.dataset.pePal)), ['P1', 'P2', 'P3', 'P4', 'P5', 'P8'], `P8 dans la page d’essai (${w} × ${h})`);
+    // Kevin qui pousse (défaut) : son message arrive au premier « Occupé » (son bandeau « Nouveau message » prend de la place en haut : la mise en page se mesure sans lui).
+    await pe.click('.pal .pe-bandeau [data-pe-pal="P8"]');
+    egal(await kevin(), 0, 'Kevin n’a rien écrit');
+    await pe.click('.pal [data-pe-trav="A1-T03"]');
+    await pe.click('.pal [data-pe-emp="A1-T03-N1-E1"]');
+    egal(await kevin(), 1, `Kevin écrit au premier « Occupé » (${w} × ${h})`);
+    egal(await pe.evaluate(() => (window.__essai.db.mails || []).find((m) => m.from === 'Kevin').text), 'Elle est prise ? Mets-la à côté, on verra demain. Il est tard. Kevin', 'son message');
+    // Sans Kevin (réglage « non ») : la mise en page, sans défiler, bouton visible.
+    await pe.selectOption('#reglages select[name="pousse"]', 'non');
+    await pe.waitForSelector('.pal');
+    await pe.evaluate(() => { document.querySelector('#reglages').style.display = 'none'; document.querySelector('#mention').style.display = 'none'; });
+    await ouvrirP8();
+    egal(await kevin(), 0, 'réglage « non » : Kevin n’écrit pas');
+    egal([await vu('.pal [data-pal="libre"]'), await vu('.pal [data-pal="signaler"]'), await vu('.pal [data-pal="poser"]'), await deborde()], [true, true, true, 0], `boutons visibles, rien ne dépasse à ${w} × ${h}`);
+    await pe.click('.pal [data-pal="libre"]');
+    egal((await pe.textContent('.pal [data-pal-modal-texte]')).replace(/\s+/g, ' ').trim(), TXT_LIBRE, 'la fenêtre donne l’adresse libre');
+    await pe.click('.pal [data-pal-modal-ok]');
   }
   egal(err, [], 'erreurs JS');
   await pe.close();

@@ -2191,6 +2191,7 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     { id: 'P5', nom: '…', cartons: 36, kg: 13, adresse: 'A1-T02-N3-E2', nouvelleAdresse: 'A1-T04-N2-E3' },   // à signaler
     { id: 'P7', …, adresse: '…', aSignaler: true },   // à signaler, sans nouvelle adresse
     { id: 'P6', …, niveaux: ['confirme'] },          // au confirmé seulement : ses jalons sont bonus
+    { id: 'P8', …, adresse: 'A1-T03-N1-E1', adresseLibre: 'A1-T01-N1-E2' },   // lot 3 : adresse donnée OCCUPÉE, adresse libre à demander
   ],
   cariste: { nom: 'Kevin', niveaux: [2, 3, 4], monte: 'validation' },   // monte : 'validation' (défaut) ou (db) => vrai / faux
   aideCharge: 'somme' | 'pose' | 'plaque',   // absent = 'plaque'
@@ -2267,10 +2268,39 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     dans le **journal du Terminal** (rangé dans l'état : il survit à un rechargement) ; la **fenêtre modale** du signalement reste.
   - **En copie** : aucun verdict, mais les phrases du Terminal (« Confirmé. », le refus) **restent dites** : c'est l'outil, pas une aide.
   - Vert : aucun plein ; « Confirmé. » est du texte. La palette en attente porte un trait de l'accent, pas un aplat.
+- **Adresse prise, adresse libre (lot 3, 22/10/2026)** — `adresseLibre: 'A1-T01-N1-E2'` sur une palette (ENT-8.13 : P3 ; ENT-8.14 : P5 ; exemple : P8 de
+  `palettier({ libre: true })` dans `contenus/palettier-essai.js`, page d'essai : le cas « Rangement » l'a toujours, réglage « Kevin pousse »). Son
+  **adresse donnée est occupée** dans le stock de départ et le système a une **adresse libre** à donner. Une palette sans `adresseLibre` ne change en rien.
+  - **Contrôles** (une déclaration fautive ne se charge pas) : l'adresse libre est connue, différente de toute autre adresse déclarée, **libre** (ni
+    stock, ni hors service), au niveau 1 ou à un niveau que le cariste dessert ; l'adresse donnée est **occupée** (stock de départ, comptage compris) ;
+    pas avec `nouvelleAdresse` ni `aSignaler` (une palette n'a qu'une façon de s'en sortir).
+  - **Ouvrir l'adresse donnée avec la palette en main** : l'emplacement est « Occupé : … » (texte d'avant), et la vue publie **`occupe:<P>`** (c'est
+    sur ce geste qu'ENT-8.13 fait écrire Kevin : « Mets-la à côté, on verra demain »). Publié **à chaque fois** que l'adresse donnée est ouverte avec
+    cette palette en main, **ou** quand on prend la palette alors que cet emplacement est déjà ouvert (la base ne retient que le premier : un
+    `apresGeste` se déclenche une fois). Pas pour une autre palette, pas sans palette en main.
+  - **« Demander une adresse libre »** : un bouton de la **vue de près d'un emplacement occupé** (stock, ta palette, réservé) quand une palette est en main,
+    entre « Confier » et « Signaler » ; il n'existe que si une palette au moins déclare `adresseLibre` (rien ne change ailleurs). Le **Terminal** dit
+    « Adresse libre pour P3 (Bougies parfumées) : A1-T02-N1-E3. » et la **fenêtre « Message du système »** (la même que le signalement, bouton « Compris »)
+    le dit aussi ; sans Terminal, l'encart « Système » et la fenêtre. La carte de la palette porte « Nouvelle adresse » (la même étiquette qu'après
+    un signalement). État `libres: { P3: adresse }`, geste **`adresseLibre:<P>`**. Pareil **en copie** (l'élève décide seul : sans cela l'adresse libre
+    ne se connaîtrait jamais ; le Terminal est l'outil, pas une aide). Redemander redit la même adresse, sans nouveau geste utile.
+  - **Une palette sans `adresseLibre`** (le bouton est là sur tout emplacement occupé) : « Pas d'autre adresse : A1-T03-N1-E2 est libre. » (son adresse
+    donnée, ou sa nouvelle adresse), ou « Pas d'autre adresse pour P9 (Peluches). » si cette adresse est prise ; même fenêtre et même Terminal, **rien
+    d'écrit, aucun geste**.
+  - **Ce que le système attend** pour la palette (pose, scan, `ouSystemeCroit`) : l'adresse donnée **tant que l'adresse libre n'est pas demandée**, puis
+    l'adresse libre. Poser « à côté » sans rien demander est **permis** (la vue laisse poser sur tout emplacement libre) ; le scan y est **refusé**
+    (« Ce n'est pas l'adresse de cette palette. », trace `scansRefuses`) et `ouSystemeCroit` rend l'adresse donnée (occupée). Après la demande :
+    scan accepté à l'adresse libre seulement ; une palette reprise garde sa demande. **La laisser dans l'allée** : « Valider » reste possible
+    (confirmation « encore en réception »), `adresseLibre-<P>` ko, et `pasPoseHaut` et `charge` aussi (règle d'avant : toutes les palettes traitées).
+  - **Jalon `adresseLibre-<P>`** (à la place de `place-<P>`, comme `signale-<P>` pour une palette à signaler) : adresse libre demandée **et** palette posée (ou
+    confiée **et montée**) **à cette adresse** = ok ; posée à côté sans demander, restée en réception, demandée mais posée ailleurs = ko. Le scan est
+    jugé par `scan-<P>` seul. `attente` avant « Valider », jamais après. Verdict de la carte (`verdict: 'adresse'`) : « ✗ adresse · adresse libre à
+    demander, puis A1-T01-N1-E2 ».
 - **Gestes publiés** (dans `signaux`, préfixés `entrepot:<id>:`) : `prendre:<P>`, `poser:<P>` (pose réussie), `confier:<P>`,
   `signaler:<P>` — une entrée par palette déclarée, celles du confirmé comprises —, `ouvrir` (toute ouverture d'un emplacement de près ; la
   première seule est retenue par la base), `monter` (le bouton « Faire monter les palettes »), `valider`, et **avec `terminal`** `scan:<P>`
-  (une entrée par palette : le second scan réussi, jamais le premier). Ni `poser` ni `verifier` du rangement. Rien n'est publié après « Valider ».
+  (une entrée par palette : le second scan réussi, jamais le premier), et, **pour chaque palette à `adresseLibre`**, `occupe:<P>` et `adresseLibre:<P>`
+  (lot 3, plus haut). Ni `poser` ni `verifier` du rangement. Rien n'est publié après « Valider ».
 - **Jalons** (ids stables ; `attente` avant « Valider », `ok` / `ko` après, **jamais `attente` après**) :
   - `place-<P>` (palette à ranger) : posée au sol ou confiée **à son adresse** ; **signalée à tort** (son adresse était possible) = faux,
     même posée juste ensuite (décision 6 de Tristan) ; **confiée mais pas montée au moment de « Valider »** = faux (décision de Tristan,
@@ -2279,10 +2309,11 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     pas la base sous la main). Pour `signale-<P>`, la palette rangée à sa nouvelle adresse doit être montée aussi. Quand `monte` est une
     fonction et que des palettes attendent, la confirmation de « Valider » dit : « Des palettes attendent Kevin : elles ne compteront pas
     comme rangées. Valider quand même ? » (avec `'validation'`, la validation les monte : aucun avertissement) ;
+  - `adresseLibre-<P>` (palette avec `adresseLibre`, **à la place de** `place-<P>` ; lot 3, plus haut) : adresse libre demandée et palette rangée à cette adresse ;
   - `signale-<P>` (palette avec `nouvelleAdresse` ou `aSignaler`) : signalée **depuis son adresse**, avec un **motif vrai**, non rangée à son
     adresse d'origine, puis rangée à sa nouvelle adresse si le système l'a donnée (pas en copie) ;
   - `scan-<P>` (**avec `terminal`**, une palette qui n'est pas « à signaler sans nouvelle adresse ») : `scan[P]` est l'adresse que le système attend
-    (la nouvelle adresse reçue, sinon l'adresse donnée) ; `attente` avant « Valider », puis `ok` ou `ko`. `bonus` pour une palette du confirmé.
+    (la nouvelle adresse reçue, sinon l'adresse libre demandée, sinon l'adresse donnée) ; `attente` avant « Valider », puis `ok` ou `ko`. `bonus` pour une palette du confirmé.
     Chaque jalon juge **son** geste : une palette posée juste mais non scannée = `place-P` ok, `scan-P` ko ; scannée à l'adresse attendue alors
     qu'elle était mal rangée = `scan-P` ok, `place-P` ko. **En copie** la nouvelle adresse n'est jamais donnée : `scan-P5` (palette signalée) y reste
     ko ; une séance d'évaluation lui met `poids: 0` ou ne le pèse pas ;
@@ -2303,12 +2334,13 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
   `monterDemande: true` et `monteesIds: [P3, …]` (le bouton « Faire monter » ; `monteesIds` seulement sans fonction `monte`),
   `monteesValidation: [P3, …]` (à la validation : les palettes montées à ce moment). **Avec `terminal`**, quatre clés créées au premier dessin
   (absentes sinon) : `scan: { P1: 'A1-T03-N1-E2' }` (second scan réussi : **ce que le système croit**), `scansRefuses: n` (trace), `scanAttente: 'P1' | null`
-  (palette scannée, l'emplacement est attendu) et `terminal: { journal, attente }`.
+  (palette scannée, l'emplacement est attendu) et `terminal: { journal, attente }`. **Avec une palette à `adresseLibre`** (lot 3), une clé créée au premier
+  dessin (absente sinon) : `libres: { P3: 'A1-T02-N1-E3' }` (l'adresse libre donnée par le système à la demande).
 - **Exports lisibles par une séance** (`core/types/entrepot.js`, `P` = la déclaration ou la fonction de la séance, `o.copie` en évaluation) :
   `palettesConfiees(db, P, o)` → `[{ id, nom, adresse }]` (les phrases du message à Kevin ; calculées une fois, à l'arrivée du message) ;
   `etatPalettier(db, P, o)` → `{ enMain, posees, confiees, signalees: { P5: motif }, nouvelles, montees, tentativesHaut, valide }` plus, **avec
-  `terminal`**, `scans: { P1: adresse }` et `scansRefuses` ; **`ouSystemeCroit(db, P, 'P1', o)`** (lot 2) → l'adresse **scannée** si elle existe,
-  sinon la **nouvelle adresse** reçue après signalement, sinon l'adresse **donnée** (`null` si la palette n'existe pas) : c'est ce que « le
+  `terminal`**, `scans: { P1: adresse }` et `scansRefuses`, et, **avec une palette à `adresseLibre`**, `libres: { P3: adresse }` ; **`ouSystemeCroit(db, P, 'P1', o)`** (lot 2) →
+  l'adresse **scannée** si elle existe, sinon la **nouvelle adresse** reçue après signalement, sinon l'**adresse libre** demandée (lot 3), sinon l'adresse **donnée** (`null` si la palette n'existe pas) : c'est ce que « le
   lendemain » (lot 5) lira. `noter` rend aussi `scans` et `scansRefuses` dans `detail`.
   `bonnesReponses(P)` rend les attendus (enseignant, page d'essai) ; la note d'une copie non pondérée compte les jalons du socle seuls.
 - **Le comptage (lot 4, 22/10/2026) : compter au Terminal, à l'aveugle, en cartons** (ENT-8.12 ; ENT-8.14 en copie au lot 6). Exemple complet :

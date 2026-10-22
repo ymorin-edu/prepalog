@@ -7,6 +7,7 @@
 <!-- Page d'ESSAI du mode « palettier » de l'écran Plan d'entrepôt (`core/types/entrepot-palettier.js`, chantier E-7, lot 1),
      dans le vrai moteur d'entreprise, sur le cas `contenus/palettier-essai.js` (5 palettes comme ENT-8.11, une 6e au confirmé).
      Lot 2 : le réglage « Scan » compare deux clics (la palette, puis l'emplacement), un clic (l'emplacement seul) et aucun scan.
+     Lot 3 : le cas « Rangement » a une 8e palette, P8, dont l'adresse est occupée (« Demander une adresse libre », « Kevin pousse »).
      Lot 4 : le réglage « Cas » passe au COMPTAGE à l'aveugle (6 adresses + 1 au confirmé, recompter / jamais, aide par couche).
      Elle n'est liée nulle part et rien n'y est enregistré : la base vit en mémoire, un changement de réglage repart de zéro.
      Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-palettier.html -->
@@ -40,6 +41,7 @@
   <label data-cas="comptage" hidden>Aide par couche <select name="aideCouche"><option value="">non</option><option value="oui">oui (accompagné)</option></select></label>
   <label><span data-cas="rangement">Après « Valider »</span><span data-cas="comptage" hidden>Après « Terminer »</span> <select name="verdict"><option value="critere">nom du critère faux</option><option value="adresse">critère et attendu</option><option value="">rien</option></select></label>
   <label data-cas="rangement">Kevin monte <select name="monte"><option value="validation">à la validation</option><option value="message">à ta réponse (bouton)</option></select></label>
+  <label data-cas="rangement">Kevin pousse (« Mets-la à côté ») <select name="pousse"><option value="oui">oui</option><option value="non">non</option></select></label>
   <label data-cas="rangement">Scan <select name="scan"><option value="palette-emplacement">deux clics (palette puis emplacement)</option><option value="emplacement">un clic (l’emplacement seul)</option><option value="aucun">aucun scan (lot 1)</option></select></label>
   <label>Niveau <select name="niveau"><option value="standard">standard</option><option value="confirme">confirmé (bonus)</option></select></label>
   <label>Temps <select name="temps"><option value="guidage">travail</option><option value="evaluation">évaluation (copie)</option></select></label>
@@ -48,6 +50,7 @@
   <button type="button" id="raz">Réinitialiser</button>
   <div data-cas="rangement"><b>Parcours attendu</b> : poser (au sol) ou confier (au-dessus) → <b>scanner la palette</b> (clic sur son code-barres : sa carte en haut, la vue de près, la zone « À monter ») → <b>scanner l’emplacement</b> (clic sur l’étiquette d’adresse de la vue de près ; le Terminal dit « Confirmé. ») → signaler P5 (une fenêtre « Message du système » donne la nouvelle adresse : « Compris ») → <b>Faire monter les palettes</b> → <b>Valider mon rangement</b>.
     <b>Scan</b> : « deux clics » = la palette, puis l’emplacement (par défaut) ; « un clic » = l’étiquette de l’emplacement confirme directement la palette qui s’y trouve ; « aucun scan » = le lot 1.
+    <b>P8, l’adresse prise</b> : l’emplacement de P8 (A1-T03-N1-E1) est <b>occupé</b>. Prends P8, ouvre cet emplacement (« Occupé ») : si « Kevin pousse » est sur « oui », il écrit « Mets-la à côté » (Messagerie). Trois chemins : <b>Demander une adresse libre</b> (une fenêtre et le Terminal donnent l’adresse, la carte la porte) → ranger là → scanner ; ou <b>poser à côté sans rien demander</b> (permis, mais le scan est refusé) ; ou la laisser dans l’allée (« Valider » reste possible).
     Avec « à ta réponse (bouton) » : « Faire monter » envoie la demande à Kevin, puis « Kevin a reçu ta réponse » le fait monter. Valider avec des palettes encore à monter : elles ne comptent pas comme rangées.</div>
   <div data-cas="comptage" hidden><b>Parcours attendu</b> : lire une adresse de la liste <b>À compter</b> (à droite) → ouvrir sa travée, puis l’emplacement → <b>scanner</b> son étiquette (clic) → compter les cartons de la palette dessinée → <b>taper le nombre</b> au Terminal (Entrée ou « Valider ») → si le Terminal dit « Quantité différente », <b>Recompter</b> ou <b>Confirmer</b> → adresse suivante → <b>Terminer le comptage</b>.
     Six adresses : deux écarts (n° 1 il manque des cartons, n° 4 il y en a en trop), quatre justes ; une 7e au confirmé. Le nombre du système n’est jamais affiché avant « Terminer ». « Voir : enseignant » montre les attendus.</div>
@@ -83,14 +86,14 @@ function monter() {
   form.querySelectorAll('[data-cas]').forEach((el) => { el.hidden = el.dataset.cas !== cas; });
   const P = cas === 'comptage'
     ? comptage({ verdict: f.get('verdict') || undefined, recompte: f.get('recompte'), aideCouche: f.get('aideCouche') === 'oui' })
-    : palettier({ aideCharge: f.get('aide'), verdict: f.get('verdict') || undefined,
+    : palettier({ aideCharge: f.get('aide'), verdict: f.get('verdict') || undefined, libre: true,
       terminal: f.get('scan') !== 'aucun', scan: f.get('scan'),
       monte: f.get('monte') === 'message' ? (d) => !!(d && d.essaiKevin) : undefined });
   kevin.hidden = cas === 'comptage' || f.get('monte') !== 'message';
   const hote = document.getElementById('hote');
   const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
   boite.hidden = true;
-  const moteur = creerEntreprise(universPalettier({ temps, entrepot: P }));
+  const moteur = creerEntreprise(universPalettier({ temps, entrepot: P, kevinPousse: cas !== 'comptage' && f.get('pousse') === 'oui' }));
   courant = { db, P, temps, moteur };
   moteur.rendre(neuf, {
     meta: { id: 'essai-palettier', code: 'ESSAI', titre: 'Essai du palettier', portee: 'eleve', immersif: true, temps, copie: temps === 'evaluation' },

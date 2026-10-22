@@ -15,6 +15,7 @@
 import { catalogueSimple } from './entreprise-commun.js';
 import { THEME } from './action.js';
 import { etapesPalettier } from '../core/types/entrepot.js';
+import { apresGeste } from '../core/declencheurs.js';
 
 export const MENTION = 'Essai du moteur (palettier à adresse donnée). Réels : Action et ses catégories de produits. <b>Construits pour l’exercice</b> : '
   + 'le plan de l’allée, les plaques de charge, le stock, les poids, les palettes, Samia et Kevin.';
@@ -77,6 +78,12 @@ export const PALETTES = [
   { id: 'P6', nom: 'Boîtes de rangement 10 L', cartons: 50, kg: 4, adresse: 'B2-T03-N4-E1', niveaux: ['confirme'] },         // 225 kg
 ];
 
+// LOT 3 (22/10/2026, adresse prise / adresse libre) : une 8e palette P8, standard, dont l'adresse donnée est OCCUPÉE (A1-T03-N1-E1 : le
+// stock de départ y a des croquettes, CRO 30 ctn) ; le système a une adresse libre à donner (A1-T01-N1-E2, au sol, libre dans le
+// stock). Ajoutée par `palettier({ libre: true })` seulement : les 6 palettes du cas ordinaire ne changent pas.
+//   « à côté » de l'adresse donnée : A1-T03-N1-E2 (libre, c'est l'adresse de P1) ; une autre adresse libre : A1-T01-N1-E3.
+export const P8_LIBRE = { id: 'P8', nom: 'Bougies parfumées', cartons: 24, kg: 3, adresse: 'A1-T03-N1-E1', adresseLibre: 'A1-T01-N1-E2' };   // 97 kg, sol
+
 export const REGLES = {
   titre: 'Les règles',
   lignes: [
@@ -93,7 +100,7 @@ export function palettier(o = {}) {
     id: 'essai-palettier', libelle: 'Plan de l’entrepôt', mode: 'palettier',
     personnage: { nom: 'Samia', role: 'cheffe d’équipe', date: 'mardi, 14 h',
       texte: 'Prends une palette, va à son adresse. Niveau 1 : tu poses. Plus haut : tu vérifies la plaque, puis tu confies à Kevin.' },
-    plan: PLAN, produits: PRODUITS, stock: STOCK, palettes: PALETTES,
+    plan: PLAN, produits: PRODUITS, stock: STOCK, palettes: o.libre ? [...PALETTES, P8_LIBRE] : PALETTES,
     cariste: { nom: 'Kevin', niveaux: [2, 3, 4], ...(o.monte ? { monte: o.monte } : {}) },
     regles: REGLES,
   };
@@ -114,6 +121,11 @@ export const POIDS = { 'place-P1': 3, 'place-P2': 3, 'place-P3': 3, 'place-P4': 
 // Avec le Terminal (somme 20 aussi) : 4 × 2 (poser) + 3 (signaler P5) + 4 × 1,5 + 1 (scanner) + 1 + 1 (les deux gardes).
 export const POIDS_SCAN = { 'place-P1': 2, 'place-P2': 2, 'place-P3': 2, 'place-P4': 2, 'signale-P5': 3,
   'scan-P1': 1.5, 'scan-P2': 1.5, 'scan-P3': 1.5, 'scan-P4': 1.5, 'scan-P5': 1, pasPoseHaut: 1, charge: 1 };
+
+// Avec P8 (adresse prise, lot 3 ; somme 20 aussi) : la palette P8 pèse comme une palette ordinaire.
+export const POIDS_LIBRE = { 'place-P1': 3, 'place-P2': 3, 'place-P3': 3, 'place-P4': 3, 'signale-P5': 3, 'adresseLibre-P8': 3, pasPoseHaut: 1, charge: 1 };
+export const POIDS_SCAN_LIBRE = { 'place-P1': 1.5, 'place-P2': 1.5, 'place-P3': 1.5, 'place-P4': 1.5, 'signale-P5': 2.5, 'adresseLibre-P8': 2.5,
+  'scan-P1': 1.25, 'scan-P2': 1.25, 'scan-P3': 1.25, 'scan-P4': 1.25, 'scan-P5': 1, 'scan-P8': 1, pasPoseHaut: 1, charge: 1 };
 
 // LE COMPTAGE (lot 4, 22/10/2026) : l'inventaire tournant à l'aveugle, au Terminal, en cartons (imite ENT-8.12). Même allée, même
 // stock ; 6 adresses au sol, plus une 7e au confirmé. Écrites À LA MAIN (les tests en dépendent) :
@@ -165,7 +177,7 @@ export const POIDS_COMPTAGE = { 'compte-1': 5 / 3, 'compte-2': 5 / 3, 'compte-3'
 // L'univers d'essai : le vrai moteur d'entreprise, dans la charte d'Action. `entrepot` : une déclaration ou une fonction
 // (graine, { niveau, copie }) ; `temps` : guidage, entraînement ou évaluation (copie) ; `poids: false` : des jalons sans poids
 // (et sans bonus), pour une déclaration d'essai qui ajoute des palettes.
-export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poids = true } = {}) {
+export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poids = true, kevinPousse = false } = {}) {
   const copie = temps === 'evaluation';
   const etapes = etapesPalettier(entrepot, { copie });
   return {
@@ -176,9 +188,15 @@ export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poid
     baseDeDepart: () => ({ v: 1, created: Date.now(), stock: {}, moves: [], mails: [], orders: [], receptions: [],
       customers: [], suppliers: [], seq: 1, _depart: [] }),
     etapes: poids ? etapes.map((e) => (e.bonus ? e : Object.assign(e, { poids: (etapes.some((x) => x.id === 'compte-1') ? POIDS_COMPTAGE
+      : etapes.some((x) => x.id === 'adresseLibre-P8') ? (etapes.some((x) => x.id === 'scan-P1') ? POIDS_SCAN_LIBRE : POIDS_LIBRE)
       : etapes.some((x) => x.id === 'scan-P1') ? POIDS_SCAN : POIDS)[e.id] }))) : etapes.filter((e) => !e.bonus),
     exercice: 'Essai du palettier à adresse donnée',
     entrepot, copie, sansTrame: 'Tout à l’écran',
     menu: ['receptions', 'stock'],
+    // Lot 3 : Kevin écrit au premier « Occupé » sur P8 (ENT-8.13), sans rien proposer : c'est le geste de l'élève qui compte.
+    ...(kevinPousse ? { volet: { id: 'volet-essai-kevin', semer: () => ({ mails: [] }), declencheurs: [{ id: 'kevin-occupe',
+      quand: apresGeste('entrepot:essai-palettier:occupe:P8'),
+      semer: () => ({ mails: [{ folder: 'in', ts: Date.now(), from: 'Kevin', fromMail: 'kevin@essai.example', to: 'Essai', subject: 'Elle est prise ?',
+        kind: 'text', text: 'Elle est prise ? Mets-la à côté, on verra demain. Il est tard. Kevin' }] }) }] } } : {}),
   };
 }

@@ -21,7 +21,8 @@
 //       { id: 'P5', …, adresse: 'A1-T02-N3-E2', nouvelleAdresse: 'A1-T04-N2-E3' },  // à signaler ; le système donne la nouvelle
 //       { id: 'P7', …, adresse: '…', aSignaler: true },                             // à signaler, sans nouvelle adresse
 //       { id: 'P6', …, niveaux: ['confirme'] },                                       // présente au confirmé seulement : jalons bonus
-//     ],
+//       { id: 'P8', …, adresse: 'A1-T03-N1-E1', adresseLibre: 'A1-T01-N1-E2' },     // LOT 3 : son adresse est OCCUPÉE (stock de départ) ;
+//     ],                                                   // « Demander une adresse libre » donne l'adresse libre (voir plus bas)
 //     cariste: { nom: 'Kevin', niveaux: [2, 3, 4], monte: 'validation' },   // monte : 'validation' (défaut) ou (db) => booléen
 //     aideCharge: 'somme' | 'pose' | 'plaque',   // vue de près : plaque + déjà posé + somme / plaque + déjà posé / plaque seule (défaut)
 //     verdict: 'critere' | 'adresse',            // après « Valider » : nom du critère faux / critère et adresse attendue ; absent = rien
@@ -43,13 +44,26 @@
 // Terminal (la fenêtre modale du signalement reste). Les phrases du Terminal sont dites aussi en copie (c'est l'outil, pas une aide).
 // Sans `terminal` : le lot 1 tel quel (ni boîtier, ni étiquette cliquable, ni jalon `scan-`).
 //
+// ADRESSE PRISE, ADRESSE LIBRE (lot 3, 22/10/2026). Une palette qui déclare `adresseLibre` a une adresse donnée OCCUPÉE (le stock de
+// départ y est ; contrôlé au chargement, comme l'adresse libre qui doit être libre, au niveau 1 ou à un niveau du cariste ; pas avec
+// `nouvelleAdresse` ni `aSignaler`). Trois chemins, tous permis par la vue (c'est la séance qui juge) : (1) ouvrir l'emplacement de
+// l'adresse donnée avec la palette en main (« Occupé »), cliquer « Demander une adresse libre » (vue de près d'un emplacement occupé) :
+// le Terminal et la fenêtre « Message du système » disent « Adresse libre pour P3 (Bougies parfumées) : A1-T02-N1-E3. », la carte
+// porte « Nouvelle adresse », `libres: { P3: adresse }` ; la palette se range là et se scanne ; (2) poser « à côté » sans rien demander :
+// permis, le scan y est REFUSÉ (« Ce n'est pas l'adresse de cette palette. ») et le système la croit toujours à l'adresse donnée ;
+// (3) la laisser dans l'allée : « Valider » reste possible. Pour une palette sans `adresseLibre`, le bouton répond « Pas d'autre adresse :
+// A1-T03-N1-E2 est libre. » (rien d'écrit, aucun geste). Le bouton n'existe que si une palette au moins déclare `adresseLibre`.
+//
 // Le poids d'une palette = cartons × kg + 25 (le support), CALCULÉ ici (ENT-8.11 §6), jamais recopié.
 //
 // GESTES publiés (tous inscrits dans `signaux`, préfixés `entrepot:<id>:`) : `prendre:<P>` (palette prise en main, en
 // réception ou reprise), `poser:<P>` (pose réussie au sol), `confier:<P>` (confiée au cariste), `signaler:<P>`, `ouvrir`
 // (toute ouverture d'un emplacement de près, publiée à chaque fois : `api.signal` ne retient que la première), `monter`
 // (le bouton « Faire monter les palettes » : l'élève demande à Kevin de monter ce qui attend dans « À monter »), `valider`, et,
-// avec `terminal`, `scan:<P>` (le second scan réussi : la palette est confirmée à son adresse).
+// avec `terminal`, `scan:<P>` (le second scan réussi : la palette est confirmée à son adresse) ; et, pour chaque palette qui déclare
+// `adresseLibre` (lot 3), `occupe:<P>` (l'emplacement de son adresse donnée ouvert de près AVEC cette palette en main, ou la palette prise
+// alors que cet emplacement est ouvert : publié à chaque fois, la base retient le premier) et `adresseLibre:<P>` (« Demander une adresse
+// libre » pressé pour cette palette).
 // Après « Valider », plus aucun geste.
 //
 // L'ÉTAT, dans `db.entrepots[<id>]` (cloisonné par séance), lu par les lots 2 à 6 :
@@ -72,6 +86,9 @@
 //                 non rangée à son adresse d'origine, puis (si le système a donné une nouvelle adresse) rangée à la nouvelle ;
 //   `pasPoseHaut` aucune tentative de pose au-dessus du sol, et toutes les palettes traitées (posée, confiée ou signalée) ;
 //   `charge`      aucune palette posée ou confiée au-delà d'une plaque, et toutes les palettes traitées.
+//   `adresseLibre-<P>` (lot 3, À LA PLACE de `place-<P>` pour une palette à `adresseLibre`) : adresse libre demandée ET palette posée
+//                 (ou confiée et montée) à CETTE adresse ; posée à côté sans demander, restée en réception, ou demandée mais posée
+//                 ailleurs = ko. Le scan est jugé par `scan-<P>` seul (l'adresse attendue y est l'adresse libre une fois demandée).
 // (« toutes les palettes » ne compte pas les palettes bonus du confirmé : en laisser une en réception ne coûte rien à ces deux gardes.)
 //   `scan-<P>`    (avec `terminal`, une palette qui n'est pas `aSignaler` sans nouvelle adresse) : `scan[P]` est l'adresse que le
 //                 système attend (la nouvelle adresse reçue, sinon l'adresse donnée) ; ko sinon, jamais `attente` après « Valider ».
@@ -179,15 +196,23 @@ export function compilerPalettier(M, err) {
       prises.set(p.nouvelleAdresse, p.id);
       if (dn.n > 1 && !(cariste && cariste.niveaux.includes(dn.n))) err(`${ou} : sa nouvelle adresse est au niveau N${dn.n}, que le cariste ne dessert pas`);
     }
+    // Lot 3 : l'adresse donnée est prise, le système a une adresse libre à donner (occupation contrôlée plus bas, une fois le stock complet).
+    if (p.adresseLibre != null) {
+      if (p.nouvelleAdresse != null || p.aSignaler === true) err(`${ou} : adresseLibre ne va pas avec nouvelleAdresse ni aSignaler (une palette a UNE façon de s'en sortir)`);
+      const dl = verifierAdresse(ou, p.adresseLibre, 'adresse libre');
+      prises.set(p.adresseLibre, p.id);
+      if (dl.n > 1 && !(cariste && cariste.niveaux.includes(dl.n))) err(`${ou} : son adresse libre est au niveau N${dl.n}, que le cariste ne dessert pas`);
+    }
     if (!aSignaler && d.n > 1 && !(cariste && cariste.niveaux.includes(d.n))) err(`${ou} : son adresse est au niveau N${d.n}, que le cariste ne dessert pas (déclarer « cariste »)`);
     if (p.niveaux != null && !(Array.isArray(p.niveaux) && p.niveaux.length === 1 && p.niveaux[0] === 'confirme')) {
       err(`${ou} : niveaux — seul ['confirme'] est prévu (une palette bonus du confirmé), parmi ${NIVEAUX_ELEVE.join(', ')}`);
     }
     M.pal[p.id] = { id: p.id, nom: String(p.nom), cartons: p.cartons, kgCarton: p.kg, kg: poidsPalette(p.cartons, p.kg),
-      adresse: p.adresse, nouvelleAdresse: p.nouvelleAdresse || null, aSignaler, niveaux: p.niveaux ? p.niveaux.slice() : null,
-      bonus: !!p.niveaux };
+      adresse: p.adresse, nouvelleAdresse: p.nouvelleAdresse || null, adresseLibre: p.adresseLibre || null, aSignaler,
+      niveaux: p.niveaux ? p.niveaux.slice() : null, bonus: !!p.niveaux };
   });
   const aPal = Object.keys(M.pal).length > 0;
+  const aLibre = Object.values(M.pal).some((p) => p.adresseLibre);
   if (aPal && !Object.values(M.pal).some((p) => !p.bonus)) err('toutes les palettes sont des bonus du confirmé : il en faut au moins une pour tous');
   const aide = P.aideCharge == null ? 'plaque' : P.aideCharge;
   if (!AIDES_CHARGE.includes(aide)) err(`aideCharge : ${AIDES_CHARGE.join(', ')} (absent = plaque)`);
@@ -201,12 +226,21 @@ export function compilerPalettier(M, err) {
     terminal = { nom: String(T.nom), scan: T.scan || 'palette-emplacement' };
   }
   const comptage = P.comptage != null ? compilerComptage(M, P.comptage, terminal, err) : null;
+  // Lot 3, une fois le stock complet (le comptage l'a peut-être augmenté) : l'adresse donnée est OCCUPÉE, l'adresse libre est LIBRE.
+  Object.values(M.pal).filter((p) => p.adresseLibre).forEach((p) => {
+    const ou = `palette ${p.id}`;
+    if (!M.stock[p.adresse]) err(`${ou} : son adresse ${p.adresse} doit être occupée dans le stock de départ (adresseLibre : l’adresse donnée est prise)`);
+    if (M.stock[p.adresseLibre]) err(`${ou} : son adresse libre ${p.adresseLibre} est occupée dans le stock de départ (elle doit être libre)`);
+    if (M.hs.has(p.adresseLibre)) err(`${ou} : son adresse libre ${p.adresseLibre} est hors service (elle doit être libre)`);
+  });
   const jalons = [];
   Object.values(M.pal).forEach((p) => {
     const b = p.bonus ? { bonus: true } : {};
     jalons.push(p.aSignaler
       ? { id: `signale-${p.id}`, type: 'signale', palette: p.id, lib: `${p.id} signalée avec le bon motif (${p.nom})`, ...b }
-      : { id: `place-${p.id}`, type: 'place', palette: p.id, lib: `${p.id} rangée à son adresse (${p.nom})`, ...b });
+      : p.adresseLibre
+        ? { id: `adresseLibre-${p.id}`, type: 'libre', palette: p.id, lib: `${p.id} rangée à l’adresse libre demandée (${p.nom})`, ...b }
+        : { id: `place-${p.id}`, type: 'place', palette: p.id, lib: `${p.id} rangée à son adresse (${p.nom})`, ...b });
     // Le scan : une palette signalée sans nouvelle adresse ne se range pas, donc ne se scanne pas : pas de jalon.
     if (terminal && !(p.aSignaler && !p.nouvelleAdresse)) {
       jalons.push({ id: `scan-${p.id}`, type: 'scan', palette: p.id, lib: `${p.id} scannée à son adresse (${p.nom})`, ...b });
@@ -225,7 +259,7 @@ export function compilerPalettier(M, err) {
       ...(x.bonus ? { bonus: true } : {}) }));
     jalons.push({ id: 'scanAvant', type: 'scanAvant', comptage: true, lib: 'Adresse scannée avant de compter' });
   }
-  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons, terminal, comptage, aPal });
+  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons, terminal, comptage, aPal, aLibre });
 }
 
 // LE COMPTAGE (lot 4) : contrôle la liste, et OCCUPE les adresses absentes du stock (copies du stock et des produits de la vue :
@@ -327,7 +361,10 @@ export function fautesPalette(M, e, p) {
   // `monteesValidation` est écrit à la validation (ce que Kevin avait monté, la validation comprise) ; un état validé sans cette
   // clé (d'avant le bouton) garde le jugement d'avant.
   const nonMontee = !!(e.valide && Array.isArray(e.monteesValidation) && e.confiees[p.id] && !e.monteesValidation.includes(p.id));
-  if (!p.aSignaler) {
+  if (p.adresseLibre) {
+    // Lot 3 : la bonne adresse est l'adresse libre, et seulement une fois DEMANDÉE ; poser « à côté » sans demander est faux.
+    if (!(e.libres || {})[p.id] || ou !== p.adresseLibre || nonMontee) F.push('adresse');
+  } else if (!p.aSignaler) {
     if (s && !verite(M, pl, p, p.adresse).length) F.push('signalement');
     if (ou !== p.adresse || nonMontee) F.push('adresse');
   } else {
@@ -339,16 +376,18 @@ export function fautesPalette(M, e, p) {
   if (depasse(M, pl, p)) F.push('plaque de charge');
   return F;
 }
-// L'adresse que le système attend pour une palette : la nouvelle adresse reçue après signalement, sinon l'adresse donnée.
-const attendueScan = (e, p) => (e.nouvelles || {})[p.id] || p.adresse;
+// L'adresse que le système attend pour une palette : la nouvelle adresse reçue après signalement, l'adresse libre une fois demandée
+// (lot 3), sinon l'adresse donnée.
+const attendueScan = (e, p) => (e.nouvelles || {})[p.id] || (e.libres || {})[p.id] || p.adresse;
 // Le jalon `scan-<P>` existe-t-il pour cette palette ? (avec `terminal`, sauf une palette signalée sans nouvelle adresse)
 const aJalonScan = (M, p) => !!M.terminal && !(p.aSignaler && !p.nouvelleAdresse);
-// Où le système croit la palette : l'adresse scannée si elle existe, sinon la nouvelle adresse reçue, sinon l'adresse donnée.
+// Où le système croit la palette : l'adresse scannée si elle existe, sinon la nouvelle adresse reçue, sinon l'adresse libre demandée
+// (lot 3), sinon l'adresse donnée (une palette posée « à côté » sans rien demander : l'adresse donnée, occupée).
 export function ouSystemeCroitPalettier(M, e, id) {
   const p = M.pal[id];
   if (!p) return null;
   e = normal(e);
-  return (e.scan || {})[id] || e.nouvelles[id] || p.adresse;
+  return (e.scan || {})[id] || e.nouvelles[id] || (e.libres || {})[id] || p.adresse;
 }
 
 // Les jalons d'un état, pour un élève de niveau `niveau` (les palettes absentes pour lui n'ont pas de jalon).
@@ -386,6 +425,7 @@ export function detailPalettier(M, e, L) {
     signalees: Object.fromEntries(Object.entries(e.signalees).map(([id, s]) => [id, s.motif])),
     tentativesHaut: e.tentativesHaut || 0, valide: !!e.valide, premierGeste: e.premierGeste || null,
     ...(M.terminal ? { scans: Object.assign({}, e.scan), scansRefuses: e.scansRefuses || 0 } : {}),
+    ...(M.aLibre ? { libres: Object.assign({}, e.libres) } : {}),
     // Le comptage (lot 4) : ses comptes confirmés, les « Recompter » choisis, les propositions du Terminal, la trace hors liste et
     // les nombres tapés sans scan (jamais notés seuls).
     ...(M.comptage ? { comptage: { comptes: Object.assign({}, C.comptes), recomptes: Object.assign({}, C.recomptes),
@@ -502,11 +542,11 @@ export function terminerComptage(e) {
 // Ce qu'attend chaque palette, sur le stock de départ (enseignant, page d'essai ; JAMAIS montré à l'élève).
 export function attendusPalettier(M) {
   return Object.fromEntries(Object.values(M.pal).map((p) => {
-    const d = decoupe(p.adresse);
+    const d = decoupe(p.adresseLibre || p.adresse);
     const x = p.aSignaler ? { signaler: verite(M, {}, p, p.adresse), puis: p.nouvelleAdresse }
-      : { adresse: p.adresse, geste: d.n === 1 ? 'poser' : 'confier' };
+      : { adresse: p.adresseLibre || p.adresse, geste: d.n === 1 ? 'poser' : 'confier', ...(p.adresseLibre ? { demander: true, donnee: p.adresse } : {}) };
     if (p.bonus) x.niveaux = p.niveaux.slice();
-    if (aJalonScan(M, p)) x.scan = p.nouvelleAdresse || p.adresse;
+    if (aJalonScan(M, p)) x.scan = p.nouvelleAdresse || p.adresseLibre || p.adresse;
     return [p.id, x];
   }).concat(M.comptage ? M.comptage.adresses.map((x) => [`compte-${x.rang}`, { comptage: true, rang: x.rang, adresse: x.adresse,
     produit: x.nom, reel: x.reel, systeme: x.systeme, ...(x.cle ? { cle: x.cle } : {}), ...(x.bonus ? { niveaux: ['confirme'] } : {}) }]) : []));
@@ -538,7 +578,8 @@ export function etatLisiblePalettier(M, e, db) {
   return { enMain: e.enMain || null, posees: Object.assign({}, e.posees), confiees: Object.assign({}, e.confiees),
     signalees: Object.fromEntries(Object.entries(e.signalees).map(([id, s]) => [id, s.motif])),
     nouvelles: Object.assign({}, e.nouvelles), montees: montees(M, e, db), tentativesHaut: e.tentativesHaut || 0, valide: !!e.valide,
-    ...(M.terminal ? { scans: Object.assign({}, e.scan), scansRefuses: e.scansRefuses || 0 } : {}) };
+    ...(M.terminal ? { scans: Object.assign({}, e.scan), scansRefuses: e.scansRefuses || 0 } : {}),
+    ...(M.aLibre ? { libres: Object.assign({}, e.libres) } : {}) };
 }
 
 // La déclaration d'un élève quand la séance passe une FONCTION `(graine, { niveau, copie })` (lot 0) : la même que celle
@@ -569,6 +610,7 @@ export function creerPalettier(P, M, opts, O) {
   const TERM = M.terminal ? creerTerminal({ nom: M.terminal.nom, mode: 'scanner' }) : null;
   const DEUX = !!TERM && M.terminal.scan !== 'emplacement';   // deux scans (la palette, puis l'emplacement) ; sinon un seul clic
   const signaux = [...Object.keys(M.pal).flatMap((id) => ['prendre', 'poser', 'confier', 'signaler', ...(TERM ? ['scan'] : [])].map((x) => geste(`${x}:${id}`))),
+    ...Object.values(M.pal).filter((p) => p.adresseLibre).flatMap((p) => [geste(`occupe:${p.id}`), geste(`adresseLibre:${p.id}`)]),
     geste('ouvrir'), ...(M.aPal ? [geste('monter'), geste('valider')] : []),
     ...(M.comptage ? [...M.comptage.adresses.map((x) => geste(`compte:${x.rang}`)), geste('compte:scan'), geste('compte:fin')] : [])];
   // LE COMPTAGE (lot 4) est-il l'écran du moment ? Sans palettes, toujours ; avec des palettes (ENT-8.14), après « Valider mon
@@ -592,6 +634,7 @@ export function creerPalettier(P, M, opts, O) {
   function normaliser(e) {
     if (!e.posees) Object.assign(e, etatPalettierNeuf(), e);
     ['posees', 'confiees', 'signalees', 'nouvelles'].forEach((k) => { if (!e[k]) e[k] = {}; });
+    if (M.aLibre && !e.libres) e.libres = {};   // lot 3 : absent de l'état neuf, créé au premier dessin d'une séance qui déclare `adresseLibre`
     if (TERM) {
       if (!e.scan) e.scan = {};
       if (typeof e.scansRefuses !== 'number') e.scansRefuses = 0;
@@ -613,7 +656,7 @@ export function creerPalettier(P, M, opts, O) {
   }
   const noterGeste = (e) => { if (!e.premierGeste) e.premierGeste = Date.now(); };
   const occupeA = (e, a) => !!M.stock[a] || Object.values(placement(e)).includes(a);
-  const adresseDe = (e, p) => e.nouvelles[p.id] || p.adresse;
+  const adresseDe = (e, p) => e.nouvelles[p.id] || (e.libres || {})[p.id] || p.adresse;
 
   // Prendre une palette (sa carte ou la réception du plan) ; la reprendre si elle est posée ou attend Kevin ; recliquer la
   // palette en main la remet en réception. Rend le geste à publier, ou rien.
@@ -672,6 +715,41 @@ export function creerPalettier(P, M, opts, O) {
     else direSysteme('Signalement enregistré.', e);
     dire(`<b>${ech(p.id)}</b> signalée : elle retourne en réception.`, 'oui');
     return `signaler:${p.id}`;
+  }
+
+  /* ------------------------------------------------------- adresse prise, adresse libre (lot 3) */
+  // Le geste `occupe:<P>` : l'emplacement de l'adresse DONNÉE d'une palette à `adresseLibre` est ouvert de près avec cette palette en main
+  // (l'élève vient d'ouvrir l'emplacement, ou d'y prendre la palette). Rend le geste à publier, ou rien.
+  function occupeGeste(e) {
+    const p = e.enMain && M.pal[e.enMain];
+    return p && p.adresseLibre && ui.pres === p.adresse ? `occupe:${p.id}` : null;
+  }
+  // « Demander une adresse libre » (la palette en main). Une palette à `adresseLibre` : le système donne l'adresse libre (état `libres`,
+  // geste `adresseLibre:<P>`, la carte porte « Nouvelle adresse »). Sinon : « Pas d'autre adresse », rien d'écrit, aucun geste. Dans les
+  // deux cas le Terminal (ou l'encart « Système ») et la fenêtre « Message du système » le disent ; en copie aussi (c'est l'outil).
+  function demanderLibre(e) {
+    const p = M.pal[e.enMain];
+    if (!p) return null;
+    let brut, html, geste = null;
+    if (p.adresseLibre) {
+      noterGeste(e);
+      e.libres[p.id] = p.adresseLibre; geste = `adresseLibre:${p.id}`;
+      brut = `Adresse libre pour ${p.id} (${p.nom}) : ${p.adresseLibre}.`;
+      html = `Adresse libre pour <b>${ech(p.id)}</b> (${ech(p.nom)}) : <b class="pe-mono">${ech(p.adresseLibre)}</b>.`;
+    } else {
+      const a = adresseDe(e, p);
+      if (M.stock[a] || M.hs.has(a)) {
+        brut = `Pas d’autre adresse pour ${p.id} (${p.nom}).`;
+        html = `Pas d’autre adresse pour <b>${ech(p.id)}</b> (${ech(p.nom)}).`;
+      } else {
+        brut = `Pas d’autre adresse : ${a} est libre.`;
+        html = `Pas d’autre adresse : <b class="pe-mono">${ech(a)}</b> est libre.`;
+      }
+    }
+    direSysteme(brut, e);
+    ui.alerte = { id: p.id, nom: p.nom, texte: html };
+    dire('');
+    return geste;
   }
 
   /* ----------------------------------------------------------------- le scan (lot 2) */
@@ -791,13 +869,14 @@ export function creerPalettier(P, M, opts, O) {
     const F = fautesPalette(M, e, p);
     if (!F.length) return '<span class="pe-verd pe-ok" data-pal-verdict="ok">✓ bien rangée</span>';
     let t = `✗ ${F.join(', ')}`;
-    if (M.verdict === 'adresse' && (F.includes('adresse') || F.includes('signalement'))) {
+    if (M.verdict === 'adresse' && p.adresseLibre && F.includes('adresse')) t += ` · adresse libre à demander, puis ${p.adresseLibre}`;
+    else if (M.verdict === 'adresse' && (F.includes('adresse') || F.includes('signalement'))) {
       t += p.aSignaler ? ` · à signaler${p.nouvelleAdresse ? `, puis ${p.nouvelleAdresse}` : ''}` : ` · adresse attendue : ${p.adresse}`;
     } else if (M.verdict === 'adresse' && F.includes('scan')) t += ` · adresse attendue : ${attendueScan(e, p)}`;
     return `<span class="pe-verd pe-ko" data-pal-verdict="ko">${ech(t)}</span>`;
   }
   function carte(e, p, R, X) {
-    const nouvelle = e.nouvelles[p.id], conf = e.confiees[p.id], mont = X.montees.includes(p.id);
+    const nouvelle = e.nouvelles[p.id] || (e.libres || {})[p.id], conf = e.confiees[p.id], mont = X.montees.includes(p.id);
     // Avec le Terminal : une palette posée ou confiée est « à scanner » (jusqu'au second scan), puis « scannée ».
     const sc = TERM && (e.posees[p.id] || conf) ? (e.scan[p.id] ? ' · scannée' : R.fige ? '' : ' · à scanner') : '';
     const etat = (e.enMain === p.id ? 'en main' : e.posees[p.id] ? `posée en ${e.posees[p.id]}`
@@ -996,6 +1075,7 @@ export function creerPalettier(P, M, opts, O) {
       h += `<div class="pal-boutons">
         <button type="button" class="btn btn-p" data-pal="poser" data-pe-cle="b:poser">Poser ici</button>
         ${C ? `<button type="button" class="btn" data-pal="confier" data-pe-cle="b:confier">Confier à ${ech(NOM)}</button>` : ''}
+        ${M.aLibre && (st || aMoi || res) ? '<button type="button" class="btn pal-libre" data-pal="libre" data-pe-cle="b:libre">Demander une adresse libre</button>' : ''}
         <button type="button" class="btn pal-signaler" data-pal="signaler" data-pe-cle="b:signaler">Signaler : on ne peut pas ranger ici</button></div>`;
     }
     return `<div class="pal-pres" data-pal-pres="${ech(a)}">${h}${msg}</div>`;
@@ -1006,6 +1086,7 @@ export function creerPalettier(P, M, opts, O) {
     // Journal vide (après un rechargement) : ce que l'état sait encore, les nouvelles adresses et la demande faite à Kevin.
     const attend = C && typeof C.monte === 'function' && e.monterDemande && Object.keys(e.confiees).some((id) => !X.montees.includes(id));
     const L = ui.journal.length ? ui.journal : [...Object.entries(e.nouvelles).map(([id, a]) => `${id} : nouvelle adresse ${a}.`),
+      ...Object.entries(e.libres || {}).map(([id, a]) => `${id} : adresse libre ${a}.`),
       ...(attend ? [`Demande envoyée à ${NOM}.`] : [])];
     // Avec `terminal`, le Terminal prend la place de l'encart « Système » (ses lignes sont dans son journal).
     let h = TERM ? `<div class="pal-term" data-pal-term>${TERM.html(e.terminal)}</div>`
@@ -1069,7 +1150,7 @@ export function creerPalettier(P, M, opts, O) {
     const A = ui.alerte;
     if (!A) return '';
     const qui = `<b>${ech(A.id)}</b> (${ech(A.nom)})`;
-    const texte = A.adresse ? `Nouvelle adresse pour ${qui} : <b class="pe-mono">${ech(A.adresse)}</b>.`
+    const texte = A.texte ? A.texte : A.adresse ? `Nouvelle adresse pour ${qui} : <b class="pe-mono">${ech(A.adresse)}</b>.`
       : A.copie ? `Signalement enregistré pour ${qui} : « ${ech(A.motif)} ». C’est noté.`
         : `Signalement enregistré pour ${qui} : « ${ech(A.motif)} ». Le système ne donne pas d’autre adresse : la palette retourne en réception.`;
     return `<div class="pal-modal-voile" data-pal-modal><div class="pal-modal" role="dialog" aria-modal="true" aria-labelledby="palModalT" aria-describedby="palModalD">
@@ -1160,6 +1241,7 @@ export function creerPalettier(P, M, opts, O) {
       activer(g, () => {
         ui.pres = g.dataset.peEmp; ui.signaler = false; dire('');
         ui.focus = e.enMain && !R.fige ? 'b:poser' : `emp:${ui.pres}`;
+        sig(occupeGeste(e));   // lot 3 : l'adresse donnée d'une palette à `adresseLibre`, ouverte avec elle en main
         fait('ouvrir');
       });
       const sur = () => { barreEl.innerHTML = barre(e, R, X, g.dataset.peEmp); };
@@ -1169,7 +1251,11 @@ export function creerPalettier(P, M, opts, O) {
     });
     if (R.compte) { brancherComptage(racine, e, api, R, { on, activer, fait, sig, redessiner }); return; }
     if (R.fige) return;
-    racine.querySelectorAll('[data-pe-pal]').forEach((b) => activer(b, () => fait(prendre(e, b.dataset.pePal, X))));
+    racine.querySelectorAll('[data-pe-pal]').forEach((b) => activer(b, () => {
+      const g = prendre(e, b.dataset.pePal, X);
+      if (g) sig(occupeGeste(e));   // lot 3 : prendre la palette alors que l'emplacement de son adresse donnée est déjà ouvert
+      fait(g);
+    }));
     // Le scan (lot 2) : l'étiquette d'une palette (carte, vue de près, zone « À monter »), puis celle de l'emplacement de près.
     racine.querySelectorAll('[data-pal-scan-pal]').forEach((b) => activer(b, () => {
       ui.focus = b.dataset.peCle; fait(scannerPalette(e, b.dataset.palScanPal, X));
@@ -1179,6 +1265,7 @@ export function creerPalettier(P, M, opts, O) {
     }));
     on('poser', () => { const n = poserIci(e, ui.pres); ui.focus = n ? `emp:${ui.pres}` : 'b:poser'; fait(n); });
     on('confier', () => { const n = confier(e, ui.pres); ui.focus = n ? `emp:${ui.pres}` : 'b:confier'; fait(n); });
+    on('libre', () => { ui.focus = 'b:libre'; fait(demanderLibre(e)); });
     on('signaler', () => { ui.signaler = true; dire(''); ui.focus = `motif:${MOTIF_IDS[0]}`; redessiner(); });
     on('signalerNon', () => { ui.signaler = false; ui.focus = 'b:signaler'; redessiner(); });
     racine.querySelectorAll('[data-pal-motif]').forEach((b) => activer(b, () => { const n = signaler(e, ui.pres, b.dataset.palMotif); ui.focus = `emp:${ui.pres}`; fait(n); }));

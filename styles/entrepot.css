@@ -526,6 +526,7 @@ button.vt-son-btn:focus-visible{ outline:3px solid #ffe08a; outline-offset:1px }
 .pal-boutons{ display:flex; flex-wrap:wrap; gap:6px }
 .pal-boutons .btn{ flex:1 1 auto; min-height:40px }
 .pal-boutons .pal-signaler{ flex-basis:100% }
+.pal-boutons .pal-libre{ flex-basis:100% }   /* lot 3 : « Demander une adresse libre », sur sa ligne */
 .pal-motifs{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:5px; margin:0; padding:2px 6px 6px; border:1px solid var(--filet); border-radius:var(--r) }
 .pal-motifs legend{ font-weight:700; font-size:.86rem; padding:0 4px }
 .pal-motifs .btn{ min-height:34px; padding:3px 8px; font-size:.84rem; line-height:1.15 }
