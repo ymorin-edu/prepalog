@@ -10,6 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
+import { forcerCatalogue } from './commun.mjs';
 
 export default async function bloc({ v, page, nav, ok, ROOT, baseXlsx, BASE }) {
 
@@ -2180,6 +2181,8 @@ await ctxL.route('**/activites/boost-ent32.js*', async (route) => {
   ent32Forcee = /pret:\s*true,/.test(corps);
   await route.fulfill({ response: r, body: corps.replace(/pret:\s*true,/, 'pret: false,') });
 });
+// Le catalogue (chantier 23) dit la même chose que le fichier réécrit ci-dessus : ENT-3.2 en préparation.
+await forcerCatalogue(ctxL, (entrees) => { entrees.find((e) => e.meta.id === 'boost-ent32').meta.pret = false; });
 const pl = await ctxL.newPage();
 pl.setDefaultTimeout(6000);
 const erreursL = [];

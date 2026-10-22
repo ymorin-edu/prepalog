@@ -271,6 +271,8 @@ const cache = new Map();
 // échouer `Promise.all` : plus aucun élève n'avait d'accueil. Maintenant la séance fautive est
 // ÉCARTÉE du registre (les élèves ne voient rien, ni carte ni message), son erreur est retenue
 // ici, et l'accueil de l'enseignant l'affiche. La suite de tests, elle, tombe (dependances.mjs).
+// Depuis le chantier 23 (accueil sur le catalogue), l'échec n'est connu qu'à l'OUVERTURE de la séance (`activite()`) ou à
+// un chargement complet : la tuile reste, le clic refuse avec un message, et l'avis de l'enseignant suit cette tentative.
 // `id` = nom du fichier sans `.js` : c'est la règle de tout le dépôt, et c'est le seul
 // identifiant qu'on connaisse d'une séance qui n'a pas pu se charger (utile pour effacer
 // les classements d'un élève supprimé, voir `core/prof.js`).
@@ -325,9 +327,45 @@ async function charger() {
   return Array.from(cache.values());
 }
 
+// LE MODULE d'une seule séance, importé à la demande (chantier 23, lot 2) : le catalogue dit de quel fichier il s'agit,
+// et seul ce fichier est téléchargé (avec ses contenus et ses vues). Les modules ainsi chargés vont dans un cache
+// À PART de `cache` : `chargerActivites()` croit tout chargé dès que `cache` n'est pas vide. Si le chargement complet
+// a déjà eu lieu (repli du catalogue, tests, relevé), son module est réutilisé tel quel.
+// Rend null si la séance n'est pas au catalogue ou si son fichier refuse de se charger ; dans ce second cas l'échec
+// est retenu dans `activitesEnEchec()` (l'avis de l'accueil enseignant le montre après la tentative), sans doublon.
+const modulesUnitaires = new Map();
+const chargementsUnitaires = new Map();
+
 export async function activite(id) {
-  await chargerActivites();
-  return cache.get(id) || null;
+  if (cache.has(id)) return cache.get(id);
+  if (modulesUnitaires.has(id)) return modulesUnitaires.get(id);
+  const entrees = await catalogue();
+  // Le catalogue illisible s'est replié sur le chargement complet : tout est dans `cache`.
+  if (cache.has(id)) return cache.get(id);
+  const entree = entrees.find((e) => e.meta.id === id);
+  if (!entree) return null;
+  if (!chargementsUnitaires.has(id)) {
+    chargementsUnitaires.set(id, chargerUne(id, entree.fichier).finally(() => chargementsUnitaires.delete(id)));
+  }
+  return chargementsUnitaires.get(id);
+}
+
+async function chargerUne(id, fichier) {
+  try {
+    const i = ACTIVITES.findIndex((f, k) => nomDuFichier(f, k) === fichier);
+    if (i < 0) throw new Error(`« ${fichier} » n'est pas dans la liste ACTIVITES.`);
+    const m = verifier(await ACTIVITES[i]());
+    modulesUnitaires.set(id, m);
+    // Un échec antérieur (coupure réseau) qui n'en est plus un.
+    for (let k = enEchec.length - 1; k >= 0; k--) if (enEchec[k].fichier === fichier) enEchec.splice(k, 1);
+    return m;
+  } catch (e) {
+    const erreur = (e && e.message) || String(e);
+    const deja = enEchec.find((x) => x.fichier === fichier);
+    if (deja) deja.erreur = erreur; else enEchec.push({ fichier, id: fichier.replace(/\.js$/, ''), erreur });
+    console.error(`Séance écartée (${fichier}) : ${erreur}`);
+    return null;
+  }
 }
 
 // ------------------------------------------------------------------- le catalogue (chantier 23)

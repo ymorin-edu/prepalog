@@ -8,6 +8,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { fileURLToPath, pathToFileURL } from 'node:url';
+import { formaterCatalogue } from '../catalogue.mjs';
 
 // `.pathname` d'une URL de fichier n'est PAS un chemin : sous Windows il rend
 // « /C:/Users/… », avec une barre oblique de tête. `path.join` en faisait
@@ -220,9 +221,23 @@ const v = async (nom, fn) => {
   finally { casEnCours = ''; }
 };
 const setBloc = (nom) => { blocEnCours = nom; };
+
+// Le CATALOGUE des séances (chantier 23, activites/catalogue.js) : l'accueil et l'espace enseignant en lisent la `meta`
+// au lieu de celle du fichier de la séance. Un cas qui réécrit une séance au vol pour changer sa `meta` (`pret`,
+// `ouverture`, `niveauxPrevus`…) doit donc réécrire AUSSI son entrée du catalogue : `forcerCatalogue(contexte, (entrees) => entrees)`
+// sert à ce contexte `activites/catalogue.js` relu sur le disque, les entrées `{ fichier, exports, meta }` retouchées par la
+// fonction donnée (elle modifie en place ou rend un autre tableau). Le texte est refait par `formaterCatalogue`, la même
+// fonction que le script qui fabrique le vrai fichier. À appeler AVANT la première page du contexte qui lit le catalogue.
+const forcerCatalogue = async (contexte, transformer) => {
+  const texte = fs.readFileSync(path.join(ROOT, 'activites', 'catalogue.js'), 'utf8');
+  const entrees = texte.split(String.fromCharCode(10)).filter((l) => l.startsWith('  {')).map((l) => JSON.parse(l.trim().replace(/,$/, '')));
+  if (entrees.length < 80) throw new Error(`forcerCatalogue : ${entrees.length} entrées lues dans activites/catalogue.js (80 au moins attendues)`);
+  const corps = formaterCatalogue(transformer(entrees) || entrees);
+  await contexte.route('**/activites/catalogue.js*', (route) => route.fulfill({ status: 200, contentType: 'text/javascript', body: corps }));
+};
 const dossierCaptures = () => (fs.existsSync(CAPTURES) ? CAPTURES : '');
 
 await page.goto(BASE);
 await page.waitForSelector('#btnProf', { timeout: 8000 });
 
-export { ROOT, BASE, SANS_CONFIG, srv, nav, ctx, page, erreurs, erreursParCas, introuvables, baseXlsx, hotesExternes, ok, ko, v, egal, vrai, setBloc, dossierCaptures };
+export { ROOT, BASE, SANS_CONFIG, srv, nav, ctx, page, erreurs, erreursParCas, introuvables, baseXlsx, hotesExternes, ok, ko, v, egal, vrai, setBloc, dossierCaptures, forcerCatalogue };

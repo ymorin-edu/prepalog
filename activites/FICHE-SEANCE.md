@@ -12,8 +12,12 @@ scores, le suivi de classe et le tableau par compétence suivent tout seuls.
 séance, dans l'ordre de `chargerActivites()`, fabriquée en faisant tourner le vrai registre dans Chromium
 (`outils/catalogue.mjs`, ≈ 2 s ; `--verifier` compare sans écrire). Il est lu par `catalogue()` (`activites/index.js`), qui
 rend les `meta` sans télécharger le code des séances, et se replie sur le chargement complet si le fichier est illisible.
-Pour l'instant, personne ne le lit hors des tests ; le lot 2 du chantier 23 y branchera l'accueil. Un cas de la suite
-(bloc `dependances`) tombe si le fichier n'est plus exactement ce que les séances disent d'elles-mêmes.
+L'accueil de l'élève et de l'enseignant le lit (lot 2 du chantier 23, 22/10/2026) : il ne télécharge plus aucun fichier de séance,
+et `activite(id)` n'importe que le fichier de la séance ouverte. Un cas de la suite (bloc `dependances`) tombe si le fichier
+n'est plus exactement ce que les séances disent d'elles-mêmes. Pour les tests : un cas qui réécrit au vol le fichier d'une
+séance (`pret`, `ouverture`, `niveauxPrevus`…) réécrit aussi son entrée du catalogue, par `forcerCatalogue(contexte,
+(entrees) => entrees)` de `outils/test/commun.mjs`. À l'ouverture, l'élève repasse la `meta` du fichier lui-même dans
+`activiteVisible` : un catalogue resté en arrière ne peut jamais ouvrir une séance fermée.
 
 ## Ce que le fichier doit exporter
 
@@ -2819,14 +2823,19 @@ sur 2 » est calculé). Après toute modification : `node outils/test.mjs questi
   modèle est Boost (`ENT-3.x`).
 - Ce que le jalon dit doit être vérifié **avant** que l'élève commence, et ne doit pas
   récompenser l'inaction. Un chiffre caché à l'élève ne doit pas être déductible ailleurs.
-- **Une séance qui refuse de se charger** (erreur de syntaxe, option inconnue, `id` de vue en double…) est **écartée du registre** :
-  les élèves ne voient rien (ni carte ni message), l'enseignant lit un avis rouge en haut de l'accueil (fichier + message du
-  moteur), et `console.error` le répète. Le reste du site marche (chantier 9a bis, 08/10/2026).
-- **La suite de tests tombe** dans ce cas (`activitesEnEchec()` doit être vide) : un brouillon `pret: false` commité avec une
-  faute n'abîme pas le site, mais il ne passe pas inaperçu. Les scores déjà enregistrés sur la séance écartée restent
-  en base, ignorés du suivi (rien à cliquer) ; supprimer un élève efface quand même ses classements dans cette séance.
+- **Une séance qui refuse de se charger** (erreur de syntaxe, option inconnue, `id` de vue en double, fichier introuvable…)
+  **garde sa tuile** (l'accueil lit le catalogue, qui la connaît) mais **refuse de s'ouvrir** (décision de Tristan, 22/10/2026,
+  chantier 23) : l'élève lit « Cette séance ne s'ouvre pas pour l'instant : préviens ton enseignant. » et reste sur la liste ;
+  l'enseignant lit le même message suivi du fichier et de l'erreur du moteur. L'échec n'est connu qu'à cette tentative : il
+  entre alors dans `activitesEnEchec()`, d'où l'avis rouge de l'accueil de l'enseignant (fichier + message du moteur) qui
+  apparaît au retour à l'accueil, et `console.error` le répète. Rien d'autre ne tombe : le reste du site marche (chantier 9a bis,
+  08/10/2026, repris au chantier 23). Avant le chantier 23, la séance était écartée du registre sans tuile ni message.
+- **La suite de tests tombe** dans ce cas : le catalogue est fabriqué en chargeant toutes les séances, et `node outils/catalogue.mjs`
+  refuse d'écrire s'il y en a une qui échoue ; un brouillon `pret: false` commité avec une faute n'abîme donc pas le site, mais
+  ne passe pas inaperçu. Les scores déjà enregistrés sur la séance écartée restent en base ; supprimer un élève efface
+  quand même ses classements dans cette séance.
 - Pour la voir : mettre une faute (`menuu:` pour `menu:`) dans un fichier de séance en local, sans commit, ouvrir le site
-  en enseignant, puis annuler la faute.
+  en enseignant, cliquer la tuile de la séance, revenir à l'accueil, puis annuler la faute.
 - Avant d'ajouter la séance : `node outils/test.mjs`, et un bloc de test dans `outils/test/`
   pour une entreprise nouvelle (une ligne dans `BLOCS` de `outils/test.mjs`).
 

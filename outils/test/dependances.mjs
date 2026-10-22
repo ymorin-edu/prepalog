@@ -8,6 +8,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { forcerCatalogue } from './commun.mjs';
 
 export default async function bloc({ v, page, nav, ROOT, hotesExternes, introuvables, SANS_CONFIG, BASE }) {
 
@@ -658,6 +659,9 @@ await ctxR.close();
 // Avant, `Promise.all` dans `chargerActivites()` : UN fichier fautif et plus aucun accueil pour personne. On casse ici une
 // séance SANS toucher au dépôt (le serveur de test sert son fichier réécrit : `menu:` devient `menuu:`, une option que
 // `creerEntreprise` refuse depuis le lot 9a). Contexte à part, avec sa propre base de démonstration.
+// RÉÉCRIT le 22/10/2026 (chantier 23, lot 2, décision de Tristan) : l'accueil lit le CATALOGUE, qui connaît la séance même
+// cassée. Sa tuile reste, à l'élève comme à l'enseignant ; le clic ne l'ouvre pas et dit pourquoi (« préviens ton
+// enseignant ») ; l'échec n'est connu qu'à cette tentative, et l'enseignant le lit alors dans l'avis rouge de son accueil.
 const CASSEE = 'cdiscount-chiffres';
 const ctxC = await nav.newContext({ viewport: { width: 1280, height: 900 } });
 await ctxC.route(`**/activites/${CASSEE}.js*`, async (route) => {
@@ -677,50 +681,78 @@ pgC.on('console', (m) => {
 pgC.on('dialog', (d) => d.accept());
 await pgC.goto(BASE);
 await pgC.waitForSelector('#btnProf');
-const graine = await pgC.evaluate(async (AID) => {
+// Semé depuis une page qui ne démarre pas le site (une feuille de style, même origine, donc même stockage) : depuis le site
+// lui-même, la connexion de passage de l'enseignant ouvrirait son accueil, qui échouerait en se fermant (l'accueil est
+// désormais assez rapide pour finir avant le rechargement).
+const pgSemis = await ctxC.newPage();
+await pgSemis.goto(BASE + 'styles/base.css');
+const graine = await pgSemis.evaluate(async (AID) => {
   const { creerBackendDemo } = await import('/core/backend-demo.js');
   const B = creerBackendDemo();
   const prof = (await B.connexionProf()).uid;
   const g = await B.creerGroupe({ nom: 'Essai écartée', annee: '', niveau: '1re', profUid: prof });
   await B.creerEleves(g.id, [{ nom: 'ECART', prenom: 'Eva', matricule: 'ze01', code: 'c1' }]);
+  await B.majGroupe(g.id, { ['ouverts.' + AID]: true });   // la séance Cdiscount est livrée fermée : l'enseignant l'a cochée
   const uid = (await B.elevesDuGroupe(g.id))[0].uid;
   await B.ecrireScore(g.id, uid, AID, { score: 2, max: 3 });
   await B.poserLigne('classements', AID, uid, { gid: g.id, groupe: 'ZZ', score: 2, max: 3, temps: 3, ts: 1 });
   await B.deconnexion();
   return { gid: g.id, uid };
 }, CASSEE);
+await pgSemis.close();
 const dehors = async () => {
   await pgC.reload();
   await pgC.waitForSelector('#btnProf, #btnDeco');
   if (await pgC.$('#btnDeco')) { await pgC.click('#btnDeco'); await pgC.waitForSelector('#btnProf'); }
 };
 
-await v('séance refusée : l\'élève a son accueil, sans la séance, sans carte ni message', async () => {
+const MESSAGE_ELEVE = "Cette séance ne s'ouvre pas pour l'instant : préviens ton enseignant.";
+const versLaSeance = async () => {
+  await pgC.click('[data-rub="simulog"]');
+  await pgC.click('[data-ent="2"]');
+  await pgC.waitForSelector(`[data-act="${CASSEE}"]`);
+};
+const lireToast = () => pgC.evaluate(() => (document.getElementById('toast') || {}).textContent || '');
+
+await v('séance refusée : l\'élève garde l\'accueil et la tuile ; le clic donne le message, il reste sur la liste, sans erreur de page', async () => {
   await dehors();
   await pgC.fill('#mat', 'ze01');
   await pgC.fill('#code', 'c1');
   await pgC.click('#btnEleve');
   await pgC.waitForSelector('text=Bonjour Eva');
-  const r = await pgC.evaluate(async () => {
+  const pastilles = await pgC.evaluate(() => document.querySelectorAll('.rubrique').length);
+  if (pastilles < 3) throw new Error('l\'accueil n\'a pas ses rubriques : ' + pastilles);
+  await versLaSeance();
+  await pgC.click(`[data-act="${CASSEE}"]`);
+  await pgC.waitForFunction(() => /ne s'ouvre pas pour l'instant/.test((document.getElementById('toast') || {}).textContent || ''));
+  const r = await pgC.evaluate(async (AID) => {
     const I = await import('/activites/index.js');
-    const mods = await I.chargerActivites();
-    return { ids: mods.map((m) => m.meta.id), attendus: I.ACTIVITES.length, echecs: I.activitesEnEchec(),
-      pastilles: document.querySelectorAll('.rubrique').length, texte: document.body.innerText,
-      avis: document.querySelectorAll('[data-seance-ecartee]').length };
-  });
-  if (r.ids.includes(CASSEE)) throw new Error('la séance cassée est restée au registre');
-  if (r.ids.length !== r.attendus - 1) throw new Error(`${r.ids.length} séances chargées au lieu de ${r.attendus - 1}`);
+    return { toast: document.getElementById('toast').textContent, ouverte: !!document.getElementById('hoteActivite'),
+      tuile: !!document.querySelector(`[data-act="${AID}"]`), echecs: I.activitesEnEchec(),
+      avis: document.querySelectorAll('[data-seance-ecartee]').length, texte: document.body.innerText };
+  }, CASSEE);
+  if (r.toast !== MESSAGE_ELEVE) throw new Error('message : ' + r.toast);
+  if (r.ouverte || !r.tuile) throw new Error(`l'élève doit rester sur la liste, tuile comprise (séance ouverte : ${r.ouverte}, tuile : ${r.tuile})`);
   if (r.echecs.length !== 1 || r.echecs[0].fichier !== `${CASSEE}.js`) throw new Error('échec mal retenu : ' + JSON.stringify(r.echecs));
   if (!r.echecs[0].erreur.includes('menuu')) throw new Error('le message du moteur n\'est pas retenu tel quel : ' + r.echecs[0].erreur);
-  if (r.pastilles < 3) throw new Error('l\'accueil n\'a pas ses rubriques : ' + r.pastilles);
-  if (r.avis || /n'a pas pu se charger|cdiscount-chiffres/i.test(r.texte)) throw new Error('l\'élève voit l\'échec : ' + r.texte.slice(0, 200));
+  if (r.avis || r.texte.includes(`${CASSEE}.js`)) throw new Error('l\'élève voit l\'avis ou le nom du fichier : ' + r.texte.slice(0, 200));
   if (attendu.length !== 1) throw new Error(`${attendu.length} message(s) « Séance écartée » dans la console au lieu d'un`);
   if (horsAttendu.length) throw new Error('erreur inattendue dans la page : ' + horsAttendu.join(' | '));
 });
 
-await v('séance refusée : l\'enseignant lit en haut de l\'accueil le fichier et le message du moteur', async () => {
+await v('séance refusée : l\'enseignant voit la tuile, lit la cause au clic, puis l\'avis (fichier et message du moteur) en haut de l\'accueil', async () => {
   await dehors();
   await pgC.click('#btnProf');
+  await pgC.waitForSelector('#btnProfEspace');
+  // Avant toute tentative, rien n'est connu de l'échec : le catalogue ne charge aucune séance.
+  if (await pgC.$('[data-seance-ecartee]')) throw new Error('l\'avis est là avant toute tentative d\'ouverture');
+  await versLaSeance();
+  await pgC.click(`[data-act="${CASSEE}"]`);
+  await pgC.waitForFunction(() => /ne s'ouvre pas pour l'instant/.test((document.getElementById('toast') || {}).textContent || ''));
+  const toast = await lireToast();
+  if (!toast.startsWith(MESSAGE_ELEVE) || !toast.includes(`${CASSEE}.js`) || !toast.includes('menuu')) throw new Error('l\'enseignant ne lit pas la cause dans le message : ' + toast);
+  await pgC.click('#btnSimulog');
+  await pgC.click('#btnAccueil');
   await pgC.waitForSelector('#btnProfEspace');
   const lignes = await pgC.$$eval('[data-seance-ecartee]', (els) => els.map((e) => ({ f: e.dataset.seanceEcartee, t: e.textContent.trim(),
     cl: e.className, avantRubriques: !!(e.compareDocumentPosition(document.querySelector('.rubrique')) & Node.DOCUMENT_POSITION_FOLLOWING) })));
@@ -733,22 +765,21 @@ await v('séance refusée : l\'enseignant lit en haut de l\'accueil le fichier e
   if (!erreur.includes('menuu')) throw new Error('le message du moteur ne nomme pas l\'option fautive : ' + erreur);
   if (!l.avantRubriques) throw new Error('l\'avis n\'est pas au-dessus des rubriques');
   if (!/avis-err/.test(l.cl)) throw new Error('classe : ' + l.cl);
+  if (horsAttendu.length) throw new Error('erreur inattendue dans la page : ' + horsAttendu.join(' | '));
 });
 
-await v('séance refusée : suivi, compétences et conduite de séance s\'ouvrent malgré un score enregistré sur elle, sans sa tuile', async () => {
+await v('séance refusée : suivi, compétences et conduite de séance s\'ouvrent malgré un score enregistré sur elle', async () => {
   // Le score de la séance cassée existe (semé plus haut) : l'espace enseignant ne doit ni planter ni afficher d'erreur.
   const avant = horsAttendu.length;
   await pgC.click('#btnProfEspace');
   for (const ong of ['suivi', 'competences', 'seance']) {
     await pgC.click(`[data-ong="${ong}"]`);
     await pgC.waitForTimeout(600);
-    const r = await pgC.evaluate((AID) => {
+    const r = await pgC.evaluate(() => {
       const z = document.querySelector('#contenuProf');
-      return { chargement: /Chargement du suivi|Chargement des compétences/.test(z.innerText), taille: z.innerText.length,
-        tuile: !!z.querySelector(`[data-ouvre="${AID}"]`) || z.innerText.includes('ENT-2.2') };
-    }, CASSEE);
+      return { chargement: /Chargement du suivi|Chargement des compétences/.test(z.innerText), taille: z.innerText.length };
+    });
     if (r.chargement || r.taille < 50) throw new Error(`l'onglet ${ong} ne s'est pas affiché`);
-    if (r.tuile) throw new Error(`l'onglet ${ong} propose encore la séance écartée`);
   }
   if (horsAttendu.length !== avant) throw new Error('erreur dans la page : ' + horsAttendu.slice(avant).join(' | '));
 });
@@ -1055,6 +1086,144 @@ await v('catalogue absent : catalogue() se replie sur le chargement des séances
     if (horsAttendu.length) throw new Error('erreur de page : ' + horsAttendu.join(' | '));
   } finally {
     if (!dejaVu) introuvables.delete('/activites/catalogue.js');
+    await c.close();
+  }
+});
+
+
+// ---------- chantier 23, lot 2 (22/10/2026) : l'accueil lit le catalogue, une séance se télécharge quand on l'ouvre
+// Un élève dans un contexte neuf, avec les séances `ouverts` cochées pour son groupe (la plupart des séances Cdiscount sont
+// livrées fermées). `preparer(contexte)` pose les routes d'un cas (catalogue réécrit, fichier réécrit ou en 404) AVANT la
+// première page. Rend aussi la liste de TOUTES les requêtes faites depuis l'ouverture du site jusqu'à l'accueil, les
+// erreurs de page et les erreurs de console de la page.
+const MESSAGE_ILLISIBLE = "Cette séance ne s'ouvre pas pour l'instant : préviens ton enseignant.";
+const MESSAGE_FERMEE = "Cette séance n'est pas ouverte pour ton groupe.";
+const FICHIER_SEANCE = /^\/activites\/(?!index\.js$|catalogue\.js$)/;
+const eleveSurCatalogue = async ({ ouverts = [], preparer } = {}) => {
+  const c = await nav.newContext({ viewport: { width: 1280, height: 900 } });
+  if (preparer) await preparer(c);
+  // Le groupe et l'élève sont semés depuis une page qui ne démarre pas le site (une feuille de style, même origine, donc
+  // même stockage) : semer depuis le site lui-même ferait ouvrir l'accueil de l'enseignant de passage, et fermer sous lui.
+  const semis = await c.newPage();
+  await semis.goto(BASE + 'styles/base.css');
+  await semis.evaluate(async (ouverts) => {
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    const B = creerBackendDemo();
+    const prof = (await B.connexionProf()).uid;
+    const g = await B.creerGroupe({ nom: 'Essai catalogue', annee: '', niveau: '1re', profUid: prof });
+    await B.creerEleves(g.id, [{ nom: 'CATA', prenom: 'Lou', matricule: 'cz01', code: 'c1' }]);
+    if (ouverts.length) await B.majGroupe(g.id, Object.fromEntries(ouverts.map((id) => ['ouverts.' + id, true])));
+    await B.deconnexion();
+  }, ouverts);
+  await semis.close();
+  const p = await c.newPage();
+  p.setDefaultTimeout(8000);
+  const requetes = [], erreursPage = [], consoles = [];
+  p.on('request', (r) => requetes.push(new URL(r.url()).pathname));
+  p.on('pageerror', (e) => erreursPage.push(e.message));
+  p.on('console', (m) => { if (m.type() === 'error' && !/Failed to load resource/.test(m.text())) consoles.push(m.text()); });
+  await p.goto(BASE);   // les requêtes comptées vont de là jusqu'à l'accueil affiché : écran de connexion, connexion, accueil
+  await p.waitForSelector('#btnProf');
+  await p.fill('#mat', 'cz01');
+  await p.fill('#code', 'c1');
+  await p.click('#btnEleve');
+  await p.waitForSelector('text=Bonjour Lou');
+  await p.waitForLoadState('networkidle');
+  return { c, p, requetes, erreursPage, consoles };
+};
+const versSimulog = async (p, ent) => {
+  await p.click('[data-rub="simulog"]');
+  await p.click(`[data-ent="${ent}"]`);
+};
+const lesFichiersDeSeance = (requetes) => [...new Set(requetes.filter((r) => FICHIER_SEANCE.test(r)))];
+
+await v('accueil élève : aucun fichier de séance ni de contenu téléchargé, et au plus 55 requêtes', async () => {
+  const { c, p, requetes, erreursPage } = await eleveSurCatalogue({ ouverts: ['cdiscount-mouvements'] });
+  try {
+    const parasites = requetes.filter((r) => FICHIER_SEANCE.test(r) || /^\/contenus\/.*\.js$/.test(r));
+    if (parasites.length) throw new Error(`l'accueil a téléchargé ${parasites.length} fichier(s) de séance ou de contenu : ${parasites.slice(0, 4).join(', ')}`);
+    if (!requetes.includes('/activites/catalogue.js')) throw new Error('l\'accueil n\'a pas lu activites/catalogue.js');
+    if (requetes.length > 55) throw new Error(`${requetes.length} requêtes pour la connexion et l'accueil (55 au plus)`);
+    // Les pastilles et la liste des séances d'une entreprise ne chargent pas non plus le code des séances.
+    await versSimulog(p, '2');
+    await p.waitForSelector('[data-act="cdiscount-mouvements"]');
+    await p.waitForLoadState('networkidle');
+    const apres = requetes.filter((r) => FICHIER_SEANCE.test(r) || /^\/contenus\/.*\.js$/.test(r));
+    if (apres.length) throw new Error(`la liste des séances d'une entreprise a téléchargé : ${apres.slice(0, 4).join(', ')}`);
+    if (erreursPage.length) throw new Error('erreur de page : ' + erreursPage.join(' | '));
+  } finally { await c.close(); }
+});
+
+await v('ouvrir une séance ne télécharge que ce fichier-là (un quiz, puis une séance d\'entreprise)', async () => {
+  const { c, p, requetes, erreursPage } = await eleveSurCatalogue({ ouverts: ['cdiscount-mouvements'] });
+  try {
+    await p.click('[data-rub="quiz"]');
+    await p.click('[data-act="quiz-flux"]');
+    await p.waitForFunction(() => { const h = document.getElementById('hoteActivite'); return h && !h.querySelector('.vide'); });
+    let fichiers = lesFichiersDeSeance(requetes);
+    if (fichiers.join() !== '/activites/quiz-flux.js') throw new Error('fichiers de séance demandés pour ouvrir le quiz : ' + JSON.stringify(fichiers));
+    await p.click('#btnRetour');
+    await p.click('#btnAccueil');
+    await p.waitForSelector('[data-rub="simulog"]');
+    await versSimulog(p, '2');
+    await p.click('[data-act="cdiscount-mouvements"]');
+    await p.waitForFunction(() => { const h = document.getElementById('hoteActivite'); return h && !h.querySelector('.vide'); });
+    fichiers = lesFichiersDeSeance(requetes);
+    if (fichiers.join() !== '/activites/quiz-flux.js,/activites/cdiscount-mouvements.js') throw new Error('fichiers de séance demandés après deux ouvertures : ' + JSON.stringify(fichiers));
+    if (erreursPage.length) throw new Error('erreur de page : ' + erreursPage.join(' | '));
+  } finally { await c.close(); }
+});
+
+await v('catalogue périmé : une séance fermée dans son fichier mais ouverte au catalogue montre sa tuile, ne s\'ouvre pas (en préparation, ou « ouverture par l\'enseignant » non cochée)', async () => {
+  const PREPA = 'cdiscount-mouvements', FERMEE = 'cdiscount-inventaire';
+  const { c, p, erreursPage, consoles } = await eleveSurCatalogue({
+    ouverts: [PREPA],   // cochée pour le groupe : seul le fichier dit « en préparation »
+    preparer: async (ctxP) => {
+      // Le catalogue, resté tel qu'il était avant un changement de la séance : prête, et sans « ouverture » pour la seconde.
+      await forcerCatalogue(ctxP, (entrees) => { delete entrees.find((e) => e.meta.id === FERMEE).meta.ouverture; });
+      await ctxP.route(`**/activites/${PREPA}.js*`, async (route) => {
+        const r = await route.fetch();
+        await route.fulfill({ response: r, body: (await r.text()).replace(/pret:\s*true,/, 'pret: false,') });
+      });
+    },
+  });
+  try {
+    await versSimulog(p, '2');
+    for (const [id, attendu] of [[PREPA, MESSAGE_FERMEE], [FERMEE, MESSAGE_FERMEE]]) {
+      await p.waitForSelector(`[data-act="${id}"]`);
+      await p.click(`[data-act="${id}"]`);
+      await p.waitForFunction((m) => (document.getElementById('toast') || {}).textContent === m && getComputedStyle(document.getElementById('toast')).display !== 'none', attendu);
+      const r = await p.evaluate((i) => ({ ouverte: !!document.getElementById('hoteActivite'), tuile: !!document.querySelector(`[data-act="${i}"]`) }), id);
+      if (r.ouverte || !r.tuile) throw new Error(`${id} : l'élève doit rester sur la liste (séance ouverte : ${r.ouverte}, tuile : ${r.tuile})`);
+      await p.evaluate(() => { document.getElementById('toast').textContent = ''; });
+    }
+    if (erreursPage.length || consoles.length) throw new Error('erreur : ' + [...erreursPage, ...consoles].join(' | '));
+  } finally { await c.close(); }
+});
+
+await v('module absent : le catalogue connaît la séance, son fichier est introuvable — la tuile reste, le clic donne le message, aucune erreur de page, l\'échec est retenu', async () => {
+  const ABSENTE = 'cdiscount-mouvements';
+  // Ce 404 est provoqué ici : on le retire du relevé de la suite entière (« aucun fichier introuvable »), sauf s'il y figurait déjà.
+  const chemin = `/activites/${ABSENTE}.js`;
+  const dejaVu = introuvables.has(chemin);
+  const { c, p, erreursPage, consoles } = await eleveSurCatalogue({
+    ouverts: [ABSENTE],
+    preparer: (ctxP) => ctxP.route(`**/activites/${ABSENTE}.js*`, (route) => route.fulfill({ status: 404, contentType: 'text/plain', body: '404' })),
+  });
+  try {
+    await versSimulog(p, '2');
+    await p.click(`[data-act="${ABSENTE}"]`);
+    await p.waitForFunction((m) => (document.getElementById('toast') || {}).textContent === m, MESSAGE_ILLISIBLE);
+    const r = await p.evaluate(async (id) => {
+      const I = await import('/activites/index.js');
+      return { ouverte: !!document.getElementById('hoteActivite'), tuile: !!document.querySelector(`[data-act="${id}"]`), echecs: I.activitesEnEchec() };
+    }, ABSENTE);
+    if (r.ouverte || !r.tuile) throw new Error(`l'élève doit rester sur la liste, tuile comprise (séance ouverte : ${r.ouverte}, tuile : ${r.tuile})`);
+    if (r.echecs.length !== 1 || r.echecs[0].fichier !== `${ABSENTE}.js` || !r.echecs[0].erreur) throw new Error('activitesEnEchec() ne contient pas la séance : ' + JSON.stringify(r.echecs));
+    if (erreursPage.length) throw new Error('erreur de page : ' + erreursPage.join(' | '));
+    if (!consoles.some((t) => t.startsWith(`Séance écartée (${ABSENTE}.js)`))) throw new Error('la console ne nomme pas la séance : ' + JSON.stringify(consoles));
+  } finally {
+    if (!dejaVu) introuvables.delete(chemin);
     await c.close();
   }
 });

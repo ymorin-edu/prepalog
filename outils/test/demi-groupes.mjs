@@ -15,6 +15,8 @@
 // test seulement : `quiz-flux` avec `ouverture: 'prof'` (fermée tant qu'on ne la coche pas) et
 // `zones-entrepot` telle quelle (ouverte d'office : on la ferme pour la classe).
 
+import { forcerCatalogue } from './commun.mjs';
+
 export default async function bloc({ v, nav, BASE }) {
 
 const ctxD = await nav.newContext({ viewport: { width: 1280, height: 900 }, acceptDownloads: true });
@@ -22,6 +24,8 @@ await ctxD.route('**/activites/quiz-flux.js*', async (route) => {
   const r = await route.fetch();
   await route.fulfill({ response: r, body: (await r.text()).replace(/pret:\s*true,/, "pret: true, ouverture: 'prof',") });
 });
+// L'accueil lit la meta du CATALOGUE (chantier 23) : l'entrée de quiz-flux reçoit la même ouverture.
+await forcerCatalogue(ctxD, (entrees) => { entrees.find((e) => e.meta.id === 'quiz-flux').meta.ouverture = 'prof'; });
 const pg = await ctxD.newPage();
 pg.setDefaultTimeout(6000);
 const erreursD = [];

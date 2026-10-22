@@ -17,6 +17,8 @@
 //     visible dès qu'elle est cochée, invisible de nouveau une fois décochée — sans commit ;
 //   - une séance fermée garde sa tuile chez l'enseignant (« fermée pour ce groupe »).
 
+import { forcerCatalogue } from './commun.mjs';
+
 export default async function bloc({ v, nav, BASE }) {
 
 const ctxV = await nav.newContext({ viewport: { width: 1280, height: 900 } });
@@ -41,6 +43,13 @@ const SANS_OUVERTURE = 'cdiscount-inventaire';
 await ctxV.route(`**/activites/${SANS_OUVERTURE}.js*`, async (route) => {
   const r = await route.fetch();
   await route.fulfill({ response: r, body: (await r.text()).replace(/\n\s*ouverture:\s*'prof',/, '') });
+});
+// L'accueil lit la meta du CATALOGUE (chantier 23) : ses trois entrées reçoivent les mêmes drapeaux que les fichiers servis ci-dessus.
+await forcerCatalogue(ctxV, (entrees) => {
+  const de = (id) => entrees.find((e) => e.meta.id === id).meta;
+  de(PREPA).pret = false;
+  Object.assign(de(A_OUVRIR), { pret: true, ouverture: 'prof' });
+  delete de(SANS_OUVERTURE).ouverture;
 });
 pg.on('pageerror', (e) => erreursV.push('PAGEERROR: ' + e.message));
 pg.on('dialog', (d) => d.accept());

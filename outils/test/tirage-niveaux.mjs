@@ -15,10 +15,12 @@
 //
 // Valeurs attendues écrites à la main.
 
+import { forcerCatalogue } from './commun.mjs';
+
 export default async function bloc({ v, nav, BASE, ROOT, egal, vrai }) {
 
 const ctxN = await nav.newContext({ viewport: { width: 1366, height: 900 } });
-let espion = false, picardDeclare = false;
+let espion = false, picardDeclare = false, picardAuCatalogue = false;
 await ctxN.route('**/core/app.js*', async (route) => {
   const r = await route.fetch();
   const corps = await r.text();
@@ -37,6 +39,8 @@ await ctxN.route('**/activites/picard-ent42.js*', async (route) => {
   picardDeclare = corps.includes(ancre);
   await route.fulfill({ response: r, body: corps.replace(ancre, `${ancre} niveauxPrevus: ['confirme'],`) });
 });
+// L'onglet Niveaux lit la meta du CATALOGUE (chantier 23) : l'entrée de picard-ent42 déclare les mêmes niveaux prévus.
+await forcerCatalogue(ctxN, (entrees) => { entrees.find((e) => e.meta.id === 'picard-ent42').meta.niveauxPrevus = ['confirme']; picardAuCatalogue = true; });
 const pg = await ctxN.newPage();
 pg.setDefaultTimeout(7000);
 const erreursN = [];
@@ -134,7 +138,8 @@ await v('Niveaux : l’onglet montre élèves × entreprises (Cdiscount, plus ce
     }
   }
   await ongletProf('niveaux');
-  vrai(picardDeclare, 'activites/picard-ent42.js n’a plus la ligne « id » attendue : la déclaration d’essai est à revoir');
+  // Le fichier de la séance n'est plus téléchargé par l'onglet (il lit le catalogue) : la déclaration d'essai vit au catalogue.
+  vrai(picardAuCatalogue, 'activites/catalogue.js n’a plus d’entrée picard-ent42 : la déclaration d’essai est à revoir');
   const cols = await pg.$$eval('[data-col-scenario]', (L) => L.map((x) => x.dataset.colScenario));
   // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026), Action (8) depuis ENT-8.1 (15/10/2026), CHEP (9) depuis ENT-9.1 (18/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
   egal(cols, ['2', '4', '6', '7', '8', '9', '10'], 'colonnes');
@@ -351,6 +356,15 @@ const suivreErreurs = (p, nom) => {
 suivreErreurs(pt, 'essai');
 await pt.goto(BASE);
 await pt.waitForSelector('#btnProf', { timeout: 8000 });
+// L'accueil et les Corrigés lisent le CATALOGUE (chantier 23), qui ne connaît pas cette séance injectée : on lui ajoute son
+// entrée, relevée par la page elle-même (registre réécrit ci-dessus, vraie fabrique) avant que le catalogue soit lu.
+const entreeInjectee = await pt.evaluate(async () => {
+  const I = await import('/activites/index.js');
+  const e = (await I.releverCatalogue()).find((x) => x.meta.id === 'essai-tirage');
+  return e ? JSON.parse(JSON.stringify(e)) : null;
+});
+vrai(entreeInjectee && entreeInjectee.fichier === 'essai-tirage-injecte.js', 'la séance d’essai injectée n’est pas relevée par le registre réécrit : ' + JSON.stringify(entreeInjectee));
+await forcerCatalogue(ctxT, (entrees) => { entrees.push(entreeInjectee); });
 
 // Monte la séance d'essai (fabrique + moteur) avec une base donnée ; rend la base et les scores remontés.
 // `o.variante` : options de `essai()` (banque enrichie, pièce supprimée…) ; `o.aisance`, `o.uid`, `o.role`.

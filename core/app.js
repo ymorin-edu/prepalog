@@ -4,7 +4,7 @@ import { demarrerBackend, B } from './backend.js';
 import { CONFIG, DEMO } from './config.js';
 import { ech, toast, entete, brancherEntete, messageErreur } from './ui.js';
 import { activiteVisible, raisonCachee, courtNiveau, libelleNiveaux, demiDe } from './niveaux.js';
-import { chargerActivites, activitesEnEchec, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe, estSimulog } from '../activites/index.js';
+import { catalogue, activitesEnEchec, activite, RUBRIQUES, ICONES, activitesDeRubrique, entreprisesDe, intentionDe, estSimulog } from '../activites/index.js';
 import { ouvrirJeu, surEchec } from './store.js';
 import { rendreEspaceProf } from './prof.js';
 import { verrou, seancesDuParcours, versionDuParcours, baseDe, appliquerReprise } from './parcours.js';
@@ -208,7 +208,7 @@ function vueConnexion() {
 // -------------------------------------------------------------------- accueil
 async function vueAccueil() {
   fermerJeuCourant();
-  const mods = await chargerActivites();
+  const mods = await catalogue();
   const estProf = profil.role === 'prof';
 
   if (!estProf) {
@@ -383,7 +383,24 @@ async function vueAccueil() {
 // fois les vérifications passées, juste avant de dessiner (pose de l'étape d'historique).
 async function vueActivite(aid, avant) {
   const m = await activite(aid);
-  if (!m) { toast('Activité introuvable.'); return false; }
+  if (!m) {
+    // Séance absente du catalogue, ou dont le fichier refuse de se charger (chantier 23, décision de Tristan du
+    // 22/10/2026) : sa tuile reste, elle ne s'ouvre pas. L'élève lit un message simple ; l'enseignant y ajoute la
+    // cause, et la retrouve dans l'avis rouge de son accueil (`activitesEnEchec`, rempli par cette tentative).
+    const echec = profil.role === 'prof' ? activitesEnEchec().find((e) => e.id === aid) : null;
+    toast('Cette séance ne s\'ouvre pas pour l\'instant : préviens ton enseignant.' + (echec ? ` (${echec.fichier} : ${echec.erreur})` : ''), 7000);
+    return false;
+  }
+  // GARDE (chantier 23) : l'accueil montre la tuile d'après le catalogue, qui peut être plus ancien que le fichier de
+  // la séance (cache du navigateur, push sans relancer le catalogue). L'élève ne passe donc que si la `meta` du
+  // MODULE chargé le lui permet aussi : une séance fermée, en préparation ou hors niveau ne s'ouvre jamais.
+  const objGroupe = groupeActif ? await B.groupe(groupeActif) : null;
+  if (profil.role !== 'prof') {
+    if (!activiteVisible(m.meta, objGroupe, demiDe(objGroupe, profil.uid))) {
+      toast("Cette séance n'est pas ouverte pour ton groupe.");
+      return false;
+    }
+  }
 
   if (m.meta.portee !== 'eleve' && !groupeActif) {
     toast("Cette activité demande un groupe. L'enseignant doit en activer un.");
@@ -391,7 +408,7 @@ async function vueActivite(aid, avant) {
   }
   // Parcours strict : une séance dont la précédente n'est pas validée reste fermée.
   {
-    const raison = await verrou((await chargerActivites()).map((x) => x.meta), m.meta, profil, groupeActif);
+    const raison = await verrou((await catalogue()).map((x) => x.meta), m.meta, profil, groupeActif);
     if (raison) { toast(raison); return false; }
   }
   if (avant) avant();
@@ -419,7 +436,6 @@ async function vueActivite(aid, avant) {
   }
 
   fermerJeuCourant();
-  const objGroupe = groupeActif ? await B.groupe(groupeActif) : null;
   // `meta.jeuId` permet à plusieurs activités de travailler dans LA MÊME base. C'est ce qui
   // fait tenir ensemble les séances d'un même environnement d'entreprise : l'élève réceptionne
   // une livraison dans une activité, prépare une commande dans la suivante et remonte la
@@ -440,7 +456,7 @@ async function vueActivite(aid, avant) {
   // neuve reçoit simplement le numéro.
   if (m.meta.portee === 'eleve' && estSimulog(m.meta)) {
     try {
-      const metas = (await chargerActivites()).map((x) => x.meta);
+      const metas = (await catalogue()).map((x) => x.meta);
       const V = versionDuParcours(metas, m.meta);
       const base = jeuOuvert.etat();
       if (V && base.versionBase !== V) {
@@ -474,7 +490,7 @@ async function vueActivite(aid, avant) {
   // refaire. Le détail est dans `appliquerReprise` (core/parcours.js).
   if (m.meta.portee === 'eleve' && profil.role === 'eleve' && groupeActif && estSimulog(m.meta)) {
     try {
-      const metas = (await chargerActivites()).map((x) => x.meta);
+      const metas = (await catalogue()).map((x) => x.meta);
       const lireDrapeau = (id) => B.lireScore(groupeActif, profil.uid, '_reprise-' + id);
       if (await appliquerReprise(metas, m.meta, jeuOuvert.etat(), lireDrapeau)) {
         jeuOuvert.sauver();
@@ -502,7 +518,7 @@ async function vueActivite(aid, avant) {
   let suivante = null;
   if (m.meta.parcours) {
     try {
-      const L = seancesDuParcours((await chargerActivites()).map((x) => x.meta), m.meta);
+      const L = seancesDuParcours((await catalogue()).map((x) => x.meta), m.meta);
       const s = L[L.findIndex((x) => x.id === m.meta.id) + 1];
       if (s) suivante = { code: s.code, titre: s.titre };
     } catch (e) { /* pas de nom : le bandeau dit seulement « validée » */ }
