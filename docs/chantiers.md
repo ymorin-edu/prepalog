@@ -44,6 +44,7 @@
 | 19 | Reliquats SCE / Spartoo : acter la règle | C15 | petit | Sonnet | non | 9 | **livré** (09/10, cd622f5) |
 | 20 | Stratelog | C19 | ? | Opus | ? | 10 | à cadrer |
 | 23 | Accueil léger : catalogue des séances séparé du code | mesure du 22/10 | moyen (≈ 7 h, 4 lots) | Opus cadrage, Sonnet construction | oui | — | **livré** (22/10/2026, 4df8283, 40ca64e, b592008 ; accueil élève 41 requêtes / 0,7 Mo au lieu de 359 / 8,9 Mo) |
+| 24 | Vue Localiser : mouvement réduit (pause, zoom) | piste restante de la décision du 22/10 (suite de tests plus rapide) | petit (≈ 1 h) | Sonnet | oui (`localiser.mjs`, deux cas rejoués en mouvement normal, un cas nouveau ; toast attendu dans `action-81.mjs` et `pelleau/commun.mjs`) | — | **livré** (22/10/2026 ; `localiser` 205 s → 54 s, `action-85` 212 s → 67 s) |
 | **Lot D — France Boissons (scénario S2, ENT-6.1 → 6.10)** : relevé du 09/10/2026, ordre de la refonte du 07/10 (Q2) | | | | | | | |
 | D-A | Questions au fil (lots 1 à 4) | brief `MOTEUR-questions-au-fil` | gros | Opus | oui | — | **livré le 08/10, vue validée par Tristan le 09/10** (page d'essai ; lot 4 à revoir avec ENT-6.1) ; **banques « Avant de commencer » d'ENT-6.1 et 6.2 + calculette sur l'écran d'ouverture livrées (étape A, 10/10)**, avec trois questions au fil d'ENT-6.1 ; geste `messagerie:transfert:<clé>` et réflexion corrigée au bilan ajoutés au moteur |
 | D-B | « Jugé au premier essai » | SMOBY-notation lot 3 | — | — | oui | — | **livré** (visite ENT-5.3 ; l'animation garde la première réponse) |
