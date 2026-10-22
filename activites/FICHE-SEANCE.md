@@ -2148,6 +2148,15 @@ d'ENT-6.7) qui l'ouvrent et lui **rédigent ses lignes** depuis le plan. Format 
   groupe ») ; l'élève peut le couper pour lui, jamais l'activer. Voix de synthèse **installées sur le poste** (français
   seulement, aucune requête réseau) ; sans voix française, le terminal reste muet et le texte suffit (il est toujours
   affiché). À essayer avec un casque avant la séance.
+- **Un nom réglable** (chantier E-7, lot 2, 22/10/2026) : `creerTerminal({ nom: 'Terminal' })` remplace « TERMINAL VOCAL » (en-tête, mis en
+  capitales, et étiquette d'accessibilité « Terminal ») et retire la mention « sans son » (il n'a pas de voix). Sans `nom` : « TERMINAL VOCAL »
+  et « sans son » exactement comme avant (ENT-6.5, 6.6 et 6.7 n'y changent rien).
+- **Le mode « scanner »** (`creerTerminal({ nom, mode: 'scanner' })`, utilisé par le palettier) : le **même boîtier**, sans champ à taper,
+  sans « Valider » ni « Répète », sans ordre de lignes. Il montre la **phrase en cours** (« Scanne la palette. ») et le **journal** des 5
+  dernières lignes, **alimentés par la vue** : `TERM.dire(T, ligne, { refus })` (un refus est un texte rouge clair, sans aplat) et
+  `TERM.attendre(T, phrase)` (la ligne d'attente ; le comptage du lot 4 s'en servira pour attendre le scan d'une adresse, comme `poser()`
+  attend la pose). État rangé par la vue : `terminalScannerNeuf()` = `{ journal: [{ q: 't', x, ko?, h }], attente }` ; fonctions pures
+  exportées `direTerminal(T, texte, { refus })` et `attendreTerminal(T, phrase)`.
 
 ### Mode `palettier` : ranger à l'adresse donnée par le système (chantier E-7, lot 1, 21/10/2026) — `core/types/entrepot-palettier.js`
 
@@ -2158,7 +2167,8 @@ emprunte le plan vu de dessus, la travée de face, les adresses, la charge d'un 
 (la travée de face a gagné trois réglages, chacun absent = le dessin d'avant : `sansPoids`, `reserves`, `choisi`). Brief
 `docs/briefs/MOTEUR-palettier-adresse-donnee.md`, décisions `docs/briefs/COORDINATION-palettier.md` §3 ; exemple complet
 `contenus/palettier-essai.js` ; page d'essai **`outils/essai-palettier.html`** (aide de charge, verdict, Kevin qui monte, niveau, copie,
-enseignant) ; tests : bloc **`palettier`**. Le scan (lot 2) et le comptage (lot 4) ne sont pas encore écrits.
+enseignant, **réglage « Scan »** : deux clics / un clic / aucun) ; tests : bloc **`palettier`**. Le scan est le **lot 2** (plus bas, « Le scan »)
+et le comptage (lot 4) n'est pas encore écrit.
 
 ```js
 entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lot 0, plus haut)
@@ -2177,7 +2187,8 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
   cariste: { nom: 'Kevin', niveaux: [2, 3, 4], monte: 'validation' },   // monte : 'validation' (défaut) ou (db) => vrai / faux
   aideCharge: 'somme' | 'pose' | 'plaque',   // absent = 'plaque'
   verdict: 'critere' | 'adresse',            // absent = rien après « Valider »
-  regles: { titre?, entete?, lignes: [html…], encadre? },   // « Les règles ▾ », jamais en copie
+  regles: { titre?, entete?, lignes: [html…], encadre?, ouvertes?: true },   // « Les règles ▾ », jamais en copie ; `ouvertes: true` : dépliées au chargement en guidage (absent : repliées)
+  terminal: { nom: 'Terminal', scan: 'palette-emplacement' | 'emplacement' },   // lot 2 : le scan ; absent = pas de scan (le lot 1 tel quel)
 }
 ```
 
@@ -2190,7 +2201,7 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
   - prendre une palette (sa carte, ou en réception sur le plan) ; recliquer la palette en main la remet en réception ; une palette
     posée, ou confiée et pas encore montée, se **reprend** tant que rien n'est validé ;
   - ouvrir une travée (plan), puis un emplacement : la **vue de près** s'ouvre à droite de la travée — l'étiquette de l'emplacement
-    (comme sur la lisse, le lot 2 y scannera), le niveau, ce qui l'occupe (stock, ta palette, « Réservé : P3, à monter », hors service),
+    (comme sur la lisse ; avec `terminal`, c'est un bouton : un clic la scanne), le niveau, ce qui l'occupe (stock, ta palette, « Réservé : P3, à monter », hors service),
     la **plaque** du niveau (jamais au sol), puis selon `aideCharge` : **`pose`** le capteur « déjà posé » (stock + palettes posées ou
     confiées sur ce niveau), **`somme`** le même et « Avec ta palette P5 : 789 + 493 = 1 282 kg », **`plaque`** rien d'autre (et la travée
     de face n'écrit **aucun poids** : la charge ne se déduit pas). Aucun rouge, aucun « surcharge » : la vue ne juge pas ;
@@ -2210,7 +2221,7 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     `monterDemande: true` (la demande se relit après un rechargement). Le parcours de l'élève : poser, signaler, faire monter, valider ;
   - **Signaler : on ne peut pas ranger ici** : un motif à choisir (« C’est occupé », « La charge serait dépassée », « L’emplacement est
     abîmé », « Autre »), la palette retourne en réception, marquée « signalée ». Le **système** répond dans l'encart « Système » (colonne de
-    droite, la place du Terminal du lot 2 ; la fonction `direSysteme` sera rebranchée sur lui) : « Nouvelle adresse : A1-T04-N2-E3. » si la
+    droite ; **avec `terminal`, ses lignes vont dans le journal du Terminal** : plus bas) : « Nouvelle adresse : A1-T04-N2-E3. » si la
     palette déclare `nouvelleAdresse` (la carte la porte aussi), sinon « Signalement enregistré. » ; **en copie, « C’est noté. »** et jamais de
     nouvelle adresse. Aucun jugement à l'écran ; un nouveau signalement de la même palette remplace le précédent ;
   - **Fenêtre « Message du système »** (21/10/2026) : **chaque signalement** ouvre une **fenêtre modale** (`role="dialog"`, `aria-modal="true"`)
@@ -2224,12 +2235,33 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     `styles/entrepot.css`) : le moteur n'avait aucune fenêtre modale réutilisable (les confirmations de rendu sont dans la page) ;
   - **Valider mon rangement** (avec confirmation, possible avec des palettes en réception) : fige tout, Kevin monte (`'validation'`), plus
     aucun geste (regarder les travées reste permis) ; en copie, la copie est rendue. Puis, hors copie et selon `verdict`, sur chaque carte :
-    « ✓ bien rangée », ou le nom des critères faux (« ✗ signalement », « ✗ adresse », « ✗ plaque de charge » ; le lot 2 ajoutera « ✗ scan »),
+    « ✓ bien rangée », ou le nom des critères faux (« ✗ signalement », « ✗ adresse », « ✗ scan » avec `terminal`, « ✗ plaque de charge »),
     avec `'adresse'` suivi de l'adresse attendue. Tous les textes nouveaux sont au « tu ».
+- **Le scan (lot 2, 22/10/2026)** — `terminal: { nom: 'Terminal' }` dans l'entrepôt. **Deux scans, toujours dans le même ordre : la palette
+  d'abord, l'emplacement ensuite** (décision de Tristan, 21/10/2026). Le boîtier du terminal vocal, renommé et sans voix (mode « scanner », voir
+  « Le terminal vocal »), prend la place de l'encart « Système » dans la colonne de droite ; il tient en 1366 × 768 et 1280 × 720.
+  - **Quand** : une palette **posée** ou **confiée** (dans « À monter », montée ou non) est « posée, non scannée » ; sa carte le dit (« posée en
+    A1-T03-N1-E2 · à scanner », puis « · scannée » ; « à monter (Kevin) · à scanner »). Après « Valider », plus de « · à scanner » (ce serait un verdict).
+  - **Geste 1, scanner la palette** = cliquer son **étiquette** (code-barres dessiné, bouton « Scanner ») : sous sa carte en haut, sur la
+    palette de la vue de près de son emplacement, ou sur sa ligne dans la zone « À monter » (clic ou Entrée). Le Terminal : « P1 — Lessive
+    liquide 3 L. Scanne l'emplacement. » Un seul scan de palette en attente à la fois ; en scanner une autre remplace l'attente. Une palette en
+    réception, en main ou signalée : « Range d'abord la palette. » (refus rouge, **sans trace**).
+  - **Geste 2, scanner l'emplacement** = cliquer l'**étiquette d'adresse** de l'emplacement de la vue de près (devenue un bouton, avec « Scanner »).
+    Si c'est l'adresse que le système attend pour cette palette (`adresse`, ou `nouvelleAdresse` reçue après signalement) **et** que la palette y est
+    posée ou confiée : « A1-T03-N1-E2 — Lessive liquide 3 L — 24 cartons. Confirmé. » (`scan[P] = adresse`, geste `scan:<P>`). Sinon « Ce n'est
+    pas l'adresse de cette palette. » en rouge, sans aplat, **compté en trace** (`scansRefuses`, visible de l'enseignant sous « Côté enseignant »,
+    jamais noté seul) ; la palette reste en attente. Sans palette scannée avant : « Scanne d'abord la palette. » (sans trace).
+  - **Une palette reprise perd son scan** (et l'attente éventuelle).
+  - **Variante « un clic »** (`scan: 'emplacement'`, page d'essai : réglage « Scan ») : aucune étiquette de palette ; l'étiquette de l'emplacement
+    confirme directement la palette qui s'y trouve (« Aucune palette n'est posée ici. » sinon, sans trace). Le défaut est `'palette-emplacement'` (deux clics).
+  - **Les lignes du système** (nouvelle adresse, « Signalement enregistré. », « C'est noté. » en copie, « Demande envoyée à Kevin. ») passent
+    dans le **journal du Terminal** (rangé dans l'état : il survit à un rechargement) ; la **fenêtre modale** du signalement reste.
+  - **En copie** : aucun verdict, mais les phrases du Terminal (« Confirmé. », le refus) **restent dites** : c'est l'outil, pas une aide.
+  - Vert : aucun plein ; « Confirmé. » est du texte. La palette en attente porte un trait de l'accent, pas un aplat.
 - **Gestes publiés** (dans `signaux`, préfixés `entrepot:<id>:`) : `prendre:<P>`, `poser:<P>` (pose réussie), `confier:<P>`,
   `signaler:<P>` — une entrée par palette déclarée, celles du confirmé comprises —, `ouvrir` (toute ouverture d'un emplacement de près ; la
-  première seule est retenue par la base), `monter` (le bouton « Faire monter les palettes ») et `valider`. Ni `poser` ni `verifier` du
-  rangement. Rien n'est publié après « Valider ».
+  première seule est retenue par la base), `monter` (le bouton « Faire monter les palettes »), `valider`, et **avec `terminal`** `scan:<P>`
+  (une entrée par palette : le second scan réussi, jamais le premier). Ni `poser` ni `verifier` du rangement. Rien n'est publié après « Valider ».
 - **Jalons** (ids stables ; `attente` avant « Valider », `ok` / `ko` après, **jamais `attente` après**) :
   - `place-<P>` (palette à ranger) : posée au sol ou confiée **à son adresse** ; **signalée à tort** (son adresse était possible) = faux,
     même posée juste ensuite (décision 6 de Tristan) ; **confiée mais pas montée au moment de « Valider »** = faux (décision de Tristan,
@@ -2240,7 +2272,13 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     comme rangées. Valider quand même ? » (avec `'validation'`, la validation les monte : aucun avertissement) ;
   - `signale-<P>` (palette avec `nouvelleAdresse` ou `aSignaler`) : signalée **depuis son adresse**, avec un **motif vrai**, non rangée à son
     adresse d'origine, puis rangée à sa nouvelle adresse si le système l'a donnée (pas en copie) ;
-  - `pasPoseHaut` : aucune tentative de pose au-dessus du sol **et toutes les palettes traitées** (posée, confiée ou signalée) : sinon faux ;
+  - `scan-<P>` (**avec `terminal`**, une palette qui n'est pas « à signaler sans nouvelle adresse ») : `scan[P]` est l'adresse que le système attend
+    (la nouvelle adresse reçue, sinon l'adresse donnée) ; `attente` avant « Valider », puis `ok` ou `ko`. `bonus` pour une palette du confirmé.
+    Chaque jalon juge **son** geste : une palette posée juste mais non scannée = `place-P` ok, `scan-P` ko ; scannée à l'adresse attendue alors
+    qu'elle était mal rangée = `scan-P` ok, `place-P` ko. **En copie** la nouvelle adresse n'est jamais donnée : `scan-P5` (palette signalée) y reste
+    ko ; une séance d'évaluation lui met `poids: 0` ou ne le pèse pas ;
+  - `pasPoseHaut` : aucune tentative de pose au-dessus du sol **et toutes les palettes traitées** (posée, confiée ou signalée) : sinon faux. « Toutes »
+    **ne compte pas les palettes bonus du confirmé** (`niveaux: ['confirme']`) : en laisser une en réception ne coûte pas ce jalon ni `charge` ;
   - `charge` : aucune palette posée ou confiée au-delà d'une plaque, même garde.
   - **La vérité d'un emplacement**, contre laquelle tout signalement se juge : hors service → `abime` ; stock de départ ou une autre palette
     de l'élève (à la fin) → `occupe` ; charge du niveau (stock + les autres palettes posées ou confiées, à la fin) + la palette > plaque →
@@ -2254,10 +2292,15 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
   confiees: { P3: adresse }, signalees: { P5: { motif, adresse } }, nouvelles: { P5: adresse }, tentativesHaut, valide, at, premierGeste }`.
   Les palettes montées ne sont pas rangées : elles se calculent (`monte`). Trois clés **absentes de l'état neuf**, écrites au besoin :
   `monterDemande: true` et `monteesIds: [P3, …]` (le bouton « Faire monter » ; `monteesIds` seulement sans fonction `monte`),
-  `monteesValidation: [P3, …]` (à la validation : les palettes montées à ce moment).
+  `monteesValidation: [P3, …]` (à la validation : les palettes montées à ce moment). **Avec `terminal`**, quatre clés créées au premier dessin
+  (absentes sinon) : `scan: { P1: 'A1-T03-N1-E2' }` (second scan réussi : **ce que le système croit**), `scansRefuses: n` (trace), `scanAttente: 'P1' | null`
+  (palette scannée, l'emplacement est attendu) et `terminal: { journal, attente }`.
 - **Exports lisibles par une séance** (`core/types/entrepot.js`, `P` = la déclaration ou la fonction de la séance, `o.copie` en évaluation) :
   `palettesConfiees(db, P, o)` → `[{ id, nom, adresse }]` (les phrases du message à Kevin ; calculées une fois, à l'arrivée du message) ;
-  `etatPalettier(db, P, o)` → `{ enMain, posees, confiees, signalees: { P5: motif }, nouvelles, montees, tentativesHaut, valide }`.
+  `etatPalettier(db, P, o)` → `{ enMain, posees, confiees, signalees: { P5: motif }, nouvelles, montees, tentativesHaut, valide }` plus, **avec
+  `terminal`**, `scans: { P1: adresse }` et `scansRefuses` ; **`ouSystemeCroit(db, P, 'P1', o)`** (lot 2) → l'adresse **scannée** si elle existe,
+  sinon la **nouvelle adresse** reçue après signalement, sinon l'adresse **donnée** (`null` si la palette n'existe pas) : c'est ce que « le
+  lendemain » (lot 5) lira. `noter` rend aussi `scans` et `scansRefuses` dans `detail`.
   `bonnesReponses(P)` rend les attendus (enseignant, page d'essai) ; la note d'une copie non pondérée compte les jalons du socle seuls.
 - **Dessin** : charte de l'entreprise (Action : bleu, gardé dans la zone de travail) ; le vert plein ne dit que « juste » (texte des
   verdicts) ; palettes confiées, « À monter », emplacement vu de près : un trait ; refus en texte rouge. Tient en **1366 × 768 et

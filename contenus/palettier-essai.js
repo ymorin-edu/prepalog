@@ -97,14 +97,23 @@ export function palettier(o = {}) {
     cariste: { nom: 'Kevin', niveaux: [2, 3, 4], ...(o.monte ? { monte: o.monte } : {}) },
     regles: REGLES,
   };
+  if (o.reglesOuvertes) P.regles = { ...REGLES, ouvertes: true };   // « Les règles ▾ » dépliées au chargement (guidage)
   if (o.aideCharge) P.aideCharge = o.aideCharge;
   if (o.verdict) P.verdict = o.verdict;
+  // Lot 2 : `o.terminal` active le Terminal et le scan ; `o.scan: 'emplacement'` = un seul clic (l'emplacement confirme la palette).
+  // Absent = le lot 1 tel quel (le bloc de tests `palettier` en dépend : aucun jalon `scan-`).
+  if (o.terminal) P.terminal = { nom: 'Terminal', ...(o.scan === 'emplacement' ? { scan: 'emplacement' } : {}) };
   return P;
 }
 export const PALETTIER = palettier({ aideCharge: 'pose', verdict: 'critere' });
+// Le même cas avec le Terminal (deux scans : la palette, puis l'emplacement) : celui de la page d'essai.
+export const PALETTIER_SCAN = palettier({ aideCharge: 'pose', verdict: 'critere', terminal: true });
 
 // Les poids des jalons du socle (somme 20, comme une séance d'entreprise : les jalons de P6 sont des bonus, sans poids).
 export const POIDS = { 'place-P1': 3, 'place-P2': 3, 'place-P3': 3, 'place-P4': 3, 'signale-P5': 4, pasPoseHaut: 2, charge: 2 };
+// Avec le Terminal (somme 20 aussi) : 4 × 2 (poser) + 3 (signaler P5) + 4 × 1,5 + 1 (scanner) + 1 + 1 (les deux gardes).
+export const POIDS_SCAN = { 'place-P1': 2, 'place-P2': 2, 'place-P3': 2, 'place-P4': 2, 'signale-P5': 3,
+  'scan-P1': 1.5, 'scan-P2': 1.5, 'scan-P3': 1.5, 'scan-P4': 1.5, 'scan-P5': 1, pasPoseHaut: 1, charge: 1 };
 
 // L'univers d'essai : le vrai moteur d'entreprise, dans la charte d'Action. `entrepot` : une déclaration ou une fonction
 // (graine, { niveau, copie }) ; `temps` : guidage, entraînement ou évaluation (copie) ; `poids: false` : des jalons sans poids
@@ -119,7 +128,7 @@ export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poid
     SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [], CM: {}, THEME,
     baseDeDepart: () => ({ v: 1, created: Date.now(), stock: {}, moves: [], mails: [], orders: [], receptions: [],
       customers: [], suppliers: [], seq: 1, _depart: [] }),
-    etapes: poids ? etapes.map((e) => (e.bonus ? e : Object.assign(e, { poids: POIDS[e.id] }))) : etapes.filter((e) => !e.bonus),
+    etapes: poids ? etapes.map((e) => (e.bonus ? e : Object.assign(e, { poids: (etapes.some((x) => x.id === 'scan-P1') ? POIDS_SCAN : POIDS)[e.id] }))) : etapes.filter((e) => !e.bonus),
     exercice: 'Essai du palettier à adresse donnée',
     entrepot, copie, sansTrame: 'Tout à l’écran',
     menu: ['receptions', 'stock'],

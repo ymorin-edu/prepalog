@@ -547,3 +547,33 @@ button.vt-son-btn:focus-visible{ outline:3px solid #ffe08a; outline-offset:1px }
 .pal-modal p{ margin:0; font-size:1rem; line-height:1.45 }
 .pal-modal .btn{ align-self:flex-end; min-width:120px; min-height:40px }
 .pal-pres .pe-msg:empty{ display:none }
+/* Le SCAN (lot 2, 22/10/2026) : le Terminal (boîtier du terminal vocal, mode « scanner ») prend la place de l'encart « Système » ;
+   les étiquettes (palette, emplacement) sont des OBJETS dessinés, teintes fixes (fond clair, trait foncé) comme l'étiquette de
+   l'emplacement. Trait de l'accent pour la palette dont on attend l'emplacement ; jamais d'aplat vert (le vert plein dit « juste »). */
+.pal-cote > .pal-term{ background:none; border:0; padding:0 }
+.vt-scan .vt-ecran{ min-height:10.5em }
+.pal-cwrap .pal-etat{ white-space:normal }
+/* Deux scans : l'étiquette sous chaque carte et l'état qui passe sur deux lignes (confirmé : six cartes) coûtent de la hauteur ; le bandeau se serre. */
+.pal-deux .pal-bandeau{ padding:4px 8px }
+.pal-deux .pe-liste h3{ margin:0 0 2px }
+.pal-cwrap{ flex:1 1 0; min-width:0; display:flex; flex-direction:column; gap:2px }
+.pal-cwrap > .pe-pal{ flex:1 1 auto; gap:0 }
+.pal-cwrap .pal-info, .pal-cwrap .pal-etat{ line-height:1.15 }
+.pal-scan{ display:flex; align-items:center; gap:6px; min-width:0; padding:0 6px; background:#fbfaf6; color:#1a1915; border:1.5px solid #1a1915;
+  border-radius:3px; font:inherit; font-size:.72rem; font-weight:700; line-height:1.15; text-align:left; cursor:pointer }
+.pal-scan span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.pal-scan:hover:not(:disabled){ outline:2px solid var(--ardoise) }
+.pal-scan:focus-visible{ outline:3px solid var(--ardoise); outline-offset:1px }
+.pal-scan:disabled{ cursor:default; opacity:.6 }
+.pal-scan.pal-scan-att{ border:3px solid var(--ardoise); padding:0 4.5px }
+.pal-code.pal-code-p{ width:46px; height:12px; flex:none }
+.pal-ta-pal{ display:flex }
+.pal-ta-pal .pal-scan{ flex:1 1 auto; font-size:.84rem; padding:4px 8px }
+.pal-ta-pal .pal-code-p{ width:70px; height:16px }
+button.pal-etiq-emp.pal-scannable{ font:inherit; text-align:left; cursor:pointer }
+button.pal-etiq-emp.pal-scannable:hover:not(:disabled){ outline:3px solid var(--ardoise); outline-offset:1px }
+button.pal-etiq-emp.pal-scannable:focus-visible{ outline:3px solid var(--ardoise); outline-offset:2px }
+button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
+.pal-etiq-l1{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; width:100% }
+.pal-scan-lib{ font-size:.68rem; font-weight:700; text-transform:uppercase; letter-spacing:.05em; color:#5a564c }
+[data-pal-scan-pal]:focus-visible{ outline:3px solid var(--ardoise); outline-offset:1px }

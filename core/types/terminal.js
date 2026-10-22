@@ -39,6 +39,15 @@
 //   quantité prise (« Pose ton fût. » / « Pose tes 2 fûts. », lot 4).
 // - « Ce que le terminal sait de toi » : `bilanTerminal` (lignes, durée, codes faux, lignes par heure), non noté.
 //
+// LE NOM ET LE MODE « SCANNER » (chantier E-7, lot 2, 22/10/2026, palettier à adresse donnée ; `entrepot-palettier.js`) :
+// - `creerTerminal({ nom: 'Terminal' })` remplace « TERMINAL VOCAL » (en-tête et étiquette d'accessibilité) ; avec un nom, la mention
+//   « sans son » ne s'affiche pas (ce terminal n'a pas de voix). Absent = « TERMINAL VOCAL », comme avant.
+// - `creerTerminal({ nom, mode: 'scanner' })` : le MÊME boîtier sans champ à taper ni ordre de lignes. Il montre la PHRASE EN COURS
+//   (« Scanne la palette. », puis « P1 — Lessive liquide 3 L. Scanne l'emplacement. ») et le JOURNAL des 5 dernières lignes, que la VUE
+//   alimente : `TERM.dire(T, ligne, { refus })` (un refus est en texte rouge, sans aplat) et `TERM.attendre(T, phrase)` (la ligne
+//   d'attente : le comptage du lot 4 s'en servira pour attendre le scan d'une adresse, comme `poser()` attend la pose). État :
+//   `terminalScannerNeuf()` = { journal: [{ q: 't', x, ko?, h }], attente }, rangé par la vue hôte.
+//
 // L'état, rangé par la vue hôte dans la base de l'élève (cloisonné par séance) :
 //   { i: n° de la ligne en cours, phase: 'code' | 'reponse' | 'combien' | 'pose', reponses: { M01: 15 }, codesFaux: { M01: 2 },
 //     exceptions: { L3: { mot: 'abime', n: 1 } }, mot: { id, lib } (pendant « combien ? »),
@@ -48,6 +57,7 @@
 import { ech } from '../texte.js';
 
 export const terminalNeuf = () => ({ i: 0, phase: 'code', reponses: {}, codesFaux: {}, journal: [], debut: null, fin: null });
+export const terminalScannerNeuf = () => ({ journal: [], attente: '' });
 const JOURNAL_MAX = 300;
 const minus = (s) => String(s).charAt(0).toLowerCase() + String(s).slice(1);
 const TEXTES = {
@@ -169,6 +179,13 @@ export function repondreTerminal(T, lignes, saisie, textes = {}, h = Date.now(),
   return evt;
 }
 
+// Mode « scanner » : la vue DIT une ligne (écrite dans le journal, un refus en rouge) ou change la phrase qu'on attend.
+export function direTerminal(T, texte, { refus = false } = {}, h = Date.now()) {
+  T.journal.push(refus ? { q: 't', x: String(texte), ko: 1, h } : { q: 't', x: String(texte), h });
+  borner(T);
+}
+export function attendreTerminal(T, phrase) { T.attente = String(phrase == null ? '' : phrase); }
+
 // Peut-on dire un mot maintenant ? (pendant la question d'une ligne de préparation, une seule fois par ligne)
 export function motPossible(T, lignes) {
   const L = lignesDuTerminal(lignes, T);
@@ -234,7 +251,9 @@ export function htmlBilanTerminal(B, phrase = '') {
 
 // Le panneau. `lignes`, `textes` : de la vue hôte ; `titre` : la deuxième moitié de l'en-tête (« Inventaire tournant ») ;
 // `mots` : les mots d'exception de la préparation ([{ id, lib, combien }], aucun par défaut).
-export function creerTerminal({ lignes, textes = {}, titre = '', mots = [] }) {
+export function creerTerminal({ lignes = [], textes = {}, titre = '', mots = [], nom = '', mode = '' }) {
+  const SCAN = mode === 'scanner';
+  const NOM = nom ? String(nom).toLocaleUpperCase('fr-FR') : 'TERMINAL VOCAL';
   const ui = { saisie: '', flash: false, focus: false, coupe: false, sonOk: false, focusSon: false };
   const VU = 5;     // les dernières phrases échangées, au-dessus de la phrase en cours
   // Le son : seulement si l'enseignant l'a activé pour le groupe (`ui.sonOk`, relu à chaque dessin) et que l'élève ne l'a pas coupé.
@@ -253,8 +272,21 @@ export function creerTerminal({ lignes, textes = {}, titre = '', mots = [] }) {
     } catch (e) { /* texte seul */ }
   };
   const ligneEnCours = (T) => lignesDuTerminal(lignes, T)[T.i];
+  // Le mode « scanner » : la phrase en cours et les 5 dernières lignes, rien à taper (le scan est un clic de la vue hôte).
+  const htmlScanner = (T) => {
+    const passe = (T.journal || []).slice(-VU).map((j) => `<div class="vt-passe${j.ko ? ' vt-ko' : ''}">${ech(j.x)}</div>`).join('');
+    return `<div class="vt vt-scan" data-terminal data-vt-mode="scanner">
+        <div class="vt-boitier" role="group" aria-label="${ech(nom || 'Terminal')}">
+          <div class="vt-tete"><span class="vt-led" aria-hidden="true"></span>${ech(NOM)}${titre ? ` · ${ech(titre)}` : ''}</div>
+          <div class="vt-ecran" aria-live="polite">${passe}<div class="vt-actu" data-vt-actu>${ech(T.attente || '')}</div></div>
+        </div></div>`;
+  };
   return {
+    // Mode « scanner » : la vue hôte alimente le journal et la phrase attendue (voir l'en-tête du fichier).
+    dire: (T, texte, o) => direTerminal(T, texte, o),
+    attendre: (T, phrase) => attendreTerminal(T, phrase),
     html(T, { estProf = false, son = false } = {}) {
+      if (SCAN) return htmlScanner(T);
       ui.sonOk = !!son;
       const fini = !!T.fin;
       const L = lignesDuTerminal(lignes, T);
@@ -276,10 +308,10 @@ export function creerTerminal({ lignes, textes = {}, titre = '', mots = [] }) {
         <div data-vt-faux>Codes faux (trace, non notée) : ${faux.length ? faux.map(([id, n]) => `${ech(id)} ×${n}`).join(' · ') : 'aucun'}</div></details>`;
       const boutonsMots = mots.map((m) => `<button type="button" class="vt-btn" data-vt-mot="${ech(m.id)}" ${peutMot ? '' : 'disabled'}>${ech(m.lib)}</button>`).join('');
       return `<div class="vt" data-terminal data-vt-ligne="${T.i}" data-vt-phase="${fini ? 'fin' : T.phase}">
-        <div class="vt-boitier" role="group" aria-label="Terminal vocal">
-          <div class="vt-tete"><span class="vt-led" aria-hidden="true"></span>TERMINAL VOCAL${titre ? ` · ${ech(titre)}` : ''}${son
+        <div class="vt-boitier" role="group" aria-label="${ech(nom || 'Terminal vocal')}">
+          <div class="vt-tete"><span class="vt-led" aria-hidden="true"></span>${ech(NOM)}${titre ? ` · ${ech(titre)}` : ''}${son
             ? `<button type="button" class="vt-son vt-son-btn" data-vt-son aria-pressed="${!ui.coupe}">${ui.coupe ? 'Remettre le son' : 'Couper le son'}</button>`
-            : '<span class="vt-son">sans son</span>'}</div>
+            : (nom ? '' : '<span class="vt-son">sans son</span>')}</div>
           <div class="vt-ecran" aria-live="polite">${passe}${actu}</div>
           <form class="vt-saisie" data-vt-form autocomplete="off">
             <input data-vt-champ inputmode="numeric" autocomplete="off" maxlength="6" value="${ech(ferme ? '' : ui.saisie)}"
@@ -292,7 +324,7 @@ export function creerTerminal({ lignes, textes = {}, titre = '', mots = [] }) {
     // `api` : { sauver, redessiner, signal(evt, ligne), clavier() }.
     brancher(racine, T, api) {
       const el = racine.querySelector('[data-terminal]');
-      if (!el) return;
+      if (!el || SCAN) return;
       const champ = el.querySelector('[data-vt-champ]');
       const apres = (evt, l) => {
         ui.saisie = '';

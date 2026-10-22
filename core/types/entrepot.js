@@ -92,7 +92,7 @@ import { compilerPicking, etatPickingNeuf, jalonsPicking, attendusPicking, creer
 import { compilerMasse, etatMasseNeuf, jalonsMasse, solutionsMasse, creerMasse, placeDe, fautesMasse as fautesM, comptageMasse } from './entrepot-masse.js';
 // Le mode PALETTIER, ranger à l'adresse donnée (chantier E-7, lot 1, 21/10/2026) : son fichier ; il emprunte le plan et la travée.
 import { compilerPalettier, etatPalettierNeuf, jalonsPalettier, detailPalettier, attendusPalettier, creerPalettier,
-  confieesPalettier, etatLisiblePalettier, declarationDe } from './entrepot-palettier.js';
+  confieesPalettier, etatLisiblePalettier, declarationDe, ouSystemeCroitPalettier } from './entrepot-palettier.js';
 import { niveauEleve } from '../tirage.js';
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
@@ -655,6 +655,9 @@ export function palettesConfiees(db, P, o = {}) {
   return confieesPalettier(compiler(Q), etatDe(db, Q), niveauEleve(db, o));
 }
 export function etatPalettier(db, P, o = {}) { const Q = declarationDe(P, db, o); return etatLisiblePalettier(compiler(Q), etatDe(db, Q), db); }
+// Lot 2 (le scan) : où le système croit la palette `id` ('P1') — l'adresse scannée si elle existe, sinon la nouvelle adresse reçue après
+// signalement, sinon l'adresse donnée (null si la palette n'existe pas). C'est ce que lira « le lendemain » (lot 5).
+export function ouSystemeCroit(db, P, id, o = {}) { const Q = declarationDe(P, db, o); return ouSystemeCroitPalettier(compiler(Q), etatDe(db, Q), id); }
 // Les étapes à donner à `creerEntreprise` : la liste est celle de la déclaration de RÉFÉRENCE (graine « », standard), la même
 // pour tous les élèves ; chaque `verifier` juge la déclaration de L'ÉLÈVE. Une palette `niveaux: ['confirme']` donne des jalons
 // `bonus: true` dont le `verifier` rend null chez un élève qui ne l'a pas. Une fonction doit déclarer les mêmes palettes à tous

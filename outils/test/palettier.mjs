@@ -15,6 +15,12 @@
 //   Libres, hors de toute adresse de palette : A1-T01-N1-E2 (sol), A1-T01-N2-E2 (N2). Occupé au sol : A1-T03-N1-E1 (stock).
 //   Hors service : B1-T01-N2-E1.
 
+// LOT 2 (22/10/2026, le scan) : les cas du Terminal sont en fin de bloc, section « le scan » ; `monter(pg, { terminal: 'deux' | 'un' })`
+// déclare `terminal: { nom: 'Terminal' }` (deux scans) ou `{ nom: 'Terminal', scan: 'emplacement' }` (un clic) ; sans `terminal`, le
+// cas d'essai est celui du lot 1, que les 32 premiers cas jouent sans une modification (seul l'aide `monter` a gagné deux options).
+// Valeurs du scan écrites à la main : P1 « Cahiers grand format » 30 cartons, A1-T03-N1-E2 · P2 « Serviettes de bain » B2-T02-N1-E3 ·
+// P3 « Bougies parfumées » A2-T02-N3-E1 · P4 B1-T04-N2-E2 · P5 « Lessive liquide 3 L », nouvelle adresse A1-T04-N2-E3.
+
 export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
 const ctx = await nav.newContext({ viewport: { width: 1366, height: 768 } });
@@ -38,7 +44,8 @@ const monter = (p, o = {}) => p.evaluate(async (o) => {
   const hote = document.createElement('div'); hote.id = 'palTest'; document.body.appendChild(hote);
   const temps = o.temps || 'guidage';
   let P = C.palettier({ aideCharge: o.aide || 'pose', verdict: o.verdict === undefined ? 'critere' : o.verdict || undefined,
-    monte: o.monte === 'base' ? (db) => !!(db && db.kevinRepondu) : undefined });
+    monte: o.monte === 'base' ? (db) => !!(db && db.kevinRepondu) : undefined,
+    terminal: !!o.terminal, scan: o.terminal === 'un' ? 'emplacement' : undefined, reglesOuvertes: !!o.reglesOuvertes });
   if (o.scenario === 'signaler') {
     P = Object.assign({}, P, { palettes: [...P.palettes,
       { id: 'P7', nom: 'Peluches', cartons: 20, kg: 3, adresse: 'B1-T01-N2-E1', aSignaler: true },
@@ -46,9 +53,9 @@ const monter = (p, o = {}) => p.evaluate(async (o) => {
   }
   const U = C.universPalettier({ temps, entrepot: P, poids: o.scenario !== 'signaler' });
   if (o.volet) {
-    // Un message qui attend le geste `monter` (comme Kevin dans ENT-8.11).
+    // Un message qui attend le geste `monter` (comme Kevin dans ENT-8.11), ou celui que `o.volet` nomme (lot 2 : `scan:P1`).
     const { apresGeste } = await import('/core/declencheurs.js');
-    U.volet = { id: 'volet-essai', semer: () => ({ mails: [] }), declencheurs: [{ id: 'kevin', quand: apresGeste('entrepot:essai-palettier:monter'),
+    U.volet = { id: 'volet-essai', semer: () => ({ mails: [] }), declencheurs: [{ id: 'kevin', quand: apresGeste(typeof o.volet === 'string' ? o.volet : 'entrepot:essai-palettier:monter'),
       semer: () => ({ mails: [{ folder: 'in', ts: Date.now(), from: 'Kevin', fromMail: 'kevin@essai.example', to: 'Lea', subject: 'Kevin monte', kind: 'text', text: 'Bonjour' }] }) }] };
   }
   const db = o.db || {};
@@ -695,6 +702,380 @@ await v('Palettier : Échap referme les motifs, puis la vue de près, puis la tr
   egal(await lu(), [false, '', 'true'], 'vue de près refermée');
   await pg.keyboard.press('Escape');
   egal(await lu(), [false, null, 'false'], 'retour au plan');
+});
+
+/* =========================================================== le scan (lot 2, 22/10/2026) */
+// Aides du scan. Un scan de palette = un clic sur son étiquette (la carte, en haut) ; un scan d'emplacement = un clic sur l'étiquette
+// d'adresse de la vue de près (celle de l'emplacement ouvert).
+const scanPal = (p, id) => p.click(`${Z} .pe-bandeau [data-pal-scan-pal="${id}"]`);
+const scanEmp = (p) => p.click(`${Z} [data-pal-scan-emp]`);
+const lignesTerm = (p) => p.$$eval(`${Z} [data-terminal] .vt-passe`, (L) => L.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+const lignesRouges = (p) => p.$$eval(`${Z} [data-terminal] .vt-passe.vt-ko`, (L) => L.map((x) => x.textContent.replace(/\s+/g, ' ').trim()));
+const derniere = async (p) => { const L = await lignesTerm(p); return L[L.length - 1]; };
+const croit = (p, id) => p.evaluate(async (id) => { const E = await import('/core/types/entrepot.js'); return E.ouSystemeCroit(window.__p.db, window.__p.P, id); }, id);
+const AD = { P1: 'A1-T03-N1-E2', P2: 'B2-T02-N1-E3', P3: 'A2-T02-N3-E1', P4: 'B1-T04-N2-E2', P5: 'A1-T04-N2-E3' };
+// (L'ordre des clés est celui de `jalons` : chaque scan-P juste après son place-P ou signale-P.)
+const tousScan = (j) => ({ 'place-P1': j, 'scan-P1': j, 'place-P2': j, 'scan-P2': j, 'place-P3': j, 'scan-P3': j, 'place-P4': j, 'scan-P4': j,
+  'signale-P5': j, 'scan-P5': j, pasPoseHaut: j, charge: j });
+// Le parcours juste AVEC les deux scans, palette par palette (`sauf` : les palettes laissées de côté).
+async function justeScan(p, sauf = []) {
+  await juste(p, sauf);
+  for (const id of ['P1', 'P2', 'P3', 'P4', 'P5']) {
+    if (sauf.includes(id)) continue;
+    await scanPal(p, id); await ouvrir(p, AD[id]); await scanEmp(p);
+  }
+}
+
+await v('Scan : avec `terminal`, le Terminal remplace l’encart « Système » — en-tête TERMINAL, sans champ ni bouton, « Scanne la palette. » ; une étiquette « Scanner » par carte ; 33 gestes ; jalons scan-P1 à scan-P5 à faire', async () => {
+  await monter(pg, { terminal: 'deux' });
+  egal(await texte(pg, '[data-terminal] .vt-tete'), 'TERMINAL', 'en-tête');
+  egal(await pg.getAttribute(`${Z} [data-terminal] [role="group"]`, 'aria-label'), 'Terminal', 'étiquette d’accessibilité');
+  vrai(!(await present(pg, '[data-pal-systeme]')), 'plus d’encart « Système »');
+  vrai(!/sans son|vocal/i.test(await texte(pg, '[data-terminal]')), 'ni « sans son » ni « vocal »');
+  egal(await texte(pg, '[data-vt-actu]'), 'Scanne la palette.', 'la phrase en cours');
+  egal(await pg.$$eval(`${Z} [data-terminal] input, ${Z} [data-terminal] button, ${Z} [data-terminal] form`, (L) => L.length), 0, 'aucun champ à taper');
+  egal(await pg.$$eval(`${Z} .pe-bandeau [data-pal-scan-pal]`, (L) => L.map((b) => b.dataset.palScanPal)), ['P1', 'P2', 'P3', 'P4', 'P5'], 'une étiquette à scanner par carte');
+  const e = await etat(pg);
+  egal([e.scan, e.scansRefuses, e.terminal.journal, e.terminal.attente], [{}, 0, [], 'Scanne la palette.'], 'état');
+  egal(await jalons(pg), tousScan('attente'), 'jalons à faire');
+  const S = await pg.evaluate(async () => { const { creerEntrepot } = await import('/core/types/entrepot.js'); const C = await import('/contenus/palettier-essai.js'); return creerEntrepot(C.palettier({ terminal: true })).signaux; });
+  egal([S.length, S.filter((g) => g.includes(':scan:')).sort()], [33, ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'].map((id) => `entrepot:essai-palettier:scan:${id}`)], 'un geste scan par palette');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Scan : palette posée mais jamais scannée + « Valider » → scan-P ko, place-P ok, « ✗ scan » sur la carte ; le système la croit à l’adresse donnée (la nouvelle adresse pour P5)', async () => {
+  await monter(pg, { terminal: 'deux' });
+  await juste(pg);
+  egal(await jalons(pg), tousScan('attente'), 'avant la validation');
+  egal(await texte(pg, '[data-pal-etat="P1"]'), 'posée en A1-T03-N1-E2 · à scanner', 'la carte le dit');
+  egal(await texte(pg, '[data-pal-etat="P3"]'), 'à monter (Kevin) · à scanner', 'confiée aussi');
+  await valider(pg);
+  egal(await jalons(pg), Object.assign(tousScan('ko'), { 'place-P1': 'ok', 'place-P2': 'ok', 'place-P3': 'ok', 'place-P4': 'ok', 'signale-P5': 'ok', pasPoseHaut: 'ok', charge: 'ok' }), 'place ok, scan ko');
+  egal(await texte(pg, '[data-pe-verd="P1"]'), '✗ scan', 'verdict « critere »');
+  egal([await croit(pg, 'P1'), await croit(pg, 'P3'), await croit(pg, 'P5')], ['A1-T03-N1-E2', 'A2-T02-N3-E1', 'A1-T04-N2-E3'], 'ce que le système croit : adresse donnée, nouvelle adresse reçue');
+});
+
+await v('Scan : la palette (étiquette), puis l’emplacement juste → « Confirmé. » dans le journal, scan-P ok, geste `scan:P1` publié (un message qui l’attend arrive), la carte dit « scannée »', async () => {
+  await monter(pg, { terminal: 'deux', volet: 'entrepot:essai-palettier:scan:P1' });
+  await ranger(pg, 'P1', AD.P1);
+  await scanPal(pg, 'P1');
+  egal(await texte(pg, '[data-vt-actu]'), 'P1 — Cahiers grand format. Scanne l’emplacement.', 'la palette est scannée');
+  egal((await etat(pg)).scanAttente, 'P1', 'état : l’emplacement est attendu');
+  egal((await gestes(pg)).includes('entrepot:essai-palettier:scan:P1'), false, 'pas de geste au premier scan');
+  await scanEmp(pg);
+  egal(await derniere(pg), 'A1-T03-N1-E2 — Cahiers grand format — 30 cartons. Confirmé.', 'journal');
+  egal(await texte(pg, '[data-vt-actu]'), 'Scanne la palette.', 'on repart');
+  egal(await lignesRouges(pg), [], 'aucun refus');
+  const e = await etat(pg);
+  egal([e.scan, e.scanAttente, e.scansRefuses], [{ P1: AD.P1 }, null, 0], 'état');
+  vrai((await gestes(pg)).includes('entrepot:essai-palettier:scan:P1'), 'geste scan:P1');
+  egal(await pg.evaluate(() => (window.__p.db.mails || []).filter((m) => m.subject === 'Kevin monte').length), 1, 'le message qui attend scan:P1 est arrivé');
+  egal(await texte(pg, '[data-pal-etat="P1"]'), 'posée en A1-T03-N1-E2 · scannée', 'la carte');
+  egal(await croit(pg, 'P1'), AD.P1, 'ce que le système croit');
+  await justeScan(pg, ['P1']);
+  await valider(pg);
+  egal(await jalons(pg), tousScan('ok'), 'parcours complet : tout juste');
+  egal(await pg.$$eval(`${Z} [data-pal-verdict]`, (L) => L.map((s) => s.textContent.trim())), Array(5).fill('✓ bien rangée'), 'verdicts');
+  egal((await pg.evaluate(() => window.__p.moteur.noter(window.__p.db))).score, 20, 'note du socle : 20');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Scan : un autre emplacement, ou l’adresse attendue où la palette n’est pas → refus en rouge (sans aplat), compté en trace ; rien d’autre ne change ; scan-P ko après « Valider »', async () => {
+  await monter(pg, { terminal: 'deux' });
+  await ranger(pg, 'P1', 'A1-T01-N1-E2');
+  await scanPal(pg, 'P1'); await scanEmp(pg);
+  egal(await lignesRouges(pg), ['Ce n’est pas l’adresse de cette palette.'], 'refus : posée ailleurs');
+  egal(await pg.$eval(`${Z} .vt-passe.vt-ko`, (x) => [getComputedStyle(x).backgroundColor, getComputedStyle(x).color]), ['rgba(0, 0, 0, 0)', 'rgb(255, 156, 156)'], 'texte rouge clair, aucun aplat');
+  let e = await etat(pg);
+  egal([e.scan, e.scansRefuses, e.scanAttente, e.posees], [{}, 1, 'P1', { P1: 'A1-T01-N1-E2' }], 'état : rien confirmé, un refus, la palette attend toujours son emplacement');
+  egal(await texte(pg, '[data-vt-actu]'), 'P1 — Cahiers grand format. Scanne l’emplacement.', 'la phrase attendue ne change pas');
+  await ouvrir(pg, AD.P1); await scanEmp(pg);
+  egal((await lignesRouges(pg)).length, 2, 'refus : l’adresse attendue, mais la palette n’y est pas');
+  e = await etat(pg);
+  egal([e.scan, e.scansRefuses], [{}, 2], 'deux refus');
+  vrai(!(await lignesTerm(pg)).some((l) => l.includes('Confirmé')), 'jamais « Confirmé. »');
+  await juste(pg, ['P1']);
+  await valider(pg);
+  egal(await jalons(pg), Object.assign(tousScan('ko'), { 'place-P1': 'ko', 'place-P2': 'ok', 'place-P3': 'ok', 'place-P4': 'ok', 'signale-P5': 'ok', pasPoseHaut: 'ok', charge: 'ok' }), 'place-P1 et scan-P1 ko');
+  // L'enseignant voit la trace, l'élève non.
+  await monter(pg, { terminal: 'deux', role: 'prof' });
+  await ranger(pg, 'P1', 'A1-T01-N1-E2'); await scanPal(pg, 'P1'); await scanEmp(pg);
+  egal(await texte(pg, '[data-pal-scans-refuses]'), 'Scans refusés (trace, non notée) : 1', 'côté enseignant');
+  await monter(pg, { terminal: 'deux' });
+  vrai(!(await present(pg, '[data-pal-scans-refuses]')), 'rien de tel côté élève');
+});
+
+await v('Scan : l’emplacement avant la palette → « Scanne d’abord la palette. » ; une palette en réception ou en main → « Range d’abord la palette. » ; ni l’un ni l’autre ne laisse de trace', async () => {
+  await monter(pg, { terminal: 'deux' });
+  await ranger(pg, 'P1', AD.P1);
+  await scanEmp(pg);
+  egal(await lignesRouges(pg), ['Scanne d’abord la palette.'], 'emplacement d’abord');
+  let e = await etat(pg);
+  egal([e.scan, e.scansRefuses, e.scanAttente ?? null], [{}, 0, null], 'aucune trace');
+  await monter(pg, { terminal: 'deux' });
+  await scanPal(pg, 'P1');
+  egal(await lignesRouges(pg), ['Range d’abord la palette.'], 'palette en réception');
+  egal(await texte(pg, '[data-vt-actu]'), 'Scanne la palette.', 'rien n’est en attente');
+  await prendre(pg, 'P2'); await scanPal(pg, 'P2');
+  egal(await lignesRouges(pg), ['Range d’abord la palette.', 'Range d’abord la palette.'], 'palette en main');
+  await signaler(pg, 'P5', 'A1-T02-N3-E2', 'charge'); await scanPal(pg, 'P5');
+  egal((await lignesRouges(pg)).length, 3, 'palette signalée (retournée en réception)');
+  e = await etat(pg);
+  egal([e.scan, e.scansRefuses, e.scanAttente ?? null], [{}, 0, null], 'aucune trace');
+});
+
+await v('Scan : P5 signalée — le scan à l’adresse d’origine est refusé (même palette confiée là), à la nouvelle adresse confirmé ; jamais signalée : l’adresse d’origine est celle que le système attend', async () => {
+  await monter(pg, { terminal: 'deux' });
+  await signaler(pg, 'P5', 'A1-T02-N3-E2', 'charge');
+  vrai((await lignesTerm(pg)).includes('Nouvelle adresse : A1-T04-N2-E3.'), 'le système donne la nouvelle adresse (journal du Terminal)');
+  await ranger(pg, 'P5', 'A1-T02-N3-E2', 'confier');
+  await scanPal(pg, 'P5'); await scanEmp(pg);
+  egal(await lignesRouges(pg), ['Ce n’est pas l’adresse de cette palette.'], 'adresse d’origine refusée');
+  egal([(await etat(pg)).scan, (await etat(pg)).scansRefuses], [{}, 1], 'rien de confirmé, un refus');
+  await ranger(pg, 'P5', AD.P5, 'confier');   // « ranger » reprend la palette confiée à l'origine (sans scan)
+  await scanPal(pg, 'P5'); await scanEmp(pg);
+  egal(await derniere(pg), 'A1-T04-N2-E3 — Lessive liquide 3 L — 36 cartons. Confirmé.', 'nouvelle adresse confirmée');
+  egal([(await etat(pg)).scan, await croit(pg, 'P5')], [{ P5: AD.P5 }, AD.P5], 'état et ce que croit le système');
+  // Jamais signalée : le système attend toujours l'adresse d'origine.
+  await monter(pg, { terminal: 'deux' });
+  await ranger(pg, 'P5', 'A1-T02-N3-E2', 'confier');
+  await scanPal(pg, 'P5'); await scanEmp(pg);
+  egal(await derniere(pg), 'A1-T02-N3-E2 — Lessive liquide 3 L — 36 cartons. Confirmé.', 'confirmé : le système ne juge pas la charge, le jalon place le fait');
+  await valider(pg);
+  const J = await jalons(pg);
+  egal([J['scan-P5'], J['signale-P5'], J.charge], ['ok', 'ko', 'ko'], 'scan-P5 ok, signale-P5 et charge ko : chaque jalon juge son geste');
+  // Une palette signalée SANS nouvelle adresse (P7, P8) ne se range pas, donc ne se scanne pas : pas de jalon scan pour elle.
+  await monter(pg, { terminal: 'deux', scenario: 'signaler' });
+  const K = Object.keys(await jalons(pg));
+  egal([K.includes('scan-P5'), K.includes('signale-P7'), K.includes('scan-P7'), K.includes('scan-P8')], [true, true, false, false], 'jalons scan : P5 oui, P7 et P8 non');
+});
+
+await v('Scan : une palette confiée se scanne dans la zone « À monter » (clic, ou Entrée au clavier) puis à son emplacement de destination, montée ou non ; scan-P ok', async () => {
+  await monter(pg, { terminal: 'deux' });
+  await ranger(pg, 'P3', AD.P3, 'confier');
+  await bouton(pg, 'retour');
+  await pg.click(`${Z} [data-pal-scan-pal="P3"][data-pe-cle="scanpalzone:P3"]`);
+  egal(await texte(pg, '[data-vt-actu]'), 'P3 — Bougies parfumées. Scanne l’emplacement.', 'scannée dans la zone');
+  await ouvrir(pg, AD.P3); await scanEmp(pg);
+  egal(await derniere(pg), 'A2-T02-N3-E1 — Bougies parfumées — 60 cartons. Confirmé.', 'confirmée, pas encore montée');
+  egal(await texte(pg, '[data-pal-etat="P3"]'), 'à monter (Kevin) · scannée', 'la carte');
+  // Au clavier, sur la zone de l'allée B.
+  await ranger(pg, 'P4', AD.P4, 'confier');
+  await bouton(pg, 'retour');
+  await pg.focus(`${Z} [data-pal-scan-pal="P4"][data-pe-cle="scanpalzone:P4"]`);
+  await pg.keyboard.press('Enter');
+  egal(await texte(pg, '[data-vt-actu]'), 'P4 — Peluches. Scanne l’emplacement.', 'Entrée sur la zone');
+  await valider(pg);
+  const J = await jalons(pg);
+  egal([J['scan-P3'], J['scan-P4']], ['ok', 'ko'], 'P3 scannée, P4 non');
+});
+
+await v('Scan : la palette de la vue de près se scanne aussi ; une palette reprise perd son scan, et la palette en attente est oubliée', async () => {
+  await monter(pg, { terminal: 'deux' });
+  await ranger(pg, 'P1', AD.P1);
+  await pg.click(`${Z} [data-pal-ta-pal="P1"] [data-pal-scan-pal="P1"]`);
+  egal(await texte(pg, '[data-vt-actu]'), 'P1 — Cahiers grand format. Scanne l’emplacement.', 'depuis la vue de près');
+  await scanEmp(pg);
+  egal((await etat(pg)).scan, { P1: AD.P1 }, 'scannée');
+  await prendre(pg, 'P1');
+  egal([(await etat(pg)).scan, await texte(pg, '[data-pal-etat="P1"]')], [{}, 'en main'], 'reprise : le scan est effacé');
+  await ouvrir(pg, AD.P1); await bouton(pg, 'poser');
+  egal(await texte(pg, '[data-pal-etat="P1"]'), 'posée en A1-T03-N1-E2 · à scanner', 'reposée : à scanner de nouveau');
+  await scanPal(pg, 'P1');
+  egal((await etat(pg)).scanAttente, 'P1', 'en attente');
+  await prendre(pg, 'P1');
+  egal([(await etat(pg)).scanAttente ?? null, await texte(pg, '[data-vt-actu]')], [null, 'Scanne la palette.'], 'reprise : plus rien en attente');
+  // Scanner une autre palette remplace l'attente.
+  await bouton(pg, 'poser');
+  await ranger(pg, 'P2', AD.P2);
+  await scanPal(pg, 'P1'); await scanPal(pg, 'P2');
+  egal(await texte(pg, '[data-vt-actu]'), 'P2 — Serviettes de bain. Scanne l’emplacement.', 'un seul scan de palette en attente à la fois');
+});
+
+await v('Scan en un clic (`scan: \'emplacement\'`) : l’étiquette de l’emplacement confirme la palette qui s’y trouve ; aucune étiquette de palette ; refus si rien n’y est posé ou si ce n’est pas son adresse', async () => {
+  await monter(pg, { terminal: 'un' });
+  egal(await texte(pg, '[data-vt-actu]'), 'Scanne l’emplacement.', 'phrase');
+  vrai(!(await present(pg, '[data-pal-scan-pal]')) && !(await present(pg, '.pal-cwrap')), 'aucune étiquette de palette à scanner');
+  await ranger(pg, 'P1', AD.P1);
+  vrai(!(await present(pg, '[data-pal-ta-pal]')), 'ni dans la vue de près');
+  await scanEmp(pg);
+  egal(await derniere(pg), 'A1-T03-N1-E2 — Cahiers grand format — 30 cartons. Confirmé.', 'un seul clic');
+  egal([(await etat(pg)).scan, (await gestes(pg)).includes('entrepot:essai-palettier:scan:P1')], [{ P1: AD.P1 }, true], 'état et geste');
+  await ouvrir(pg, 'A1-T01-N1-E2'); await scanEmp(pg);
+  egal(await derniere(pg), 'Aucune palette n’est posée ici.', 'emplacement sans palette');
+  egal((await etat(pg)).scansRefuses, 0, 'sans trace');
+  await ranger(pg, 'P2', 'A1-T01-N1-E2'); await scanEmp(pg);
+  egal(await derniere(pg), 'Ce n’est pas l’adresse de cette palette.', 'palette posée ailleurs');
+  egal((await etat(pg)).scansRefuses, 1, 'refus compté');
+  await juste(pg, ['P1', 'P2']);
+  await valider(pg);
+  const J = await jalons(pg);
+  egal([J['scan-P1'], J['scan-P2'], J['place-P2'], J['scan-P3']], ['ok', 'ko', 'ko', 'ko'], 'jalons');
+});
+
+await v('Scan en copie : les phrases du Terminal (« Confirmé. », le refus) restent dites ; « Valider » rend la copie, aucun verdict ni « ✗ » dans la page ; les jalons scan-P sont jugés', async () => {
+  await monter(pg, { terminal: 'deux', temps: 'evaluation' });
+  await ranger(pg, 'P1', AD.P1);
+  await scanPal(pg, 'P1'); await scanEmp(pg);
+  egal(await derniere(pg), 'A1-T03-N1-E2 — Cahiers grand format — 30 cartons. Confirmé.', '« Confirmé. » en copie');
+  await ranger(pg, 'P2', 'A1-T01-N1-E2');
+  await scanPal(pg, 'P2'); await scanEmp(pg);
+  egal(await lignesRouges(pg), ['Ce n’est pas l’adresse de cette palette.'], 'le refus aussi');
+  await juste(pg, ['P1', 'P2']);
+  await valider(pg);
+  vrai(!!(await pg.evaluate(() => window.__p.remis)), 'copie rendue');
+  vrai(!(await present(pg, '[data-pal-verdict]')) && !(await texte(pg, '')).includes('✗') && !(await texte(pg, '.pe-bandeau')).includes('✓'), 'aucun verdict : pas de ✗ dans la page, pas de ✓ sur les cartes');
+  const J = await jalons(pg);
+  egal([J['scan-P1'], J['scan-P2'], J['place-P2']], ['ok', 'ko', 'ko'], 'jalons jugés');
+  egal(await texte(pg, '[data-vt-actu]'), 'Terminé.', 'le Terminal a fini');
+});
+
+await v('Scan : sans `terminal`, le lot 1 tel quel — encart « Système », aucun boîtier, aucune étiquette cliquable, aucun jalon `scan-`, aucune clé de scan dans l’état ni dans `etatPalettier`', async () => {
+  await monter(pg);
+  vrai(await present(pg, '[data-pal-systeme]'), 'encart « Système »');
+  const sel = ['[data-terminal]', '[data-pal-term]', '[data-pal-scan-pal]', '[data-pal-scan-emp]', '.pal-cwrap', '.pal-scannable', '[data-pal-ta-pal]'];
+  egal(await pg.$$eval(Z, (R, s) => s.filter((q) => R[0].querySelector(q)), sel), [], 'rien du scan');
+  await ranger(pg, 'P1', AD.P1);
+  vrai(!(await present(pg, '[data-pal-scan-emp]')) && !(await present(pg, '[data-pal-ta-pal]')), 'ni étiquette cliquable ni palette à scanner dans la vue de près');
+  egal(await pg.$eval(`${Z} [data-pal-etiq-emp]`, (x) => x.tagName), 'DIV', 'l’étiquette d’emplacement n’est pas un bouton');
+  egal(await texte(pg, '[data-pal-etat="P1"]'), 'posée en A1-T03-N1-E2', 'la carte ne parle pas de scan');
+  const e = await etat(pg);
+  egal(['scan', 'scansRefuses', 'scanAttente', 'terminal'].filter((k) => k in e), [], 'état sans clé de scan');
+  egal(Object.keys(await jalons(pg)).filter((k) => k.startsWith('scan-')), [], 'aucun jalon scan-');
+  const r = await pg.evaluate(async () => { const E = await import('/core/types/entrepot.js'); return { e: Object.keys(E.etatPalettier(window.__p.db, window.__p.P)), o: E.ouSystemeCroit(window.__p.db, window.__p.P, 'P1') }; });
+  egal([r.e.includes('scans'), r.e.includes('scansRefuses'), r.o], [false, false, AD.P1], 'etatPalettier sans scan ; ouSystemeCroit rend l’adresse donnée');
+});
+
+await v('Terminal : `nom` remplace « TERMINAL VOCAL » (en-tête, étiquette d’accessibilité) et retire « sans son » ; absent, tout reste comme avant ; le mode « scanner » n’a ni champ ni bouton et alimente son journal', async () => {
+  const r = await pg.evaluate(async () => {
+    const T = await import('/core/types/terminal.js');
+    const L = [{ id: 'M1', lieu: 'Lieu.', code: '12', question: 'Combien ?' }];
+    const lire = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d; };
+    const avec = lire(T.creerTerminal({ lignes: L, nom: 'Terminal' }).html(T.terminalNeuf()));
+    const sans = lire(T.creerTerminal({ lignes: L }).html(T.terminalNeuf()));
+    const S = T.creerTerminal({ nom: 'Terminal', mode: 'scanner' });
+    const N = T.terminalScannerNeuf();
+    S.dire(N, 'Une ligne.'); S.dire(N, 'Un refus.', { refus: true }); S.attendre(N, 'Scanne la palette.');
+    const sc = lire(S.html(N));
+    return { avecTete: avec.querySelector('.vt-tete').textContent.trim(), avecLabel: avec.querySelector('[role="group"]').getAttribute('aria-label'), avecSon: !!avec.querySelector('.vt-son'), avecChamp: !!avec.querySelector('input'),
+      sansTete: sans.querySelector('.vt-tete').textContent.trim(), sansLabel: sans.querySelector('[role="group"]').getAttribute('aria-label'),
+      scTete: sc.querySelector('.vt-tete').textContent.trim(), scChamp: sc.querySelectorAll('input, button, form').length, scRouge: [...sc.querySelectorAll('.vt-ko')].map((x) => x.textContent),
+      scPasse: [...sc.querySelectorAll('.vt-passe')].map((x) => x.textContent), scActu: sc.querySelector('[data-vt-actu]').textContent };
+  });
+  egal([r.avecTete, r.avecLabel, r.avecSon, r.avecChamp], ['TERMINAL', 'Terminal', false, true], 'avec un nom (mode ordinaire : le champ reste)');
+  egal([r.sansTete.startsWith('TERMINAL VOCAL'), r.sansTete.endsWith('sans son'), r.sansLabel], [true, true, 'Terminal vocal'], 'sans nom : « TERMINAL VOCAL » et « sans son », comme avant');
+  egal([r.scTete, r.scChamp, r.scRouge, r.scPasse, r.scActu], ['TERMINAL', 0, ['Un refus.'], ['Une ligne.', 'Un refus.'], 'Scanne la palette.'], 'mode scanner');
+});
+
+await v('Scan : les lignes du système (nouvelle adresse, demande à Kevin) vont dans le journal du Terminal et survivent à un rechargement ; la fenêtre « Message du système » s’ouvre toujours', async () => {
+  await monter(pg, { terminal: 'deux', monte: 'base' });
+  await ranger(pg, 'P3', AD.P3, 'confier');
+  await bouton(pg, 'monter');
+  egal(await derniere(pg), 'Demande envoyée à Kevin.', 'demande envoyée');
+  await signaler(pg, 'P5', 'A1-T02-N3-E2', 'charge', true);
+  egal((await fenetre(pg)).length, 1, 'la fenêtre s’ouvre');
+  egal(await texte(pg, '[data-pal-modal-texte]'), 'Nouvelle adresse pour P5 (Lessive liquide 3 L) : A1-T04-N2-E3.', 'texte de la fenêtre');
+  await pg.click(`${Z} [data-pal-modal-ok]`);
+  egal((await lignesTerm(pg)).slice(-2), ['Demande envoyée à Kevin.', 'Nouvelle adresse : A1-T04-N2-E3.'], 'journal');
+  const copie = await pg.evaluate(() => JSON.parse(JSON.stringify(window.__p.db)));
+  await monter(pg, { terminal: 'deux', monte: 'base', db: copie });
+  egal((await lignesTerm(pg)).slice(-2), ['Demande envoyée à Kevin.', 'Nouvelle adresse : A1-T04-N2-E3.'], 'après un rechargement');
+  vrai(!(await present(pg, '[data-pal-systeme]')), 'jamais d’encart « Système »');
+});
+
+await v('Scan : verdict « adresse » — « ✗ scan · adresse attendue : … » sur une palette posée juste mais non scannée ; « ✓ bien rangée » une fois scannée', async () => {
+  await monter(pg, { terminal: 'deux', verdict: 'adresse' });
+  await justeScan(pg, ['P2']);
+  await valider(pg);
+  egal([await texte(pg, '[data-pe-verd="P2"]'), await texte(pg, '[data-pe-verd="P1"]'), await texte(pg, '[data-pe-verd="P5"]')],
+    ['✗ adresse, scan · adresse attendue : B2-T02-N1-E3', '✓ bien rangée', '✓ bien rangée'], 'P2 jamais posée ni scannée');
+  await monter(pg, { terminal: 'deux', verdict: 'adresse' });
+  await juste(pg, ['P5']);
+  await signaler(pg, 'P5', 'A1-T02-N3-E2', 'charge'); await ranger(pg, 'P5', AD.P5, 'confier');
+  await valider(pg);
+  egal([await texte(pg, '[data-pe-verd="P5"]'), await texte(pg, '[data-pe-verd="P1"]')], ['✗ scan · adresse attendue : A1-T04-N2-E3', '✗ scan · adresse attendue : A1-T03-N1-E2'], 'rien de scanné');
+});
+
+await v('Palettier (retouche du 22/10) : une palette bonus du confirmé laissée en réception ne coûte ni `charge` ni `pasPoseHaut` ; une palette du socle laissée en réception les coûte toujours', async () => {
+  await monter(pg, { aisance: 'confirme' });
+  await juste(pg);
+  await valider(pg);
+  const J = await jalons(pg);
+  egal([J['place-P6'], J.charge, J.pasPoseHaut, J['place-P1']], ['ko', 'ok', 'ok', 'ok'], 'P6 oubliée : place-P6 ko seul');
+  await monter(pg, { aisance: 'confirme' });
+  await juste(pg, ['P4']);
+  await valider(pg);
+  const K = await jalons(pg);
+  egal([K.charge, K.pasPoseHaut], ['ko', 'ko'], 'P4 (socle) oubliée : les deux gardes tombent');
+});
+
+await v('Palettier (retouche du 22/10) : `regles.ouvertes: true` — « Les règles ▾ » dépliées au chargement en guidage, repliées sinon (absent, entraînement, copie : pas de volet) ; l’élève peut les replier et elles le restent', async () => {
+  await monter(pg);
+  egal(await pg.$eval(`${Z} [data-pe-regles]`, (d) => d.open), false, 'absent : repliées');
+  await monter(pg, { reglesOuvertes: true });
+  egal(await pg.$eval(`${Z} [data-pe-regles]`, (d) => d.open), true, 'ouvertes en guidage');
+  await pg.click(`${Z} [data-pe-regles] summary`);
+  egal(await pg.$eval(`${Z} [data-pe-regles]`, (d) => d.open), false, 'repliées par l’élève');
+  await prendre(pg, 'P1');
+  egal(await pg.$eval(`${Z} [data-pe-regles]`, (d) => d.open), false, 'elles le restent après un nouveau dessin');
+  await monter(pg, { reglesOuvertes: true, temps: 'entrainement' });
+  egal(await pg.$eval(`${Z} [data-pe-regles]`, (d) => d.open), false, 'entraînement : repliées');
+  await monter(pg, { reglesOuvertes: true, temps: 'evaluation' });
+  vrai(!(await present(pg, '[data-pe-regles]')), 'copie : pas de volet');
+});
+
+await v('Scan : après « Valider », les étiquettes ne se cliquent plus, aucun geste de plus, le Terminal dit « Terminé. »', async () => {
+  await monter(pg, { terminal: 'deux' });
+  await ranger(pg, 'P1', AD.P1);
+  await valider(pg);
+  const avant = await gestes(pg);
+  egal(await texte(pg, '[data-vt-actu]'), 'Terminé.', 'phrase');
+  egal(await pg.$$eval(`${Z} .pe-bandeau [data-pal-scan-pal]`, (L) => L.every((b) => b.disabled)), true, 'étiquettes de palettes désactivées');
+  await pg.click(`${Z} [data-pe-trav="A1-T03"]`); await pg.click(`${Z} [data-pe-emp="${AD.P1}"]`);
+  egal(await pg.isDisabled(`${Z} [data-pal-scan-emp]`), true, 'étiquette d’emplacement désactivée');
+  egal([await gestes(pg), (await etat(pg)).scan], [avant, {}], 'rien ne change');
+});
+
+await v('Scan : déclaration fautive — `terminal` sans nom, ou `scan` inconnu, ne se charge pas', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntrepot } = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const essai = (t) => { try { creerEntrepot(Object.assign({}, C.PALETTIER, { id: `x${Math.random()}`, terminal: t })); return ''; } catch (e) { return e.message; } };
+    return [essai({}), essai({ nom: 'Terminal', scan: 'trois' }), essai('Terminal'), essai({ nom: 'Terminal', scan: 'emplacement' })];
+  });
+  vrai(r[0].includes('terminal') && r[0].includes('nom'), r[0]);
+  vrai(r[1].includes('terminal.scan'), r[1]);
+  vrai(r[2].includes('terminal'), r[2]);
+  egal(r[3], '', 'la variante « un clic » se charge');
+});
+
+await v('Scan : la page d’essai (Terminal plein, standard et confirmé) tient en 1366 × 768 et 1280 × 720 sans défiler ; les étiquettes à scanner et la phrase du Terminal sont visibles', async () => {
+  const pe = await ctx.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const [w, h, niv] of [[1366, 768, 'standard'], [1280, 720, 'standard'], [1366, 768, 'confirme'], [1280, 720, 'confirme']]) {
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-palettier.html');
+    await pe.waitForSelector('.pal');
+    if (niv === 'confirme') await pe.evaluate(() => { document.querySelector('select[name="niveau"]').value = 'confirme'; document.querySelector('#reglages').dispatchEvent(new Event('change', { bubbles: true })); });
+    await pe.waitForSelector('.pal');
+    await pe.evaluate(() => { document.querySelector('#reglages').style.display = 'none'; document.querySelector('#mention').style.display = 'none'; document.querySelector('.ent-nav[data-vue="entrepot"]').click(); });
+    const deborde = () => pe.evaluate(() => Math.max(0, document.documentElement.scrollHeight - innerHeight));
+    const vu = (s) => pe.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.right <= innerWidth; }, s);
+    await pe.click('.pal .pe-bandeau [data-pe-pal="P1"]');
+    await pe.click('.pal [data-pe-trav="A1-T03"]');
+    await pe.click('.pal [data-pe-emp="A1-T03-N1-E2"]');
+    await pe.click('.pal [data-pal="poser"]');
+    await pe.click('.pal .pe-bandeau [data-pal-scan-pal="P1"]');
+    await pe.click('.pal [data-pal-scan-emp]');
+    for (let i = 0; i < 4; i++) await pe.click('.pal [data-pal-scan-emp]');   // « Scanne d'abord la palette. » : le journal se remplit
+    const d = await deborde();
+    egal([d, await vu('.pal [data-pal-scan-emp]'), await vu('.pal .pe-bandeau [data-pal-scan-pal="P5"]'), await vu('.pal [data-vt-actu]')], [0, true, true, true], `pixels qui dépassent, étiquettes et phrase visibles à ${w} × ${h} (${niv})`);
+    await pe.click('.pal [data-pal="retour"]');
+    egal([await deborde(), await vu('.pal [data-vt-actu]')], [0, true], `plan, Terminal plein à ${w} × ${h} (${niv})`);
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
 });
 
 await v('Palettier : aucune erreur JavaScript', async () => { egal(erreurs, []); });

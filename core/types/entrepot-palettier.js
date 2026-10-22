@@ -25,21 +25,40 @@
 //     cariste: { nom: 'Kevin', niveaux: [2, 3, 4], monte: 'validation' },   // monte : 'validation' (défaut) ou (db) => booléen
 //     aideCharge: 'somme' | 'pose' | 'plaque',   // vue de près : plaque + déjà posé + somme / plaque + déjà posé / plaque seule (défaut)
 //     verdict: 'critere' | 'adresse',            // après « Valider » : nom du critère faux / critère et adresse attendue ; absent = rien
-//     regles: { titre?, entete?, lignes: [html…], encadre? },   // « Les règles ▾ » (jamais en copie)
+//     regles: { titre?, entete?, lignes: [html…], encadre?, ouvertes?: true },   // « Les règles ▾ » (jamais en copie) ; `ouvertes` : dépliées au chargement en guidage
+//     terminal: { nom: 'Terminal', scan: 'palette-emplacement' | 'emplacement' },   // LOT 2 : le scan (voir plus bas) ; absent = pas de scan
 //   }
+//
+// LE SCAN (lot 2, 22/10/2026). `terminal` active le Terminal (le boîtier du terminal vocal, renommé, sans voix, mode « scanner » :
+// `terminal.js`) à la place de l'encart « Système », et un SECOND temps pour chaque palette : la poser (ou la confier) ne suffit pas,
+// il faut la SCANNER pour que le système sache où elle est. Deux scans, toujours dans le même ordre (décision de Tristan, 21/10/2026) :
+// la PALETTE d'abord (clic sur son étiquette, code-barres dessiné : sur sa carte, sur la palette dans la vue de près, dans la zone
+// « À monter »), l'EMPLACEMENT ensuite (clic sur l'étiquette d'adresse de la vue de près). `scan: 'emplacement'` (variante de la
+// page d'essai) : un seul clic, l'étiquette de l'emplacement confirme la palette qui s'y trouve. Le Terminal dit « Scanne la
+// palette. » puis « P1 — Lessive liquide 3 L. Scanne l'emplacement. » ; « A1-T03-N1-E2 — Lessive liquide 3 L — 24 cartons. Confirmé. »
+// si c'est l'adresse que le système attend pour cette palette (`adresse`, ou `nouvelleAdresse` reçue après signalement) et que la
+// palette y est posée ou confiée ; sinon « Ce n'est pas l'adresse de cette palette. » (rouge, compté dans `scansRefuses`, trace
+// jamais notée seule). Refus sans trace : « Range d'abord la palette. » (palette en réception ou en main), « Scanne d'abord la
+// palette. ». Les lignes du système (nouvelle adresse, signalement enregistré, demande envoyée à Kevin) passent dans le journal du
+// Terminal (la fenêtre modale du signalement reste). Les phrases du Terminal sont dites aussi en copie (c'est l'outil, pas une aide).
+// Sans `terminal` : le lot 1 tel quel (ni boîtier, ni étiquette cliquable, ni jalon `scan-`).
 //
 // Le poids d'une palette = cartons × kg + 25 (le support), CALCULÉ ici (ENT-8.11 §6), jamais recopié.
 //
 // GESTES publiés (tous inscrits dans `signaux`, préfixés `entrepot:<id>:`) : `prendre:<P>` (palette prise en main, en
 // réception ou reprise), `poser:<P>` (pose réussie au sol), `confier:<P>` (confiée au cariste), `signaler:<P>`, `ouvrir`
 // (toute ouverture d'un emplacement de près, publiée à chaque fois : `api.signal` ne retient que la première), `monter`
-// (le bouton « Faire monter les palettes » : l'élève demande à Kevin de monter ce qui attend dans « À monter »), `valider`.
+// (le bouton « Faire monter les palettes » : l'élève demande à Kevin de monter ce qui attend dans « À monter »), `valider`, et,
+// avec `terminal`, `scan:<P>` (le second scan réussi : la palette est confirmée à son adresse).
 // Après « Valider », plus aucun geste.
 //
 // L'ÉTAT, dans `db.entrepots[<id>]` (cloisonné par séance), lu par les lots 2 à 6 :
 //   { enMain: 'P1' | null, posees: { P1: 'A1-T03-N1-E2' }, confiees: { P3: 'A2-T02-N3-E1' },
 //     signalees: { P5: { motif: 'charge', adresse: 'A1-T02-N3-E2' } }, nouvelles: { P5: 'A1-T04-N2-E3' },
 //     tentativesHaut: 0, valide: false, at: null, premierGeste: null }
+// Avec `terminal` s'y ajoutent (créées au premier dessin, absentes sinon) : `scan: { P1: 'A1-T03-N1-E2' }` (second scan réussi : ce que
+// le système croit), `scansRefuses: n` (trace), `scanAttente: 'P1' | null` (palette scannée, l'emplacement est attendu), `terminal`
+// (le journal et la phrase du Terminal). Une palette reprise perd son scan.
 // Une palette confiée est MONTÉE (dessinée à son emplacement) quand Kevin la monte : au bouton « Faire monter les palettes »
 // (sans `monte` ou `monte: 'validation'` : tout de suite), à la validation (`monte: 'validation'` seulement), ou dès que
 // `monte(db)` est vrai (relu à chaque dessin). Le résultat n'est pas rangé : il est calculé (`montees`). Le bouton écrit, une
@@ -53,12 +72,17 @@
 //                 non rangée à son adresse d'origine, puis (si le système a donné une nouvelle adresse) rangée à la nouvelle ;
 //   `pasPoseHaut` aucune tentative de pose au-dessus du sol, et toutes les palettes traitées (posée, confiée ou signalée) ;
 //   `charge`      aucune palette posée ou confiée au-delà d'une plaque, et toutes les palettes traitées.
+// (« toutes les palettes » ne compte pas les palettes bonus du confirmé : en laisser une en réception ne coûte rien à ces deux gardes.)
+//   `scan-<P>`    (avec `terminal`, une palette qui n'est pas `aSignaler` sans nouvelle adresse) : `scan[P]` est l'adresse que le
+//                 système attend (la nouvelle adresse reçue, sinon l'adresse donnée) ; ko sinon, jamais `attente` après « Valider ».
+//                 En copie la nouvelle adresse n'est jamais donnée : `scan-P5` y reste ko (la palette signalée ne se range pas).
 // Les jalons d'une palette `niveaux: ['confirme']` sont `bonus: true`. LA VÉRITÉ d'un emplacement (`verite`) : hors service
 // → `abime` ; stock de départ ou une autre palette de l'élève (à la fin) → `occupe` ; charge du niveau (stock + toutes les
 // autres palettes de l'élève, à la fin) + la palette > plaque → `charge`. `autre` n'est jamais vrai.
 
 import { ech, pad2 } from '../texte.js';
 import { niveauEleve, graineDeBase, NIVEAUX_ELEVE } from '../tirage.js';
+import { creerTerminal, terminalScannerNeuf } from './terminal.js';
 
 const nb = (n) => Number(n).toLocaleString('fr-FR');
 const kg = (n) => `${nb(n)} kg`;
@@ -72,6 +96,7 @@ export const MOTIFS = [['occupe', 'C’est occupé'], ['charge', 'La charge sera
 const MOTIF_IDS = MOTIFS.map((m) => m[0]);
 export const AIDES_CHARGE = ['somme', 'pose', 'plaque'];
 export const VERDICTS = ['critere', 'adresse'];
+export const SCANS = ['palette-emplacement', 'emplacement'];
 // Le support d'une palette (ENT-8.11 §6) et le poids d'une palette chargée, calculé, arrondi au centième.
 export const SUPPORT_KG = 25;
 export const poidsPalette = (cartons, kgCarton) => Math.round((cartons * kgCarton + SUPPORT_KG) * 100) / 100;
@@ -127,16 +152,28 @@ export function compilerPalettier(M, err) {
   const aide = P.aideCharge == null ? 'plaque' : P.aideCharge;
   if (!AIDES_CHARGE.includes(aide)) err(`aideCharge : ${AIDES_CHARGE.join(', ')} (absent = plaque)`);
   if (P.verdict != null && !VERDICTS.includes(P.verdict)) err(`verdict : ${VERDICTS.join(', ')} (absent = rien)`);
+  // LE TERMINAL (lot 2) : un objet { nom, scan } ; absent = pas de scan (le lot 1 tel quel).
+  let terminal = null;
+  if (P.terminal != null) {
+    const T = P.terminal;
+    if (typeof T !== 'object' || Array.isArray(T) || !T.nom) err('terminal : un objet avec un nom, par exemple { nom: \'Terminal\' }');
+    if (T.scan != null && !SCANS.includes(T.scan)) err(`terminal.scan : ${SCANS.join(', ')} (absent = palette-emplacement)`);
+    terminal = { nom: String(T.nom), scan: T.scan || 'palette-emplacement' };
+  }
   const jalons = [];
   Object.values(M.pal).forEach((p) => {
     const b = p.bonus ? { bonus: true } : {};
     jalons.push(p.aSignaler
       ? { id: `signale-${p.id}`, type: 'signale', palette: p.id, lib: `${p.id} signalée avec le bon motif (${p.nom})`, ...b }
       : { id: `place-${p.id}`, type: 'place', palette: p.id, lib: `${p.id} rangée à son adresse (${p.nom})`, ...b });
+    // Le scan : une palette signalée sans nouvelle adresse ne se range pas, donc ne se scanne pas : pas de jalon.
+    if (terminal && !(p.aSignaler && !p.nouvelleAdresse)) {
+      jalons.push({ id: `scan-${p.id}`, type: 'scan', palette: p.id, lib: `${p.id} scannée à son adresse (${p.nom})`, ...b });
+    }
   });
   jalons.push({ id: 'pasPoseHaut', type: 'pasPoseHaut', lib: 'Aucune palette posée soi-même au-dessus du sol' });
   jalons.push({ id: 'charge', type: 'charge', lib: 'Aucune plaque de charge dépassée' });
-  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons });
+  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons, terminal });
 }
 
 /* ==================================================================== le modèle */
@@ -168,7 +205,7 @@ function depasse(M, pl, p) {
   return !!d && d.n > 1 && M.chargeNiveau(pl, d, p.id) + p.kg > plaqueDe(M, d) + 1e-9;
 }
 // Les critères faux d'une palette, d'après l'état (les noms montrés après « Valider ») : 'signalement', 'adresse',
-// 'plaque de charge'. Le lot 2 ajoutera 'scan'.
+// 'scan' (avec `terminal`, lot 2), 'plaque de charge'.
 export function fautesPalette(M, e, p) {
   e = normal(e);
   const pl = placement(e), s = e.signalees[p.id], ou = pl[p.id];
@@ -185,8 +222,20 @@ export function fautesPalette(M, e, p) {
     const nouvelle = e.nouvelles[p.id];
     if (ou === p.adresse || (nouvelle && ou !== nouvelle) || nonMontee) F.push('adresse');
   }
+  if (aJalonScan(M, p) && (e.scan || {})[p.id] !== attendueScan(e, p)) F.push('scan');
   if (depasse(M, pl, p)) F.push('plaque de charge');
   return F;
+}
+// L'adresse que le système attend pour une palette : la nouvelle adresse reçue après signalement, sinon l'adresse donnée.
+const attendueScan = (e, p) => (e.nouvelles || {})[p.id] || p.adresse;
+// Le jalon `scan-<P>` existe-t-il pour cette palette ? (avec `terminal`, sauf une palette signalée sans nouvelle adresse)
+const aJalonScan = (M, p) => !!M.terminal && !(p.aSignaler && !p.nouvelleAdresse);
+// Où le système croit la palette : l'adresse scannée si elle existe, sinon la nouvelle adresse reçue, sinon l'adresse donnée.
+export function ouSystemeCroitPalettier(M, e, id) {
+  const p = M.pal[id];
+  if (!p) return null;
+  e = normal(e);
+  return (e.scan || {})[id] || e.nouvelles[id] || p.adresse;
 }
 
 // Les jalons d'un état, pour un élève de niveau `niveau` (les palettes absentes pour lui n'ont pas de jalon).
@@ -194,10 +243,13 @@ export function jalonsPalettier(M, e, niveau = 'standard') {
   e = normal(e);
   const ps = presentes(M, niveau), ids = new Set(ps.map((p) => p.id));
   const pl = placement(e), v = !!e.valide;
-  const toutes = ps.every((p) => traitee(e, pl, p.id));
+  // La garde « toutes les palettes traitées » ne compte pas les palettes bonus du confirmé : en laisser une en réception ne coûte pas
+  // `charge` ni `pasPoseHaut` (retouche du 22/10/2026, relevée par ENT-8.11). Une palette bonus posée trop haut ou en surcharge compte quand même.
+  const toutes = ps.filter((p) => !p.bonus).every((p) => traitee(e, pl, p.id));
   return M.jalons.filter((j) => !j.palette || ids.has(j.palette)).map((j) => {
     let ok;
-    if (j.palette) {
+    if (j.type === 'scan') ok = !fautesPalette(M, e, M.pal[j.palette]).includes('scan');
+    else if (j.palette) {
       const F = fautesPalette(M, e, M.pal[j.palette]);
       ok = !F.includes('adresse') && !F.includes('signalement');
     } else if (j.type === 'pasPoseHaut') ok = toutes && !(e.tentativesHaut > 0);
@@ -212,7 +264,8 @@ export function detailPalettier(M, e, L) {
   return { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, etat: l.etat, ...(l.bonus ? { bonus: true } : {}) })),
     posees: Object.assign({}, e.posees), confiees: Object.assign({}, e.confiees),
     signalees: Object.fromEntries(Object.entries(e.signalees).map(([id, s]) => [id, s.motif])),
-    tentativesHaut: e.tentativesHaut || 0, valide: !!e.valide, premierGeste: e.premierGeste || null };
+    tentativesHaut: e.tentativesHaut || 0, valide: !!e.valide, premierGeste: e.premierGeste || null,
+    ...(M.terminal ? { scans: Object.assign({}, e.scan), scansRefuses: e.scansRefuses || 0 } : {}) };
 }
 
 // Ce qu'attend chaque palette, sur le stock de départ (enseignant, page d'essai ; JAMAIS montré à l'élève).
@@ -222,6 +275,7 @@ export function attendusPalettier(M) {
     const x = p.aSignaler ? { signaler: verite(M, {}, p, p.adresse), puis: p.nouvelleAdresse }
       : { adresse: p.adresse, geste: d.n === 1 ? 'poser' : 'confier' };
     if (p.bonus) x.niveaux = p.niveaux.slice();
+    if (aJalonScan(M, p)) x.scan = p.nouvelleAdresse || p.adresse;
     return [p.id, x];
   }));
 }
@@ -251,7 +305,8 @@ export function etatLisiblePalettier(M, e, db) {
   e = normal(e);
   return { enMain: e.enMain || null, posees: Object.assign({}, e.posees), confiees: Object.assign({}, e.confiees),
     signalees: Object.fromEntries(Object.entries(e.signalees).map(([id, s]) => [id, s.motif])),
-    nouvelles: Object.assign({}, e.nouvelles), montees: montees(M, e, db), tentativesHaut: e.tentativesHaut || 0, valide: !!e.valide };
+    nouvelles: Object.assign({}, e.nouvelles), montees: montees(M, e, db), tentativesHaut: e.tentativesHaut || 0, valide: !!e.valide,
+    ...(M.terminal ? { scans: Object.assign({}, e.scan), scansRefuses: e.scansRefuses || 0 } : {}) };
 }
 
 // La déclaration d'un élève quand la séance passe une FONCTION `(graine, { niveau, copie })` (lot 0) : la même que celle
@@ -272,11 +327,15 @@ export function declarationDe(E, db, { copie = false } = {}) {
 // (`htmlPlan`, `htmlFace`), l'état d'écran partagé (`ui` : `trav`, `anim`, `focus`, `main`), Échap, le clavier.
 export function creerPalettier(P, M, opts, O) {
   const ui = O.ui, G = O.G;
-  Object.assign(ui, { pres: null, signaler: false, journal: [], confirmer: false, msg: '', msgType: '', alerte: null });
+  // `regles: null` : « Les règles » n'ont pas encore été touchées par l'élève (le rangement, lui, part de `false`).
+  Object.assign(ui, { pres: null, signaler: false, journal: [], confirmer: false, msg: '', msgType: '', alerte: null, regles: null });
   const COPIE = !!opts.copie;
   const C = M.cariste, NOM = C ? C.nom : 'le cariste';
   const geste = (n) => `entrepot:${P.id}:${n}`;
-  const signaux = [...Object.keys(M.pal).flatMap((id) => ['prendre', 'poser', 'confier', 'signaler'].map((x) => geste(`${x}:${id}`))),
+  // Le Terminal du lot 2 (mode « scanner ») : absent sans `terminal`, et alors rien de ce qui touche au scan n'existe.
+  const TERM = M.terminal ? creerTerminal({ nom: M.terminal.nom, mode: 'scanner' }) : null;
+  const DEUX = !!TERM && M.terminal.scan !== 'emplacement';   // deux scans (la palette, puis l'emplacement) ; sinon un seul clic
+  const signaux = [...Object.keys(M.pal).flatMap((id) => ['prendre', 'poser', 'confier', 'signaler', ...(TERM ? ['scan'] : [])].map((x) => geste(`${x}:${id}`))),
     geste('ouvrir'), geste('monter'), geste('valider')];
 
   function regime(api, e) {
@@ -293,12 +352,21 @@ export function creerPalettier(P, M, opts, O) {
   function normaliser(e) {
     if (!e.posees) Object.assign(e, etatPalettierNeuf(), e);
     ['posees', 'confiees', 'signalees', 'nouvelles'].forEach((k) => { if (!e[k]) e[k] = {}; });
+    if (TERM) {
+      if (!e.scan) e.scan = {};
+      if (typeof e.scansRefuses !== 'number') e.scansRefuses = 0;
+      if (!e.terminal) e.terminal = terminalScannerNeuf();
+    }
   }
 
   /* ------------------------------------------------------------- les gestes */
   const dire = (t, type) => { ui.msg = t; ui.msgType = type || ''; };
-  // LE SYSTÈME parle : une ligne de l'encart « Système ». Le lot 2 rebranchera cette fonction sur le Terminal.
-  function direSysteme(texte) { ui.journal.push(texte); if (ui.journal.length > 4) ui.journal.shift(); }
+  // LE SYSTÈME parle : une ligne de l'encart « Système », ou, avec `terminal`, une ligne du journal du Terminal (qui survit
+  // à un rechargement : elle est rangée dans l'état).
+  function direSysteme(texte, e) {
+    if (TERM) { TERM.dire(e.terminal, texte); return; }
+    ui.journal.push(texte); if (ui.journal.length > 4) ui.journal.shift();
+  }
   const noterGeste = (e) => { if (!e.premierGeste) e.premierGeste = Date.now(); };
   const occupeA = (e, a) => !!M.stock[a] || Object.values(placement(e)).includes(a);
   const adresseDe = (e, p) => e.nouvelles[p.id] || p.adresse;
@@ -310,6 +378,8 @@ export function creerPalettier(P, M, opts, O) {
     if (e.enMain === id) { e.enMain = null; dire(''); return null; }
     if (X.montees.includes(id)) { dire(`<b>${ech(id)}</b> est déjà montée par ${ech(NOM)} : elle ne se reprend plus.`, 'non'); return null; }
     delete e.posees[id]; delete e.confiees[id];
+    // Une palette reprise perd son scan : le système ne sait plus où elle est.
+    if (e.scan) delete e.scan[id];   // (la palette en attente d'un emplacement est oubliée au dessin suivant : `html`)
     e.enMain = id; ui.signaler = false; ui.confirmer = false; dire('');
     noterGeste(e);
     return `prendre:${id}`;
@@ -350,14 +420,58 @@ export function creerPalettier(P, M, opts, O) {
     // accusé de réception NEUTRE (jamais « faux », jamais un point perdu). L'encart « Système » garde sa ligne courte.
     const lib = (MOTIFS.find((m) => m[0] === motif) || [])[1];
     ui.alerte = { id: p.id, nom: p.nom, motif: lib, adresse: null, copie: COPIE };
-    if (COPIE) direSysteme('C’est noté.');
+    if (COPIE) direSysteme('C’est noté.', e);
     else if (p.nouvelleAdresse) {
-      e.nouvelles[p.id] = p.nouvelleAdresse; direSysteme(`Nouvelle adresse : ${p.nouvelleAdresse}.`);
+      e.nouvelles[p.id] = p.nouvelleAdresse; direSysteme(`Nouvelle adresse : ${p.nouvelleAdresse}.`, e);
       ui.alerte.adresse = p.nouvelleAdresse;
     }
-    else direSysteme('Signalement enregistré.');
+    else direSysteme('Signalement enregistré.', e);
     dire(`<b>${ech(p.id)}</b> signalée : elle retourne en réception.`, 'oui');
     return `signaler:${p.id}`;
+  }
+
+  /* ----------------------------------------------------------------- le scan (lot 2) */
+  // La phrase que le Terminal attend maintenant. Calculée de l'état à chaque dessin (elle survit à un rechargement et suit une
+  // palette reprise) puis posée par `TERM.attendre`.
+  function phraseScan(e, R) {
+    if (R.fige) return 'Terminé.';
+    if (!DEUX) return 'Scanne l’emplacement.';
+    const p = e.scanAttente && M.pal[e.scanAttente];
+    return p ? `${p.id} — ${p.nom}. Scanne l’emplacement.` : 'Scanne la palette.';
+  }
+  const terminalDit = (e, t, refus) => TERM.dire(e.terminal, t, { refus: !!refus });
+  // Premier scan : l'étiquette de la palette. Une palette posée ou confiée devient « scannée, l'emplacement est attendu » ;
+  // en réception ou en main : « Range d'abord la palette. » (refus sans trace). Rend le geste à publier (jamais : le geste
+  // `scan:<P>` est celui du second scan).
+  function scannerPalette(e, id, X) {
+    if (!TERM || !DEUX || !X.ids.has(id)) return null;
+    if (!X.pl[id]) { terminalDit(e, 'Range d’abord la palette.', true); return null; }
+    if (e.scan[id]) { terminalDit(e, `${id} est déjà scannée.`); return null; }
+    e.scanAttente = id; noterGeste(e);
+    return null;
+  }
+  // Second scan : l'étiquette d'adresse de l'emplacement de près (`a`). Confirmé si c'est l'adresse que le système attend pour la
+  // palette ET qu'elle y est posée ou confiée ; sinon refus compté en trace. En un clic (`scan: 'emplacement'`), la palette est
+  // celle qui se trouve là.
+  function scannerEmplacement(e, a, X) {
+    if (!TERM) return null;
+    let p;
+    if (DEUX) {
+      p = e.scanAttente && M.pal[e.scanAttente];
+      if (!p) { terminalDit(e, 'Scanne d’abord la palette.', true); return null; }
+    } else {
+      p = X.ps.find((x) => X.pl[x.id] === a);
+      if (!p) { terminalDit(e, 'Aucune palette n’est posée ici.', true); return null; }
+    }
+    noterGeste(e);
+    if (X.pl[p.id] === a && adresseDe(e, p) === a) {
+      e.scan[p.id] = a; e.scanAttente = null;
+      terminalDit(e, `${a} — ${p.nom} — ${p.cartons} cartons. Confirmé.`);
+      return `scan:${p.id}`;
+    }
+    e.scansRefuses = (e.scansRefuses || 0) + 1;
+    terminalDit(e, 'Ce n’est pas l’adresse de cette palette.', true);
+    return null;
   }
 
   /* ------------------------------------------------------------- le dessin */
@@ -374,7 +488,7 @@ export function creerPalettier(P, M, opts, O) {
 
   // La zone « À MONTER », au pied de chaque allée (trait de l'accent, jamais d'aplat vert) : les palettes confiées que Kevin
   // n'a pas encore montées, avec leur destination.
-  function dessusAMonter(e, X) {
+  function dessusAMonter(e, X, R) {
     if (!C) return '';
     const att = Object.entries(e.confiees).filter(([id]) => !X.montees.includes(id));
     let s = '';
@@ -385,8 +499,15 @@ export function creerPalettier(P, M, opts, O) {
         <text x="${x + w / 2}" y="${y + 15}" text-anchor="middle" font-size="11.5" font-weight="800" fill="var(--ardoise)" font-family="inherit">À MONTER</text>`;
       ici.slice(0, 2).forEach(([id, a], k) => {
         const d = decoupe(a), yy = y + 22 + k * 21;
-        s += `<rect x="${x + 4}" y="${yy}" width="${w - 8}" height="18" rx="2" fill="none" stroke="var(--pe-carton-trait)" stroke-width="1.5" data-pal-amonter-p="${ech(id)}"/>
-          <text x="${x + w / 2}" y="${yy + 13}" text-anchor="middle" font-size="10" font-weight="700" fill="var(--encre)" class="pe-mono">${ech(id)} T${pad2(d.t)}-N${d.n}-E${d.e}</text>`;
+        // Avec le scan, la place du code-barres est prise à gauche : le texte se resserre (l'adresse complète est dans la liste et le libellé).
+        const rang = `<rect x="${x + 4}" y="${yy}" width="${w - 8}" height="18" rx="2" fill="none" stroke="var(--pe-carton-trait)" stroke-width="1.5" data-pal-amonter-p="${ech(id)}"/>
+          <text x="${DEUX ? x + 32 : x + w / 2}" y="${yy + 13}" text-anchor="${DEUX ? 'start' : 'middle'}" font-size="${DEUX ? 9.5 : 10}" font-weight="700" fill="var(--encre)" class="pe-mono">${DEUX ? `${ech(id)} N${d.n}-E${d.e}` : `${ech(id)} T${pad2(d.t)}-N${d.n}-E${d.e}`}</text>`;
+        // Deux scans : la ligne de la palette est son étiquette (code-barres dessiné à gauche), un clic la scanne.
+        if (DEUX && !R.fige) {
+          const B = barres(`${id} ${M.pal[id].nom}`);
+          s += `<g data-pal-scan-pal="${ech(id)}" data-pe-cle="scanpalzone:${ech(id)}" role="button" tabindex="0" aria-label="Scanner la palette ${ech(id)}" pointer-events="all" style="cursor:pointer">${rang}
+            <rect x="${x + 6}" y="${yy + 2}" width="22" height="14" rx="1" fill="#fbfaf6"/><svg x="${x + 7}" y="${yy + 3}" width="20" height="12" viewBox="0 0 ${B.x} 22" preserveAspectRatio="none" aria-hidden="true">${B.bars}</svg></g>`;
+        } else s += rang;
       });
       if (ici.length > 2) s += `<text x="${x + w / 2}" y="${y + h - 3}" text-anchor="middle" font-size="9.5" fill="var(--encre-douce)" font-family="inherit">+ ${ici.length - 2}</text>`;
       s += '</g>';
@@ -427,20 +548,25 @@ export function creerPalettier(P, M, opts, O) {
     let t = `✗ ${F.join(', ')}`;
     if (M.verdict === 'adresse' && (F.includes('adresse') || F.includes('signalement'))) {
       t += p.aSignaler ? ` · à signaler${p.nouvelleAdresse ? `, puis ${p.nouvelleAdresse}` : ''}` : ` · adresse attendue : ${p.adresse}`;
-    }
+    } else if (M.verdict === 'adresse' && F.includes('scan')) t += ` · adresse attendue : ${attendueScan(e, p)}`;
     return `<span class="pe-verd pe-ko" data-pal-verdict="ko">${ech(t)}</span>`;
   }
   function carte(e, p, R, X) {
     const nouvelle = e.nouvelles[p.id], conf = e.confiees[p.id], mont = X.montees.includes(p.id);
-    const etat = e.enMain === p.id ? 'en main' : e.posees[p.id] ? `posée en ${e.posees[p.id]}`
-      : conf ? (mont ? `montée en ${conf}` : `à monter (${NOM})`) : e.signalees[p.id] ? 'signalée' : 'en réception';
+    // Avec le Terminal : une palette posée ou confiée est « à scanner » (jusqu'au second scan), puis « scannée ».
+    const sc = TERM && (e.posees[p.id] || conf) ? (e.scan[p.id] ? ' · scannée' : R.fige ? '' : ' · à scanner') : '';
+    const etat = (e.enMain === p.id ? 'en main' : e.posees[p.id] ? `posée en ${e.posees[p.id]}`
+      : conf ? (mont ? `montée en ${conf}` : `à monter (${NOM})`) : e.signalees[p.id] ? 'signalée' : 'en réception') + sc;
     const cls = `pe-pal pal-carte${e.enMain === p.id ? ' pe-en-main' : ''}${e.posees[p.id] || mont ? ' pe-posee' : ''}${conf && !mont ? ' pal-confiee' : ''}`;
-    return `<button type="button" class="${cls}" data-pe-pal="${ech(p.id)}" data-pe-cle="pal:${ech(p.id)}" ${R.fige ? 'disabled' : ''} aria-pressed="${e.enMain === p.id}" title="${ech(`${p.id} ${p.nom}`)}">
+    const bouton = `<button type="button" class="${cls}" data-pe-pal="${ech(p.id)}" data-pe-cle="pal:${ech(p.id)}" ${R.fige ? 'disabled' : ''} aria-pressed="${e.enMain === p.id}" title="${ech(`${p.id} ${p.nom}`)}">
       <span class="pe-ttl"><span class="pe-pid">${ech(p.id)}</span> ${ech(p.nom)}</span>
       <span class="pal-etiq${nouvelle ? ' pal-nouvelle' : ''}" data-pal-etiq="${ech(p.id)}"><small>${nouvelle ? 'Nouvelle adresse' : 'Adresse'}</small> <b class="pe-mono">${ech(nouvelle || p.adresse)}</b></span>
       <span class="pal-info">${p.cartons} cartons · ${kg(p.kg)}</span>
       <span class="pal-etat" data-pal-etat="${ech(p.id)}">${ech(etat)}</span>
       <span class="pe-verd-l" data-pe-verd="${ech(p.id)}">${verdict(e, p, R)}</span></button>`;
+    // Deux scans : l'étiquette de la palette (son code-barres) est un bouton à part sous la carte (la carte, elle, prend ou reprend
+    // la palette : on ne peut pas imbriquer deux boutons).
+    return DEUX ? `<div class="pal-cwrap">${bouton}${etiquettePalette(p, e, R, 'scanpal')}</div>` : bouton;
   }
   function bandeau(e, R, X) {
     const per = P.personnage || {};
@@ -463,7 +589,9 @@ export function creerPalettier(P, M, opts, O) {
       act += `<button type="button" class="btn pal-monter" data-pal="monter" data-pe-cle="b:monter" title="${ech(raison)}" ${R.fige || !attend.length ? 'disabled' : ''}>Faire monter les palettes</button>`;
     }
     const RG = P.regles;
-    const regles = !R.copie && RG ? `<details class="pe-regles" data-pe-regles ${ui.regles ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
+    // « Les règles ▾ » : repliées, sauf `regles.ouvertes: true` en guidage (dépliées au chargement, jusqu'à ce que l'élève les replie).
+    const reglesOuvertes = ui.regles == null ? !!(RG && RG.ouvertes) && R.temps === 'guidage' : ui.regles;
+    const regles = !R.copie && RG ? `<details class="pe-regles" data-pe-regles ${reglesOuvertes ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
       <div class="pe-regles-corps"><b>${ech(RG.entete || 'Ranger à l’adresse donnée')}</b><ol>${(RG.lignes || []).map((l) => `<li>${l}</li>`).join('')}</ol>
       ${RG.encadre ? `<div class="pe-encadre">${RG.encadre}</div>` : ''}</div></details>` : '';
     return `<div class="pe-bandeau pal-bandeau">
@@ -472,16 +600,26 @@ export function creerPalettier(P, M, opts, O) {
       <div class="pe-act">${act}${regles}</div></div>`;
   }
 
-  // Une étiquette d'emplacement, comme sur la lisse (code à barres décoratif tiré de l'adresse) : le lot 2 y scannera.
-  function etiquette(a) {
+  // Un code à barres décoratif tiré d'un texte (adresse, identifiant de palette) : { bars, x } pour un `viewBox="0 0 x 22"`.
+  function barres(texte) {
     let x = 0, bars = '';
-    [...a].forEach((ch, i) => {
+    [...texte].forEach((ch, i) => {
       const c = ch.charCodeAt(0);
       [1 + (c % 3), 1 + ((c >> 2) % 2), 2 + ((c + i) % 2)].forEach((w, k) => { if (k !== 1) bars += `<rect x="${x}" y="0" width="${w}" height="22" fill="#1a1915"/>`; x += w + 1; });
     });
-    return `<div class="pal-etiq-emp" data-pal-etiq-emp="${ech(a)}"><b class="pe-mono">${ech(a)}</b>
-      <svg class="pal-code" viewBox="0 0 ${x} 22" preserveAspectRatio="none" aria-hidden="true">${bars}</svg></div>`;
+    return { bars, x };
   }
+  const codeSvg = (texte, cls) => { const B = barres(texte); return `<svg class="${cls}" viewBox="0 0 ${B.x} 22" preserveAspectRatio="none" aria-hidden="true">${B.bars}</svg>`; };
+  // Une étiquette d'emplacement, comme sur la lisse (code à barres décoratif tiré de l'adresse). Avec `terminal`, c'est un bouton :
+  // un clic la scanne (`scan` d'un emplacement ; après « Valider », elle ne se clique plus).
+  function etiquette(a, R) {
+    if (!TERM) return `<div class="pal-etiq-emp" data-pal-etiq-emp="${ech(a)}"><b class="pe-mono">${ech(a)}</b>${codeSvg(a, 'pal-code')}</div>`;
+    return `<button type="button" class="pal-etiq-emp pal-scannable" data-pal-etiq-emp="${ech(a)}" data-pal-scan-emp="${ech(a)}" data-pe-cle="scanemp" aria-label="Scanner l’emplacement ${ech(a)}" ${R.fige ? 'disabled' : ''}>
+      <span class="pal-etiq-l1"><b class="pe-mono">${ech(a)}</b><small class="pal-scan-lib">Scanner</small></span>${codeSvg(a, 'pal-code')}</button>`;
+  }
+  // L'étiquette d'une palette (scan de la palette) : bouton « code-barres + Scanner », sous sa carte ou dans la vue de près.
+  const etiquettePalette = (p, e, R, cle, texte) => `<button type="button" class="pal-scan${e.scanAttente === p.id ? ' pal-scan-att' : ''}" data-pal-scan-pal="${ech(p.id)}" data-pe-cle="${cle}:${ech(p.id)}"
+      aria-label="Scanner la palette ${ech(p.id)}" aria-pressed="${e.scanAttente === p.id}" ${R.fige ? 'disabled' : ''}>${codeSvg(`${p.id} ${p.nom}`, 'pal-code pal-code-p')}<span>${texte || 'Scanner'}</span></button>`;
   // LA VUE DE PRÈS d'un emplacement : son étiquette, le niveau, ce qui l'occupe, la plaque (jamais au sol), le « déjà posé »
   // et la somme selon `aideCharge`, la palette en main, les trois boutons (les mêmes à tous les niveaux) ou les motifs.
   function pres(e, R, X) {
@@ -497,9 +635,11 @@ export function creerPalettier(P, M, opts, O) {
       : aMoi ? ['eleve', `Occupé : ta palette ${aMoi}${poids ? ` · ${kg(M.pal[aMoi].kg)}` : ''}`]
       : res ? ['reserve', `Réservé : ${res}, à monter (${NOM})`] : ['libre', 'Libre'];
     const pm = e.enMain ? M.pal[e.enMain] : null;
-    let h = etiquette(a);
+    let h = etiquette(a, R);
     h += `<div class="pal-niv"><span>Niveau <b>N${d.n}</b> · ${d.n === 1 ? 'le sol (picking)' : 'réserve, au-dessus du sol'}</span>
       <span class="pal-occ pal-occ-${occ[0]}" data-pal-occ="${occ[0]}">${ech(occ[1])}</span></div>`;
+    // La palette posée ici (ou montée ici par le cariste) porte son étiquette : un clic la scanne (deux scans).
+    if (DEUX && aMoi) h += `<div class="pal-ta-pal" data-pal-ta-pal="${ech(aMoi)}">${etiquettePalette(M.pal[aMoi], e, R, 'scanpalpres', `Scanner ${ech(aMoi)} · ${ech(M.pal[aMoi].nom)}`)}</div>`;
     if (plaque) {
       let charge = `<div class="pal-plaque" data-pal-plaque>Charge max <b>${kg(plaque)}</b> par niveau</div>`;
       if (poids) {
@@ -532,7 +672,9 @@ export function creerPalettier(P, M, opts, O) {
     const attend = C && typeof C.monte === 'function' && e.monterDemande && Object.keys(e.confiees).some((id) => !X.montees.includes(id));
     const L = ui.journal.length ? ui.journal : [...Object.entries(e.nouvelles).map(([id, a]) => `${id} : nouvelle adresse ${a}.`),
       ...(attend ? [`Demande envoyée à ${NOM}.`] : [])];
-    let h = `<div class="pal-systeme" data-pal-systeme><div class="pal-systeme-t">Système</div>
+    // Avec `terminal`, le Terminal prend la place de l'encart « Système » (ses lignes sont dans son journal).
+    let h = TERM ? `<div class="pal-term" data-pal-term>${TERM.html(e.terminal)}</div>`
+      : `<div class="pal-systeme" data-pal-systeme><div class="pal-systeme-t">Système</div>
       <div class="pal-systeme-e" aria-live="polite">${L.length ? L.map((l, i) => `<div class="${i === L.length - 1 ? 'pal-sys-actu' : 'pal-sys-passe'}">${ech(l)}</div>`).join('') : '<span class="pal-sys-vide">—</span>'}</div></div>`;
     if (!ui.trav) h += `<div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pal-msg role="status">${ui.msg}</div>`;
     if (C) {
@@ -546,7 +688,7 @@ export function creerPalettier(P, M, opts, O) {
       const A = attendusPalettier(M);
       h += `<details class="pe-prof"><summary>Côté enseignant : attendus</summary>${Object.entries(A).map(([id, x]) => `<div><b>${ech(id)}</b> : ${x.signaler
         ? `signaler (${ech(x.signaler.join(', ') || '—')})${x.puis ? `, puis <span class="pe-mono">${ech(x.puis)}</span>` : ''}`
-        : `${x.geste === 'poser' ? 'poser' : `confier à ${ech(NOM)}`} en <span class="pe-mono">${ech(x.adresse)}</span>`}${x.niveaux ? ' (confirmé)' : ''}</div>`).join('')}</details>`;
+        : `${x.geste === 'poser' ? 'poser' : `confier à ${ech(NOM)}`} en <span class="pe-mono">${ech(x.adresse)}</span>`}${x.scan ? `, puis scanner (<span class="pe-mono">${ech(x.scan)}</span>)` : ''}${x.niveaux ? ' (confirmé)' : ''}</div>`).join('')}${TERM ? `<div data-pal-scans-refuses>Scans refusés (trace, non notée) : ${e.scansRefuses || 0}</div>` : ''}</details>`;
     }
     return `<aside class="pal-cote">${h}</aside>`;
   }
@@ -557,12 +699,16 @@ export function creerPalettier(P, M, opts, O) {
     const X = calcul(e, R, api);
     if (e.enMain && (!X.ids.has(e.enMain) || X.pl[e.enMain])) e.enMain = null;
     if (R.fige) { ui.confirmer = false; ui.signaler = false; ui.alerte = null; }
+    if (TERM) {
+      if (e.scanAttente && !X.pl[e.scanAttente]) e.scanAttente = null;
+      TERM.attendre(e.terminal, phraseScan(e, R));
+    }
     ui.main = e.enMain;
     const VE = vueE(e, X);
     let espace;
     if (!ui.trav) {
       espace = `<div class="pe-plan">${O.htmlPlan(VE, { bandes: false, parcours: false, eval: false, aideCharge: false, g: false },
-        { dessus: dessusAMonter(e, X), aria: 'Plan de l’entrepôt : clique une travée pour l’ouvrir' })}</div>`;
+        { dessus: dessusAMonter(e, X, R), aria: 'Plan de l’entrepôt : clique une travée pour l’ouvrir' })}</div>`;
     } else {
       const c = M.cotes[ui.trav.split('-')[0]];
       const RF = { aideCharge: false, eval: false, sansPoids: M.aide === 'plaque', reserves: reserves(e, X), choisi: ui.pres };
@@ -570,7 +716,7 @@ export function creerPalettier(P, M, opts, O) {
           <button type="button" class="btn btn-p pe-retour" data-pal="retour" data-pe-cle="b:retour">← Retour au plan</button></div>
         <div class="pal-partage"><div class="pe-face">${O.htmlFace(VE, RF)}</div><div class="pal-pres-zone">${pres(e, R, X)}</div></div>`;
     }
-    return `<div class="pe pal" data-entrepot="${ech(P.id)}" data-pe-mode="palettier" data-pe-temps="${R.temps}" data-pal-valide="${!!e.valide}" data-pe-ouverte="${!!ui.trav}">
+    return `<div class="pe pal${DEUX ? ' pal-deux' : ''}" data-entrepot="${ech(P.id)}" data-pe-mode="palettier" data-pe-temps="${R.temps}" data-pal-valide="${!!e.valide}" data-pe-ouverte="${!!ui.trav}">
       <div class="pe-adresse" data-pe-adresse>${barre(e, R, X, null)}</div>
       ${bandeau(e, R, X)}
       <div class="pal-jeu"><section class="pe-espace">${espace}</section>${cote(e, R, X, api)}</div>${fenetre()}</div>`;
@@ -667,6 +813,13 @@ export function creerPalettier(P, M, opts, O) {
     });
     if (R.fige) return;
     racine.querySelectorAll('[data-pe-pal]').forEach((b) => activer(b, () => fait(prendre(e, b.dataset.pePal, X))));
+    // Le scan (lot 2) : l'étiquette d'une palette (carte, vue de près, zone « À monter »), puis celle de l'emplacement de près.
+    racine.querySelectorAll('[data-pal-scan-pal]').forEach((b) => activer(b, () => {
+      ui.focus = b.dataset.peCle; fait(scannerPalette(e, b.dataset.palScanPal, X));
+    }));
+    racine.querySelectorAll('[data-pal-scan-emp]').forEach((b) => activer(b, () => {
+      ui.focus = b.dataset.peCle; fait(scannerEmplacement(e, b.dataset.palScanEmp, X));
+    }));
     on('poser', () => { const n = poserIci(e, ui.pres); ui.focus = n ? `emp:${ui.pres}` : 'b:poser'; fait(n); });
     on('confier', () => { const n = confier(e, ui.pres); ui.focus = n ? `emp:${ui.pres}` : 'b:confier'; fait(n); });
     on('signaler', () => { ui.signaler = true; dire(''); ui.focus = `motif:${MOTIF_IDS[0]}`; redessiner(); });
@@ -678,7 +831,7 @@ export function creerPalettier(P, M, opts, O) {
       const att = Object.keys(e.confiees).filter((id) => !X.montees.includes(id));
       if (!att.length || !C) return;
       noterGeste(e); e.monterDemande = true;
-      if (typeof C.monte === 'function') { direSysteme(`Demande envoyée à ${NOM}.`); ui.focus = 'b:monter'; }
+      if (typeof C.monte === 'function') { direSysteme(`Demande envoyée à ${NOM}.`, e); ui.focus = 'b:monter'; }
       else {
         e.monteesIds = [...new Set([...(Array.isArray(e.monteesIds) ? e.monteesIds : []), ...att])];
         dire(`${ech(NOM)} a monté ${att.map((id) => `<b>${ech(id)}</b>`).join(', ')}.`, 'oui');
