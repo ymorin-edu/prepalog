@@ -12,7 +12,9 @@
 export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
 const SEANCE = 'essai-localiser';
-const ctxL = await nav.newContext({ viewport: { width: 1366, height: 768 } });
+// Mouvement réduit (22/10/2026) : la pause et le zoom animé s'appliquent d'un coup, et la suite gagne ≈ 150 s. Le dernier cas rejoue
+// un bon clic en mouvement normal pour prouver que la pause et le zoom existent toujours.
+const ctxL = await nav.newContext({ viewport: { width: 1366, height: 768 }, reducedMotion: 'reduce' });
 const pg = await ctxL.newPage();
 pg.setDefaultTimeout(9000);
 const erreurs = [];
@@ -351,7 +353,8 @@ await v('Localiser : gestes et questions au fil — chaque geste publié une foi
   let G = (await base()).gestes[SEANCE];
   vrai(G['localiser:entrepot:region'] && !G['localiser:entrepot:departement'], 'gestes après la région du 2e lieu');
   const t1 = G['localiser:port:region'];
-  // Le bon département : le geste (et la question) attendent la fin de l'animation.
+  // Le bon département : le geste (et la question) attendent la fin de l'animation, donc en mouvement normal (22/10/2026).
+  await pg.emulateMedia({ reducedMotion: 'no-preference' });
   await cliquer((await lire()).bon);
   await pg.waitForTimeout(150);
   vrai(!(await base()).gestes[SEANCE]['localiser:entrepot:departement'], 'geste publié avant la fin du zoom');
@@ -359,6 +362,7 @@ await v('Localiser : gestes et questions au fil — chaque geste publié une foi
   await immobile();
   await pg.waitForSelector('#lc-hote [data-q-panneau]');
   egal((await lire()).etape, 'ville', 'la question arrive à l’étape ville, carte zoomée');
+  await pg.emulateMedia({ reducedMotion: 'reduce' });
   // Gelée : un clic de souris sur un point, puis Entrée au clavier, ne font rien.
   const bon = (await lire()).bon;
   const b = await (await pg.$(`${R} [data-lc-cle="${bon}"]`)).boundingBox();
@@ -391,6 +395,7 @@ await v('Localiser : couleurs — un seul aplat vert (la zone trouvée), aucun a
   egal(await fonds(), [], 'aplat vert après un clic faux (la zone fausse a son trait rouge)');
   await immobile();
   const bon = (await lire()).bon;
+  await pg.emulateMedia({ reducedMotion: 'no-preference' });   // la zone « juste » se voit pendant la pause : mouvement normal (22/10/2026)
   await cliquer(bon);
   await pg.waitForTimeout(260);          // la zone passe en « juste » (transition de 0,15 s), avant le zoom (0,5 s)
   const c = await pg.evaluate((R) => {
@@ -405,6 +410,7 @@ await v('Localiser : couleurs — un seul aplat vert (la zone trouvée), aucun a
   egal(c.verts, [bon], 'aplats verts');
   egal(c.rouges, 0, 'aplats rouges');
   egal(c.panneau, 0, 'aplat vert ou rouge dans le panneau');
+  await pg.emulateMedia({ reducedMotion: 'reduce' });
   await immobile();
   await juste(); await juste();
   await bouton('suivant'); await lieuJuste(); await bouton('suivant'); await lieuJuste(); await bouton('bilan');
@@ -649,6 +655,40 @@ await v('Localiser : lieux, flux et fin en fonction de la base (le site tiré) �
   });
   vrai(/« flux\(db\) » ou « fin\(db\) » ne marche pas sur une base vide/.test(m || ''), 'fin(db) qui plante : ' + m);
   egal(erreurs, [], 'erreurs de page');
+});
+
+// Un bon clic de la région, observé image par image : quand la viewBox bouge pour la première fois, l'animation tourne-t-elle encore ?
+async function observerBonClic() {
+  await monter();
+  await immobile();
+  const l = await lire();
+  const sonde = pg.evaluate((R) => new Promise((ok) => {
+    const racine = document.querySelector(R), svg = racine.querySelector('[data-ct-svg]'), v0 = svg.getAttribute('viewBox');
+    let tClic = null, tDebut = null, animeAuDebut = null;
+    window.addEventListener('mousedown', () => { tClic = performance.now(); }, { once: true, capture: true });
+    const f = () => {
+      const t = performance.now();
+      if (tClic != null && tDebut == null && svg.getAttribute('viewBox') !== v0) { tDebut = t; animeAuDebut = racine.__lc.lire().anime; }
+      if (tDebut != null && !racine.__lc.lire().anime) ok({ pause: tDebut - tClic, zoom: t - tDebut, animeAuDebut });
+      else requestAnimationFrame(f);
+    };
+    requestAnimationFrame(f);
+  }), R);
+  await cliquer(l.bon);
+  return sonde;
+}
+
+await v('Localiser : mouvement normal — la pause (≥ 400 ms) puis le zoom animé (≥ 450 ms) existent ; mouvement réduit — la viewBox change d’un coup, animation déjà finie', async () => {
+  await pg.emulateMedia({ reducedMotion: 'no-preference' });
+  try {
+    const n = await observerBonClic();
+    vrai(n.pause >= 400, `pause après le bon clic : ${Math.round(n.pause)} ms, attendu ≥ 400`);
+    vrai(n.animeAuDebut === true, 'le zoom doit démarrer en mouvement normal');
+    vrai(n.zoom >= 450, `zoom animé : ${Math.round(n.zoom)} ms, attendu ≥ 450`);
+  } finally { await pg.emulateMedia({ reducedMotion: 'reduce' }); }
+  const r = await observerBonClic();
+  egal(r.animeAuDebut, false, 'en mouvement réduit, l’animation est finie dès que la viewBox change');
+  vrai(r.pause < 400 && r.zoom < 100, `mouvement réduit : pause ${Math.round(r.pause)} ms, zoom ${Math.round(r.zoom)} ms`);
 });
 
 await ctxL.close();

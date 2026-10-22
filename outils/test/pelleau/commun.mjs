@@ -148,6 +148,8 @@ export async function ouvrirPelleau({ nav, BASE, vrai, activite, id }) {
     if (await present(`[data-carte-lire="${mid}"]`)) await clic(`[data-carte-lire="${mid}"]`);
     else { await aller('mail'); await clic(`[data-mail="${mid}"]`); }
     await pause();
+    // Le toast (« Fiche envoyée. ») peut couvrir le bouton du bas : un clic à la souris le recevrait. Attendre qu'il parte.
+    await pg.waitForFunction(() => { const t = document.getElementById('toast'); return !t || t.style.display === 'none'; });
     await clic(`[data-vue2="${vue}"]`);
     await pause();
   }

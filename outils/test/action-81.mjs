@@ -90,10 +90,14 @@ const monter = (o = {}) => pg.evaluate(async (o) => {
 // Les questions au fil : répond au panneau ouvert (réponse de `R`, sinon la juste), puis « Reprendre », tant qu'il y en a une.
 const Q_JUSTES = { 'pourquoi-marseille': 'km', 'voyage-bateau': 'conteneurs', 'qui-remarque': 'magasin' };
 let Q_REP = Q_JUSTES;
+// Le toast (« Fiche envoyée. ») peut couvrir un bouton du bas : un clic à la souris le recevrait. Attendre qu'il parte
+// (la carte, plus rapide en mouvement réduit, ne laisse plus ce temps).
+const sansToast = () => pg.waitForFunction(() => { const t = document.getElementById('toast'); return !t || t.style.display === 'none'; });
 async function qFil() {
   for (let i = 0; i < 4; i++) {
     const id = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null);
     if (!id) return;
+    await sansToast();
     await clic(`[data-q-choix="${Q_REP[id]}"][data-q="${id}"]`);
     await clic(`[data-q-repondre="${id}"]`);
     await pause();
@@ -192,6 +196,7 @@ async function ouvrirParMessage(sujet, vue) {
   if (await present(`[data-carte-lire="${id}"]`)) await clic(`[data-carte-lire="${id}"]`);
   else { await aller('mail'); await clic(`[data-mail="${id}"]`); }
   await pause();
+  await sansToast();
   await clic(`[data-vue2="${vue}"]`);
   await pause();
 }
