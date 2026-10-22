@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Suite de tests plus rapide (palettier en mouvement réduit, lanceur parallèle qui lit les durées mesurées, 8 groupes GitHub) — session « Optimisations suite de test » | `outils/test/palettier.mjs`, `outils/test-parallele.mjs`, `outils/test.mjs` (GROUPES et en-tête), `.github/workflows/tests.yml`, `.gitignore`, `CLAUDE.md` (section Tests), `docs/decisions.md` | 22/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

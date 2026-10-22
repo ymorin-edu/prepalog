@@ -194,10 +194,16 @@ modifier une séance**, et la corriger si le code a changé.
 
 ## Tests
 
-- Suite Playwright en mode démonstration, ~1 000 cas. **En local, la lancer en parallèle :
-  `node outils/test-parallele.mjs`** (tous les blocs, six navigateurs à la fois, ~4 min 30 ; le temps
-  est celui du bloc le plus long, Smoby). `node outils/test.mjs` joue la même suite dans un seul
-  navigateur (~14 min) ; sur GitHub, en quatre groupes (`--groupe N`, voir l'en-tête de `outils/test.mjs`).
+- Suite Playwright en mode démonstration, ~2 300 cas (73 blocs, ≈ 80 min de travail cumulé). **En local, la
+  lancer en parallèle : `node outils/test-parallele.mjs`** (tous les blocs, huit navigateurs à la fois,
+  ~10 min 30 mesurées le 22/10/2026 ; les plus longs partent d'abord, d'après les durées du lancer précédent
+  gardées dans `outils/.durees-blocs.json`, non versionné ; `--ordre` affiche cet ordre sans rien lancer).
+  `node outils/test.mjs` joue la même suite dans un seul navigateur (~1 h 20) ; sur GitHub, en **huit groupes**
+  (`--groupe N`, voir l'en-tête de `outils/test.mjs`, ≈ 10 min chacun, délai de sécurité 25 min). Quand un bloc
+  grossit ou qu'un groupe GitHub dépasse 15 min, rééquilibrer `GROUPES` d'après la ligne « Durée par bloc ».
+  Un bloc dont les cas cliquent à travers une animation CSS du moteur ouvre son contexte en
+  `reducedMotion: 'reduce'` (palettier : 640 s → 144 s), sauf s'il teste l'animation elle-même (Smoby, quai ISO
+  jouent exprès les deux modes : ne jamais forcer l'option pour tous les contextes).
   Les séances France Boissons ont **un bloc par séance** (`fb-6.1` à `fb-6.6`, aides communes dans
   `outils/test/france-boissons/commun.mjs`, sous-dossier exprès : le lanceur refuse un `.mjs` égaré dans
   `outils/test/`) : une séance nouvelle = son fichier `outils/test/fb-6.x.mjs` + sa ligne dans `BLOCS` et dans
