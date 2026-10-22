@@ -103,9 +103,13 @@ async function fiche(rep = FICHE_JUSTE, choix = BONNES_Q) {
   await qrep(choix);
 }
 // ② le plan
-const bouton = async (k) => { await pg.click(`${P} [data-pal="${k}"]`); await pause(40); };
+// « Les règles ▾ » dépliées au départ (standard, accompagné) couvrent le haut de la travée, « Retour au plan » et le Terminal : comme l'élève, on les
+// replie avant d'agir sur le plan.
+const replier = async () => { if (await pg.$eval(`${P} [data-pe-regles]`, (d) => d.open).catch(() => false)) { await pg.click(`${P} [data-pe-regles] summary`); await pause(40); } };
+const bouton = async (k) => { await replier(); await pg.click(`${P} [data-pal="${k}"]`); await pause(40); };
 const prendre = async (id) => { await pg.click(`${P} .pe-bandeau [data-pe-pal="${id}"]`); await pause(40); };
 async function ouvrir(a) {
+  await replier();
   if (await present('.pal [data-pal="retour"]')) await bouton('retour');
   await pg.click(`${P} [data-pe-trav="${a.slice(0, 6)}"]`); await pause(30);
   await pg.click(`${P} [data-pe-emp="${a}"]`); await pause(40);
@@ -114,6 +118,7 @@ async function ouvrir(a) {
 async function ranger(id, a, geste = 'poser', choix = BONNES_Q) { await prendre(id); await ouvrir(a); await bouton(geste); await qrep(choix); }
 // Scanner : l'étiquette de la palette (sous sa carte), puis celle de l'emplacement (vue de près).
 async function scanner(id, a, choix = BONNES_Q) {
+  await replier();
   await pg.click(`${P} .pe-bandeau [data-pal-scan-pal="${id}"]`); await pause(40);
   if (!(await present(`.pal [data-pal-scan-emp="${a}"]`))) await ouvrir(a);
   await pg.click(`${P} [data-pal-scan-emp="${a}"]`); await pause(40);
@@ -193,7 +198,7 @@ await v('ENT-8.11 : déclaration (CAP, C1.5, guidage, 20 points, parcours après
     const m = A.meta, E = S.ETAPES.filter((e) => !e.bonus), B = S.ETAPES.filter((e) => e.bonus);
     const poidsDe = (e) => (e.compte === false ? 0 : e.poids);
     const decl = (n) => { const x = D.entrepotDe('temoin-1', { niveau: n }); return [x.id, x.mode, x.aideCharge, x.verdict, JSON.stringify(x.terminal), x.cariste.niveaux, typeof x.cariste.monte,
-      x.palettes.map((p) => p.id + (p.nouvelleAdresse ? '+' : '') + (p.niveaux ? '*' : '')).join(' '), x.personnage.texte, !!x.regles]; };
+      x.palettes.map((p) => p.id + (p.nouvelleAdresse ? '+' : '') + (p.niveaux ? '*' : '')).join(' '), x.personnage.texte, !!x.regles, !!x.regles.ouvertes]; };
     return {
       m: [m.id, m.code, m.rubrique, m.niveaux, m.competences, m.competencesCap, m.temps, m.bareme, m.parcours, m.correction, m.bilanDetail, m.precedente,
         m.niveauxPrevus, m.questions, m.ouverture, m.corrige],
@@ -226,9 +231,10 @@ await v('ENT-8.11 : déclaration (CAP, C1.5, guidage, 20 points, parcours après
     'q-sans-scan': ['entrepot:action-ranger:scan:P1', 'entrepot:action-ranger:scan:P2'], 'q-materiel': [], 'q-securite': ['entrepot:action-ranger:valider'] }, 'gestes rebranchés');
   egal(r.ouv, [{ preparation: 3, image: 1 }, 9], 'Avant de commencer : 9 notions, 3 + 1 tirées');
   const base = ['action-ranger', 'palettier'];
-  egal(r.decl.standard, [...base, 'pose', 'critere', '{"nom":"Terminal"}', [2, 3, 4], 'function', 'P1 P2 P3 P4 P5+ P6*', 'Range les palettes de la réception.', true], 'plan standard');
+  egal(r.decl.standard, [...base, 'pose', 'critere', '{"nom":"Terminal"}', [2, 3, 4], 'function', 'P1 P2 P3 P4 P5+ P6*', 'Range les palettes de la réception.', true, true], 'plan standard');
   egal(r.decl.accompagne.slice(2, 4), ['somme', 'adresse'], 'accompagné : somme de charge et adresse attendue');
   egal(r.decl.confirme.slice(2, 4), ['pose', 'critere'], 'confirmé : comme le standard (P6 en plus)');
+  egal([r.decl.accompagne[10], r.decl.confirme[10]], [true, false], '« Les règles » dépliées : accompagné oui, confirmé non');
   egal(r.fin, 'Ton rangement est validé : il ne se refait pas.', 'finFige');
   egal(r.fermeture, 'Après la fiche « Lire une adresse »', 'le plan fermé jusqu’à la fiche');
 });
@@ -437,6 +443,7 @@ await v('ENT-8.11 : témoin 2, accompagné — 20 / 20 ; de près, la somme « d
   await monter({ uid: 'ac811-acc', graine: T2.graine, aisance: 'accompagne' });
   await fiche();
   await allerV('entrepot');
+  egal(await pg.$eval(`${P} [data-pe-regles]`, (d) => d.open), true, 'accompagné : « Les règles » dépliées au départ');
   await prendre('P5'); await ouvrir(T2.P5);
   const somme = await pg.textContent(`${P} [data-pal-somme]`).catch(() => '');
   vrai(/Avec ta palette P5 : 850 \+ 493 = 1\s?343 kg/.test(somme.replace(/\s+/g, ' ')), 'accompagné : la somme est faite : ' + somme);
@@ -451,11 +458,12 @@ await v('ENT-8.11 : témoin 2, accompagné — 20 / 20 ; de près, la somme « d
   egal(erreursF, [], 'erreurs JavaScript');
 });
 
-await v('ENT-8.11 : standard — de près, la plaque et le « déjà posé », sans la somme', async () => {
+await v('ENT-8.11 : standard — « Les règles » dépliées au départ (repliées au confirmé) ; de près, la plaque et le « déjà posé », sans la somme', async () => {
   nouveau();
   await monter({ uid: 'ac811-std', graine: T2.graine });
   await fiche();
   await allerV('entrepot');
+  egal(await pg.$eval(`${P} [data-pe-regles]`, (d) => d.open), true, 'standard : « Les règles » dépliées au départ');
   await prendre('P5'); await ouvrir(T2.P5);
   egal([await present('.pal [data-pal-plaque]'), await present('.pal [data-pal-capteur]'), await present('.pal [data-pal-somme]')], [true, true, false], 'plaque, déjà posé, pas de somme');
   egal((await pg.textContent(`${P} [data-pal-deja]`)).replace(/\s/g, ''), '850', 'déjà posé : 850 kg (le stock du niveau du témoin)');
@@ -520,6 +528,7 @@ await v('ENT-8.11 : confirmé — P6 présente (6 cartes, bandeau identique) ; l
   await fiche();
   await allerV('entrepot');
   egal(await pg.$$eval(`${P} .pe-bandeau [data-pe-pal]`, (L) => L.map((b) => b.dataset.pePal)), ['P1', 'P2', 'P3', 'P4', 'P5', 'P6'], 'six cartes');
+  egal(await pg.$eval(`${P} [data-pe-regles]`, (d) => d.open), false, 'confirmé : « Les règles » repliées');
   egal(await pg.textContent(`${P} .pe-perso`).then((t) => t.includes('Range les palettes de la réception.')), true, 'consigne identique');
   await ranger5(T1);
   await monterPalettes();

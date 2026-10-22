@@ -212,7 +212,8 @@ export const REGLES = {
   ],
 };
 // La déclaration de l'élève (graine, niveau). Accompagné : la somme de charge faite (« déjà posé + ta palette ») et, après « Valider »,
-// l'adresse attendue ; standard et confirmé : la plaque et le « déjà posé » (guidage, décision de Tristan). Aucune copie (guidage).
+// l'adresse attendue ; standard et confirmé : la plaque et le « déjà posé » (guidage, décision de Tristan). « Les règles » dépliées au départ, sauf
+// au confirmé. Aucune copie (guidage).
 export function entrepotDe(graine, { niveau = 'standard' } = {}) {
   const jeu = jeuDe(graine);
   const accompagne = niveau === 'accompagne';
@@ -227,7 +228,8 @@ export function entrepotDe(graine, { niveau = 'standard' } = {}) {
     aideCharge: accompagne ? 'somme' : 'pose',
     verdict: accompagne ? 'adresse' : 'critere',
     terminal: { nom: 'Terminal' },
-    regles: REGLES,
+    // « Les règles ▾ » dépliées au chargement (guidage) pour le standard et l'accompagné ; repliées au confirmé.
+    regles: niveau === 'confirme' ? REGLES : { ...REGLES, ouvertes: true },
   };
 }
 

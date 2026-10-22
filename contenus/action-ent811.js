@@ -287,13 +287,6 @@ function jalonsPlan() {
   }
   const S = ORDRE.map((id) => {
     const e = socle.find((x) => x.id === id), [groupe, titre, titreBilan] = PLAN_JALON[id];
-    // `charge` et `pasPoseHaut` ne comptent que « si toutes les palettes sont traitées » ; le moteur (lot 1) y range aussi P6, la palette BONUS
-    // du confirmé : un confirmé qui laisse P6 perdrait le point « plaque de charge » du socle. Le bonus ne doit jamais coûter (brief §8 : « note
-    // du socle inchangée sans elle ») : ces deux jalons sont jugés comme chez un élève standard (sans P6). Signalé au chef de chantier.
-    if (id === 'charge' || id === 'pasPoseHaut') {
-      const juger = e.verifier;
-      e.verifier = (db) => juger(db && db.aisance === 'confirme' ? { ...db, aisance: 'standard' } : db);
-    }
     // `pasPoseHaut` : la garde non notée (poids 0, COORDINATION n° 5), sans ligne au bandeau (`compte: false`) : une tentative de pose en hauteur
     // est refusée par la vue et reste en trace, elle n'enlève rien (brief §5).
     if (id === 'pasPoseHaut') return Object.assign(e, { titre, poids: 0, compte: false });

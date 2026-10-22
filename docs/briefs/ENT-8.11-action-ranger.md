@@ -337,11 +337,12 @@ réserve », « La plaque de charge », « Toujours scanner ». Corrigé : `cont
   ses palettes restent alors « à monter », comme le jalon.
 - **Écarts par rapport au brief** (et pourquoi) :
   1. Envoi de la fiche : « Bien reçu. Maintenant, au rack ! » au lieu de « C'est ça. … » (le message arrive juste ou faux : « C'est ça » mentirait).
-  2. « Les règles ▾ » **fermées** au départ (guidage et accompagné les voulaient ouvertes) : le moteur n'a pas l'option ; demande au moteur.
+  2. « Les règles ▾ » dépliées au départ (`regles.ouvertes`, lot 2) au standard et à l'accompagné, repliées au confirmé. Dépliées, elles couvrent le haut
+     de la travée, « Retour au plan » et le Terminal : l'élève doit les replier pour agir (signalé au chef de chantier).
   3. Kevin écrit aussi à « Valider » si l'élève n'a jamais cliqué « Faire monter » (sinon le message à Kevin ne se juge jamais : élève bloqué).
   4. `pasPoseHaut` : `poids: 0` **et** `compte: false` (pas de ligne ✗ au bandeau pour une garde qui « n'enlève rien », §5).
-  5. **Confirmé** : le moteur (lot 1) compte P6 dans « toutes les palettes traitées » de `charge` et `pasPoseHaut` : un confirmé qui laisse P6 perdait le
-     point « plaque de charge ». La séance juge ces deux jalons comme chez un standard (bonus jamais payant). **À corriger au moteur** (`jalonsPalettier`).
+  5. **Confirmé** : le lot 1 comptait P6 dans « toutes les palettes traitées » de `charge` et `pasPoseHaut` ; la séance l'a contourné un temps. Corrigé au
+     moteur (lot 2) : le contournement est retiré, le cas « confirmé » (socle 20 sans P6) reste vert.
   6. P4 tirée parmi tous les produits (§6 bis) et non « légère » (§6.3) ; la plaque est respectée par construction.
   7. « Sans date » : aucun texte ni document n'écrit de date ; la Messagerie affiche quand même l'horodatage des messages (le moteur l'écrit) : la
      séance prend le dernier mardi, 13 h 30 + le temps passé (rien à recaler).
@@ -352,8 +353,8 @@ réserve », « La plaque de charge », « Toujours scanner ». Corrigé : `cont
 - **Vérifié / construit** : vérifié (Cowork, brief §2) Action, Geodis à Ensuès, matériel à Action / personnel Geodis (Gomet'), catégories de produits ;
   texte du Code du travail relu le 22/10. Construit : allée, adresses, plaques, stock, hors service, produits et poids, camion, Samia, Kevin, Julie,
   dessins (étiquette, travée, plaque, chariot sans conducteur) ; dit dans l'Accueil (`MENTION`) et en pied de chaque dessin.
-- **Tests** : bloc `action-811`, 13 cas, vert (`PORT_TESTS=8131`), livré `pret: true, ouverture: 'prof'` **contre le lot 2 (scan) encore en cours d'écriture dans l'arbre de travail**.
-  Sabotages (16, chacun restauré et vérifié par empreinte) → cas tombés : q-plaque sans `apres` → déclaration + parcours ; P5 tirée sans contrainte ou `verifier` sans contrôle de P5 → équité + parcours (6-7 cas) ; `verifier` sans contrôle des niveaux → équité ; P6 sans `niveaux` → séance refusée (10 cas) ; Kevin monte sans réponse → parcours (« rien n’est monté avant le geste ») ; Kevin écrit à la 1re confiance → parcours ; accompagné sans somme / standard avec somme → déclaration + cas du niveau ; Kevin monte après « Valider » → cas « valider sans faire monter » ; `charge` toujours juste → bases fabriquées + inaction ; poids P3/P4 inversés → déclaration + signalement à tort ; bonus qui coûte → confirmé ; demande jugée sur les adresses attendues → cas « la demande suit ce qu’il a confié » + parcours ; forme jugée avec la demande → cas du message ; « Corriger » qui rouvre le plan → cas « Corriger » ; fiche jugée sur une autre ligne → parcours. Blocs joués seuls (port 8131) : `action-811` 13/13, `action`, `dependances`, `tirage-niveaux` verts ; `socle` 76/76 (un premier passage groupé a buté sur « connexion enseignant », départ lent, vert rejoué seul).
+- **Tests** : bloc `action-811`, 13 cas, vert (`PORT_TESTS=8131`) contre le code final (lot 2 commité), livré `pret: true, ouverture: 'prof'`.
+  Sabotages (18, chacun restauré et vérifié par empreinte) → cas tombés : q-plaque sans `apres` → déclaration + parcours ; P5 tirée sans contrainte ou `verifier` sans contrôle de P5 → équité + parcours (6-7 cas) ; `verifier` sans contrôle des niveaux → équité ; P6 sans `niveaux` → séance refusée (10 cas) ; Kevin monte sans réponse → parcours (« rien n’est monté avant le geste ») ; Kevin écrit à la 1re confiance → parcours ; accompagné sans somme / standard avec somme → déclaration + cas du niveau ; Kevin monte après « Valider » → cas « valider sans faire monter » ; `charge` toujours juste → bases fabriquées + inaction ; poids P3/P4 inversés → déclaration + signalement à tort ; bonus qui coûte → confirmé ; demande jugée sur les adresses attendues → cas « la demande suit ce qu’il a confié » + parcours ; forme jugée avec la demande → cas du message ; « Corriger » qui rouvre le plan → cas « Corriger » ; fiche jugée sur une autre ligne → parcours ; règles dépliées partout → déclaration + confirmé ; jamais dépliées → déclaration + standard + accompagné. Blocs joués seuls contre le code final (port 8131) : `action-811` 13/13, `socle` 76/76, `action` 22/22 ; avant le lot 2, `dependances` et `tirage-niveaux` verts.
 - **Commits** : aucun (le chef de chantier commite).
-- **Reste ouvert** : option moteur « Les règles ouvertes » ; `charge`/`pasPoseHaut` et palettes bonus au moteur ; relecture à l'écran des textes de
+- **Reste ouvert** : « Les règles » dépliées qui couvrent la travée (moteur) ; relecture à l'écran des textes de
   Cowork et des dessins ; trame (Cowork).
