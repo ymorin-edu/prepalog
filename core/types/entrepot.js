@@ -702,6 +702,20 @@ export function etapesPalettier(E, { copie = false } = {}) {
       if (ids(autre) !== attendu) throw new Error(`entrepot ${R.P.id} : les jalons du comptage changent d'un élève à l'autre (graine « ${g} ») : une clé (cle) à un rang tiré déplace les ids recompte-<rang> ; donner une clé à toutes les adresses, ou à aucune`);
     });
   }
+  // Toute la liste (22/10/2026, après le lot 6) : une fonction (un plan par site, des palettes tirées) donne les MÊMES jalons à toutes les
+  // graines, rangement et lendemain compris (`place-`, `signale-`, `adresseLibre-`, `scan-`, `pasPoseHaut`, `charge`…). Une palette de plus
+  // ou de moins pour une graine ferait changer la liste d'un élève à l'autre : la séance ne se charge pas, le premier id qui diffère est nommé.
+  if (typeof E === 'function') {
+    // Triés : un comptage tiré peut ranger ses jalons dans un autre ordre d'une graine à l'autre (mêmes ids, ce que le contrôle ci-dessus vérifie).
+    const liste = R.jalons.map((j) => j.id).sort();
+    ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].forEach((g) => {
+      const autre = compiler(E(g, { niveau: 'standard', copie })).jalons.map((j) => j.id).sort();
+      const rang = liste.findIndex((id, i) => autre[i] !== id);
+      if (rang < 0 && autre.length === liste.length) return;
+      const premier = rang < 0 ? liste.length : rang;
+      throw new Error(`entrepot ${R.P.id} : les jalons ne sont pas les mêmes pour toutes les graines (graine « ${g} » : le jalon n° ${premier + 1} est « ${autre[premier] ?? 'aucun'} », la référence a « ${liste[premier] ?? 'aucun'} ») : déclarer les mêmes palettes, avec les mêmes ids, à tous les élèves`);
+    });
+  }
   return R.jalons.map((j) => ({
     id: j.id, titre: j.lib, ...(j.bonus ? { bonus: true } : {}),
     verifier(db) {

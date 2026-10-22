@@ -2540,9 +2540,9 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     avec `nouvelleAdresse` garde son `scan-<P>`, toujours ko en copie (la nouvelle adresse n'y est jamais donnée) : la séance lui met `poids: 0`. Les `recompte-…`
     se pèsent à 0 (le Terminal propose le recomptage : c'est l'outil).
   - **Un plan par site** : rien à construire dans le moteur. `entrepot` est une fonction de la graine (lot 0) ; les **ids des jalons sont les mêmes pour tous les
-    élèves** (mêmes palettes, mêmes rangs de comptage, une `cle` partout ou nulle part). `etapesPalettier` ne compare, d'une graine à l'autre, que les ids du
-    comptage (huit graines) : **ceux du rangement ne sont pas contrôlés au chargement**, la séance les garde égaux (le test de la séance les compare sur 60 graines,
-    comme le fait le cas « les jalons sont les mêmes pour toutes les graines » du bloc `palettier`).
+    élèves** (mêmes palettes, mêmes rangs de comptage, une `cle` partout ou nulle part). `etapesPalettier` compare, d'une graine à l'autre (huit graines, standard), **toute la liste des jalons**
+    (rangement, comptage, lendemain) : une palette de plus ou de moins pour une graine fait refuser la séance au chargement, le message nomme le premier id qui
+    diffère et la graine (22/10/2026). Le test de la séance les compare en plus sur 60 graines, comme le cas « les jalons sont les mêmes pour toutes les graines » du bloc `palettier`.
 - **Dessin** : charte de l'entreprise (Action : bleu, gardé dans la zone de travail) ; le vert plein ne dit que « juste » (texte des
   verdicts) ; palettes confiées, « À monter », emplacement vu de près : un trait ; refus en texte rouge. Tient en **1366 × 768 et
   1280 × 720 sans défiler** (plan, travée et vue de près, motifs : testé ; pendant le choix du motif, la ligne « En main » s'efface ; **en copie**, l'en-tête du moteur est 13 px plus haut :

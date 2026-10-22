@@ -1565,6 +1565,23 @@ await v('Comptage : une fonction (adresses tirées) dont la clé change de rang 
   egal([r[1], r[2]], ['', ''], 'une clé partout, ou aucune');
 });
 
+await v('Jalons : une fonction qui déclare une palette de moins pour une graine (même sans comptage) ne se charge pas — le message nomme le premier id qui diffère et la graine ; la même avec les mêmes palettes partout se charge', async () => {
+  const r = await pg.evaluate(async () => {
+    const E = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const sans = (id) => Object.assign({}, C.PALETTIER, { palettes: C.PALETTIER.palettes.filter((p) => p.id !== id) });
+    const F = (fn) => { try { return { msg: '', n: E.etapesPalettier(fn).length }; } catch (e) { return { msg: e.message, n: 0 }; } };
+    return { sans: !C.PALETTIER.comptage, nb: C.PALETTIER.palettes.length, un: F((g) => (g === 'c' ? sans('P2') : C.PALETTIER)),
+      deux: F((g) => (g === 'h' ? sans('P5') : C.PALETTIER)), partout: F(() => sans('P2')), ref: F((g) => (g === '' ? sans('P2') : C.PALETTIER)) };
+  });
+  vrai(r.sans, 'la déclaration d’essai n’a pas de comptage : seul le contrôle de toute la liste peut refuser');
+  egal(r.nb, 6, 'six palettes déclarées (P6 au confirmé), cinq avec une de moins');
+  vrai(r.un.msg.includes('pas les mêmes pour toutes les graines') && r.un.msg.includes('graine « c »') && r.un.msg.includes('« place-P3 »') && r.un.msg.includes('« place-P2 »'), `une palette de moins pour la graine « c » : ${r.un.msg}`);
+  vrai(r.deux.msg.includes('graine « h »'), `la dernière graine essayée l’est aussi : ${r.deux.msg}`);
+  vrai(r.ref.msg.includes('pas les mêmes pour toutes les graines'), `la graine de référence (« ») qui diffère des autres : ${r.ref.msg}`);
+  vrai(r.partout.msg === '' && r.partout.n > 0, `les mêmes palettes partout : se charge (une palette de moins pour tous, c’est permis) : ${r.partout.msg}`);
+});
+
 await v('Comptage : avec des palettes (ENT-8.14), le rangement d’abord (Valider ne rend pas la copie), puis le comptage dans le même entrepôt ; jalons du rangement puis du comptage', async () => {
   await monterC(pg, { palettes: true, temps: 'evaluation' });
   egal([await pg.getAttribute(Z, 'data-pe-phase'), await present(pg, '[data-pal-acompter]'), await present(pg, '[data-pal="valider"]')], ['rangement', false, true], 'rangement d’abord');
