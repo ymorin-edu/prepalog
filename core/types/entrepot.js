@@ -92,7 +92,8 @@ import { compilerPicking, etatPickingNeuf, jalonsPicking, attendusPicking, creer
 import { compilerMasse, etatMasseNeuf, jalonsMasse, solutionsMasse, creerMasse, placeDe, fautesMasse as fautesM, comptageMasse } from './entrepot-masse.js';
 // Le mode PALETTIER, ranger à l'adresse donnée (chantier E-7, lot 1, 21/10/2026) : son fichier ; il emprunte le plan et la travée.
 import { compilerPalettier, etatPalettierNeuf, jalonsPalettier, detailPalettier, attendusPalettier, creerPalettier,
-  confieesPalettier, etatLisiblePalettier, declarationDe, ouSystemeCroitPalettier, ecartsComptage, etatLisibleComptage } from './entrepot-palettier.js';
+  confieesPalettier, etatLisiblePalettier, declarationDe, ouSystemeCroitPalettier, ecartsComptage, etatLisibleComptage,
+  chercheePalettier } from './entrepot-palettier.js';
 import { niveauEleve } from '../tirage.js';
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
@@ -670,6 +671,13 @@ export function etatComptage(db, P, o = {}) {
   const Q = declarationDe(P, db || {}, o), M = compiler(Q);
   return etatLisibleComptage(M, etatDe(db, Q));
 }
+// Lot 5 (le lendemain) : LA PALETTE CHERCHÉE le matin, { id, nom, adresseSysteme, adresseReelle } — celle de l'élève si le système la croit
+// ailleurs que là où elle est, sinon celle de Kevin ; `adresseSysteme` est l'adresse où le système envoie Yanis (vide), `adresseReelle`
+// celle où elle est le matin (avant tout transfert). null avant le passage au lendemain ; jamais d'erreur sur une base vide.
+export function paletteCherchee(db, P, o = {}) {
+  const Q = declarationDe(P, db || {}, o), M = compiler(Q);
+  return chercheePalettier(M, etatDe(db, Q), niveauEleve(db || {}, o));
+}
 // Les étapes à donner à `creerEntreprise` : la liste est celle de la déclaration de RÉFÉRENCE (graine « », standard), la même
 // pour tous les élèves ; chaque `verifier` juge la déclaration de L'ÉLÈVE. Une palette `niveaux: ['confirme']` donne des jalons
 // `bonus: true` dont le `verifier` rend null chez un élève qui ne l'a pas. Une fonction doit déclarer les mêmes palettes à tous
@@ -1098,7 +1106,8 @@ export function creerEntrepot(P, opts = {}) {
   // emplacements : la charge déjà posée ne se déduit pas), `R.reserves` ({ adresse: palette } : emplacement réservé, la palette
   // attend le cariste, en trait), `R.choisi` (l'emplacement vu de près, cerné de l'accent, sans aplat). Le capteur se cache
   // déjà par `R.aideCharge` faux. Lot 4 (le comptage, 22/10/2026) : `R.sansPlaque` (aucune plaque de charge sur les niveaux :
-  // un écran de comptage n'écrit aucun « kg »).
+  // un écran de comptage n'écrit aucun « kg »). Lot 5 (le lendemain, 22/10/2026) : `R.sansNoms` (un emplacement occupé ne montre
+  // qu'une palette, sans le nom de son produit ni de palette, même dans son étiquette d'accessibilité : elle se lit de près).
   function htmlFace(e, R) {
     const d = decoupe(`${ui.trav}-N1-E1`), c = M.cotes[d.c], g = G.racks[d.c];
     // Le capteur de charge (05/10/2026) : un boîtier fixé au montant droit, un par niveau au-dessus du sol. Il
@@ -1134,8 +1143,9 @@ export function creerEntrepot(P, opts = {}) {
       for (let k = 1; k <= M.E; k++) {
         const a = adresse(d.c, d.t, n, k), p = M.occupant(e.place, a), hs = M.hs.has(a), x = XG + (k - 1) * PW;
         const st = PREP && (e.vides || []).includes(a) ? null : M.stock[a];
-        const sp = !!R.sansPoids, res = !st && !p && !hs && R.reserves ? R.reserves[a] : null;
-        const lib = st ? (PREP ? `${court(st.produit)}, ${n === 1 ? `picking, ${pickDe(e, a)} cartons` : 'réserve'}` : sp ? court(st.produit) : `${court(st.produit)}, ${kg(st.kg)}`)
+        const sp = !!R.sansPoids, sn = !!R.sansNoms, res = !st && !p && !hs && R.reserves ? R.reserves[a] : null;
+        const lib = sn && (st || p) ? 'occupé'
+          : st ? (PREP ? `${court(st.produit)}, ${n === 1 ? `picking, ${pickDe(e, a)} cartons` : 'réserve'}` : sp ? court(st.produit) : `${court(st.produit)}, ${kg(st.kg)}`)
           : p ? (sp ? `votre palette ${p}` : `votre palette ${p}, ${kg(M.pal[p].kg)}`) : hs ? 'hors service' : res ? `réservé à ${res}, à monter` : 'libre';
         // La visite met en avant l'emplacement trouvé, et lui seul, en vert : il dit « juste » (l'accent de
         // l'entreprise peut être rouge, comme chez Smoby).
@@ -1147,7 +1157,8 @@ export function creerEntrepot(P, opts = {}) {
         else if (st || p) {
           s += `<rect x="${x + 14}" y="${yb - 92}" width="${PW - 28}" height="78" fill="${p ? 'var(--pe-carton)' : 'var(--pe-gris)'}" stroke="${p ? 'var(--pe-carton-trait)' : 'var(--pe-gris-trait)'}" stroke-width="${p ? 2.5 : 1}"/>
             <rect x="${x + 14}" y="${yb - 14}" width="${PW - 28}" height="11" fill="#a87b45"/>
-            <text x="${x + PW / 2}" y="${yb - 58}" text-anchor="middle" font-size="13" font-weight="${p ? 800 : 600}" fill="${p ? '#1a1915' : 'var(--pe-sur-gris)'}" ${TXT}>${ech(p || court(st.produit))}</text>
+            ${sn ? `<rect x="${x + PW / 2 - 22}" y="${yb - 70}" width="44" height="26" rx="2" fill="#fbfaf6" stroke="var(--pe-gris-trait)" data-pe-etiq-muette/>`
+    : `<text x="${x + PW / 2}" y="${yb - 58}" text-anchor="middle" font-size="13" font-weight="${p ? 800 : 600}" fill="${p ? '#1a1915' : 'var(--pe-sur-gris)'}" ${TXT}>${ech(p || court(st.produit))}</text>`}
             ${sp ? '' : `<text x="${x + PW / 2}" y="${yb - 38}" text-anchor="middle" font-size="15" font-weight="800" fill="${p ? '#1a1915' : 'var(--pe-sur-gris)'}" ${TXT}>${kg(p ? M.pal[p].kg : st.kg)}</text>`}`;
         } else if (res) {
           s += `<rect x="${x + 14}" y="${yb - 92}" width="${PW - 28}" height="78" fill="none" stroke="var(--ardoise)" stroke-width="2.5" stroke-dasharray="8 5" data-pe-reserve="${ech(res)}"/>

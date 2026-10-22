@@ -133,6 +133,23 @@
 // au moins une fois ; rien proposé → ok) ; `scanAvant` (ko si rien n'est compté). Exports d'entrepot.js : `ecartsConfirmes`,
 // `etatComptage`.
 
+// LE LENDEMAIN (lot 5, 22/10/2026 : « retrouver une palette et la transférer », ENT-8.13). Un seul entrepôt à deux phases (clé `phase`
+// de l'état : 'soir' puis 'lendemain') :
+//
+//   phases: [{ id: 'soir' }, { id: 'lendemain', bouton: 'Le lendemain, 6 h', date?, consigne? }],
+//   lendemain: {
+//     kevin: { palette: { id: 'P9', nom, cartons, kg, adresse, adresseLibre? }, posee: 'B1-T03-N1-E3' },   // posée par Kevin dès le soir, sans scan
+//     nuit: { evacuees: ['A1-T02-N1-E3', …], alleeVers: 'A1-T02-N1-E2' | [ … ] },   // le stock évacué part ; une palette en réception est posée
+//     trouveEn: 4, eleve?: 'P3',
+//   },
+//
+// Le soir : le rangement tel quel, la palette de Kevin dans le stock de la vue ; après « Valider », le bouton de la phase suivante
+// (confirmation, geste `phase:lendemain`). Le matin : la palette cherchée (celle de l'élève si le système la croit ailleurs, sinon celle de
+// Kevin : `paletteCherchee`), la travée sans noms (réglage `sansNoms` de la travée de face), les ouvertures comptées (`ouvrir:lendemain`, `trouvee`),
+// le transfert au Terminal (l'étiquette de la palette, puis celle de l'emplacement : `transfert:scan`, `transfert`), « Valider mon transfert »
+// (`valider:lendemain`). JALONS : `retrouvee`, `trouveeVite`, `transfert-place`, `transfert-scan`. ÉTAT : `phase`, `lendemain: { ouvertures, trouvee,
+// trouveeA, scanAttente, place, confiee, montee, libre, transfert, refus, valide, at }`. Détail : `activites/FICHE-SEANCE.md`, « Phases et le lendemain ».
+
 import { ech, pad2 } from '../texte.js';
 import { niveauEleve, graineDeBase, NIVEAUX_ELEVE } from '../tirage.js';
 import { creerTerminal, terminalScannerNeuf, direTerminal } from './terminal.js';
@@ -226,6 +243,8 @@ export function compilerPalettier(M, err) {
     terminal = { nom: String(T.nom), scan: T.scan || 'palette-emplacement' };
   }
   const comptage = P.comptage != null ? compilerComptage(M, P.comptage, terminal, err) : null;
+  // Lot 5 (le lendemain) : la palette de Kevin est posée dès le soir (le stock de la vue la porte : l'élève voit un emplacement occupé).
+  const lendemain = compilerLendemain(M, P, { terminal, cariste, comptage, prises }, err);
   // Lot 3, une fois le stock complet (le comptage l'a peut-être augmenté) : l'adresse donnée est OCCUPÉE, l'adresse libre est LIBRE.
   Object.values(M.pal).filter((p) => p.adresseLibre).forEach((p) => {
     const ou = `palette ${p.id}`;
@@ -259,7 +278,79 @@ export function compilerPalettier(M, err) {
       ...(x.bonus ? { bonus: true } : {}) }));
     jalons.push({ id: 'scanAvant', type: 'scanAvant', comptage: true, lib: 'Adresse scannée avant de compter' });
   }
-  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons, terminal, comptage, aPal, aLibre });
+  // Le lendemain (lot 5) : après les jalons du soir, quatre ids fixes, jugés à « Valider mon transfert ».
+  if (lendemain) {
+    jalons.push({ id: 'retrouvee', type: 'retrouvee', lendemain: true, lib: 'Palette cherchée retrouvée (ouverte de près)' });
+    jalons.push({ id: 'trouveeVite', type: 'trouveeVite', lendemain: true, lib: `Retrouvée en ${lendemain.trouveEn} ouverture${lendemain.trouveEn > 1 ? 's' : ''} au plus` });
+    jalons.push({ id: 'transfert-place', type: 'transfertPlace', lendemain: true, lib: 'Palette remise à son adresse (ou à l’adresse libre demandée)' });
+    jalons.push({ id: 'transfert-scan', type: 'transfertScan', lendemain: true, lib: 'Transfert scanné : le système sait où elle est' });
+  }
+  Object.assign(M, { cariste, aide, verdict: P.verdict || null, jalons, terminal, comptage, aPal, aLibre, lendemain });
+}
+
+// LE LENDEMAIN (lot 5) : `phases` et `lendemain` vont ensemble. Contrôle la déclaration, pose la palette de Kevin dans une COPIE du
+// stock (dès le soir, à `posee`) et un produit de la vue par palette (le lendemain dessine les palettes comme du stock, sans nom).
+// Rend null sans `phases` ni `lendemain`. Une déclaration fautive ne se charge pas.
+function compilerLendemain(M, P, { terminal, cariste, comptage, prises }, err) {
+  if (P.phases == null && P.lendemain == null) return null;
+  const PH = P.phases;
+  if (!Array.isArray(PH) || PH.length !== 2 || !PH[0] || PH[0].id !== 'soir' || !PH[1] || PH[1].id !== 'lendemain') {
+    err('phases : seule [{ id: \'soir\' }, { id: \'lendemain\', bouton, consigne }] est écrite (lot 5), avec « lendemain »');
+  }
+  if (!PH[1].bouton || typeof PH[1].bouton !== 'string') err('phases : la phase « lendemain » a un bouton (son libellé, ex. « Le lendemain, 6 h »)');
+  const LD = P.lendemain;
+  if (!LD || typeof LD !== 'object') err('lendemain : une déclaration { kevin: { palette, posee }, nuit: { evacuees, alleeVers }, trouveEn }');
+  if (comptage) err('lendemain : pas avec un comptage dans le même entrepôt (les phases rangement / comptage sont le lot 6)');
+  if (!terminal) err('lendemain : le transfert se fait au Terminal, déclarer terminal: { nom: \'Terminal\' }');
+  if (!Object.keys(M.pal).length) err('lendemain : il faut des palettes à ranger le soir');
+  const N1 = (a) => { const d = decoupe(a); return !!d && d.n === 1; };
+  const servi = (a) => { const d = decoupe(a); return !!d && (d.n === 1 || !!(cariste && cariste.niveaux.includes(d.n))); };
+  // La palette de Kevin : posée « à côté » par lui, le soir, SANS scan ; le système la croit à son `adresse`.
+  const K = LD.kevin || {}, KP = K.palette || {};
+  if (!KP.id || M.pal[KP.id]) err(`lendemain.kevin.palette : un id qui n’est pas celui d’une palette de l’élève (${KP.id})`);
+  if (!KP.nom) err('lendemain.kevin.palette : il manque le nom');
+  if (!(Number.isInteger(KP.cartons) && KP.cartons > 0)) err('lendemain.kevin.palette : cartons (un nombre entier de cartons)');
+  if (!(KP.kg > 0)) err('lendemain.kevin.palette : kg (le poids d’UN carton)');
+  const connue = (a, quoi) => { if (!decoupe(a) || !M.existe.has(a)) err(`lendemain : ${quoi} inconnue (${a})`); };
+  connue(KP.adresse, 'adresse de la palette de Kevin');
+  if (!servi(KP.adresse)) err(`lendemain.kevin.palette : son adresse ${KP.adresse} est à un niveau que le cariste ne dessert pas`);
+  if (prises.has(KP.adresse)) err(`lendemain.kevin.palette : son adresse ${KP.adresse} est déjà celle de ${prises.get(KP.adresse)}`);
+  if (!M.stock[KP.adresse]) err(`lendemain.kevin.palette : son adresse ${KP.adresse} doit être occupée le soir (c’est pour ça que Kevin la pose à côté)`);
+  connue(K.posee, 'adresse où Kevin pose sa palette (posee)');
+  if (!N1(K.posee)) err(`lendemain.kevin.posee : ${K.posee} n’est pas au niveau 1 (Kevin la pose « à côté », au sol)`);
+  if (M.stock[K.posee] || M.hs.has(K.posee)) err(`lendemain.kevin.posee : ${K.posee} doit être libre dans le stock de départ`);
+  if (prises.has(K.posee)) err(`lendemain.kevin.posee : ${K.posee} est déjà celle de ${prises.get(K.posee)}`);
+  if (KP.adresseLibre != null) {
+    connue(KP.adresseLibre, 'adresse libre de la palette de Kevin');
+    if (!servi(KP.adresseLibre)) err(`lendemain.kevin.palette : son adresse libre ${KP.adresseLibre} est à un niveau que le cariste ne dessert pas`);
+    if (M.stock[KP.adresseLibre] || M.hs.has(KP.adresseLibre) || prises.has(KP.adresseLibre) || KP.adresseLibre === K.posee) err(`lendemain.kevin.palette : son adresse libre ${KP.adresseLibre} doit être libre et à personne`);
+  }
+  // La nuit : les palettes « à évacuer » partent (leurs adresses se libèrent) ; une palette laissée en réception est posée par Kevin.
+  const NU = LD.nuit || {};
+  if (!Array.isArray(NU.evacuees)) err('lendemain.nuit.evacuees : la liste des adresses dont le stock part la nuit');
+  NU.evacuees.forEach((a) => { connue(a, 'adresse évacuée'); if (!M.stock[a]) err(`lendemain.nuit.evacuees : ${a} est vide le soir (rien à évacuer)`); });
+  const allee = typeof NU.alleeVers === 'string' ? [NU.alleeVers] : NU.alleeVers;
+  if (!Array.isArray(allee) || !allee.length) err('lendemain.nuit.alleeVers : l’adresse (ou la liste) où Kevin pose, la nuit, une palette laissée en réception');
+  allee.forEach((a) => {
+    connue(a, 'adresse alleeVers');
+    if (!N1(a)) err(`lendemain.nuit.alleeVers : ${a} n’est pas au sol`);
+    if (M.stock[a] || M.hs.has(a) || a === K.posee) err(`lendemain.nuit.alleeVers : ${a} doit être libre`);
+    if (prises.has(a)) err(`lendemain.nuit.alleeVers : ${a} est déjà celle de ${prises.get(a)}`);
+  });
+  const trouveEn = LD.trouveEn == null ? 4 : LD.trouveEn;
+  if (!(Number.isInteger(trouveEn) && trouveEn >= 1)) err('lendemain.trouveEn : un nombre entier d’ouvertures (1 au moins)');
+  // La palette de l'élève qu'on cherche si le système la croit ailleurs : `eleve`, sinon la première (pour tous) à adresse libre.
+  const eleve = LD.eleve || (Object.values(M.pal).find((p) => !p.bonus && p.adresseLibre) || {}).id;
+  if (!eleve || !M.pal[eleve] || M.pal[eleve].bonus) err('lendemain.eleve : la palette de l’élève qu’on cherchera (une palette pour tous ; par défaut, la première à adresse libre)');
+  // La palette de Kevin est dans le stock de la vue dès le soir (un produit de la vue la nomme) ; chaque palette a son produit « @P »
+  // (le lendemain dessine tout le rack comme du stock). Copies : la déclaration de la séance n'est jamais modifiée.
+  const kevin = { id: KP.id, nom: String(KP.nom), cartons: KP.cartons, kgCarton: KP.kg, kg: poidsPalette(KP.cartons, KP.kg),
+    adresse: KP.adresse, adresseLibre: KP.adresseLibre || null };
+  M.produits = Object.assign({}, M.produits);
+  [...Object.values(M.pal), kevin].forEach((p) => { M.produits[`@${p.id}`] = { nom: p.nom, court: p.nom.split(' ')[0] }; });
+  M.stock = Object.assign({}, M.stock, { [K.posee]: { produit: `@${kevin.id}`, kg: kevin.kg } });
+  return { kevin, posee: K.posee, evacuees: NU.evacuees.slice(), alleeVers: allee.slice(), trouveEn, eleve,
+    bouton: PH[1].bouton, consigne: PH[1].consigne || 'Trouve la palette, puis remets-la en ordre au terminal.', date: PH[1].date || '' };
 }
 
 // LE COMPTAGE (lot 4) : contrôle la liste, et OCCUPE les adresses absentes du stock (copies du stock et des produits de la vue :
@@ -383,11 +474,89 @@ const attendueScan = (e, p) => (e.nouvelles || {})[p.id] || (e.libres || {})[p.i
 const aJalonScan = (M, p) => !!M.terminal && !(p.aSignaler && !p.nouvelleAdresse);
 // Où le système croit la palette : l'adresse scannée si elle existe, sinon la nouvelle adresse reçue, sinon l'adresse libre demandée
 // (lot 3), sinon l'adresse donnée (une palette posée « à côté » sans rien demander : l'adresse donnée, occupée).
+// Le lendemain (lot 5) : un transfert enregistré dit où est la palette cherchée ; la palette de Kevin est crue à son adresse.
 export function ouSystemeCroitPalettier(M, e, id) {
+  e = normal(e);
+  const T = M.lendemain && e.phase === 'lendemain' ? normalL(e).transfert : null;
+  if (T && T.id === id) return T.vers;
+  if (M.lendemain && id === M.lendemain.kevin.id) return M.lendemain.kevin.adresse;
+  return croitSoir(M, e, id);
+}
+function croitSoir(M, e, id) {
   const p = M.pal[id];
   if (!p) return null;
-  e = normal(e);
   return (e.scan || {})[id] || e.nouvelles[id] || (e.libres || {})[id] || p.adresse;
+}
+
+/* ================================================================ le lendemain (lot 5) */
+// L'état du lendemain, dans `db.entrepots[<id>].lendemain` (créé au passage à la phase « lendemain ») : les ouvertures d'emplacements,
+// la palette trouvée (et à quelle ouverture), le scan de la palette en attente de son emplacement, le transfert, l'adresse libre demandée
+// le matin, la palette confiée à Kevin (et montée), les scans refusés (trace), la validation.
+export const lendemainNeuf = () => ({ ouvertures: 0, trouvee: false, trouveeA: null, scanAttente: null, place: null, confiee: null,
+  montee: false, libre: null, transfert: null, refus: 0, valide: false, at: null });
+const normalL = (e) => Object.assign(lendemainNeuf(), (e && e.lendemain) || {});
+const paletteL = (M, id) => (M.lendemain && id === M.lendemain.kevin.id ? M.lendemain.kevin : M.pal[id]);
+// Où sont les palettes le matin, AVANT tout transfert : celles de l'élève là où il les a laissées (posées ; confiées : Kevin monte la
+// nuit ce qui attendait encore), la palette de Kevin à `posee`, et les palettes restées en réception posées par Kevin aux adresses
+// `nuit.alleeVers` encore libres (la palette `eleve` d'abord ; à défaut d'adresse libre dans la liste, elle va au premier emplacement
+// libre au sol ; les autres restent en réception, hors du rack). Le stock « à évacuer » est parti.
+function departMatin(M, e, niveau) {
+  const LD = M.lendemain;
+  e = normal(e);
+  const pos = placement(e);
+  const evac = new Set(LD.evacuees);
+  const pris = (a) => (!!M.stock[a] && !evac.has(a)) || M.hs.has(a) || Object.values(pos).includes(a);
+  const reste = presentes(M, niveau).filter((p) => !pos[p.id]).map((p) => p.id);
+  reste.sort((x, y) => (y === LD.eleve) - (x === LD.eleve));
+  reste.forEach((id) => {
+    let a = LD.alleeVers.find((x) => !pris(x));
+    if (!a && id === LD.eleve) a = M.toutes.find((x) => decoupe(x).n === 1 && !pris(x));
+    if (a) pos[id] = a;
+  });
+  pos[LD.kevin.id] = LD.posee;
+  return pos;
+}
+// LA PALETTE CHERCHÉE (une seule, décision n° 10) : celle de l'élève (`eleve`) si le système la croit ailleurs que là où elle est le
+// matin (posée à côté sans scan, laissée en réception puis posée par Kevin, adresse libre demandée mais posée ailleurs) ; sinon celle de
+// Kevin. `adresseSysteme` : là où le système l'envoie chercher (ce que dit Yanis) ; `adresseReelle` : là où elle est le matin.
+function chercheeDe(M, e, niveau) {
+  const LD = M.lendemain, pos = departMatin(M, e, niveau);
+  const sys = croitSoir(M, normal(e), LD.eleve), reelle = pos[LD.eleve] || null;
+  const id = reelle !== sys ? LD.eleve : LD.kevin.id;
+  return { id, nom: paletteL(M, id).nom, adresseSysteme: id === LD.eleve ? sys : LD.kevin.adresse, adresseReelle: id === LD.eleve ? reelle : LD.posee, pos };
+}
+// Exporté (`paletteCherchee` d'entrepot.js) : null avant le lendemain.
+export function chercheePalettier(M, e, niveau = 'standard') {
+  if (!M.lendemain || normal(e).phase !== 'lendemain') return null;
+  const c = chercheeDe(M, e, niveau);
+  return { id: c.id, nom: c.nom, adresseSysteme: c.adresseSysteme, adresseReelle: c.adresseReelle };
+}
+// Le matin, maintenant : les palettes là où elles sont (le transfert compris ; une palette confiée à Kevin et pas encore montée attend
+// dans « À monter » : `attente`), le stock qui reste (sans les évacuées ni la palette de Kevin, dessinée comme une palette), et le stock
+// à DESSINER (le stock qui reste plus chaque palette, sous son produit « @P » : la travée et le plan ne distinguent rien).
+function matinPalettier(M, e, niveau) {
+  const LD = M.lendemain, L = normalL(e), c = chercheeDe(M, e, niveau);
+  const pos = Object.assign({}, c.pos);
+  let attente = null;
+  if (L.place) pos[c.id] = L.place;
+  else if (L.confiee) { if (L.montee) pos[c.id] = L.confiee; else { delete pos[c.id]; attente = L.confiee; } }
+  const evac = new Set(LD.evacuees);
+  const stock = {};
+  Object.entries(M.stock).forEach(([a, s]) => { if (!evac.has(a) && a !== LD.posee) stock[a] = s; });
+  const dessin = Object.assign({}, stock);
+  Object.entries(pos).forEach(([id, a]) => { dessin[a] = { produit: `@${id}`, kg: paletteL(M, id).kg }; });
+  const occupant = (a) => Object.keys(pos).find((id) => pos[id] === a) || null;
+  // Un emplacement pris pour la palette cherchée : stock, hors service, une autre palette, ou réservé à elle-même (À monter).
+  const pris = (a) => !!stock[a] || M.hs.has(a) || (!!occupant(a) && occupant(a) !== c.id) || attente === a;
+  return { c, L, pos, attente, stock, dessin, occupant, pris, ici: pos[c.id] || null };
+}
+// L'adresse où le transfert doit mener la palette cherchée : l'adresse libre demandée le matin, sinon celle où le système la croit.
+const cibleL = (X) => X.L.libre || X.c.adresseSysteme;
+// Les jalons du lendemain (ok avant « Valider mon transfert » ; le verdict lit les mêmes).
+function okLendemain(M, L) {
+  const place = !!L.transfert && (!!L.place || (!!L.confiee && !!L.montee));
+  return { retrouvee: !!L.trouvee, trouveeVite: !!L.trouvee && L.trouveeA != null && L.trouveeA <= M.lendemain.trouveEn,
+    'transfert-place': place, 'transfert-scan': !!L.transfert };
 }
 
 // Les jalons d'un état, pour un élève de niveau `niveau` (les palettes absentes pour lui n'ont pas de jalon).
@@ -400,7 +569,13 @@ export function jalonsPalettier(M, e, niveau = 'standard') {
   const toutes = ps.filter((p) => !p.bonus).every((p) => traitee(e, pl, p.id));
   // Le comptage (lot 4) : ses jalons sont jugés à « Terminer le comptage » (`fini`), pas à « Valider ».
   const C = normalC(e), liste = listeComptage(M, niveau), rangs = new Set(liste.map((x) => x.rang)), vC = !!C.fini;
+  // Le lendemain (lot 5) : jugé à « Valider mon transfert ».
+  const LL = normalL(e), vL = !!LL.valide, OKL = M.lendemain ? okLendemain(M, LL) : {};
   return M.jalons.filter((j) => (!j.palette || ids.has(j.palette)) && (!j.rang || rangs.has(j.rang))).map((j) => {
+    if (j.lendemain) {
+      const ok = !!OKL[j.id];
+      return { id: j.id, lib: j.lib, palette: null, bonus: false, ok: vL && ok, etat: vL ? (ok ? 'ok' : 'ko') : 'attente' };
+    }
     if (j.comptage) {
       const ok = okComptage(M, C, j, liste);
       return { id: j.id, lib: j.lib, palette: null, rang: j.rang || null, bonus: !!j.bonus, ok: vC && ok, etat: vC ? (ok ? 'ok' : 'ko') : 'attente' };
@@ -430,7 +605,16 @@ export function detailPalettier(M, e, L) {
     // les nombres tapés sans scan (jamais notés seuls).
     ...(M.comptage ? { comptage: { comptes: Object.assign({}, C.comptes), recomptes: Object.assign({}, C.recomptes),
       propositions: Object.assign({}, C.propositions), horsListe: C.horsListe.map((h) => Object.assign({}, h)), sansScan: C.sansScan || 0,
-      fini: !!C.fini } } : {}) };
+      fini: !!C.fini } } : {}),
+    // Le lendemain (lot 5) : la palette cherchée, les ouvertures, le transfert, les scans refusés (trace).
+    ...(M.lendemain ? { phase: e.phase || 'soir', lendemain: lisibleL(M, e) } : {}) };
+}
+// Le lendemain en clair (détail de la note, `etatPalettier`) : null avant le passage au lendemain.
+function lisibleL(M, e, niveau = 'standard') {
+  if (normal(e).phase !== 'lendemain') return null;
+  const L = normalL(e);
+  return { cherchee: chercheePalettier(M, e, niveau), ouvertures: L.ouvertures, trouvee: !!L.trouvee, trouveeA: L.trouveeA,
+    libre: L.libre, transfert: L.transfert ? Object.assign({}, L.transfert) : null, montee: !!L.montee, refus: L.refus || 0, valide: !!L.valide };
 }
 
 /* ================================================================ le comptage (lot 4) */
@@ -579,7 +763,8 @@ export function etatLisiblePalettier(M, e, db) {
     signalees: Object.fromEntries(Object.entries(e.signalees).map(([id, s]) => [id, s.motif])),
     nouvelles: Object.assign({}, e.nouvelles), montees: montees(M, e, db), tentativesHaut: e.tentativesHaut || 0, valide: !!e.valide,
     ...(M.terminal ? { scans: Object.assign({}, e.scan), scansRefuses: e.scansRefuses || 0 } : {}),
-    ...(M.aLibre ? { libres: Object.assign({}, e.libres) } : {}) };
+    ...(M.aLibre ? { libres: Object.assign({}, e.libres) } : {}),
+    ...(M.lendemain ? { phase: e.phase || 'soir', lendemain: lisibleL(M, e, niveauEleve(db)) } : {}) };
 }
 
 // La déclaration d'un élève quand la séance passe une FONCTION `(graine, { niveau, copie })` (lot 0) : la même que celle
@@ -602,7 +787,7 @@ export function creerPalettier(P, M, opts, O) {
   const ui = O.ui, G = O.G;
   // `regles: null` : « Les règles » n'ont pas encore été touchées par l'élève (le rangement, lui, part de `false`).
   Object.assign(ui, { pres: null, signaler: false, journal: [], confirmer: false, msg: '', msgType: '', alerte: null, regles: null,
-    confirmerFin: false, focusTerm: false });
+    confirmerFin: false, focusTerm: false, confirmerPhase: false, confirmerL: false, marque: null });
   const COPIE = !!opts.copie;
   const C = M.cariste, NOM = C ? C.nom : 'le cariste';
   const geste = (n) => `entrepot:${P.id}:${n}`;
@@ -612,7 +797,9 @@ export function creerPalettier(P, M, opts, O) {
   const signaux = [...Object.keys(M.pal).flatMap((id) => ['prendre', 'poser', 'confier', 'signaler', ...(TERM ? ['scan'] : [])].map((x) => geste(`${x}:${id}`))),
     ...Object.values(M.pal).filter((p) => p.adresseLibre).flatMap((p) => [geste(`occupe:${p.id}`), geste(`adresseLibre:${p.id}`)]),
     geste('ouvrir'), ...(M.aPal ? [geste('monter'), geste('valider')] : []),
-    ...(M.comptage ? [...M.comptage.adresses.map((x) => geste(`compte:${x.rang}`)), geste('compte:scan'), geste('compte:fin')] : [])];
+    ...(M.comptage ? [...M.comptage.adresses.map((x) => geste(`compte:${x.rang}`)), geste('compte:scan'), geste('compte:fin')] : []),
+    // Le lendemain (lot 5) : le passage à la phase, les ouvertures du matin, la palette trouvée, son scan, le transfert, la validation.
+    ...(M.lendemain ? ['phase:lendemain', 'ouvrir:lendemain', 'trouvee', 'transfert:scan', 'transfert', 'valider:lendemain'].map(geste) : [])];
   // LE COMPTAGE (lot 4) est-il l'écran du moment ? Sans palettes, toujours ; avec des palettes (ENT-8.14), après « Valider mon
   // rangement » (les phases nommées sont le lot 6).
   const enComptage = (e) => !!M.comptage && (!M.aPal || !!e.valide);
@@ -620,11 +807,14 @@ export function creerPalettier(P, M, opts, O) {
   function regime(api, e) {
     const rendue = !!(api && api.copieRendue && api.copieRendue());
     const fini = !!(e.comptage && e.comptage.fini);
+    const lendemain = !!M.lendemain && e.phase === 'lendemain';
     return { copie: COPIE, rendue, fige: !!e.valide || rendue, prof: !!(api && api.estProf),
       niveau: niveauEleve(api && api.db, { copie: COPIE }),
       temps: COPIE ? 'evaluation' : (P.temps || (api && api.temps) || 'guidage'),
       // le comptage : son écran, et figé à « Terminer le comptage » (ou copie rendue)
-      compte: enComptage(e), cfige: fini || rendue };
+      compte: enComptage(e), cfige: fini || rendue,
+      // le lendemain (lot 5) : son écran, et figé à « Valider mon transfert » (ou copie rendue)
+      lendemain, lfige: lendemain && (!!(e.lendemain && e.lendemain.valide) || rendue) };
   }
   // Ce que chaque dessin recalcule : les palettes de l'élève, où tout est rangé, ce que Kevin a monté, sa liste à compter.
   function calcul(e, R, api) {
@@ -643,6 +833,14 @@ export function creerPalettier(P, M, opts, O) {
     if (M.comptage) {
       if (!e.comptage) e.comptage = comptageNeuf();
       else Object.entries(comptageNeuf()).forEach(([k, v]) => { if (!(k in e.comptage)) e.comptage[k] = v; });
+    }
+    // Lot 5 : la phase (absente sans `phases`) ; l'état du lendemain naît au passage à la phase.
+    if (M.lendemain) {
+      if (!e.phase) e.phase = 'soir';
+      if (e.phase === 'lendemain') {
+        if (!e.lendemain) e.lendemain = lendemainNeuf();
+        else Object.entries(lendemainNeuf()).forEach(([k, v]) => { if (!(k in e.lendemain)) e.lendemain[k] = v; });
+      }
     }
   }
 
@@ -796,6 +994,70 @@ export function creerPalettier(P, M, opts, O) {
     return null;
   }
 
+  /* ------------------------------------------------------------- le lendemain (lot 5) : les gestes */
+  // `X` : le matin calculé (`matinPalettier`). Chaque geste rend le geste à publier (sans le préfixe), ou null.
+  // Passer au lendemain (après « Valider mon rangement », avec confirmation) : l'état du lendemain naît, l'écran revient au plan.
+  function passerLendemain(e) {
+    if (!M.lendemain || !e.valide || e.phase === 'lendemain') return null;
+    e.phase = 'lendemain'; e.lendemain = lendemainNeuf();
+    Object.assign(ui, { trav: null, pres: null, signaler: false, confirmer: false, confirmerPhase: false, alerte: null, marque: null });
+    dire('');
+    return 'phase:lendemain';
+  }
+  // Ouvrir un emplacement de près, le matin : chaque ouverture compte ; celle de l'emplacement où est la palette cherchée la TROUVE.
+  function ouvrirLendemain(e, a, X) {
+    const L = e.lendemain;
+    L.ouvertures = (L.ouvertures || 0) + 1;
+    if (!L.trouvee && a && a === X.ici) { L.trouvee = true; L.trouveeA = L.ouvertures; return 'trouvee'; }
+    return null;
+  }
+  // Scanner une palette, de près : la palette cherchée attend son emplacement ; une autre n'a rien à transférer.
+  function scannerPaletteL(e, id, X) {
+    const L = e.lendemain, p = paletteL(M, id);
+    if (!p) return null;
+    if (id !== X.c.id) { terminalDit(e, `${id} — ${p.nom}. Rien à transférer.`); return null; }
+    if (L.transfert) { terminalDit(e, `${id} est déjà transférée.`); return null; }
+    L.scanAttente = id;
+    return 'transfert:scan';
+  }
+  // Scanner l'emplacement où elle doit aller : l'adresse où le système la croit (libérée la nuit), ou l'adresse libre demandée le matin.
+  // Au sol : elle y est déplacée ; au-dessus : elle part « À monter » (Kevin). Le transfert est enregistré dans les deux cas.
+  function scannerEmplacementL(e, a, X) {
+    const L = e.lendemain;
+    if (!L.scanAttente) { terminalDit(e, 'Scanne d’abord la palette.', true); return null; }
+    const p = paletteL(M, L.scanAttente), d = decoupe(a);
+    if (a !== cibleL(X)) { L.refus = (L.refus || 0) + 1; terminalDit(e, 'Ce n’est pas l’adresse de cette palette.', true); return null; }
+    if (X.pris(a)) { terminalDit(e, 'Emplacement déjà occupé.', true); return null; }
+    if (d.n > 1 && !(C && C.niveaux.includes(d.n))) { terminalDit(e, `${NOM} ne monte pas au niveau N${d.n}.`, true); return null; }
+    const de = X.ici || X.c.adresseReelle;
+    if (d.n === 1) Object.assign(L, { place: a, confiee: null, montee: false });
+    else Object.assign(L, { place: null, confiee: a, montee: false });
+    L.transfert = { id: p.id, de, vers: a, at: Date.now() };
+    L.scanAttente = null;
+    const brut = `Transfert enregistré : ${p.id} de ${de} vers ${a}.`;
+    terminalDit(e, brut);
+    ui.alerte = { id: p.id, nom: p.nom, focus: 'scanemp', texte: `Transfert enregistré : <b>${ech(p.id)}</b> de <b class="pe-mono">${ech(de)}</b> vers <b class="pe-mono">${ech(a)}</b>.${d.n > 1 ? ` Elle attend ${ech(NOM)} dans la zone « À monter ».` : ''}` };
+    return 'transfert';
+  }
+  // « Demander une adresse libre », le matin (la palette cherchée scannée, de près sur un emplacement occupé) : comme le soir (lot 3).
+  function demanderLibreL(e, X) {
+    const L = e.lendemain, p = paletteL(M, L.scanAttente);
+    if (!p) return;
+    const sys = X.c.adresseSysteme;
+    let brut, html;
+    if (!X.pris(sys)) {
+      brut = `Pas d’autre adresse : ${sys} est libre.`; html = `Pas d’autre adresse : <b class="pe-mono">${ech(sys)}</b> est libre.`;
+    } else if (p.adresseLibre && p.adresseLibre !== sys && !X.pris(p.adresseLibre)) {
+      L.libre = p.adresseLibre;
+      brut = `Adresse libre pour ${p.id} (${p.nom}) : ${p.adresseLibre}.`;
+      html = `Adresse libre pour <b>${ech(p.id)}</b> (${ech(p.nom)}) : <b class="pe-mono">${ech(p.adresseLibre)}</b>.`;
+    } else {
+      brut = `Pas d’autre adresse pour ${p.id} (${p.nom}).`; html = `Pas d’autre adresse pour <b>${ech(p.id)}</b> (${ech(p.nom)}).`;
+    }
+    terminalDit(e, brut);
+    ui.alerte = { id: p.id, nom: p.nom, focus: 'b:llibre', texte: html };
+  }
+
   /* ------------------------------------------------------------- le dessin */
   // L'état que lisent le plan et la travée de face du rangement : `place` = ce qui est physiquement dans le rack (posées,
   // montées) ; une palette qui attend Kevin ou absente pour cet élève est rangée « ailleurs », hors du plan et de la réception.
@@ -810,9 +1072,11 @@ export function creerPalettier(P, M, opts, O) {
 
   // La zone « À MONTER », au pied de chaque allée (trait de l'accent, jamais d'aplat vert) : les palettes confiées que Kevin
   // n'a pas encore montées, avec leur destination.
-  function dessusAMonter(e, X, R) {
+  // Le lendemain passe sa liste (`attL` : la palette transférée qui attend Kevin), sans étiquette à scanner.
+  function dessusAMonter(e, X, R, attL = null) {
     if (!C) return '';
-    const att = Object.entries(e.confiees).filter(([id]) => !X.montees.includes(id));
+    const att = attL || Object.entries(e.confiees).filter(([id]) => !X.montees.includes(id));
+    const SC = DEUX && !attL;   // l'étiquette de la palette se scanne dans la zone (le soir, deux scans)
     let s = '';
     M.allees.forEach((al) => {
       const x = G.allees[al.id].x + 5, w = O.AW - 10, y = G.yBas - 72, h = 66;
@@ -823,9 +1087,9 @@ export function creerPalettier(P, M, opts, O) {
         const d = decoupe(a), yy = y + 22 + k * 21;
         // Avec le scan, la place du code-barres est prise à gauche : le texte se resserre (l'adresse complète est dans la liste et le libellé).
         const rang = `<rect x="${x + 4}" y="${yy}" width="${w - 8}" height="18" rx="2" fill="none" stroke="var(--pe-carton-trait)" stroke-width="1.5" data-pal-amonter-p="${ech(id)}"/>
-          <text x="${DEUX ? x + 32 : x + w / 2}" y="${yy + 13}" text-anchor="${DEUX ? 'start' : 'middle'}" font-size="${DEUX ? 9.5 : 10}" font-weight="700" fill="var(--encre)" class="pe-mono">${DEUX ? `${ech(id)} N${d.n}-E${d.e}` : `${ech(id)} T${pad2(d.t)}-N${d.n}-E${d.e}`}</text>`;
+          <text x="${SC ? x + 32 : x + w / 2}" y="${yy + 13}" text-anchor="${SC ? 'start' : 'middle'}" font-size="${SC ? 9.5 : 10}" font-weight="700" fill="var(--encre)" class="pe-mono">${SC ? `${ech(id)} N${d.n}-E${d.e}` : `${ech(id)} T${pad2(d.t)}-N${d.n}-E${d.e}`}</text>`;
         // Deux scans : la ligne de la palette est son étiquette (code-barres dessiné à gauche), un clic la scanne.
-        if (DEUX && !R.fige) {
+        if (SC && !R.fige) {
           const B = barres(`${id} ${M.pal[id].nom}`);
           s += `<g data-pal-scan-pal="${ech(id)}" data-pe-cle="scanpalzone:${ech(id)}" role="button" tabindex="0" aria-label="Scanner la palette ${ech(id)}" pointer-events="all" style="cursor:pointer">${rang}
             <rect x="${x + 6}" y="${yy + 2}" width="22" height="14" rx="1" fill="#fbfaf6"/><svg x="${x + 7}" y="${yy + 3}" width="20" height="12" viewBox="0 0 ${B.x} 22" preserveAspectRatio="none" aria-hidden="true">${B.bars}</svg></g>`;
@@ -840,6 +1104,8 @@ export function creerPalettier(P, M, opts, O) {
   function consigne(e, R, X) {
     const n = (k, t) => `<span class="pe-num">${k}</span>${t}`;
     if (R.compte) return consigneComptage(e, R, X, n);
+    if (R.lendemain) return consigneLendemain(e, R, n);
+    if (R.fige && M.lendemain) return n('✓', `Rangement validé. Pour la suite, clique <b>${ech(M.lendemain.bouton)}</b>.`);
     if (R.fige) return n('✓', R.copie ? 'Copie rendue.' : 'Rangement validé : il ne change plus.');
     const pm = e.enMain ? M.pal[e.enMain] : null;
     if (!pm) {
@@ -865,7 +1131,8 @@ export function creerPalettier(P, M, opts, O) {
 
   // Après « Valider » (hors copie, si la séance le déclare) : le nom du critère faux, ou le critère et l'adresse attendue.
   function verdict(e, p, R) {
-    if (!e.valide || R.copie || !M.verdict) return '';
+    // Avec un lendemain, le soir ne dit rien (l'élève découvre la suite le lendemain) : le verdict est celui du lendemain.
+    if (!e.valide || R.copie || !M.verdict || M.lendemain) return '';
     const F = fautesPalette(M, e, p);
     if (!F.length) return '<span class="pe-verd pe-ok" data-pal-verdict="ok">✓ bien rangée</span>';
     let t = `✗ ${F.join(', ')}`;
@@ -898,7 +1165,13 @@ export function creerPalettier(P, M, opts, O) {
     const txt = typeof per.texte === 'string' ? per.texte : ((per.texte || {})[R.temps] || '');
     let act;
     const attend = Object.keys(e.confiees).filter((id) => !X.montees.includes(id));
-    if (R.fige) act = `<button type="button" class="btn" disabled>${R.copie ? 'Copie rendue' : 'Rangement validé'}</button>`;
+    // Lot 5 : le rangement validé, le bouton de la phase suivante prend la place de « Valider » (avec confirmation).
+    if (R.fige && M.lendemain && !R.rendue && ui.confirmerPhase) {
+      act = `<span class="pe-confirme" data-pal-confirme-phase>Passer à « ${ech(M.lendemain.bouton)} » ?
+        <button type="button" class="btn btn-p" data-pal="phaseOui" data-pe-cle="b:phaseOui">Oui</button>
+        <button type="button" class="btn" data-pal="phaseNon" data-pe-cle="b:phaseNon">Non</button></span>`;
+    } else if (R.fige && M.lendemain && !R.rendue) act = `<button type="button" class="btn btn-p" data-pal="phase" data-pe-cle="b:phase">${ech(M.lendemain.bouton)}</button>`;
+    else if (R.fige) act = `<button type="button" class="btn" disabled>${R.copie ? 'Copie rendue' : 'Rangement validé'}</button>`;
     else if (ui.confirmer) {
       const reste = X.ps.filter((p) => !traitee(e, X.pl, p.id)).length;
       // Avec `monte: 'validation'`, la validation monte ce qui attend : aucun avertissement. Sinon, ces palettes ne comptent pas.
@@ -908,7 +1181,7 @@ export function creerPalettier(P, M, opts, O) {
         <button type="button" class="btn" data-pal="validerNon" data-pe-cle="b:validerNon">Non</button></span>`;
     } else act = '<button type="button" class="btn btn-p" data-pal="valider" data-pe-cle="b:valider">Valider mon rangement</button>';
     // « Faire monter les palettes » : actif seulement s'il y a une palette « À monter » et que rien n'est validé.
-    if (C && !ui.confirmer) {
+    if (C && !ui.confirmer && !(R.fige && M.lendemain)) {
       const raison = R.fige ? 'Le rangement est validé : il ne change plus.' : !attend.length ? `Aucune palette n’attend ${NOM} : confie d’abord une palette.`
         : `${NOM} monte les palettes de la zone « À monter ».`;
       act += `<button type="button" class="btn pal-monter" data-pal="monter" data-pe-cle="b:monter" title="${ech(raison)}" ${R.fige || !attend.length ? 'disabled' : ''}>Faire monter les palettes</button>`;
@@ -1013,6 +1286,141 @@ export function creerPalettier(P, M, opts, O) {
     return `<aside class="pal-cote">${h}</aside>`;
   }
 
+  /* ------------------------------------------------------------- le lendemain (lot 5) : le dessin */
+  // Le plan et la travée de face du rangement lisent `M.stock` : le temps d'un dessin du matin, ils lisent le stock DU MATIN (les
+  // évacuées parties, chaque palette dessinée comme du stock sous son produit « @P »), puis le stock du soir revient (finally).
+  function avecStock(stock, fn) { const S = M.stock; M.stock = stock; try { return fn(); } finally { M.stock = S; } }
+  function phraseL(e, R) {
+    if (R.lfige) return 'Terminé.';
+    const L = e.lendemain, p = L.scanAttente && paletteL(M, L.scanAttente);
+    return p ? `${p.id} — ${p.nom}. Scanne l’emplacement où elle doit aller.` : 'Scanne la palette.';
+  }
+  function consigneLendemain(e, R, n) {
+    const L = e.lendemain;
+    if (R.lfige) return n('✓', R.copie ? 'Copie rendue.' : 'Transfert validé : il ne change plus.');
+    if (L.transfert && L.confiee && !L.montee) return n(4, `Clique <b>Faire monter les palettes</b>, puis <b>Valider mon transfert</b>.`);
+    if (L.transfert) return n('✓', 'Transfert enregistré. Relis, puis clique <b>Valider mon transfert</b>.');
+    if (L.scanAttente) return n(3, 'Va à l’emplacement où elle doit aller et <b>scanne son étiquette</b>.');
+    if (L.trouvee) return n(2, 'De près, <b>scanne l’étiquette de la palette</b>.');
+    return n(1, 'Ouvre des <b>emplacements</b> pour trouver la palette : une travée, puis un emplacement.');
+  }
+  // Le verdict du lendemain (`verdict`, hors copie, après « Valider mon transfert ») : « ✗ transfert », « ✗ scan ».
+  function verdictL(e, R, X) {
+    const L = e.lendemain;
+    if (!L.valide || R.copie || !M.verdict) return '';
+    const ok = okLendemain(M, L), F = [];
+    if (!ok['transfert-place']) F.push('transfert');
+    if (!ok['transfert-scan']) F.push('scan');
+    if (!F.length) return '<span class="pe-verd pe-ok" data-pal-verdict="ok">✓ remise en ordre</span>';
+    return `<span class="pe-verd pe-ko" data-pal-verdict="ko">${ech(`✗ ${F.join(', ')}${M.verdict === 'adresse' ? ` · adresse attendue : ${cibleL(X)}` : ''}`)}</span>`;
+  }
+  // La carte de la palette cherchée : seulement une fois trouvée (ou après « Valider mon transfert ») ; avant, rien ne la nomme.
+  function carteL(e, R, X) {
+    const L = e.lendemain, c = X.c;
+    if (!L.trouvee && !R.lfige) return '<div class="pal-lend-rien" data-pal-lcarte="">Pas encore trouvée.</div>';
+    const T = L.transfert;
+    const etat = !L.trouvee ? 'non retrouvée' : T ? (X.attente ? `transférée vers ${T.vers} · à monter (${NOM})` : `transférée en ${T.vers}`) : 'à transférer';
+    return `<div class="pe-pal pal-carte pal-lcarte${L.trouvee ? ' pe-posee' : ''}" data-pal-lcarte="${ech(c.id)}">
+      <span class="pe-ttl"><span class="pe-pid">${ech(c.id)}</span> ${ech(c.nom)}</span>
+      ${L.trouvee ? `<span class="pal-info">trouvée en <b class="pe-mono">${ech(c.adresseReelle)}</b></span>` : ''}
+      <span class="pal-etat" data-pal-letat>${ech(etat)}</span>
+      <span class="pe-verd-l" data-pe-verd="${ech(c.id)}">${verdictL(e, R, X)}</span></div>`;
+  }
+  function bandeauLendemain(e, R, X) {
+    const per = P.personnage || {}, LD = M.lendemain, L = e.lendemain;
+    let act;
+    if (R.lfige) act = `<button type="button" class="btn" disabled>${R.copie ? 'Copie rendue' : 'Transfert validé'}</button>`;
+    else if (ui.confirmerL) {
+      const perdent = X.attente && C && typeof C.monte === 'function';
+      act = `<span class="pe-confirme" data-pal-confirme-l>${perdent ? `La palette attend ${ech(NOM)} : elle ne comptera pas comme remise en ordre. Valider quand même ?` : 'Valider ?'} Tu ne pourras plus rien changer.${L.transfert ? '' : ' (Aucun transfert enregistré.)'}
+        <button type="button" class="btn btn-p" data-pal="lvaliderOui" data-pe-cle="b:lvaliderOui">Oui, valider</button>
+        <button type="button" class="btn" data-pal="lvaliderNon" data-pe-cle="b:lvaliderNon">Non</button></span>`;
+    } else act = '<button type="button" class="btn btn-p" data-pal="lvalider" data-pe-cle="b:lvalider">Valider mon transfert</button>';
+    if (C && !ui.confirmerL && !R.lfige) {
+      const raison = X.attente ? `${NOM} monte la palette de la zone « À monter ».` : `Aucune palette n’attend ${NOM}.`;
+      act += `<button type="button" class="btn pal-monter" data-pal="lmonter" data-pe-cle="b:lmonter" title="${ech(raison)}" ${X.attente ? '' : 'disabled'}>Faire monter les palettes</button>`;
+    }
+    return `<div class="pe-bandeau pal-bandeau pal-bandeau-lend">
+      <div class="pe-perso"><b>${ech([per.nom, per.role].filter(Boolean).join(', '))}${LD.date ? ` · ${ech(LD.date)}` : ''}</b>${ech(LD.consigne)}</div>
+      <div class="pe-liste"><h3>La palette à retrouver</h3><div class="pe-cartes">${carteL(e, R, X)}</div></div>
+      <div class="pe-act">${act}${reglesHtml(R)}</div></div>`;
+  }
+  // L'étiquette d'un emplacement, le matin : un clic la scanne (l'emplacement où va la palette scannée).
+  const etiquetteL = (a, R) => `<button type="button" class="pal-etiq-emp pal-scannable" data-pal-etiq-emp="${ech(a)}" data-pal-lscan-emp="${ech(a)}" data-pe-cle="scanemp" aria-label="Scanner l’emplacement ${ech(a)}" ${R.lfige ? 'disabled' : ''}>
+      <span class="pal-etiq-l1"><b class="pe-mono">${ech(a)}</b><small class="pal-scan-lib">Scanner</small></span>${codeSvg(a, 'pal-code')}</button>`;
+  // LA VUE DE PRÈS, le matin : l'étiquette de l'emplacement, ce qui l'occupe (une palette : son étiquette, qui se scanne ; le stock : son
+  // produit), « Palette retrouvée » sur celle qu'on cherche, la plaque (jamais au sol), « Demander une adresse libre » (palette scannée,
+  // emplacement occupé). C'est ici, et ici seulement, que se lisent le produit et l'id d'une palette.
+  function presLendemain(e, R, X) {
+    const a = ui.pres, L = e.lendemain;
+    const msg = `<div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pal-msg role="status">${ui.msg}</div>`;
+    if (!a) return `<div class="pal-pres pal-pres-vide" data-pal-pres="">Clique un <b>emplacement</b> de la travée : tu le vois de près ici.${msg}</div>`;
+    const d = decoupe(a), st = X.stock[a], id = X.occupant(a), res = X.attente === a ? X.c.id : null;
+    const pal = id ? paletteL(M, id) : null;
+    const occ = M.hs.has(a) ? ['hs', 'Emplacement hors service'] : pal ? ['palette', `Occupé : palette ${id} · ${pal.nom}`]
+      : st ? ['stock', `Occupé : ${(M.produits[st.produit] || {}).nom || st.produit}`] : res ? ['reserve', `Réservé : ${res}, à monter (${NOM})`] : ['libre', 'Libre'];
+    let h = etiquetteL(a, R);
+    h += `<div class="pal-niv"><span>Niveau <b>N${d.n}</b> · ${d.n === 1 ? 'le sol (picking)' : 'réserve, au-dessus du sol'}</span>
+      <span class="pal-occ pal-occ-${occ[0]}" data-pal-occ="${occ[0]}">${ech(occ[1])}</span></div>`;
+    if (pal) {
+      h += `<div class="pal-ta-pal" data-pal-ta-pal="${ech(id)}"><button type="button" class="pal-scan${L.scanAttente === id ? ' pal-scan-att' : ''}" data-pal-lscan-pal="${ech(id)}" data-pe-cle="lscanpal:${ech(id)}"
+        aria-label="Scanner la palette ${ech(id)}" aria-pressed="${L.scanAttente === id}" ${R.lfige ? 'disabled' : ''}>${codeSvg(`${id} ${pal.nom}`, 'pal-code pal-code-p')}<span>Scanner ${ech(id)} · ${ech(pal.nom)}</span></button></div>`;
+    }
+    if (L.trouvee && a === X.ici) h += '<div class="pal-trouvee" data-pal-trouvee>Palette retrouvée</div>';
+    h += d.n > 1 ? `<div class="pal-charge"><div class="pal-plaque" data-pal-plaque>Charge max <b>${kg(M.cotes[d.c].charge[d.n])}</b> par niveau</div></div>`
+      : '<div class="pal-sol">Au sol : pas de plaque de charge.</div>';
+    if (!R.lfige && L.scanAttente && ((pal && id !== X.c.id) || st)) {   // un emplacement pris par autre chose que la palette cherchée
+      h += '<div class="pal-boutons"><button type="button" class="btn pal-libre" data-pal="llibre" data-pe-cle="b:llibre">Demander une adresse libre</button></div>';
+    }
+    return `<div class="pal-pres" data-pal-pres="${ech(a)}">${h}${msg}</div>`;
+  }
+  function coteLendemain(e, R, X) {
+    const L = e.lendemain, c = X.c;
+    let h = `<div class="pal-term" data-pal-term>${TERM.html(e.terminal)}</div>`;
+    if (!ui.trav) h += `<div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pal-msg role="status">${ui.msg}</div>`;
+    if (C) {
+      h += `<div class="pal-liste-amonter" data-pal-amonter-liste><span class="pe-t">À monter (${ech(NOM)}) :</span>${X.attente
+        ? `<span><b>${ech(c.id)}</b> → <span class="pe-mono">${ech(X.attente)}</span></span>` : ' aucune'}</div>`;
+    }
+    h += `<div class="pe-legende"><span><i class="pe-puce pe-p-stock"></i>occupé</span><span><i class="pe-puce pal-p-reserve"></i>à monter</span>
+      <span><i class="pe-puce pe-p-hs"></i>hors service</span><span><i class="pe-puce"></i>libre</span></div>`;
+    if (R.prof) {
+      h += `<details class="pe-prof" data-pal-prof-lend><summary>Côté enseignant : le lendemain</summary>
+        <div>Palette cherchée : <b>${ech(c.id)}</b> (${ech(c.nom)}) — ${c.id === M.lendemain.eleve ? 'la sienne : le système la croit ailleurs' : `celle de ${ech(NOM)} : la sienne est bien enregistrée`}</div>
+        <div>Le système la croit en <span class="pe-mono">${ech(c.adresseSysteme)}</span> ; elle est en <span class="pe-mono">${ech(c.adresseReelle || '—')}</span></div>
+        <div>À transférer en <span class="pe-mono">${ech(cibleL(X))}</span></div>
+        <div>Ouvertures : ${L.ouvertures}${L.trouvee ? ` (trouvée à la ${L.trouveeA}${L.trouveeA === 1 ? 're' : 'e'})` : ''} · scans refusés (trace, non notée) : ${L.refus || 0}</div></details>`;
+    }
+    return `<aside class="pal-cote">${h}</aside>`;
+  }
+  function htmlLendemain(e, R) {
+    const X = matinPalettier(M, e, R.niveau), L = e.lendemain;
+    if (R.lfige) { ui.confirmerL = false; ui.alerte = null; L.scanAttente = null; }
+    if (L.transfert) L.scanAttente = null;
+    TERM.attendre(e.terminal, phraseL(e, R));
+    ui.main = null;
+    ui.marque = L.trouvee && X.ici ? X.ici : null;   // la marque « trouvée » de la visite : vert pâle, elle dit « juste »
+    // Aucune palette en réception le matin : toutes sont « ailleurs » pour le plan (elles sont dessinées comme du stock).
+    const VE = { place: Object.fromEntries(Object.keys(M.pal).map((id) => [id, 'ailleurs'])), vides: [], aideCharge: false };
+    const attL = X.attente ? [[X.c.id, X.attente]] : [];
+    const espace = avecStock(X.dessin, () => {
+      if (!ui.trav) {
+        return `<div class="pe-plan">${O.htmlPlan(VE, { bandes: false, parcours: false, eval: false, aideCharge: false, g: false },
+          { dessus: dessusAMonter(e, null, R, attL), aria: 'Plan de l’entrepôt : clique une travée pour l’ouvrir' })}</div>`;
+      }
+      const c = M.cotes[ui.trav.split('-')[0]];
+      // Le matin, la travée de face ne montre que des palettes : ni nom, ni poids (l'étiquette ne se lit que de près).
+      const RF = { aideCharge: false, eval: false, sansPoids: true, sansNoms: true, reserves: X.attente ? { [X.attente]: X.c.id } : {}, choisi: ui.pres };
+      return `<div class="pe-entete"><div class="pe-fil pal-fil">Plan › <b>Travée</b> <span class="pe-mono">${ech(ui.trav)}</span> <span class="pe-petit">(vue depuis l’allée ${ech(c.allee)})</span></div>
+          <button type="button" class="btn btn-p pe-retour" data-pal="retour" data-pe-cle="b:retour">← Retour au plan</button></div>
+        <div class="pal-partage"><div class="pe-face">${O.htmlFace(VE, RF)}</div><div class="pal-pres-zone">${presLendemain(e, R, X)}</div></div>`;
+    });
+    return `<div class="pe pal pal-lendemain" data-entrepot="${ech(P.id)}" data-pe-mode="palettier" data-pe-phase="lendemain" data-pe-temps="${R.temps}" data-pal-valide="${!!e.valide}" data-pal-lvalide="${!!R.lfige}" data-pe-ouverte="${!!ui.trav}">
+      <div class="pe-adresse" data-pe-adresse>${barre(e, R, null, null)}</div>
+      ${bandeauLendemain(e, R, X)}
+      <div class="pal-jeu"><section class="pe-espace">${espace}</section>${coteLendemain(e, R, X)}</div>${fenetre()}</div>`;
+  }
+
   // Un code à barres décoratif tiré d'un texte (adresse, identifiant de palette) : { bars, x } pour un `viewBox="0 0 x 22"`.
   function barres(texte) {
     let x = 0, bars = '';
@@ -1112,6 +1520,8 @@ export function creerPalettier(P, M, opts, O) {
   function html(e, api) {
     normaliser(e);
     const R = regime(api, e);
+    if (R.lendemain) return htmlLendemain(e, R);
+    ui.marque = null;
     const X = calcul(e, R, api);
     if (e.enMain && (!X.ids.has(e.enMain) || X.pl[e.enMain])) e.enMain = null;
     if (R.fige) { ui.confirmer = false; ui.signaler = false; ui.alerte = null; }
@@ -1166,7 +1576,8 @@ export function creerPalettier(P, M, opts, O) {
     const R = regime(api, e);
     const X = calcul(e, R, api);
     const redessiner = () => api.redessiner();
-    const FIGE = R.compte ? R.cfige : R.fige;   // au comptage, c'est « Terminer le comptage » qui fige
+    // au comptage, c'est « Terminer le comptage » qui fige ; le lendemain, « Valider mon transfert »
+    const FIGE = R.lendemain ? R.lfige : R.compte ? R.cfige : R.fige;
     const sig = (n) => { if (n && api.signal && !FIGE) api.signal(geste(n)); };
     const fait = (n) => { sig(n); api.sauver(); redessiner(); };
     const activer = (el, fn) => {
@@ -1176,7 +1587,7 @@ export function creerPalettier(P, M, opts, O) {
     const on = (cle, fn) => racine.querySelectorAll(`[data-pal="${cle}"]`).forEach((b) => activer(b, fn));
     // La fenêtre du système se ferme : le focus revient sur la carte de la palette, à la souris comme au clavier.
     const fermerAlerte = () => {
-      ui.focus = `pal:${ui.alerte.id}`; ui.focusForce = true; ui.alerte = null; redessiner();
+      ui.focus = ui.alerte.focus || `pal:${ui.alerte.id}`; ui.focusForce = true; ui.alerte = null; redessiner();
     };
     // Échap : la fenêtre du système, puis les motifs, puis la vue de près, puis la travée.
     const fermer = () => {
@@ -1241,7 +1652,9 @@ export function creerPalettier(P, M, opts, O) {
       activer(g, () => {
         ui.pres = g.dataset.peEmp; ui.signaler = false; dire('');
         ui.focus = e.enMain && !R.fige ? 'b:poser' : `emp:${ui.pres}`;
-        sig(occupeGeste(e));   // lot 3 : l'adresse donnée d'une palette à `adresseLibre`, ouverte avec elle en main
+        // Le lendemain (lot 5) : chaque ouverture compte (`ouvrir:lendemain`), celle de la palette cherchée la trouve (`trouvee`).
+        if (R.lendemain) { if (!R.lfige) { sig('ouvrir:lendemain'); sig(ouvrirLendemain(e, ui.pres, matinPalettier(M, e, R.niveau))); } }
+        else sig(occupeGeste(e));   // lot 3 : l'adresse donnée d'une palette à `adresseLibre`, ouverte avec elle en main
         fait('ouvrir');
       });
       const sur = () => { barreEl.innerHTML = barre(e, R, X, g.dataset.peEmp); };
@@ -1250,7 +1663,22 @@ export function creerPalettier(P, M, opts, O) {
       g.addEventListener('mouseleave', hors); g.addEventListener('blur', hors);
     });
     if (R.compte) { brancherComptage(racine, e, api, R, { on, activer, fait, sig, redessiner }); return; }
-    if (R.fige) return;
+    if (R.lendemain) { brancherLendemain(racine, e, api, R, { on, activer, fait, sig, redessiner }); return; }
+    if (R.fige) {
+      // Lot 5 : le rangement validé, le bouton de la phase suivante (avec confirmation) publie `phase:lendemain` et passe au matin.
+      if (M.lendemain && !R.rendue) {
+        on('phase', () => { ui.confirmerPhase = true; ui.focus = 'b:phaseOui'; redessiner(); });
+        on('phaseNon', () => { ui.confirmerPhase = false; ui.focus = 'b:phase'; redessiner(); });
+        on('phaseOui', () => {
+          const g = passerLendemain(e);
+          if (g && api.signal) api.signal(geste(g));
+          api.sauver();
+          // Tout l'écran, menu compris : un message qui attend `phase:lendemain` (Yanis, ENT-8.13) arrive tout de suite.
+          if (api.redessinerTout) api.redessinerTout(); else redessiner();
+        });
+      }
+      return;
+    }
     racine.querySelectorAll('[data-pe-pal]').forEach((b) => activer(b, () => {
       const g = prendre(e, b.dataset.pePal, X);
       if (g) sig(occupeGeste(e));   // lot 3 : prendre la palette alors que l'emplacement de son adresse donnée est déjà ouvert
@@ -1290,8 +1718,9 @@ export function creerPalettier(P, M, opts, O) {
       e.enMain = null; e.valide = true; e.at = Date.now(); noterGeste(e);
       e.monteesValidation = montees(M, e, api.db);   // ce que Kevin a monté À CE MOMENT : le reste n'est pas rangé
       sig('valider'); api.sauver();
-      // Avec un comptage après le rangement (ENT-8.14), c'est « Terminer le comptage » qui rend la copie.
-      if (COPIE && api.rendreCopie && !M.comptage) api.rendreCopie();
+      // Avec un comptage après le rangement (ENT-8.14), c'est « Terminer le comptage » qui rend la copie ; avec un lendemain (lot 5),
+      // « Valider mon transfert ».
+      if (COPIE && api.rendreCopie && !M.comptage && !M.lendemain) api.rendreCopie();
       // Tout l'écran, menu compris : un message qui attend le geste `valider` (Kevin, ENT-8.11) arrive tout de suite.
       if (api.redessinerTout) api.redessinerTout(); else redessiner();
     });
@@ -1329,6 +1758,33 @@ export function creerPalettier(P, M, opts, O) {
     });
     B.on('finNon', () => { ui.confirmerFin = false; ui.focus = 'b:terminer'; B.redessiner(); });
     B.on('finOui', terminer);
+  }
+
+  // LE LENDEMAIN (lot 5) : les deux scans du transfert (l'étiquette de la palette de près, puis celle de l'emplacement), « Demander une
+  // adresse libre », « Faire monter les palettes », « Valider mon transfert ». Après la validation, regarder reste permis.
+  function brancherLendemain(racine, e, api, R, B) {
+    if (R.lfige) return;
+    const X = matinPalettier(M, e, R.niveau), L = e.lendemain;
+    racine.querySelectorAll('[data-pal-lscan-pal]').forEach((b) => B.activer(b, () => { ui.focus = b.dataset.peCle; B.fait(scannerPaletteL(e, b.dataset.palLscanPal, X)); }));
+    racine.querySelectorAll('[data-pal-lscan-emp]').forEach((b) => B.activer(b, () => { ui.focus = b.dataset.peCle; B.fait(scannerEmplacementL(e, b.dataset.palLscanEmp, X)); }));
+    B.on('llibre', () => { demanderLibreL(e, X); B.fait(null); });
+    // Faire monter : le matin, Kevin monte tout de suite la palette transférée au-dessus du sol.
+    B.on('lmonter', () => {
+      if (!X.attente) return;
+      L.montee = true; dire(`${ech(NOM)} a monté <b>${ech(X.c.id)}</b>.`, 'oui'); ui.focus = 'b:lvalider';
+      B.fait('monter');
+    });
+    B.on('lvalider', () => { ui.confirmerL = true; ui.focus = 'b:lvaliderOui'; B.redessiner(); });
+    B.on('lvaliderNon', () => { ui.confirmerL = false; ui.focus = 'b:lvalider'; B.redessiner(); });
+    B.on('lvaliderOui', () => {
+      ui.confirmerL = false; ui.pres = null; ui.trav = null; dire('');
+      // Comme le soir : sans fonction `monte`, la validation monte ce qui attend ; avec, la palette qui attend n'est pas remise en ordre.
+      if (X.attente && !(C && typeof C.monte === 'function')) L.montee = true;
+      Object.assign(L, { valide: true, at: Date.now(), scanAttente: null });
+      B.sig('valider:lendemain'); api.sauver();
+      if (COPIE && api.rendreCopie) api.rendreCopie();
+      if (api.redessinerTout) api.redessinerTout(); else B.redessiner();
+    });
   }
 
   return {

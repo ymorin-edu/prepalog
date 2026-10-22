@@ -1925,6 +1925,409 @@ await v('Adresse libre : la page d’essai (cas « Rangement », P8 occupée, Ke
   await pe.close();
 });
 
+/* =========================================================== le lendemain (lot 5, 22/10/2026) */
+// Cas « Le lendemain : … », sur le cas d'essai `lendemain()` de `contenus/palettier-essai.js` (imite ENT-8.13). `PALETTIER_SEUL='Le lendemain'`
+// ne joue que cette section. Valeurs écrites À LA MAIN :
+//   P1 « Cahiers grand format », adresse A1-T03-N1-E2 (libre) · P3 « Bougies parfumées », adresse A1-T02-N1-E3 (prise : Peluches, à évacuer),
+//   adresse libre A1-T01-N1-E2, « à côté » A1-T02-N1-E1 ; restée en réception, Kevin la pose la nuit en A1-T02-N1-E2 ·
+//   P9 (Kevin) « Peluches », adresse B1-T03-N1-E2 (prise : Nettoyant, à évacuer), posée par Kevin en B1-T03-N1-E3 ;
+//   `haut` : B1-T03-N1-E2 reste prise, adresse libre de P9 B1-T03-N2-E1 (niveau 2, Kevin). Poids d'essai : place-P1 2, scan-P1 2,
+//   adresseLibre-P3 3, scan-P3 2, pasPoseHaut 1, charge 1, retrouvee 3, trouveeVite 1, transfert-place 2, transfert-scan 3 (somme 20).
+const IDL = 'essai-lendemain';
+const LA = { p1: 'A1-T03-N1-E2', p3: 'A1-T02-N1-E3', p3Libre: 'A1-T01-N1-E2', p3Cote: 'A1-T02-N1-E1', allee: 'A1-T02-N1-E2',
+  p9: 'B1-T03-N1-E2', p9Posee: 'B1-T03-N1-E3', p9Libre: 'B1-T03-N2-E1' };
+const NOMS_PRODUITS = ['Lessive', 'Nettoyant', 'Croquettes', 'Cahiers', 'Bougies', 'Boîtes', 'Peluches', 'Serviettes'];
+// Monte le cas du lendemain. `o` : temps, verdict, haut, monte ('base'), chemin ('scanne' | 'acote' | 'allee' : le soir déjà validé),
+// prerempli (retouches de cet état), kevin (Kevin pousse), yanis (son message au passage), suite (la barre « Étape suivante »), role.
+const monterL = (p, o = {}) => p.evaluate(async (o) => {
+  const { creerEntreprise } = await import('/core/types/entreprise.js');
+  const C = await import('/contenus/palettier-essai.js');
+  document.querySelector('#palTest')?.remove();
+  const hote = document.createElement('div'); hote.id = 'palTest'; document.body.appendChild(hote);
+  const temps = o.temps || 'guidage';
+  const P = C.lendemain({ verdict: o.verdict === undefined ? 'critere' : o.verdict || undefined, haut: !!o.haut,
+    monte: o.monte === 'base' ? (db) => !!(db && db.kevinRepondu) : undefined });
+  const U = C.universPalettier({ temps, entrepot: P, kevinPousse: !!o.kevin, yanis: !!o.yanis, suite: !!o.suite });
+  const db = o.chemin ? { entrepots: { 'essai-lendemain': Object.assign(C.soirPrerempli(o.chemin), o.prerempli || {}) } } : {};
+  const moteur = creerEntreprise(U);
+  window.__p = { db, P, U, temps, moteur, remis: null };
+  moteur.rendre(hote, {
+    meta: { id: 'essai-palettier', code: 'ESSAI', titre: 'Essai', portee: 'eleve', immersif: true, temps, copie: temps === 'evaluation' },
+    profil: { prenom: 'Lea', nom: 'Test', role: o.role || 'eleve', uid: 'u-test' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: () => {}, quitter: () => {}, codeStock: 'ABC',
+    lireScore: async () => null,
+    rendreCopie: async (res) => { window.__p.remis = res; return { rendu: Date.now() }; },
+  });
+  document.querySelector('#palTest .ent-nav[data-vue="entrepot"]').click();
+}, o);
+const etatL = (p) => p.evaluate((id) => JSON.parse(JSON.stringify((window.__p.db.entrepots || {})[id] || null)), IDL);
+const gestesL = (p) => p.evaluate(() => Object.keys((window.__p.db.gestes || {})['essai-palettier'] || {}).sort());   // rangés sous l'id de la séance
+const nouveaux = (G) => G.filter((g) => /:(phase|ouvrir:lendemain|trouvee|transfert|valider:lendemain)/.test(g)).map((g) => g.replace('entrepot:essai-lendemain:', ''));
+const chercheeL = (p) => p.evaluate(async () => (await import('/core/types/entrepot.js')).paletteCherchee(window.__p.db, window.__p.P));
+const croitLd = (p, id) => p.evaluate(async (id) => (await import('/core/types/entrepot.js')).ouSystemeCroit(window.__p.db, window.__p.P, id), id);
+const noteL = (p) => p.evaluate(() => window.__p.moteur.noter(window.__p.db).score);
+const passer = async (p) => { await bouton(p, 'phase'); await bouton(p, 'phaseOui'); };
+const scanPalL = (p, id) => p.click(`${Z} [data-pal-lscan-pal="${id}"]`);
+const scanEmpL = (p) => p.click(`${Z} [data-pal-lscan-emp]`);
+async function validerL(p) {
+  if (await present(p, '[data-pal="retour"]')) await bouton(p, 'retour');
+  await bouton(p, 'lvalider'); await bouton(p, 'lvaliderOui');
+}
+// Transférer la palette cherchée : l'ouvrir (là où elle est), scanner son étiquette, ouvrir la cible, scanner l'étiquette de l'emplacement.
+async function transferer(p, id, de, vers) { await ouvrir(p, de); await scanPalL(p, id); await ouvrir(p, vers); await scanEmpL(p); await compris(p); }
+const tousLend = (j) => ({ 'place-P1': j, 'scan-P1': j, 'adresseLibre-P3': j, 'scan-P3': j, pasPoseHaut: j, charge: j,
+  retrouvee: j, trouveeVite: j, 'transfert-place': j, 'transfert-scan': j });
+const LEND = ['retrouvee', 'trouveeVite', 'transfert-place', 'transfert-scan'];
+const lend = (j) => Object.fromEntries(LEND.map((id) => [id, j]));
+const soirOk = { 'place-P1': 'ok', 'scan-P1': 'ok', 'adresseLibre-P3': 'ok', 'scan-P3': 'ok', pasPoseHaut: 'ok', charge: 'ok' };
+// Le texte et les étiquettes d'accessibilité de la travée de face (ce que l'élève lit sans ouvrir un emplacement).
+const face = (p) => p.$eval(`${Z} .pe-face`, (f) => [f.textContent, ...[...f.querySelectorAll('[aria-label]')].map((x) => x.getAttribute('aria-label'))].join(' | '));
+
+await v('Le lendemain : montage — 6 gestes de plus dans `signaux` (un apresGeste sur chacun se charge) ; jalons du soir puis du lendemain, tous à faire ; état : `phase` « soir », pas de clé `lendemain` ; P9 posée dès le soir (emplacement occupé « Peluches », ni carte ni étiquette) ; paletteCherchee null', async () => {
+  await monterL(pg);
+  const r = await pg.evaluate(async () => {
+    const { creerEntrepot } = await import('/core/types/entrepot.js');
+    const { creerEntreprise } = await import('/core/types/entreprise.js');
+    const { apresGeste } = await import('/core/declencheurs.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const S = creerEntrepot(C.LENDEMAIN).signaux;
+    const U = C.universPalettier({ entrepot: C.LENDEMAIN });
+    U.volet = { semer: () => ({ mails: [] }), declencheurs: S.map((n, i) => ({ id: `d${i}`, quand: apresGeste(n), semer: () => ({ mails: [] }) })) };
+    let tous = ''; try { creerEntreprise(U); } catch (e) { tous = e.message; }
+    return { S, tous, sansL: creerEntrepot(C.palettier({ libre: true, terminal: true })).signaux.filter((g) => /phase|trouvee|transfert|lendemain/.test(g)) };
+  });
+  egal(r.S.filter((g) => /phase|ouvrir:lendemain|trouvee|transfert|valider:lendemain/.test(g)).map((g) => g.replace('entrepot:essai-lendemain:', '')),
+    ['phase:lendemain', 'ouvrir:lendemain', 'trouvee', 'transfert:scan', 'transfert', 'valider:lendemain'], 'les gestes du lendemain');
+  egal([r.tous, r.sansL], ['', []], 'un apresGeste sur chaque geste se charge ; sans lendemain, aucun de ces gestes');
+  egal(await jalons(pg), tousLend('attente'), 'jalons : ceux du soir, puis retrouvee, trouveeVite, transfert-place, transfert-scan');
+  const e = await etatL(pg);
+  egal([e.phase, 'lendemain' in e], ['soir', false], 'phase « soir » créée au premier dessin, pas encore d’état du lendemain');
+  egal(await pg.$$eval(`${Z} .pe-bandeau [data-pe-pal]`, (L) => L.map((b) => b.dataset.pePal)), ['P1', 'P3'], 'cartes : P1 et P3 (pas P9)');
+  await ouvrir(pg, LA.p9Posee);
+  egal([await texte(pg, '[data-pal-occ]'), await pg.getAttribute(`${Z} [data-pal-occ]`, 'data-pal-occ'), await present(pg, '[data-pal-scan-pal="P9"]')],
+    ['Occupé : Peluches', 'stock', false], 'P9 posée dès le soir : un emplacement occupé, rien de plus');
+  egal(await chercheeL(pg), null, 'paletteCherchee : null avant le lendemain');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Le lendemain : le soir joué juste (adresse libre demandée, rangée, scannée) → « Valider » : pas de verdict du soir, le bouton « Le lendemain, 6 h » à sa place ; confirmation ; geste phase:lendemain, Yanis écrit l’adresse de P9 ; on cherche P9', async () => {
+  await monterL(pg, { kevin: true, yanis: true });
+  await ranger(pg, 'P1', LA.p1); await scanPal(pg, 'P1'); await scanEmp(pg);
+  await prendre(pg, 'P3'); await ouvrir(pg, LA.p3);
+  egal(await pg.evaluate(() => (window.__p.db.mails || []).filter((m) => m.from === 'Kevin').length), 1, 'Kevin pousse au premier « Occupé » sur P3');
+  await demander(pg); await compris(pg);
+  await ouvrir(pg, LA.p3Libre); await bouton(pg, 'poser'); await scanPal(pg, 'P3'); await scanEmp(pg);
+  await valider(pg);
+  egal(await pg.$$eval(`${Z} [data-pal-verdict]`, (L) => L.length), 0, 'aucun verdict du soir (le lendemain dira tout)');
+  egal([await present(pg, '[data-pal="valider"]'), await texte(pg, '[data-pal="phase"]')], [false, 'Le lendemain, 6 h'], 'le bouton du lendemain à la place de « Valider »');
+  vrai((await texte(pg, '[data-pe-consigne]')).includes('Le lendemain, 6 h'), 'la consigne le dit');
+  egal(await jalons(pg), Object.assign(tousLend('attente'), soirOk), 'le soir est jugé, le lendemain à faire');
+  egal(nouveaux(await gestesL(pg)), [], 'rien du lendemain publié');
+  egal(await pg.evaluate(() => (window.__p.db.mails || []).filter((m) => m.from === 'Yanis').length), 0, 'Yanis n’a rien écrit');
+  await bouton(pg, 'phase');
+  vrai((await texte(pg, '[data-pal-confirme-phase]')).startsWith('Passer à « Le lendemain, 6 h » ? Oui Non'), 'confirmation');
+  await bouton(pg, 'phaseNon');
+  egal((await etatL(pg)).phase, 'soir', '« Non » : on reste le soir');
+  await passer(pg);
+  const e = await etatL(pg);
+  egal([e.phase, e.lendemain], ['lendemain', { ouvertures: 0, trouvee: false, trouveeA: null, scanAttente: null, place: null, confiee: null,
+    montee: false, libre: null, transfert: null, refus: 0, valide: false, at: null }], 'phase « lendemain », état du lendemain neuf');
+  egal(nouveaux(await gestesL(pg)), ['phase:lendemain'], 'geste phase:lendemain');
+  egal(await chercheeL(pg), { id: 'P9', nom: 'Peluches', adresseSysteme: LA.p9, adresseReelle: LA.p9Posee }, 'bon geste le soir : on cherche la palette de Kevin');
+  egal(await pg.evaluate(() => (window.__p.db.mails || []).find((m) => m.from === 'Yanis').text),
+    'Bonjour ! Le terminal m’envoie en B1-T03-N1-E2. C’est vide. Je ne peux pas préparer le magasin. Tu peux regarder ? Yanis', 'Yanis : l’adresse que croit le système');
+  egal([await pg.getAttribute(Z, 'data-pe-phase'), await texte(pg, '[data-pal-lcarte]'), await present(pg, '[data-pal="lvalider"]')],
+    ['lendemain', 'Pas encore trouvée.', true], 'l’écran du lendemain : rien ne nomme la palette');
+  egal(await jalons(pg), Object.assign(tousLend('attente'), soirOk), 'le lendemain toujours à faire');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Le lendemain : la nuit — les adresses évacuées sont libres, P9 occupe B1-T03-N1-E3 ; la travée ne montre plus aucun nom (texte ni étiquette d’accessibilité), le plan ne distingue rien ; de près, « palette P9 · Peluches » et son étiquette', async () => {
+  // Le soir, la travée B1-T03 nomme ses produits (c'est le dessin d'avant).
+  await monterL(pg, { chemin: 'scanne' });
+  await pg.click(`${Z} [data-pe-trav="B1-T03"]`);
+  vrai(/Nettoyant|Peluches/.test(await face(pg)), 'le soir, la travée nomme les produits');
+  await bouton(pg, 'retour');
+  await passer(pg);
+  egal([await mini(pg, LA.p9), await mini(pg, LA.p3), await mini(pg, LA.p9Posee), await mini(pg, LA.p3Libre), await mini(pg, LA.p1)],
+    ['libre', 'libre', 'stock', 'stock', 'stock'], 'plan du matin : évacuées libres, les palettes de l’élève et de Kevin comme du stock');
+  await pg.click(`${Z} [data-pe-trav="B1-T03"]`);
+  const F = await face(pg);
+  egal(NOMS_PRODUITS.filter((n) => F.includes(n)).concat(['P1', 'P3', 'P9'].filter((id) => F.includes(id))), [], `aucun nom dans la travée du matin : ${F.slice(0, 120)}`);
+  egal(await pg.$$eval(`${Z} .pe-face [data-pe-etiq-muette]`, (L) => L.length) > 0, true, 'les palettes portent une étiquette muette');
+  egal(await pg.$$eval(`${Z} .pe-face [data-pe-emp="${LA.p9Posee}"], ${Z} .pe-face [data-pe-emp="B1-T03-N2-E2"]`, (L) => L.map((g) => g.getAttribute('aria-label'))),
+    [`${LA.p9Posee} : occupé`, 'B1-T03-N2-E2 : occupé'], 'palette ou stock : « occupé », rien de plus');
+  await pg.click(`${Z} [data-pe-emp="${LA.p9}"]`);
+  egal(await texte(pg, '[data-pal-occ]'), 'Libre', 'B1-T03-N1-E2 : évacuée la nuit');
+  await pg.click(`${Z} [data-pe-emp="${LA.p9Posee}"]`);
+  egal([await texte(pg, '[data-pal-occ]'), await texte(pg, '[data-pal-lscan-pal="P9"]')], ['Occupé : palette P9 · Peluches', 'Scanner P9 · Peluches'], 'de près : l’étiquette de la palette');
+  await pg.click(`${Z} [data-pe-emp="B1-T03-N2-E2"]`);
+  egal([await texte(pg, '[data-pal-occ]'), await present(pg, '[data-pal-lscan-pal]')], ['Occupé : Bougies parfumées', false], 'du stock : son produit, pas d’étiquette à scanner');
+  await ouvrir(pg, LA.p3);
+  egal(await texte(pg, '[data-pal-occ]'), 'Libre', 'A1-T02-N1-E3 : évacuée la nuit');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Le lendemain : chercher P9 — chaque ouverture compte ; l’adresse vide, puis B1-T03-N1-E3 → trouvée (geste, marque vert pâle, « Palette retrouvée », carte) ; scan → « Scanne l’emplacement où elle doit aller » ; mauvaise cible refusée (trace) ; B1-T03-N1-E2 → « Transfert enregistré » ; Valider → tout juste, 20 sur 20', async () => {
+  await monterL(pg, { chemin: 'scanne' });
+  await passer(pg);
+  await ouvrir(pg, LA.p9);
+  egal([(await etatL(pg)).lendemain.ouvertures, (await etatL(pg)).lendemain.trouvee], [1, false], 'l’adresse vide : une ouverture, rien trouvé');
+  egal(nouveaux(await gestesL(pg)), ['ouvrir:lendemain', 'phase:lendemain'], 'ouvrir:lendemain publié');
+  await pg.click(`${Z} [data-pe-emp="${LA.p9}"]`);
+  await ouvrir(pg, LA.p9Posee);
+  let L = (await etatL(pg)).lendemain;
+  egal([L.ouvertures, L.trouvee, L.trouveeA], [3, true, 3], 'trouvée à la 3e ouverture (rouvrir compte)');
+  egal(nouveaux(await gestesL(pg)), ['ouvrir:lendemain', 'phase:lendemain', 'trouvee'], 'geste trouvee');
+  egal([await pg.getAttribute(`${Z} .pe-face [data-pe-emp="${LA.p9Posee}"]`, 'class'), await texte(pg, '[data-pal-trouvee]')], ['pe-emp pe-marque pe-choisi', 'Palette retrouvée'], 'la marque « trouvée »');
+  egal(await pg.$eval(`${Z} .pe-face [data-pe-emp="${LA.p9Posee}"] .pe-cible`, (r) => r.getAttribute('fill')), 'var(--vert-pale)', 'vert pâle : « juste »');
+  vrai((await texte(pg, '[data-pal-lcarte="P9"]')).startsWith('P9 Peluches trouvée en B1-T03-N1-E3 à transférer'), `la carte : ${await texte(pg, '[data-pal-lcarte]')}`);
+  await scanPalL(pg, 'P9');
+  egal(await actu(pg), 'P9 — Peluches. Scanne l’emplacement où elle doit aller.', 'le Terminal attend l’emplacement');
+  vrai((await gestesL(pg)).includes('entrepot:essai-lendemain:transfert:scan'), 'geste transfert:scan');
+  egal(await present(pg, '[data-pal="llibre"]'), false, 'pas de « Demander une adresse libre » sur l’emplacement de la palette elle-même');
+  await ouvrir(pg, 'B1-T03-N1-E1'); await scanEmpL(pg);
+  egal(await lignesRouges(pg), ['Ce n’est pas l’adresse de cette palette.'], 'mauvaise cible : refus en rouge');
+  egal([(await etatL(pg)).lendemain.refus, (await etatL(pg)).lendemain.transfert], [1, null], 'trace, rien enregistré');
+  await ouvrir(pg, LA.p9); await scanEmpL(pg);
+  const T = 'Transfert enregistré : P9 de B1-T03-N1-E3 vers B1-T03-N1-E2.';
+  egal([await derniere(pg), await texteFen(pg)], [T, T], 'Terminal et fenêtre « Message du système »');
+  await compris(pg);
+  L = (await etatL(pg)).lendemain;
+  egal([L.place, L.transfert.de, L.transfert.vers, L.scanAttente], [LA.p9, LA.p9Posee, LA.p9, null], 'déplacée et enregistrée');
+  egal(await croitLd(pg, 'P9'), LA.p9, 'le système la sait là');
+  vrai((await gestesL(pg)).includes('entrepot:essai-lendemain:transfert'), 'geste transfert');
+  egal(await texte(pg, '[data-pal-occ]'), 'Occupé : palette P9 · Peluches', 'P9 est à sa place');
+  await ouvrir(pg, LA.p9Posee);
+  egal(await texte(pg, '[data-pal-occ]'), 'Libre', 'son ancienne place est libre');
+  egal(await jalons(pg), Object.assign(tousLend('attente'), soirOk), 'avant « Valider mon transfert » : à faire');
+  await validerL(pg);
+  egal(await jalons(pg), tousLend('ok'), 'tout juste');
+  egal(await noteL(pg), 20, 'note : 20');
+  egal(await texte(pg, '[data-pal-verdict]'), '✓ remise en ordre', 'verdict de la carte');
+  egal([nouveaux(await gestesL(pg)).includes('valider:lendemain'), await actu(pg), await present(pg, '[data-pal="lvalider"]')], [true, 'Terminé.', false], 'validé, figé');
+  const n0 = (await etatL(pg)).lendemain.ouvertures;
+  await ouvrir(pg, LA.p9);
+  egal([(await etatL(pg)).lendemain.ouvertures, await present(pg, '[data-pal-lscan-emp]:not([disabled])'), await present(pg, '[data-pal-lscan-pal]:not([disabled])')],
+    [n0, false, false], 'regarder reste permis : rien ne compte, rien ne se scanne');
+  egal(erreurs, [], 'erreurs JS');
+});
+
+await v('Le lendemain : posée à côté sans scan → on cherche P3 (le système la croit à son adresse, elle est à côté) ; scanner une autre palette : « Rien à transférer. » ; transfert vers son adresse libérée → le lendemain tout juste, adresseLibre-P3 et scan-P3 ko', async () => {
+  await monterL(pg, { chemin: 'acote' });
+  await passer(pg);
+  egal(await chercheeL(pg), { id: 'P3', nom: 'Bougies parfumées', adresseSysteme: LA.p3, adresseReelle: LA.p3Cote }, 'on cherche SA palette');
+  egal(await croitLd(pg, 'P3'), LA.p3, 'le système la croit à son adresse donnée');
+  await ouvrir(pg, LA.p1); await scanPalL(pg, 'P1');
+  egal(await derniere(pg), 'P1 — Cahiers grand format. Rien à transférer.', 'une autre palette : rien à transférer');
+  await ouvrir(pg, LA.p3);
+  egal((await etatL(pg)).lendemain.trouvee, false, 'l’adresse donnée est vide');
+  await ouvrir(pg, LA.p3Cote);
+  egal([(await etatL(pg)).lendemain.trouvee, (await etatL(pg)).lendemain.trouveeA], [true, 3], 'trouvée à côté');
+  await scanPalL(pg, 'P3'); await ouvrir(pg, LA.p3); await scanEmpL(pg);
+  egal(await derniere(pg), 'Transfert enregistré : P3 de A1-T02-N1-E1 vers A1-T02-N1-E3.', 'Terminal');
+  await compris(pg);
+  egal(await croitLd(pg, 'P3'), LA.p3, 'le système la sait là');
+  await validerL(pg);
+  egal(await jalons(pg), Object.assign(tousLend('ok'), { 'adresseLibre-P3': 'ko', 'scan-P3': 'ko' }), 'le piège coûte le soir seulement');
+  egal(await noteL(pg), 15, 'note : 20 − 3 − 2');
+});
+
+await v('Le lendemain : P3 laissée en réception → Kevin la pose la nuit en A1-T02-N1-E2 (alleeVers), on cherche P3 ; si P1 a pris A1-T02-N1-E2, Kevin la pose au premier emplacement libre au sol ; un emplacement d’adresse libre demandée mais posée ailleurs → P3 aussi', async () => {
+  await monterL(pg, { chemin: 'allee' });
+  await passer(pg);
+  egal(await chercheeL(pg), { id: 'P3', nom: 'Bougies parfumées', adresseSysteme: LA.p3, adresseReelle: LA.allee }, 'P3 posée par Kevin à alleeVers');
+  await ouvrir(pg, LA.allee);
+  egal([await texte(pg, '[data-pal-occ]'), (await etatL(pg)).lendemain.trouvee], ['Occupé : palette P3 · Bougies parfumées', true], 'elle y est, trouvée');
+  // alleeVers déjà prise par P1 (posée là à tort) : le premier emplacement libre au sol, dans l'ordre du plan (A1-T01-N1-E2).
+  await monterL(pg, { chemin: 'allee', prerempli: { posees: { P1: LA.allee }, scan: {} } });
+  await passer(pg);
+  egal((await chercheeL(pg)).adresseReelle, 'A1-T01-N1-E2', 'repli : le premier emplacement libre au sol');
+  // Adresse libre demandée, posée à côté : le système la croit à l'adresse libre, elle est ailleurs.
+  await monterL(pg, { chemin: 'acote', prerempli: { libres: { P3: LA.p3Libre } } });
+  await passer(pg);
+  egal(await chercheeL(pg), { id: 'P3', nom: 'Bougies parfumées', adresseSysteme: LA.p3Libre, adresseReelle: LA.p3Cote }, 'demandée mais posée ailleurs : P3, attendue à l’adresse libre');
+  // Demandée, rangée là, PAS scannée : le système la croit là où elle est → c'est P9 qu'on cherche.
+  await monterL(pg, { chemin: 'scanne', prerempli: { scan: { P1: LA.p1 } } });
+  await passer(pg);
+  egal((await chercheeL(pg)).id, 'P9', 'rangée à l’adresse libre demandée, non scannée : le système la sait là, on cherche P9');
+});
+
+await v('Le lendemain : trouvée en 6 ouvertures → retrouvee ok, trouveeVite ko ; jamais trouvée → les quatre ko ; trouvée sans transfert → transfert-place et transfert-scan ko ; aucun « à faire » après « Valider mon transfert »', async () => {
+  await monterL(pg, { chemin: 'scanne' });
+  await passer(pg);
+  for (const a of ['B1-T03-N1-E1', LA.p9, 'B1-T03-N2-E1', 'B1-T03-N2-E2', 'B1-T03-N2-E3']) await ouvrir(pg, a);
+  await ouvrir(pg, LA.p9Posee);
+  egal((await etatL(pg)).lendemain.trouveeA, 6, 'trouvée à la 6e');
+  await transferer(pg, 'P9', LA.p9Posee, LA.p9);
+  await validerL(pg);
+  egal(await jalons(pg), Object.assign(tousLend('ok'), { trouveeVite: 'ko' }), '6 ouvertures > trouveEn (4)');
+  // Jamais trouvée : « Valider » dit qu'aucun transfert n'est enregistré.
+  await monterL(pg, { chemin: 'scanne' });
+  await passer(pg);
+  await bouton(pg, 'lvalider');
+  vrai((await texte(pg, '[data-pal-confirme-l]')).includes('(Aucun transfert enregistré.)'), 'la confirmation le dit');
+  await bouton(pg, 'lvaliderOui');
+  egal(await jalons(pg), Object.assign(tousLend('ko'), soirOk), 'jamais trouvée : les quatre ko, jamais « à faire »');
+  egal(await texte(pg, '[data-pal-lcarte]'), 'P9 Peluches non retrouvée ✗ transfert, scan', 'la carte après la validation');
+  // Trouvée, pas transférée.
+  await monterL(pg, { chemin: 'scanne' });
+  await passer(pg);
+  await ouvrir(pg, LA.p9Posee); await scanPalL(pg, 'P9');
+  await validerL(pg);
+  egal(await jalons(pg), Object.assign(tousLend('ok'), { 'transfert-place': 'ko', 'transfert-scan': 'ko' }), 'trouvée, pas transférée');
+  egal(Object.values(await jalons(pg)).filter((x) => x === 'attente'), [], 'aucun « à faire »');
+});
+
+await v('Le lendemain : son adresse encore prise (haut) → « Emplacement déjà occupé. » ; « Demander une adresse libre » → B1-T03-N2-E1 (niveau 2) ; scan → « À monter », transfert enregistré ; « Faire monter » → montée, tout juste ; avec `monte(db)`, validée sans monter → transfert-place ko, transfert-scan ok', async () => {
+  await monterL(pg, { chemin: 'scanne', haut: true });
+  await passer(pg);
+  await ouvrir(pg, LA.p9Posee); await scanPalL(pg, 'P9');
+  await ouvrir(pg, LA.p9);
+  egal(await texte(pg, '[data-pal-occ]'), 'Occupé : Nettoyant multi-usages 1 L', 'pas évacuée cette nuit');
+  await scanEmpL(pg);
+  egal(await lignesRouges(pg), ['Emplacement déjà occupé.'], 'refus : occupé');
+  egal((await etatL(pg)).lendemain.refus, 0, 'pas une trace (c’est la bonne adresse)');
+  await bouton(pg, 'llibre');
+  const TL = 'Adresse libre pour P9 (Peluches) : B1-T03-N2-E1.';
+  egal([await texteFen(pg), await derniere(pg)], [TL, TL], 'fenêtre et Terminal');
+  await compris(pg);
+  egal((await etatL(pg)).lendemain.libre, LA.p9Libre, 'adresse libre demandée');
+  await ouvrir(pg, LA.p9Libre); await scanEmpL(pg);
+  egal(await derniere(pg), 'Transfert enregistré : P9 de B1-T03-N1-E3 vers B1-T03-N2-E1.', 'transfert vers le niveau 2');
+  vrai((await texteFen(pg)).endsWith('Elle attend Kevin dans la zone « À monter ».'), 'la fenêtre dit qu’elle attend Kevin');
+  egal(await croitLd(pg, 'P9'), LA.p9Libre, 'le système la croit à son adresse libre (plus à son adresse donnée)');
+  await compris(pg);
+  egal([await texte(pg, '[data-pal-occ]'), (await texte(pg, '[data-pal-amonter-liste]')).includes('P9 → B1-T03-N2-E1')], ['Réservé : P9, à monter (Kevin)', true], 'réservée, à monter');
+  egal(await pg.$eval(`${Z} [data-pal="lmonter"]`, (b) => b.disabled), false, '« Faire monter » actif');
+  await bouton(pg, 'lmonter');
+  egal([(await etatL(pg)).lendemain.montee, await texte(pg, '[data-pal-amonter-liste]')], [true, 'À monter (Kevin) : aucune'], 'montée');
+  await validerL(pg);
+  egal(await jalons(pg), tousLend('ok'), 'tout juste');
+  // Avec `monte(db)` (Kevin monte quand la base le dit) : validée sans « Faire monter » → pas remise en ordre, mais le système la sait là.
+  await monterL(pg, { chemin: 'scanne', haut: true, monte: 'base' });
+  await passer(pg);
+  await ouvrir(pg, LA.p9Posee); await scanPalL(pg, 'P9'); await ouvrir(pg, LA.p9); await bouton(pg, 'llibre'); await compris(pg);
+  await ouvrir(pg, LA.p9Libre); await scanEmpL(pg); await compris(pg);
+  await bouton(pg, 'retour'); await bouton(pg, 'lvalider');
+  vrai((await texte(pg, '[data-pal-confirme-l]')).startsWith('La palette attend Kevin : elle ne comptera pas comme remise en ordre.'), 'la confirmation prévient');
+  await bouton(pg, 'lvaliderOui');
+  egal(await jalons(pg), Object.assign(tousLend('ok'), { 'transfert-place': 'ko' }), 'transfert-place ko, transfert-scan ok');
+});
+
+await v('Le lendemain : deux étapes sur l’écran du plan — la barre « Étape suivante » mène au plan le soir, puis le lendemain, sans planter', async () => {
+  await monterL(pg, { suite: true, yanis: true });
+  egal(await pg.$('#palTest [data-suite]'), null, 'sur l’écran du plan, pas de barre');
+  await pg.click('#palTest .ent-nav[data-vue="mail"]');
+  const barre = () => pg.$eval('#palTest [data-suite="entrepot"]', (b) => b.textContent.replace(/\s+/g, ' ').trim()).catch(() => '');
+  egal(await barre(), 'Étape suivante : Fin de poste : range les palettes Y aller →', 'le soir');
+  await pg.click('#palTest [data-suite-aller]');
+  egal(!!(await pg.$('#palTest [data-pe-mode="palettier"]')), true, '« Y aller » ouvre le plan');
+  await ranger(pg, 'P1', LA.p1); await valider(pg); await passer(pg);
+  await pg.click('#palTest .ent-nav[data-vue="mail"]');
+  egal(await barre(), 'Étape suivante : Le lendemain : retrouve la palette Y aller →', 'le lendemain : la seconde étape, même écran');
+  await pg.click('#palTest [data-suite-aller]');
+  egal(await pg.getAttribute(Z, 'data-pe-phase'), 'lendemain', '« Y aller » ouvre le plan du matin');
+  egal(erreurs, [], 'erreurs JS (aucune étape ne plante)');
+});
+
+await v('Le lendemain : en copie — « Valider mon rangement » ne rend pas la copie, le bouton du lendemain est là ; « Valider mon transfert » la rend ; aucun verdict ; jalons jugés', async () => {
+  await monterL(pg, { temps: 'evaluation' });
+  await ranger(pg, 'P1', LA.p1); await scanPal(pg, 'P1'); await scanEmp(pg);
+  await valider(pg);
+  egal([await pg.evaluate(() => window.__p.remis), await texte(pg, '[data-pal="phase"]')], [null, 'Le lendemain, 6 h'], 'pas de copie rendue au soir');
+  await passer(pg);
+  await ouvrir(pg, LA.p9Posee);
+  egal((await etatL(pg)).lendemain.trouvee, false, 'P3 en réception : posée par Kevin à alleeVers, c’est elle qu’on cherche');
+  await ouvrir(pg, LA.allee);
+  await transferer(pg, 'P3', LA.allee, LA.p3);
+  await validerL(pg);
+  await pg.waitForFunction(() => window.__p.remis !== null);
+  egal(await pg.$$eval(`${Z} [data-pal-verdict]`, (L) => L.length), 0, 'aucun verdict');
+  const J = await jalons(pg);
+  egal(LEND.map((id) => J[id]), ['ok', 'ok', 'ok', 'ok'], 'le lendemain jugé');
+});
+
+await v('Le lendemain : une déclaration fautive ne se charge pas (phases sans lendemain et l’inverse, phases inconnues, sans bouton, P9 = une palette de l’élève, posée occupée ou en hauteur, adresse de Kevin libre, alleeVers occupée, évacuée vide, sans Terminal, trouveEn, avec un comptage)', async () => {
+  const r = await pg.evaluate(async () => {
+    const { creerEntrepot } = await import('/core/types/entrepot.js');
+    const C = await import('/contenus/palettier-essai.js');
+    const P0 = C.lendemain();
+    const essai = (o) => { try { creerEntrepot(Object.assign({}, P0, { id: `x${Math.random()}` }, o)); return ''; } catch (e) { return e.message; } };
+    const L = (x) => ({ lendemain: Object.assign({}, P0.lendemain, x) });
+    const K = (pal, x = {}) => L({ kevin: Object.assign({}, P0.lendemain.kevin, { palette: Object.assign({}, P0.lendemain.kevin.palette, pal) }, x) });
+    return [
+      essai({}),
+      essai({ lendemain: undefined }),
+      essai({ phases: undefined }),
+      essai({ phases: [{ id: 'soir' }, { id: 'matin', bouton: 'x' }] }),
+      essai({ phases: [{ id: 'soir' }, { id: 'lendemain' }] }),
+      essai(K({ id: 'P1' })),
+      essai(K({}, { posee: 'A1-T03-N1-E1' })),
+      essai(K({}, { posee: 'B1-T03-N2-E1' })),
+      essai(K({ adresse: 'B1-T03-N1-E1' })),
+      essai(L({ nuit: { evacuees: ['A1-T02-N1-E3'], alleeVers: 'A1-T03-N1-E1' } })),
+      essai(L({ nuit: { evacuees: ['A1-T02-N1-E1'], alleeVers: 'A1-T02-N1-E2' } })),
+      essai({ terminal: undefined }),
+      essai(L({ trouveEn: 0 })),
+      essai({ comptage: { adresses: [{ adresse: 'A2-T02-N1-E2', produit: 'BOI', systeme: 26, reel: 26, couche: [2, 4], couches: 4 }] } }),
+    ];
+  });
+  egal(r[0], '', `la déclaration d’essai se charge : ${r[0]}`);
+  vrai(r[1].includes('lendemain : une déclaration'), r[1]);
+  vrai(r[2].includes('phases : seule'), r[2]);
+  vrai(r[3].includes('phases : seule'), r[3]);
+  vrai(r[4].includes('a un bouton'), r[4]);
+  vrai(r[5].includes('pas celui d’une palette de l’élève'), r[5]);
+  vrai(r[6].includes('doit être libre dans le stock'), r[6]);
+  vrai(r[7].includes('pas au niveau 1'), r[7]);
+  vrai(r[8].includes('doit être occupée le soir'), r[8]);
+  vrai(r[9].includes('alleeVers : A1-T03-N1-E1 doit être libre'), r[9]);
+  vrai(r[10].includes('A1-T02-N1-E1 est vide le soir'), r[10]);
+  vrai(r[11].includes('le transfert se fait au Terminal'), r[11]);
+  vrai(r[12].includes('trouveEn'), r[12]);
+  vrai(r[13].includes('pas avec un comptage'), r[13]);
+});
+
+await v('Le lendemain : la page d’essai (cas « Le lendemain ») tient en 1366 × 768 et 1280 × 720 sans défiler : soir validé et son bouton, plan du matin, travée et vue de près avec les deux étiquettes à scanner, fenêtre du transfert', async () => {
+  const pe = await ctx.newPage();
+  const err = [];
+  pe.on('pageerror', (e) => err.push(e.message));
+  for (const [w, h] of [[1366, 768], [1280, 720]]) {
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-palettier.html');
+    await pe.waitForSelector('.pal');
+    await pe.selectOption('#reglages select[name="cas"]', 'lendemain');
+    await pe.waitForSelector('.pal [data-pe-pal="P3"]');
+    await pe.selectOption('#reglages select[name="chemin"]', 'scanne');
+    await pe.waitForSelector('.pal [data-pal="phase"]');
+    // Les bandeaux de la page d'essai (réglages, mention, bilan des jalons) ne sont pas ceux de la séance : la mise en page se mesure sans eux.
+    await pe.addStyleTag({ content: '#reglages, #mention, #essaiNote { display: none !important }' });
+    const deborde = () => pe.evaluate(() => Math.max(0, document.documentElement.scrollHeight - innerHeight));
+    const vu = (s) => pe.evaluate((s) => { const r = document.querySelector(s).getBoundingClientRect(); return r.top >= 0 && r.bottom <= innerHeight && r.right <= innerWidth && r.height > 0; }, s);
+    egal([await vu('.pal [data-pal="phase"]'), await deborde()], [true, 0], `soir validé : le bouton visible, rien ne dépasse (${w} × ${h})`);
+    await pe.click('.pal [data-pal="phase"]'); await pe.click('.pal [data-pal="phaseOui"]');
+    await pe.waitForSelector('.pal-lendemain');
+    // Le message de Yanis pose sa carte « Nouveau message » en haut (le moteur, pour tout message) : la mise en page se mesure sans elle,
+    // comme le cas de Kevin.
+    egal(await pe.evaluate(() => (window.__essai.db.mails || []).filter((m) => m.from === 'Yanis').length), 1, 'Yanis a écrit');
+    await pe.addStyleTag({ content: '.ent-carte, .ent-carte-reste { display: none !important }' });
+    egal(await deborde(), 0, `le plan du matin tient (${w} × ${h})`);
+    await pe.click('.pal [data-pe-trav="B1-T03"]');
+    await pe.click(`.pal [data-pe-emp="${LA.p9Posee}"]`);
+    egal([await vu('.pal [data-pal-lscan-pal="P9"]'), await vu('.pal [data-pal-lscan-emp]'), await vu('.pal [data-pal="lvalider"]'), await deborde()], [true, true, true, 0], `travée et vue de près : étiquettes visibles, rien ne dépasse (${w} × ${h})`);
+    await pe.click('.pal [data-pal-lscan-pal="P9"]');
+    await pe.click(`.pal [data-pe-emp="${LA.p9}"]`);
+    await pe.click('.pal [data-pal-lscan-emp]');
+    egal([await vu('.pal [data-pal-modal-ok]'), (await pe.textContent('.pal [data-pal-modal-texte]')).replace(/\s+/g, ' ').trim()],
+      [true, 'Transfert enregistré : P9 de B1-T03-N1-E3 vers B1-T03-N1-E2.'], `la fenêtre du transfert (${w} × ${h})`);
+    await pe.click('.pal [data-pal-modal-ok]');
+  }
+  egal(err, [], 'erreurs JS');
+  await pe.close();
+});
+
 await v('Palettier : aucune erreur JavaScript', async () => { egal(erreurs, []); });
 await ctx.close();
 }

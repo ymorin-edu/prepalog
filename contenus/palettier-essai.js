@@ -14,7 +14,7 @@
 
 import { catalogueSimple } from './entreprise-commun.js';
 import { THEME } from './action.js';
-import { etapesPalettier } from '../core/types/entrepot.js';
+import { etapesPalettier, paletteCherchee } from '../core/types/entrepot.js';
 import { apresGeste } from '../core/declencheurs.js';
 
 export const MENTION = 'Essai du moteur (palettier à adresse donnée). Réels : Action et ses catégories de produits. <b>Construits pour l’exercice</b> : '
@@ -174,12 +174,78 @@ export const COMPTAGE = comptage({ verdict: 'critere' });
 export const POIDS_COMPTAGE = { 'compte-1': 5 / 3, 'compte-2': 5 / 3, 'compte-3': 5 / 3, 'compte-4': 5 / 3, 'compte-5': 5 / 3, 'compte-6': 5 / 3,
   'recompte-manque': 3, 'recompte-2': 0, 'recompte-3': 0, 'recompte-surplus': 3, 'recompte-5': 0, 'recompte-6': 0, scanAvant: 4 };
 
+// LE LENDEMAIN (lot 5, 22/10/2026) : imite ENT-8.13, « la palette d'à côté ». Le soir (jeudi, 20 h 30) : P1 au sol, adresse libre (un
+// échauffement) ; P3, dont l'adresse donnée est OCCUPÉE par une palette « à évacuer cette nuit » (Kevin pousse : « Mets-la à côté »).
+// Le même soir, Kevin pose sa palette P9 « à côté », sans scan. La nuit, les deux palettes « à évacuer » partent. Le lendemain (6 h),
+// on cherche P3 si le système la croit ailleurs, sinon P9. Écrites À LA MAIN (les tests en dépendent) :
+//   P1 Cahiers grand format 30 × 9 kg, adresse A1-T03-N1-E2 (libre) ;
+//   P3 Bougies parfumées 24 × 3 kg, adresse A1-T02-N1-E3 (stock : Peluches, à évacuer), adresse libre A1-T01-N1-E2 ; « à côté » libre :
+//     A1-T02-N1-E1 ; si elle reste en réception, Kevin la pose la nuit en A1-T02-N1-E2 (alleeVers) ;
+//   P9 (Kevin) Peluches 40 × 3 kg, adresse B1-T03-N1-E2 (stock : Nettoyant, à évacuer), posée par Kevin en B1-T03-N1-E3 (libre).
+//   `haut: true` : B1-T03-N1-E2 n'est PAS évacuée (toujours prise le matin) et P9 a une adresse libre au niveau 2, B1-T03-N2-E1 (Kevin).
+export const LENDEMAIN_AD = { p1: 'A1-T03-N1-E2', p3: 'A1-T02-N1-E3', p3Libre: 'A1-T01-N1-E2', p3Cote: 'A1-T02-N1-E1', allee: 'A1-T02-N1-E2',
+  p9: 'B1-T03-N1-E2', p9Posee: 'B1-T03-N1-E3', p9Libre: 'B1-T03-N2-E1' };
+const A = LENDEMAIN_AD;
+// `o` : verdict ('critere' | 'adresse'), haut (voir plus haut), monte (la fonction du cariste), trouveEn.
+export function lendemain(o = {}) {
+  const P = {
+    id: 'essai-lendemain', libelle: 'Plan de l’entrepôt', mode: 'palettier',
+    personnage: { nom: 'Samia', role: 'cheffe d’équipe', date: 'jeudi, 20 h 30', texte: 'Dernière demi-heure : deux palettes à ranger. Kevin est là pour la réserve.' },
+    plan: PLAN, produits: PRODUITS, stock: STOCK,
+    palettes: [
+      { id: 'P1', nom: 'Cahiers grand format', cartons: 30, kg: 9, adresse: A.p1 },
+      { id: 'P3', nom: 'Bougies parfumées', cartons: 24, kg: 3, adresse: A.p3, adresseLibre: A.p3Libre },
+    ],
+    cariste: { nom: 'Kevin', niveaux: [2, 3, 4], ...(o.monte ? { monte: o.monte } : {}) },
+    terminal: { nom: 'Terminal' },
+    phases: [{ id: 'soir' }, { id: 'lendemain', bouton: 'Le lendemain, 6 h', date: 'le lendemain, 6 h', consigne: 'Trouve la palette, puis remets-la en ordre au terminal.' }],
+    lendemain: {
+      kevin: { palette: { id: 'P9', nom: 'Peluches', cartons: 40, kg: 3, adresse: A.p9, ...(o.haut ? { adresseLibre: A.p9Libre } : {}) }, posee: A.p9Posee },
+      nuit: { evacuees: o.haut ? [A.p3] : [A.p3, A.p9], alleeVers: A.allee },
+      trouveEn: o.trouveEn || 4,
+    },
+    regles: REGLES,
+  };
+  if (o.verdict) P.verdict = o.verdict;
+  return P;
+}
+export const LENDEMAIN = lendemain({ verdict: 'critere' });
+// Poids d'essai (somme 20), à la manière d'ENT-8.13 : le bon geste face à Kevin 3, retrouver 3 + 1, remettre en ordre 2 + 3.
+export const POIDS_LENDEMAIN = { 'place-P1': 2, 'scan-P1': 2, 'adresseLibre-P3': 3, 'scan-P3': 2, pasPoseHaut: 1, charge: 1,
+  retrouvee: 3, trouveeVite: 1, 'transfert-place': 2, 'transfert-scan': 3 };
+// L'état du SOIR déjà validé, pour aller droit au lendemain (page d'essai, réglage « Chemin ») : `scanne` = le bon geste (adresse libre
+// demandée, P3 rangée là et scannée : on cherchera P9) ; `acote` = P3 posée à côté sans scan ; `allee` = P3 laissée en réception.
+export function soirPrerempli(chemin) {
+  const posees = { P1: A.p1 }, scan = { P1: A.p1 }, libres = {};
+  if (chemin === 'scanne') { posees.P3 = A.p3Libre; scan.P3 = A.p3Libre; libres.P3 = A.p3Libre; }
+  if (chemin === 'acote') posees.P3 = A.p3Cote;
+  return { enMain: null, posees, confiees: {}, signalees: {}, nouvelles: {}, tentativesHaut: 0, valide: true, at: Date.now(), premierGeste: Date.now(),
+    scan, scansRefuses: 0, libres, monteesValidation: [], phase: 'soir' };
+}
+
 // L'univers d'essai : le vrai moteur d'entreprise, dans la charte d'Action. `entrepot` : une déclaration ou une fonction
 // (graine, { niveau, copie }) ; `temps` : guidage, entraînement ou évaluation (copie) ; `poids: false` : des jalons sans poids
-// (et sans bonus), pour une déclaration d'essai qui ajoute des palettes.
-export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poids = true, kevinPousse = false } = {}) {
+// (et sans bonus), pour une déclaration d'essai qui ajoute des palettes. Lot 5 : `yanis` (son message arrive au passage au
+// lendemain, sur l'adresse que croit le système : `paletteCherchee`), `suite` (la barre « Étape suivante » : deux étapes sur l'écran
+// du plan, le soir puis le lendemain).
+export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poids = true, kevinPousse = false, yanis = false, suite = false } = {}) {
   const copie = temps === 'evaluation';
   const etapes = etapesPalettier(entrepot, { copie });
+  const idE = typeof entrepot === 'function' ? entrepot('', { niveau: 'standard', copie }).id : entrepot.id;
+  const libre = typeof entrepot === 'function' ? null : (entrepot.palettes || []).find((p) => p.adresseLibre);
+  const mail = (from, subject, text) => ({ folder: 'in', ts: Date.now(), from, fromMail: `${from.toLowerCase()}@essai.example`, to: 'Essai', subject, kind: 'text', text });
+  const declencheurs = [
+    // Lot 3 : Kevin écrit au premier « Occupé » sur la palette à adresse libre (ENT-8.13), sans rien proposer : c'est le geste de l'élève qui compte.
+    ...(kevinPousse && libre ? [{ id: 'kevin-occupe', quand: apresGeste(`entrepot:${idE}:occupe:${libre.id}`),
+      semer: () => ({ mails: [mail('Kevin', 'Elle est prise ?', 'Elle est prise ? Mets-la à côté, on verra demain. Il est tard. Kevin')] }) }] : []),
+    // Lot 5 : Yanis, au passage au lendemain, sur l'adresse où le système envoie chercher la palette.
+    ...(yanis ? [{ id: 'yanis', quand: apresGeste(`entrepot:${idE}:phase:lendemain`), semer: (prenom, db) => {
+      const c = paletteCherchee(db, entrepot);
+      return { mails: [mail('Yanis', 'C’est vide', `Bonjour ! Le terminal m’envoie en ${c ? c.adresseSysteme : '…'}. C’est vide. Je ne peux pas préparer le magasin. Tu peux regarder ? Yanis`)] };
+    } }] : []),
+  ];
+  const valide = (db) => !!((db.entrepots || {})[idE] || {}).valide;
+  const lValide = (db) => !!(((db.entrepots || {})[idE] || {}).lendemain || {}).valide;
   return {
     ENTREPRISE: { id: 'essai-palettier', nom: 'Action — essai du palettier', sousTitre: 'Entrepôt d’Ensuès-la-Redonne (13) — allées A et B', exercice: 'Essai du palettier à adresse donnée' },
     VOCAB: { unit: 'palette', unitPl: 'palettes', sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton', mailDomain: 'essai.example' },
@@ -187,16 +253,15 @@ export function universPalettier({ temps = 'guidage', entrepot = PALETTIER, poid
     SUPPLIERS: [], SUP_BY_ID: {}, CUSTOMERS: [], CM: {}, THEME,
     baseDeDepart: () => ({ v: 1, created: Date.now(), stock: {}, moves: [], mails: [], orders: [], receptions: [],
       customers: [], suppliers: [], seq: 1, _depart: [] }),
-    etapes: poids ? etapes.map((e) => (e.bonus ? e : Object.assign(e, { poids: (etapes.some((x) => x.id === 'compte-1') ? POIDS_COMPTAGE
+    etapes: poids ? etapes.map((e) => (e.bonus ? e : Object.assign(e, { poids: (etapes.some((x) => x.id === 'retrouvee') ? POIDS_LENDEMAIN
+      : etapes.some((x) => x.id === 'compte-1') ? POIDS_COMPTAGE
       : etapes.some((x) => x.id === 'adresseLibre-P8') ? (etapes.some((x) => x.id === 'scan-P1') ? POIDS_SCAN_LIBRE : POIDS_LIBRE)
       : etapes.some((x) => x.id === 'scan-P1') ? POIDS_SCAN : POIDS)[e.id] }))) : etapes.filter((e) => !e.bonus),
     exercice: 'Essai du palettier à adresse donnée',
     entrepot, copie, sansTrame: 'Tout à l’écran',
     menu: ['receptions', 'stock'],
-    // Lot 3 : Kevin écrit au premier « Occupé » sur P8 (ENT-8.13), sans rien proposer : c'est le geste de l'élève qui compte.
-    ...(kevinPousse ? { volet: { id: 'volet-essai-kevin', semer: () => ({ mails: [] }), declencheurs: [{ id: 'kevin-occupe',
-      quand: apresGeste('entrepot:essai-palettier:occupe:P8'),
-      semer: () => ({ mails: [{ folder: 'in', ts: Date.now(), from: 'Kevin', fromMail: 'kevin@essai.example', to: 'Essai', subject: 'Elle est prise ?',
-        kind: 'text', text: 'Elle est prise ? Mets-la à côté, on verra demain. Il est tard. Kevin' }] }) }] } } : {}),
+    ...(declencheurs.length ? { volet: { id: 'volet-essai-kevin', semer: () => ({ mails: [] }), declencheurs } } : {}),
+    ...(suite ? { suite: [{ vue: 'entrepot', libelle: 'Fin de poste : range les palettes', fait: valide },
+      { vue: 'entrepot', libelle: 'Le lendemain : retrouve la palette', fait: lValide }] } : {}),
   };
 }

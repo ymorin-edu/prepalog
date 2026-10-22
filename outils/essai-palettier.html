@@ -9,6 +9,8 @@
      Lot 2 : le réglage « Scan » compare deux clics (la palette, puis l'emplacement), un clic (l'emplacement seul) et aucun scan.
      Lot 3 : le cas « Rangement » a une 8e palette, P8, dont l'adresse est occupée (« Demander une adresse libre », « Kevin pousse »).
      Lot 4 : le réglage « Cas » passe au COMPTAGE à l'aveugle (6 adresses + 1 au confirmé, recompter / jamais, aide par couche).
+     Lot 5 : le cas « Le lendemain » (ENT-8.13) : le soir (P3 à l'adresse prise, Kevin pousse), puis le lendemain (retrouver, transférer) ;
+     le réglage « Chemin » pose le soir déjà validé (scanné / posé à côté / laissé en réception) pour aller droit au lendemain.
      Elle n'est liée nulle part et rien n'y est enregistré : la base vit en mémoire, un changement de réglage repart de zéro.
      Ouvrir avec `lancer.bat`, puis http://localhost:8000/outils/essai-palettier.html -->
 <base href="../">
@@ -35,11 +37,13 @@
 <body>
 <form class="essai-reglages" id="reglages">
   <b>Essai</b> (chaque réglage repart de zéro) :
-  <label>Cas <select name="cas"><option value="rangement">Rangement</option><option value="comptage">Comptage</option></select></label>
+  <label>Cas <select name="cas"><option value="rangement">Rangement</option><option value="comptage">Comptage</option><option value="lendemain">Le lendemain</option></select></label>
+  <label data-cas="lendemain" hidden>Chemin <select name="chemin"><option value="soir">jouer le soir</option><option value="scanne">l’élève a scanné (adresse libre)</option><option value="acote">l’élève a posé P3 à côté sans scan</option><option value="allee">l’élève a laissé P3 en réception</option></select></label>
+  <label data-cas="lendemain" hidden>Adresse de P9 le matin <select name="haut"><option value="">libérée la nuit</option><option value="oui">encore prise (adresse libre au niveau 2)</option></select></label>
   <label data-cas="rangement">De près <select name="aide"><option value="pose">plaque + déjà posé</option><option value="somme">plaque + déjà posé + somme</option><option value="plaque">plaque seule</option></select></label>
   <label data-cas="comptage" hidden>Recompter <select name="recompte"><option value="ecart">proposé si le compte diffère</option><option value="jamais">jamais (tout compte gardé)</option></select></label>
   <label data-cas="comptage" hidden>Aide par couche <select name="aideCouche"><option value="">non</option><option value="oui">oui (accompagné)</option></select></label>
-  <label><span data-cas="rangement">Après « Valider »</span><span data-cas="comptage" hidden>Après « Terminer »</span> <select name="verdict"><option value="critere">nom du critère faux</option><option value="adresse">critère et attendu</option><option value="">rien</option></select></label>
+  <label><span data-cas="rangement">Après « Valider »</span><span data-cas="comptage" hidden>Après « Terminer »</span><span data-cas="lendemain" hidden>Après « Valider mon transfert »</span> <select name="verdict"><option value="critere">nom du critère faux</option><option value="adresse">critère et attendu</option><option value="">rien</option></select></label>
   <label data-cas="rangement">Kevin monte <select name="monte"><option value="validation">à la validation</option><option value="message">à ta réponse (bouton)</option></select></label>
   <label data-cas="rangement">Kevin pousse (« Mets-la à côté ») <select name="pousse"><option value="oui">oui</option><option value="non">non</option></select></label>
   <label data-cas="rangement">Scan <select name="scan"><option value="palette-emplacement">deux clics (palette puis emplacement)</option><option value="emplacement">un clic (l’emplacement seul)</option><option value="aucun">aucun scan (lot 1)</option></select></label>
@@ -54,6 +58,8 @@
     Avec « à ta réponse (bouton) » : « Faire monter » envoie la demande à Kevin, puis « Kevin a reçu ta réponse » le fait monter. Valider avec des palettes encore à monter : elles ne comptent pas comme rangées.</div>
   <div data-cas="comptage" hidden><b>Parcours attendu</b> : lire une adresse de la liste <b>À compter</b> (à droite) → ouvrir sa travée, puis l’emplacement → <b>scanner</b> son étiquette (clic) → compter les cartons de la palette dessinée → <b>taper le nombre</b> au Terminal (Entrée ou « Valider ») → si le Terminal dit « Quantité différente », <b>Recompter</b> ou <b>Confirmer</b> → adresse suivante → <b>Terminer le comptage</b>.
     Six adresses : deux écarts (n° 1 il manque des cartons, n° 4 il y en a en trop), quatre justes ; une 7e au confirmé. Le nombre du système n’est jamais affiché avant « Terminer ». « Voir : enseignant » montre les attendus.</div>
+  <div data-cas="lendemain" hidden><b>Parcours attendu</b> (ENT-8.13) : <b>le soir</b>, ranger P1 (au sol) et P3, dont l’adresse A1-T02-N1-E3 est <b>prise</b> (Kevin écrit « Mets-la à côté ») → le bon geste : <b>Demander une adresse libre</b>, ranger là, scanner ; sinon poser à côté, ou laisser P3 en réception → <b>Valider mon rangement</b> → <b>Le lendemain, 6 h</b> (Yanis écrit : l’adresse où le système l’envoie est vide) → <b>ouvrir des emplacements</b> (la travée ne montre plus les noms : l’étiquette se lit de près ; chaque ouverture compte) → la palette trouvée est marquée → <b>scanner son étiquette</b> (« Scanne l’emplacement où elle doit aller ») → <b>scanner l’emplacement</b> où le système l’attend (libéré la nuit) → « Transfert enregistré » → <b>Valider mon transfert</b>.
+    <b>Chemin</b> : « jouer le soir » part de zéro ; les trois autres posent le soir déjà validé (bouton <b>Le lendemain, 6 h</b> en haut). Si l’élève a scanné, on cherche <b>P9</b>, la palette posée à côté par Kevin (B1-T03-N1-E3, le système la croit en B1-T03-N1-E2) ; sinon on cherche <b>P3</b>. <b>Adresse de P9 encore prise</b> : le transfert de P9 passe par « Demander une adresse libre » (niveau 2), puis « Faire monter les palettes ».</div>
 </form>
 <div class="essai-mention" id="mention"></div>
 <div id="essaiNote" class="essai-note" hidden></div>
@@ -61,7 +67,7 @@
 <script type="module">
 import { creerEntreprise } from './core/types/entreprise.js';
 import { jalonsEntrepot } from './core/types/entrepot.js';
-import { MENTION, palettier, comptage, universPalettier } from './contenus/palettier-essai.js';
+import { MENTION, palettier, comptage, lendemain, soirPrerempli, universPalettier } from './contenus/palettier-essai.js';
 
 document.getElementById('mention').innerHTML = MENTION;
 const form = document.getElementById('reglages');
@@ -76,7 +82,8 @@ function bilan() {
   if (!fin) { boite.hidden = true; return; }
   const { L } = jalonsEntrepot(db, P, temps);
   boite.hidden = false;
-  boite.innerHTML = `<b>Bilan des jalons</b> (${P.comptage ? 'comptage terminé' : 'rangement validé'}) : ${L.map((l) => `<span class="${l.etat === 'ok' ? 'ok' : l.etat === 'ko' ? 'ko' : 'at'}">${l.etat === 'ok' ? '✓' : l.etat === 'ko' ? '✗' : '…'} ${l.id}${l.bonus ? ' (bonus)' : ''}</span>`).join(' · ')}`;
+  const quoi = P.comptage ? 'comptage terminé' : P.lendemain ? (e.lendemain && e.lendemain.valide ? 'transfert validé' : 'rangement validé, le lendemain à faire') : 'rangement validé';
+  boite.innerHTML = `<b>Bilan des jalons</b> (${quoi}) : ${L.map((l) => `<span class="${l.etat === 'ok' ? 'ok' : l.etat === 'ko' ? 'ko' : 'at'}">${l.etat === 'ok' ? '✓' : l.etat === 'ko' ? '✗' : '…'} ${l.id}${l.bonus ? ' (bonus)' : ''}</span>`).join(' · ')}`;
 }
 function monter() {
   const f = new FormData(form);
@@ -86,14 +93,18 @@ function monter() {
   form.querySelectorAll('[data-cas]').forEach((el) => { el.hidden = el.dataset.cas !== cas; });
   const P = cas === 'comptage'
     ? comptage({ verdict: f.get('verdict') || undefined, recompte: f.get('recompte'), aideCouche: f.get('aideCouche') === 'oui' })
+    : cas === 'lendemain' ? lendemain({ verdict: f.get('verdict') || undefined, haut: f.get('haut') === 'oui' })
     : palettier({ aideCharge: f.get('aide'), verdict: f.get('verdict') || undefined, libre: true,
       terminal: f.get('scan') !== 'aucun', scan: f.get('scan'),
       monte: f.get('monte') === 'message' ? (d) => !!(d && d.essaiKevin) : undefined });
-  kevin.hidden = cas === 'comptage' || f.get('monte') !== 'message';
+  // Le lendemain : un chemin choisi pose l'état du soir déjà validé (on va droit au bouton « Le lendemain, 6 h »).
+  if (cas === 'lendemain' && f.get('chemin') !== 'soir') db.entrepots = { [P.id]: soirPrerempli(f.get('chemin')) };
+  kevin.hidden = cas !== 'rangement' || f.get('monte') !== 'message';
   const hote = document.getElementById('hote');
   const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
   boite.hidden = true;
-  const moteur = creerEntreprise(universPalettier({ temps, entrepot: P, kevinPousse: cas !== 'comptage' && f.get('pousse') === 'oui' }));
+  const moteur = creerEntreprise(universPalettier({ temps, entrepot: P, kevinPousse: cas !== 'comptage' && f.get('pousse') === 'oui',
+    yanis: cas === 'lendemain', suite: cas === 'lendemain' }));
   courant = { db, P, temps, moteur };
   moteur.rendre(neuf, {
     meta: { id: 'essai-palettier', code: 'ESSAI', titre: 'Essai du palettier', portee: 'eleve', immersif: true, temps, copie: temps === 'evaluation' },

@@ -603,5 +603,13 @@ button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
 /* Le bandeau du comptage n'a pas de cartes : la parole de la cheffe d'équipe s'élargit (moins de lignes, la page tient en 1280 × 720). */
 .pal-bandeau-compte .pe-perso{ flex-basis:380px; max-width:42% }
 .pal-compte .vt-scan .vt-ecran{ min-height:7.4em }
+/* LE LENDEMAIN du palettier (lot 5, 22/10/2026). La travée ne montre que des palettes (étiquette muette) ; la palette retrouvée
+   porte la marque vert pâle de la visite (elle dit « juste ») et la vue de près le dit en texte vert (jamais d'aplat). Avant qu'elle
+   soit trouvée, le bandeau ne la nomme pas. */
+.pal-trouvee{ align-self:flex-start; color:var(--vert); font-weight:800; border:2px solid var(--vert); border-radius:4px; padding:1px 10px }
+.pe-emp.pe-marque.pe-choisi .pe-cible{ stroke:var(--vert) }   /* la palette retrouvée, vue de près : le trait vert l'emporte sur l'accent */
+.pal-lend-rien{ color:var(--encre-douce); font-size:.88rem; padding:6px 2px }
+.pal-lcarte{ cursor:default; max-width:340px }
+.pal-bandeau-lend .pe-perso{ flex-basis:340px; max-width:38% }
 .vt-choix{ display:flex; gap:6px; margin-top:8px }
 .vt-choix .vt-btn{ flex:1 1 0; min-height:38px }

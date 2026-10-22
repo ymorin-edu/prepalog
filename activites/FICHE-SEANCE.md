@@ -2176,7 +2176,7 @@ emprunte le plan vu de dessus, la travée de face, les adresses, la charge d'un 
 `contenus/palettier-essai.js` ; page d'essai **`outils/essai-palettier.html`** (aide de charge, verdict, Kevin qui monte, niveau, copie,
 enseignant, **réglage « Scan »** : deux clics / un clic / aucun ; **réglage « Cas »** : Rangement / Comptage) ; tests : bloc **`palettier`**. Le
 scan est le **lot 2** (plus bas, « Le scan ») et le comptage le **lot 4** (plus bas, « Le comptage ») ; la travée de face a gagné au lot 4 un
-quatrième réglage, `sansPlaque` (absent = le dessin d'avant).
+quatrième réglage, `sansPlaque` (absent = le dessin d'avant), et au lot 5 un cinquième, `sansNoms` (plus bas, « Phases et le lendemain »).
 
 ```js
 entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lot 0, plus haut)
@@ -2300,7 +2300,8 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
   `signaler:<P>` — une entrée par palette déclarée, celles du confirmé comprises —, `ouvrir` (toute ouverture d'un emplacement de près ; la
   première seule est retenue par la base), `monter` (le bouton « Faire monter les palettes »), `valider`, et **avec `terminal`** `scan:<P>`
   (une entrée par palette : le second scan réussi, jamais le premier), et, **pour chaque palette à `adresseLibre`**, `occupe:<P>` et `adresseLibre:<P>`
-  (lot 3, plus haut). Ni `poser` ni `verifier` du rangement. Rien n'est publié après « Valider ».
+  (lot 3, plus haut). Ni `poser` ni `verifier` du rangement. Rien n'est publié après « Valider » (sauf, avec un `lendemain`, ses
+  propres gestes : plus bas, « Phases et le lendemain »).
 - **Jalons** (ids stables ; `attente` avant « Valider », `ok` / `ko` après, **jamais `attente` après**) :
   - `place-<P>` (palette à ranger) : posée au sol ou confiée **à son adresse** ; **signalée à tort** (son adresse était possible) = faux,
     même posée juste ensuite (décision 6 de Tristan) ; **confiée mais pas montée au moment de « Valider »** = faux (décision de Tristan,
@@ -2413,6 +2414,90 @@ entrepot: {   // ou une fonction (graine, { niveau, copie }) => déclaration (lo
     d'erreur sur une base vide (une fiche l'appelle au chargement) ; **`etatComptage(db, P, o)`** → `{ comptes: { 1: 33 }, recomptes: { 1: 1 },
     horsListe, fini }` ; `noteEntrepot(…).detail.comptage` (comptes, recomptes, propositions, hors liste, `sansScan`, fini) ; `bonnesReponses(P)`
     ajoute `compte-<rang>` : `{ adresse, produit, reel, systeme, cle? }` (l'enseignant les voit sous « Côté enseignant », l'élève jamais).
+- **Phases et le lendemain (lot 5, 22/10/2026) : retrouver une palette et la transférer** (ENT-8.13, « la palette d'à côté »). Un **seul
+  entrepôt à deux phases**, un seul état (`db.entrepots[<id>]`, clé `phase` : `'soir'` puis `'lendemain'`). Exemple complet : `lendemain()` de
+  `contenus/palettier-essai.js` ; page d'essai, réglage **« Cas : Le lendemain »** (réglage « Chemin » : jouer le soir, ou le soir déjà validé
+  — scanné / posé à côté sans scan / laissé en réception —, et « Adresse de P9 encore prise ») ; tests : section « le lendemain » du bloc `palettier`.
+
+  ```js
+  entrepot: {
+    …, mode: 'palettier', terminal: { nom: 'Terminal' }, cariste: { nom: 'Kevin', niveaux: [2, 3, 4] },   // Terminal obligatoire
+    palettes: [ { id: 'P1', … }, { id: 'P3', …, adresse: 'A1-T02-N1-E3', adresseLibre: 'A1-T01-N1-E2' } ],  // le soir (lots 1 à 3)
+    phases: [
+      { id: 'soir' },                                  // la première phase = le rangement (lots 1 à 3), tel quel
+      { id: 'lendemain', bouton: 'Le lendemain, 6 h', date?: 'le lendemain, 6 h', consigne?: 'Trouve la palette, puis remets-la en ordre au terminal.' },
+    ],
+    lendemain: {
+      kevin: { palette: { id: 'P9', nom: 'Peluches', cartons: 40, kg: 3, adresse: 'B1-T03-N1-E2', adresseLibre? }, posee: 'B1-T03-N1-E3' },
+      nuit: { evacuees: ['A1-T02-N1-E3', 'B1-T03-N1-E2'], alleeVers: 'A1-T02-N1-E2' },   // alleeVers : une adresse ou une liste
+      trouveEn: 4,        // ouvertures au plus pour `trouveeVite` (défaut 4)
+      eleve?: 'P3',       // la palette de l'élève qu'on cherchera ; défaut : la première (pour tous) à `adresseLibre`
+    },
+  }
+  ```
+  - **Contrôles** (une déclaration fautive ne se charge pas) : `phases` et `lendemain` vont ensemble ; seules les phases `soir` puis `lendemain`
+    sont écrites (lot 6 : rangement / comptage), la seconde avec un `bouton` ; pas avec un `comptage` ; `terminal` déclaré ; la palette de Kevin a
+    un id qui n'est pas celui d'une palette de l'élève, son **adresse est occupée le soir** (c'est pourquoi il la pose à côté), au sol ou à un niveau
+    du cariste ; `posee` au sol, libre, à personne ; `adresseLibre` de Kevin libre et desservie ; chaque adresse évacuée porte du stock le soir ;
+    chaque `alleeVers` au sol, libre, à personne ; `trouveEn` entier ≥ 1 ; `eleve` une palette pour tous.
+  - **Le soir** : le rangement des lots 1 à 3, inchangé, **plus** la palette de Kevin posée à `posee` **dès le soir** : l'élève voit un emplacement
+    occupé (« Occupé : Peluches »), rien de plus (ni carte, ni étiquette à scanner) ; le système la croit à son `adresse`. Après « Valider mon
+    rangement » : **aucun verdict sur les cartes** (le lendemain dira tout), la copie n'est pas rendue, et le bouton **`phases[1].bouton`** prend la
+    place de « Valider » ; un clic demande confirmation (« Passer à « Le lendemain, 6 h » ? » Oui / Non),
+    puis l'état du lendemain naît, l'écran revient au plan et le geste **`phase:lendemain`** est publié (tout l'écran est redessiné : un message qui
+    l'attend, celui de Yanis, arrive tout de suite).
+  - **La nuit** (calculée, rien n'est rangé) : les palettes du stock aux adresses `evacuees` partent ; les palettes de l'élève restent où il les a
+    laissées (posées ; confiées : Kevin monte la nuit ce qui attendait) ; une palette restée en réception (signalée comprise) est posée par Kevin, sans
+    scan, à la première adresse `alleeVers` encore libre — la palette `eleve` d'abord ; à défaut, elle va au **premier emplacement libre au sol** dans
+    l'ordre du plan ; les autres restent en réception, hors du rack.
+  - **La palette cherchée** (une seule, décision n° 10) : la palette `eleve` si **le système la croit ailleurs que là où elle est** le matin (posée à
+    côté sans demander, laissée en réception, adresse libre demandée mais posée ailleurs) ; sinon celle de Kevin (le bon geste le soir : adresse libre
+    demandée, rangée là — scannée ou non, le système la sait là). Export **`paletteCherchee(db, P, o)`** → `{ id, nom, adresseSysteme, adresseReelle }`
+    (`adresseSysteme` : là où le système envoie Yanis, vide ; `adresseReelle` : là où elle est le matin, avant tout transfert) ; **null avant le
+    lendemain**, jamais d'erreur sur une base vide (le message de Yanis le lit dans `semer(prenom, db)`, déclenché par `apresGeste('…:phase:lendemain')`).
+  - **L'écran du matin** : en haut, la cheffe d'équipe (`date`, `consigne`), « La palette à retrouver » (« Pas encore trouvée. » : **rien ne la nomme**
+    avant qu'elle soit trouvée), **« Valider mon transfert »** et « Faire monter les palettes » ; à droite, le Terminal (le même journal que le
+    soir). La **travée de face ne montre que des palettes** : réglage **`sansNoms`** de `htmlFace` (absent = le dessin d'avant) — ni nom de produit
+    ni id, une étiquette blanche muette, et « occupé » pour étiquette d'accessibilité ; le plan colore tout pareil (stock, palettes de l'élève, de
+    Kevin) ; aucun poids. **De près seulement** : « Occupé : palette P9 · Peluches » et l'étiquette de la palette (bouton « Scanner P9 · Peluches »),
+    ou « Occupé : <produit> » pour le stock (sans étiquette à scanner).
+  - **Chercher = ouvrir des emplacements** : chaque ouverture de près compte (`ouvertures`, une même adresse rouverte aussi) et publie
+    **`ouvrir:lendemain`** (le `ouvrir` du soir est déjà retenu par la base : ENT-8.13 accroche `q-rupture` ici). Ouvrir l'emplacement où est la palette
+    cherchée la **trouve** : geste **`trouvee`**, `trouveeA` = le rang de cette ouverture, marque vert pâle de la visite sur la travée (elle dit
+    « juste »), « Palette retrouvée » en texte vert de près, et la carte en haut (« trouvée en B1-T03-N1-E3 · à transférer »).
+  - **Transférer** (même ordre que le rangement : la palette, puis l'emplacement) : l'étiquette de la palette, de près → Terminal « **P9 — Peluches.
+    Scanne l’emplacement où elle doit aller.** » (geste **`transfert:scan`** ; une autre palette : « P1 — Cahiers grand format. Rien à transférer. ») ;
+    puis l'étiquette de l'emplacement cible. **Cible juste** = l'adresse où le système la croit (libérée par la nuit), ou l'**adresse libre demandée le
+    matin** : au sol, la palette y est **déplacée** ; à un niveau du cariste, elle part **« À monter »** (zone au pied de l'allée, emplacement
+    réservé, « Faire monter les palettes » la monte tout de suite ; « Valider » la monte sans fonction `monte`, comme le soir) ; dans les deux cas
+    Terminal **« Transfert enregistré : P9 de B1-T03-N1-E3 vers B1-T03-N1-E2. »**, la même phrase dans la **fenêtre « Message du système »** (+ « Elle
+    attend Kevin dans la zone « À monter ». »), geste **`transfert`**, et `ouSystemeCroit` rend la nouvelle adresse. **Cible fausse** : « Ce n’est pas
+    l’adresse de cette palette. » (rouge, trace `refus`) ; cible juste encore prise : « Emplacement déjà occupé. » (sans trace) ; sans palette scannée :
+    « Scanne d’abord la palette. ». **« Demander une adresse libre »** (de près, sur un emplacement occupé, la palette scannée) : comme au lot 3 —
+    « Pas d’autre adresse : B1-T03-N1-E2 est libre. » si l'adresse du système est libre, sinon l'`adresseLibre` de la palette (« Adresse libre pour P9
+    (Peluches) : B1-T03-N2-E1. »), sinon « Pas d’autre adresse pour P9 (Peluches). » ; Terminal et fenêtre, aucun geste. Un transfert ne se refait pas.
+    **Aucun autre geste ne déplace une palette le matin** (ni prendre, ni poser) : une palette ne peut donc jamais être transférée ailleurs qu'à une
+    cible juste.
+  - **« Valider mon transfert »** (confirmation ; « (Aucun transfert enregistré.) » s'il n'y en a pas ; avec `monte(db)` et la palette encore à
+    monter : « La palette attend Kevin : elle ne comptera pas comme remise en ordre. Valider quand même ? ») : geste **`valider:lendemain`**, tout se
+    fige (Terminal « Terminé. », regarder reste permis, plus rien ne compte), **en copie la copie est rendue ici**.
+  - **Jalons du lendemain** (ids fixes, après ceux du soir ; `attente` avant « Valider mon transfert », `ok` / `ko` après, jamais `attente` après) :
+    `retrouvee` (la palette cherchée ouverte de près) ; `trouveeVite` (retrouvée **et** `trouveeA` ≤ `trouveEn`) ; `transfert-place` (transfert
+    enregistré, la palette posée là ou confiée **et montée**) ; `transfert-scan` (transfert enregistré : le système la sait là). Une palette confiée et
+    pas montée : `transfert-place` ko, `transfert-scan` ok. Les jalons du soir restent ceux des lots 1 à 3, jugés à « Valider mon rangement ».
+    `etapesPalettier` rend tout dans l'ordre ; en copie, pareil, sans verdict.
+  - **Verdict** (`verdict`, hors copie, après « Valider mon transfert ») : sur la carte de la palette cherchée, « ✓ remise en ordre », ou
+    « ✗ transfert », « ✗ scan » (avec `'adresse'` : « · adresse attendue : … ») ; jamais trouvée : la carte dit « non retrouvée ».
+  - **Gestes** (dans `signaux`, avec `lendemain`) : `phase:lendemain`, `ouvrir:lendemain`, `trouvee`, `transfert:scan`, `transfert`, `valider:lendemain`
+    (et `monter` si « Faire monter » sert le matin).
+  - **État** : `phase` (créée au premier dessin, absente sans `phases`) et `lendemain: { ouvertures, trouvee, trouveeA, scanAttente, place, confiee,
+    montee, libre, transfert: { id, de, vers, at } | null, refus, valide, at }` (créé au passage). `etatPalettier` et le détail de la note ajoutent
+    `phase` et `lendemain: { cherchee, ouvertures, trouvee, trouveeA, libre, transfert, montee, refus, valide }` (null avant le lendemain).
+  - **Comment le matin est dessiné** : le plan et la travée lisent `M.stock` ; le temps d'un dessin du matin, la vue leur prête le **stock du matin**
+    (évacuées parties, chaque palette dessinée comme du stock sous un produit « @P » de la vue), puis remet celui du soir (`avecStock`, dans
+    `entrepot-palettier.js`). La déclaration de la séance n'est jamais modifiée (copies du stock et des produits).
+  - **La barre « Étape suivante »** accepte deux étapes sur le même écran (`suite: [{ vue: 'entrepot', … fait: soir validé }, { vue: 'entrepot', …
+    fait: lendemain validé }]`) : elle prend la première non faite (testé).
 - **Dessin** : charte de l'entreprise (Action : bleu, gardé dans la zone de travail) ; le vert plein ne dit que « juste » (texte des
   verdicts) ; palettes confiées, « À monter », emplacement vu de près : un trait ; refus en texte rouge. Tient en **1366 × 768 et
   1280 × 720 sans défiler** (plan, travée et vue de près, motifs : testé ; pendant le choix du motif, la ligne « En main » s'efface) ; la colonne de droite (300 px) garde la place du Terminal. L'enseignant voit les
