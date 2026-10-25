@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md, docs/briefs/ENT-8.15-action-preparer.md (§0), docs/briefs/ENT-8.14-action-evaluation-stock.md (§0) puis docs/briefs/ENT-8.19-action-evaluation-preparation.md en entier. Les lots 0 à 5 du chantier E-8 doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter (poids validés par Tristan le 25/10/2026)
+**Statut** : à valider par Tristan (construite le 25/10/2026, en ligne cachée aux élèves ; poids validés par Tristan le 25/10/2026)
 **Date du brief** : 25/10/2026, projet PREPALOG. **Modèle** : Sonnet. **Durée estimée** : ≈ 3 h.
 **Place dans l'ordre** : après ENT-8.18 (évaluation d'avril dans la progression). Attend les **lots 0 à 5** d'E-8 (le lot 5 : copie, un plan
 par site).
@@ -81,6 +81,21 @@ E-8 lots 0 à 5 (copie avec terminal, un plan par site) ; vue Inspection en copi
 ## 8. Tests attendus
 Bloc `action-819` (alerte 7). Deux témoins (un par site) 20/20 ; inaction 0/20 ; aucun verdict ni règle visibles avant la copie ; « Avant de
 commencer » : « Je ne sais pas » et la règle du faux ; abîmé pris sans rien dire ; somme 20. Non-régression : 8.5, 8.6, 8.10, 8.14 intacts.
+
+## 9 bis. Compte rendu de construction (25/10/2026)
+
+Fichiers : `contenus/action-ent819-donnees.js`, `contenus/action-ent819.js`, `contenus/questions/ENT-8.19.js`, `contenus/corriges/ENT-8.19.js`,
+`activites/action-evaluation-preparation.js`, bloc `action-819` (5 cas). Moteur : rien de neuf (copie, `montageSurPose`, `rendCopie: false`,
+`terminal.cariste`, `preparation({ site })` du lot 5 ; vue Inspection en copie).
+Écarts avec le brief :
+- Les magasins : UN par site, celui déjà vérifié pour ENT-8.5 (Action La Sentinelle pour Onnaing, Action Villefranche-sur-Saône pour
+  Belleville) : aucun nom de magasin non vérifié.
+- Le défaut du poste : un parmi six (extincteur absent, plan de circulation absent, fourche tordue, roue abîmée, câble de charge débranché,
+  avertisseur muet) ; l'avertisseur du n° 1 s'essaie toujours (non noté).
+- « Avant de commencer » : 8 questions, une tirée par rubrique (`q-circuit`/`q-code`, `q-abime`/`q-vide`, `q-lourd`/`q-film`, `q-nuit`/`q-retour`) ;
+  `q-code` ajoutée (banque double du tirage) ; réponses réécrites ; « ton tuteur », jamais son prénom (comme ENT-8.14). « Le droit » (L3163-1,
+  L3163-2, recopiés d'ENT-8.15) est à gauche.
+- La fiche s'ouvre après le poste, le plan après la fiche (envoi possible incomplet : personne n'est bloqué).
 
 ## 10. Critères de validation par Tristan
 - Rien n'indique juste ou faux avant la copie ; le terminal parle quand même (il guide, il ne corrige pas).

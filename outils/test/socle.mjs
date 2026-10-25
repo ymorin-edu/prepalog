@@ -447,6 +447,9 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
     'ENT-8.14': 'CAP-C1.5',
     'ENT-8.15': 'CAP-C3.1',
     'ENT-8.16': 'CAP-C3.2',
+    'ENT-8.17': 'CAP-C3.3',
+    'ENT-8.18': 'CAP-C3.1,CAP-C3.2,CAP-C3.3',
+    'ENT-8.19': 'CAP-C3.1,CAP-C3.2,CAP-C3.3',
     'ENT-10.1': 'CAP-C1.1',
     'ENT-10.2': 'CAP-C1.2',
     'ENT-10.3': 'CAP-C1.2',
@@ -826,9 +829,9 @@ await v('compétences : un groupe CAP voit ses moyennes CAP-C… avec libellé, 
     await rouvrir();
     let lu = await lireTableau();
     // Les colonnes : les compétences CAP qu'au moins une séance déclare (tableau §3 du brief), dans l'ordre du
-    // référentiel, écrites à la main. Ni CAP-C3.3 ni CAP-C3.6 (aucune séance), ni aucune colonne Bac Pro.
+    // référentiel, écrites à la main. Ni CAP-C3.6 (aucune séance ; CAP-C3.3 : ENT-8.17 depuis le 25/10/2026), ni aucune colonne Bac Pro.
     const codes = lu.th.map((x) => x.code).join(',');
-    if (codes !== 'CAP-C1.1,CAP-C1.2,CAP-C1.3,CAP-C1.4,CAP-C1.5,CAP-C3.1,CAP-C3.2,CAP-C3.4,CAP-C3.5,CAP-C3.7') throw new Error('colonnes CAP : ' + codes);
+    if (codes !== 'CAP-C1.1,CAP-C1.2,CAP-C1.3,CAP-C1.4,CAP-C1.5,CAP-C3.1,CAP-C3.2,CAP-C3.3,CAP-C3.4,CAP-C3.5,CAP-C3.7') throw new Error('colonnes CAP : ' + codes);
     const t14 = lu.th.find((x) => x.code === 'CAP-C1.4').titre;
     if (t14 !== "Contrôler les quantités et l'état de la livraison") throw new Error('libellé CAP-C1.4 : ' + t14);
     // DEC-1, QUI-6, ENT-6.1, ENT-8.1, ENT-8.3, ENT-8.5 (Action) et ENT-10.1 (Pelleau) déclarent CAP-C1.1 : une faite sur sept, 10/20.

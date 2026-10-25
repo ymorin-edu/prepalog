@@ -257,7 +257,8 @@ await v('ENT-8.2 : déclaration (CAP, CAP-C1.2, guidage, 20 points, parcours apr
     true, 'prof', './contenus/corriges/ENT-8.2.js'], 'meta ENT-8.2');
   egal(r.b, ['action-se-situer', 'ENT-8.1', ['cap'], [], ['CAP-C1.1'], 'guidage', 20, true, false], 'meta d’ENT-8.1 (la précédente : première du parcours)');
   egal(r.entreprise && [r.entreprise.nom, r.entreprise.logo], ['Action', './contenus/trames/logos/action.svg'], 'entreprise n° 8');
-  egal(r.registre, ['ENT-8.1', 'ENT-8.2', 'ENT-8.3', 'ENT-8.4', 'ENT-8.5', 'ENT-8.6', 'ENT-8.7', 'ENT-8.8', 'ENT-8.9', 'ENT-8.10', 'ENT-8.11', 'ENT-8.12', 'ENT-8.13', 'ENT-8.14'], 'au registre');   // ENT-8.3 à 8.6 ajoutées le 16/10/2026 ; 8.7 à 8.10 le 17/10 (ENT-8.10 après ENT-8.9 : tri segment par segment) ; 8.11 et 8.12 le 22/10 ; 8.13 le 22/10 ; 8.14 le 22/10
+  egal(r.registre, ['ENT-8.1', 'ENT-8.2', 'ENT-8.3', 'ENT-8.4', 'ENT-8.5', 'ENT-8.6', 'ENT-8.7', 'ENT-8.8', 'ENT-8.9', 'ENT-8.10', 'ENT-8.11', 'ENT-8.12', 'ENT-8.13', 'ENT-8.14',
+    'ENT-8.15', 'ENT-8.16', 'ENT-8.17', 'ENT-8.18', 'ENT-8.19'], 'au registre');   // ENT-8.3 à 8.6 ajoutées le 16/10/2026 ; 8.7 à 8.10 le 17/10 (ENT-8.10 après ENT-8.9 : tri segment par segment) ; 8.11 et 8.12 le 22/10 ; 8.13 le 22/10 ; 8.14 le 22/10 ; 8.15 à 8.19 le 25/10
   proche(r.somme, 16, 'somme des poids des jalons');
   egal(r.part, 4, 'part des questions');
   egal(r.parGroupe, [['Repérer mon poste', 3], ['Qui fait quoi ?', 3], ['Le planigramme', 4], ['Les documents du camion', 4], ['Rendre compte', 2]], 'points par ligne du bandeau');

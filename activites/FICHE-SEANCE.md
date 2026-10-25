@@ -1967,6 +1967,7 @@ entrepot: preparation({
   terminal: { montrer?: 'travee', cocher?: true,  // aides de l'accompagné (jamais en copie)
               montageSurPose?: true,              // les critères jugés sur ce qui est posé (évaluation)
               finir?: false, finirTexte?: '…',  // ni film ni étiquettes, une phrase à la place (ENT-8.15)
+              classe?: true,                      // accompagné : la classe des cartons sous « Où poses-tu ? » (ENT-8.17)
               cariste?: 'Léo', titre?, mots?, fin?, phraseBilan? },
   site?: { cle: 'onnaing', magasins: [{ id, nom, court }, …] },   // un AUTRE site : autre stock, ses magasins (8.19)
   personnage, regles, jalons?, libelle?,

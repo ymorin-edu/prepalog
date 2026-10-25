@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md, docs/briefs/ENT-8.15-action-preparer.md (§0), docs/briefs/ENT-8.13-action-palette-a-cote.md (l'erreur induite) puis docs/briefs/ENT-8.18-action-deux-magasins.md en entier. Les lots 0 à 4 du chantier E-8 doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter (poids validés par Tristan le 25/10/2026)
+**Statut** : à valider par Tristan (construite le 25/10/2026, en ligne cachée aux élèves ; poids validés par Tristan le 25/10/2026)
 **Date du brief** : 25/10/2026, projet PREPALOG. **Modèle** : Opus (erreur induite, deux palettes). **Durée estimée** : ≈ 4 h.
 **Place dans l'ordre** : après ENT-8.17. Attend les **lots 0 à 4** d'E-8 (le lot 4 : deux commandes, deux palettes, « Contrôler mes palettes »).
 **Décision de Tristan** (18/10/2026) : 8.18 = entraînement « deux commandes de magasins mélangées ».
@@ -128,6 +128,22 @@ Bloc `action-818` (alerte 7). Deux parcours justes (graines différentes, dont u
 inaction 0/20 ; tout sur une palette sans contrôle → grouper 0, étiquettes du bon magasin seulement là où elles le sont ; un carton déplacé au
 contrôle rend « grouper » juste ; étiquettes inversées ; confirmé, accompagné ; somme 20 ; `part` 4. Sabotage : « grouper » jugé sur la pose au
 terminal au lieu de l'état final → le parcours « suit Yanis puis corrige » tombe.
+
+## 9 bis. Compte rendu de construction (25/10/2026)
+
+Fichiers : `contenus/action-ent818-donnees.js`, `contenus/action-ent818.js`, `contenus/questions/ENT-8.18.js`, `contenus/corriges/ENT-8.18.js`,
+`activites/action-deux-magasins.js`, bloc `action-818` (6 cas, dont « suit Yanis puis corrige tout au contrôle » à 20/20). Moteur : rien de neuf.
+Écarts avec le brief :
+- « Prélever » : le moteur sépare la ligne abîmée (`abime-dit`), il reste 7 lignes normales à 0,25 ; le quart de point manquant va à « aucun carton
+  abîmé sur une palette » (`rienAbime`, 0,25), dans le même bloc. Calage, poids, hauteur : 0,5 par critère et par palette.
+- Pas de « Corriger » : tous les jalons sont jugés en continu ; le contrôle, le film et les étiquettes restent ouverts après « Vérifier mes
+  palettes » (le moteur refuse `correction` sans écran à rouvrir). La préparation au terminal reste figée.
+- Le confirmé n'a pas les 10 lignes bonus (le moteur veut les mêmes jalons à tous les niveaux) ; il est comme le standard.
+- La réponse à Yanis part du message de Yanis (« Répondre ») ; elle n'a aucun jalon, la ligne du fond est jugée par `q-yanis`.
+- Samia, à la fin : « Merci. Deux magasins, deux palettes, deux listes : c'est le métier. Lundi, je te regarde préparer. » (le brief disait « zéro
+  erreur au quai », un verdict).
+- Le nombre de cartons par magasin n'est pas borné à 12-20 (tirage partagé d'E-8, 3 à 6 par ligne) ; la commande a au moins 2 lourds et 2 fragiles.
+- « Avant de commencer » : `k-grouper`, `k-pour-qui`, `k-controle`, `img-fragile` ajoutées (banque double du tirage).
 
 ## 10. Critères de validation par Tristan
 - Le message de Yanis tente vraiment (il arrive au bon moment, notification visible).

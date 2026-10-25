@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md, docs/briefs/ENT-8.15-action-preparer.md (§0) puis docs/briefs/ENT-8.17-action-conditionner.md en entier. Les lots 0 à 3 du chantier E-8 doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter (poids validés par Tristan le 25/10/2026)
+**Statut** : à valider par Tristan (construite le 25/10/2026, en ligne cachée aux élèves ; poids validés par Tristan le 25/10/2026)
 **Date du brief** : 25/10/2026, projet PREPALOG. **Modèle** : Sonnet. **Durée estimée** : ≈ 3 h.
 **Place dans l'ordre** : après ENT-8.16. Attend les **lots 0 à 3** d'E-8 (le lot 2 porte « Où poses-tu ? » et l'ordre de pose).
 
@@ -122,6 +122,25 @@ E-8 lots 0 à 3 (lot 2 surtout). Les trois cartons dessinés de la fiche : un SV
 Bloc `action-817` (alerte 7). Parcours juste (deux graines) 20/20 ; inaction 0/20 ; tout posé dans l'ordre du terminal → au moins un critère de
 calage faux ; un carton resté à côté → critères de montage non jugés ; film 2 tours ; étiquettes sur une seule face ; confirmé (7e carton) ;
 accompagné ; somme 20 ; `part` 4. Sabotage : critères lus sur l'ordre de prélèvement au lieu de l'ordre de pose → le cas « à côté » tombe.
+
+## 9 bis. Compte rendu de construction (25/10/2026)
+
+Fichiers : `contenus/action-ent817-donnees.js`, `contenus/action-ent817.js`, `contenus/questions/ENT-8.17.js`, `contenus/corriges/ENT-8.17.js`,
+`activites/action-conditionner.js`, bloc `action-817` (7 cas). Moteur : `terminal.classe: true` (l'accompagné voit la classe des cartons sous
+« Où poses-tu ? »).
+Écarts avec le brief :
+- Le confirmé n'a pas le 7e carton bonus (le moteur veut les mêmes jalons à tous les niveaux) ; il a « Les règles » repliées.
+- La commande a **au moins** 2 lourds (parfois 3, et alors 1 normal) : c'est le tirage partagé d'E-8 (profil `p817`).
+- Poids et hauteur sont toujours justes quand ils sont jugés (la bonne palette tient toujours, l'ordre de pose ne change ni le poids ni, ici, la
+  hauteur) : ces 2 points récompensent une palette complète.
+- Fiche « Lire un carton » : trois cartons numérotés (un verre, deux flèches, rien), leur poids écrit sur chacun (le lourd : 14 à 22 kg, les
+  autres 3 à 8 kg) et une phrase « Un carton de plus de 10 kg est lourd. » ; l'ordre est tiré par élève.
+- Samia écrit « Merci. Demain, deux magasins à la fois. » (le brief disait « Belle palette », un verdict alors que la palette peut être fausse).
+- `q-etiquette` part à « Vérifier ma préparation » (la fiche vient avant la palette) ; le rattrapage du moteur la pose souvent dès que tous les
+  jalons sont jugés, c'est-à-dire juste après les étiquettes.
+- « Avant de commencer » : `k-acote`, `k-etiquette`, `img-haut` ajoutées (banque double du tirage).
+- « Corriger » rouvre la fiche ; la palette se remonte tant qu'on veut (reposer, film, étiquettes, vérifier encore) ; les lignes dites au
+  terminal ne se redisent pas.
 
 ## 10. Critères de validation par Tristan
 - « À côté, je les pose après » se comprend tout de suite ; la palette se voit monter.

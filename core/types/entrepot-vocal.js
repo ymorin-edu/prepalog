@@ -15,6 +15,7 @@
 //     cariste?: 'Kevin',                              // celui qui descend la réserve (lot 5 : Léo ou Hugo dans l'autre site)
 //     montageSurPose?: true,                          // lot 5 : les critères jugés sur ce qui est posé (voir LOT 5 plus bas)
 //     finir?: false, finirTexte?: '…',                // ENT-8.15 : ni film ni étiquettes à l'écran, une phrase à la place
+//     classe?: true,                                  // ENT-8.17, l'accompagné : sous « Où poses-tu ? », la classe du carton (lourd, fragile)
 //   },
 //   codes: { 'A1-T03-N1-E1': '47', … },             // le CODE DE CONTRÔLE de chaque emplacement de la commande (2 à 4 chiffres)
 //   produits: { LES: { …, voix?: 'Lessive liquide, trois litres' } },   // `voix` : ce que dit le terminal (défaut : `nom`)
@@ -173,10 +174,11 @@ export function compilerVocal(M, err, libs) {
   if (!jalons.some((j) => j.ligne)) err('jalons : il faut le type « lignes » (un jalon par ligne)');
   // `terminal.finir: false` (ENT-8.15, le film et les étiquettes viennent en 8.17) : la palette se finit sans geste, `finirTexte` le dit.
   if (D.finir !== undefined && D.finir !== false) err('terminal.finir : ne prend que la valeur false');
+  if (D.classe !== undefined && typeof D.classe !== 'boolean') err('terminal.classe : true ou false');
   if (D.finir === false && jalons.some((j) => j.critere === 'film' || j.critere === 'etiquettes')) err('terminal.finir: false : pas de jalon film ni etiquettes');
   if (D.finir === false && DEST) err('terminal.finir: false ne va pas avec deux magasins');
   M.jalons = jalons.map((j) => Object.assign({ type: j.critere || j.cas || 'ligne' }, j));
-  M.vocal = { lignes, mots, palettes, court, abimes, deux: !!DEST, cocher: !!D.cocher, titre: D.titre || 'Préparation', montrer: D.montrer || '', surPose: !!D.montageSurPose, cariste,
+  M.vocal = { lignes, mots, palettes, court, abimes, deux: !!DEST, cocher: !!D.cocher, titre: D.titre || 'Préparation', montrer: D.montrer || '', surPose: !!D.montageSurPose, cariste, classe: !!D.classe,
     sansFinir: D.finir === false, finirTexte: D.finirTexte || 'La palette sera filmée et étiquetée par un collègue.',
     textes: { fin: D.fin || 'Commande terminée.', codeFaux: D.codeFaux || 'Code faux. Vérifie l’emplacement.',
       // « Emplacement vide » : le terminal appelle le cariste (lot 3) ; les autres mots, la phrase du terminal.
@@ -493,7 +495,8 @@ export function creerVocal(P, M, opts, O) {
     let h = '<section class="pk-montage pvc-montage" data-pvc-montage aria-label="La palette">';
     if (!fin && T.phase === 'pose') {
       const l = ligneEnCours(e), n = T.reponses[l.id];
-      h += `<div class="pk-question" data-pvc-question>Où poses-tu ${ech(quoi(l.produit, n))} ?</div><div class="pe-petit">De près, sélectionne les cartons, puis « Poser sur la palette » ou « À côté », en haut à gauche de la pile.</div>`;
+      const cl = M.classe(l.produit), CL = { lourd: n > 1 ? 'lourds' : 'lourd', fragile: n > 1 ? 'fragiles' : 'fragile', normal: 'ni lourds ni fragiles' };
+      h += `<div class="pk-question" data-pvc-question>Où poses-tu ${ech(quoi(l.produit, n))} ?</div>${V.classe && !COPIE ? `<div class="pe-petit" data-pvc-classe="${cl}">${n > 1 ? 'Ces cartons sont' : 'Ce carton est'} : <b>${cl === 'normal' && n <= 1 ? 'ni lourd ni fragile' : CL[cl]}</b>.</div>` : ''}<div class="pe-petit">De près, sélectionne les cartons, puis « Poser sur la palette » ou « À côté », en haut à gauche de la pile.</div>`;
     } else if (!fin) h += '<div class="pe-petit">Suis le terminal : va à l’emplacement, lis le code sur l’étiquette, sélectionne les cartons, dis la quantité au terminal, puis pose.</div>';
     if (cote.length) {
       h += `<div class="pk-cote" data-pvc-cote><b>À côté :</b> ${cote.map((g, k) => `<button type="button" class="pk-objet${ui.main === k ? ' pk-main' : ''}" data-pvc-objet="${k}"
