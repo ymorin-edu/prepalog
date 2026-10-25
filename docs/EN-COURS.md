@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| E-8 lot 0 (préparation tirée par élève, fil « Construire la préparation vocale Action ») | `core/types/entrepot.js` (mode `preparation`), `contenus/action-prepa-donnees.js` (neuf), `outils/test/preparation-vocale.mjs` (neuf), `outils/test.mjs` (BLOCS, GROUPES) | 25/10/2026 14 h 30 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
