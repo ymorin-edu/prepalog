@@ -58,6 +58,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'action-812',
   'action-813',
   'action-814',
+  'action-815',
   'preparation-vocale',
   'chep-91',
   'chep-92',
@@ -114,7 +115,7 @@ const GROUPES = {
   6: ['quiz', 'inventaire', 'tirage-niveaux', 'decathlon', 'localiser', 'action-89', 'action-811', 'chep-94', 'preparation-vocale'],
   7: ['carte', 'fb-6.2', 'fb-6.8', 'courriel', 'pelleau-101', 'pelleau-108', 'pelleau-110', 'palettier'],
   8: ['planning', 'amenagements', 'dialogue', 'inspection', 'action-810', 'action-814', 'chep-92',
-    'pelleau-104', 'pelleau-106'],
+    'pelleau-104', 'pelleau-106', 'action-815'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne
 // tournerait pas sur GitHub (ou deux fois), sans que rien ne le dise.

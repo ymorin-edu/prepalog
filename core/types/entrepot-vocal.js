@@ -14,6 +14,7 @@
 //     montrer?: 'travee',                             // l'aide de l'élève accompagné : la travée de la ligne en cours, cernée sur le plan
 //     cariste?: 'Kevin',                              // celui qui descend la réserve (lot 5 : Léo ou Hugo dans l'autre site)
 //     montageSurPose?: true,                          // lot 5 : les critères jugés sur ce qui est posé (voir LOT 5 plus bas)
+//     finir?: false, finirTexte?: '…',                // ENT-8.15 : ni film ni étiquettes à l'écran, une phrase à la place
 //   },
 //   codes: { 'A1-T03-N1-E1': '47', … },             // le CODE DE CONTRÔLE de chaque emplacement de la commande (2 à 4 chiffres)
 //   produits: { LES: { …, voix?: 'Lessive liquide, trois litres' } },   // `voix` : ce que dit le terminal (défaut : `nom`)
@@ -170,8 +171,13 @@ export function compilerVocal(M, err, libs) {
     else err(`jalon de type « ${t} » : avec le terminal, les types sont lignes, abime, vide, rienAbime, grouper, ${CRITERES.join(', ')}`);
   });
   if (!jalons.some((j) => j.ligne)) err('jalons : il faut le type « lignes » (un jalon par ligne)');
+  // `terminal.finir: false` (ENT-8.15, le film et les étiquettes viennent en 8.17) : la palette se finit sans geste, `finirTexte` le dit.
+  if (D.finir !== undefined && D.finir !== false) err('terminal.finir : ne prend que la valeur false');
+  if (D.finir === false && jalons.some((j) => j.critere === 'film' || j.critere === 'etiquettes')) err('terminal.finir: false : pas de jalon film ni etiquettes');
+  if (D.finir === false && DEST) err('terminal.finir: false ne va pas avec deux magasins');
   M.jalons = jalons.map((j) => Object.assign({ type: j.critere || j.cas || 'ligne' }, j));
   M.vocal = { lignes, mots, palettes, court, abimes, deux: !!DEST, cocher: !!D.cocher, titre: D.titre || 'Préparation', montrer: D.montrer || '', surPose: !!D.montageSurPose, cariste,
+    sansFinir: D.finir === false, finirTexte: D.finirTexte || 'La palette sera filmée et étiquetée par un collègue.',
     textes: { fin: D.fin || 'Commande terminée.', codeFaux: D.codeFaux || 'Code faux. Vérifie l’emplacement.',
       // « Emplacement vide » : le terminal appelle le cariste (lot 3) ; les autres mots, la phrase du terminal.
       comprisMot: (n, lib, combien) => (combien ? `Compris : ${n} ${lib.toLowerCase()}.` : `Compris : ${lib.toLowerCase()}. Réserve demandée au cariste.`) },
@@ -501,7 +507,10 @@ export function creerVocal(P, M, opts, O) {
         h += `<div class="pk-poser">${bouton('data-pvc="controle"', 'b:controle', ui.controle ? 'Fermer le contrôle' : 'Contrôler mes palettes', cote.length > 0, ui.controle ? 'btn' : 'btn btn-p')}</div>`;
         if (ui.controle) h += `<div class="pe-petit" data-pvc-aide-ctl>${ui.dep ? 'Clique l’autre palette pour y mettre ce groupe.' : 'Compare chaque palette à sa liste. Un groupe mal placé : clique-le, puis l’autre palette.'}</div>`;
       } else h += `<div class="pk-reposer">${V.palettes.map((pl) => bouton(`data-pvc-reposer="${pl.p}"`, `reposer:${pl.p}`, '↶ Reposer le dernier', !(e.palettes[pl.p] || []).length)).join('')}</div>`;
-      h += `<div class="pe-finir pk-finir"><b>Avant le quai</b>${V.palettes.map((pl) => `<div class="pk-fin-pal" data-pvc-fin="${pl.p}">${V.deux ? `<b>Palette ${ech(pl.etiquette)}</b>` : ''}
+      // `terminal.finir: false` (ENT-8.15) : ni film ni étiquettes, une phrase à la place (« Yanis filme et étiquette ta palette. »).
+      if (V.sansFinir) h += `<div class="pe-finir pk-finir"><b>Avant le quai</b><p class="pe-petit" data-pvc-sans-finir>${ech(V.finirTexte)}</p>
+        <div class="pe-boutons">${COPIE ? boutonsCopie(e, api, cote) : bouton('data-pvc="verifier"', 'b:verifier', 'Vérifier ma préparation', cote.length > 0, 'btn btn-p')}</div></div>`;
+      else h += `<div class="pe-finir pk-finir"><b>Avant le quai</b>${V.palettes.map((pl) => `<div class="pk-fin-pal" data-pvc-fin="${pl.p}">${V.deux ? `<b>Palette ${ech(pl.etiquette)}</b>` : ''}
           <label>Film étirable : <select data-pvc-film="${pl.p}" data-pe-cle="film:${pl.p}"><option value="">— tours —</option>${[1, 2, 3, 4, 5, 6].map((n) => `<option value="${n}" ${String((e.film || [])[pl.p]) === String(n) ? 'selected' : ''}>${n}</option>`).join('')}</select> tours</label>
           <div class="pe-etq">${V.deux ? `<label>Étiquette du magasin : <select data-pvc-etiqmag="${pl.p}" data-pe-cle="etiqmag:${pl.p}"><option value="">— magasin —</option>${
             V.palettes.map((q) => `<option value="${q.p}" ${String((e.etiqMag || [])[pl.p]) === String(q.p) ? 'selected' : ''}>${ech(q.etiquette)}</option>`).join('')}</select></label> sur : ` : `Étiquette « ${ech(pl.etiquette)} » sur : `}${ETIQ_COTES.map(([k, lib]) => `<label><input type="checkbox" data-pvc-etiq="${pl.p}:${k}" data-pe-cle="etiq:${pl.p}:${k}" ${((e.etiq || [])[pl.p] || {})[k] ? 'checked' : ''}> ${lib}</label>`).join('')}</div></div>`).join('')}
@@ -694,7 +703,7 @@ export function creerVocal(P, M, opts, O) {
       racine.querySelectorAll('[data-pvc-poser]').forEach((b) => activer(b, () => {
         const d = b.dataset.pvcPoser;
         const evt = poserLigne(e, d === 'cote' ? 'cote' : +d, sig);
-        ui.focus = evt === 'fin' ? ((e.cote || []).length ? 'objet:0' : 'film:0') : null;
+        ui.focus = evt === 'fin' ? ((e.cote || []).length ? 'objet:0' : V.sansFinir ? 'b:verifier' : 'film:0') : null;
         sauver();
         if (evt === 'fin') tout(); else redessiner();
       }));
@@ -705,7 +714,7 @@ export function creerVocal(P, M, opts, O) {
       const vers = (p) => {
         const g = poserGroupe(e, p);
         if (g) sig(`pose:${M.classe(g.k)}`);
-        fait((e.cote || []).length ? 'objet:0' : 'film:0');
+        fait((e.cote || []).length ? 'objet:0' : V.sansFinir ? 'b:verifier' : 'film:0');
       };
       racine.querySelectorAll('[data-pvc-vers]').forEach((b) => activer(b, () => vers(+b.dataset.pvcVers)));
       racine.querySelectorAll('[data-pvc-pal][role="button"]').forEach((g) => activer(g, () => vers(+g.dataset.pvcPal)));

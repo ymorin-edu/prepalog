@@ -1966,6 +1966,7 @@ entrepot: preparation({
   abimes: 1, vides: 1, magasins: 2,               // kgMax, hMax, magasin ; magasins: 2 = deux magasins (8.18)
   terminal: { montrer?: 'travee', cocher?: true,  // aides de l'accompagné (jamais en copie)
               montageSurPose?: true,              // les critères jugés sur ce qui est posé (évaluation)
+              finir?: false, finirTexte?: '…',  // ni film ni étiquettes, une phrase à la place (ENT-8.15)
               cariste?: 'Léo', titre?, mots?, fin?, phraseBilan? },
   site?: { cle: 'onnaing', magasins: [{ id, nom, court }, …] },   // un AUTRE site : autre stock, ses magasins (8.19)
   personnage, regles, jalons?, libelle?,

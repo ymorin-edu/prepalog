@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md puis docs/briefs/ENT-8.15-action-preparer.md en entier. Les lots 0, 1 et 2 du chantier E-8 doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter (poids validés par Tristan le 25/10/2026) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à valider par Tristan (construite le 25/10/2026, en ligne cachée aux élèves ; poids validés par Tristan le 25/10/2026) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 25/10/2026, projet PREPALOG (cadrage de C3.1 à C3.3 chez Action, demande de Tristan : « tu vas cadrer 8.15 à 8.19, tu me
 poses que les questions importantes »).
 **Modèle** : **Opus** (séance nouvelle). **Durée estimée** : ≈ 4 h, après les lots 0 à 2 d'E-8. Ce qui prend le temps : la scène d'inspection
@@ -202,6 +202,21 @@ contrôle ».
 - L'élève comprend tout de suite qu'il suit **la voix** et qu'il n'a pas de bon papier.
 - Le code de contrôle se trouve sans aide sur la lisse.
 - 45 minutes suffisent.
+
+## 10 bis. Compte rendu de construction (25/10/2026)
+
+Fichiers : `contenus/action-ent815-donnees.js`, `contenus/action-ent815.js`, `contenus/questions/ENT-8.15.js`, `contenus/corriges/ENT-8.15.js`,
+`activites/action-preparer.js`, bloc `action-815` (8 cas). Moteur : `terminal.finir: false` + `finirTexte` (`core/types/entrepot-vocal.js`) : ni
+film ni étiquettes à l'écran, la phrase « Yanis filme et étiquette ta palette. ».
+Écarts avec le brief :
+- **Les deux défauts** : un au quai (extincteur ou plan de circulation) et un sur le transpalette n° 1 (fourche, roue, câble de charge — l'état
+  « batterie débranchée » du kit —, avertisseur muet), comme Pelleau 10.4 : les jalons de l'inspection se lisent par place.
+- **Le confirmé n'a pas de 6e ligne bonus** : le moteur veut les mêmes jalons à tous les niveaux (`etapesEntrepot`).
+- **Un défaut signalé APRÈS l'arrêt ne compte pas** (règle de la vue Inspection : « signalé avant de prendre le poste »).
+- « Corriger » rouvre la fiche et le message, pas la préparation (les lignes sont dites au terminal).
+- Le départ du camion est tiré de 7 h 00 à 8 h 45 (tirage partagé d'E-8), le total de cartons de 16 à 29 (22 en moyenne) au lieu de 18 à 26.
+- « Avant de commencer » : trois notions ajoutées (`k-terminal`, `k-mission`, `img-terminal`) : le moteur veut une banque double du tirage.
+- Textes de loi recopiés le 25/10 sur code.travail.gouv.fr : L3163-1 en entier, L3163-2 première phrase.
 
 ## 11. Questions ouvertes
 1. **Tranché par Tristan (25/10)** : poids du §5. **Proposé** : questions au fil, retours et banque « Avant de commencer » ; produits fragiles ; heures.
