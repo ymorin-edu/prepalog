@@ -99,7 +99,8 @@ export function lignesDuTerminal(lignes, T) {
 }
 
 // Ce qui reste à prendre sur une ligne de préparation (la quantité demandée moins ce qui a été signalé).
-const reste = (T, l) => l.prends - (((T.exceptions || {})[l.id] || {}).n || 0);
+// `surPlace` (chantier E-8, 25/10 : le carton abîmé se remplace sur la même pile) : signaler ne retire rien, le terminal redit la quantité.
+const reste = (T, l) => l.prends - (l.surPlace ? 0 : ((T.exceptions || {})[l.id] || {}).n || 0);
 
 // Parmi les voix du navigateur, une voix française installée sur le poste (jamais une voix qui passe par le réseau), ou null.
 export function choisirVoix(voix) {

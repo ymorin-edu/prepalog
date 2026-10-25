@@ -92,9 +92,9 @@ export const PLAN = {
 // LE STOCK DE DÉPART, le même pour toute la classe (règle fixe, graine constante) : chaque emplacement du picking porte une palette pleine
 // (chaque produit sur 6 ou 7 emplacements, de quoi tirer une ligne de remplacement) ; en réserve, 0 à 3 palettes par niveau, la plaque
 // respectée, et chaque produit au moins deux fois (de quoi descendre une réserve).
-function fabriquerStock() {
+function fabriquerStock(cle = '') {
   for (let essai = 0; essai < 50; essai++) {
-    const H = hasard(`action-prepa|stock|${essai}`);
+    const H = hasard(cle ? `action-prepa|stock|${cle}|${essai}` : `action-prepa|stock|${essai}`);
     const S = {};
     const ordre = H.melanger(PICKING_TOUS);
     ordre.forEach((a, i) => { S[a] = CODES[i % CODES.length]; });
@@ -110,12 +110,20 @@ function fabriquerStock() {
     const enReserve = (k) => Object.entries(S).filter(([a, x]) => x === k && decoupe(a).n > 1).length;
     if (CODES.every((k) => enReserve(k) >= 2)) return Object.fromEntries(Object.entries(S).map(([a, k]) => [a, { produit: k, kg: poidsPleine(k) }]));
   }
-  throw new Error('action-prepa : aucun stock de départ conforme');
+  throw new Error(`action-prepa : aucun stock de départ conforme${cle ? ` (site ${cle})` : ''}`);
 }
 export const STOCK = fabriquerStock();
 export const produitEn = (a) => (STOCK[a] ? STOCK[a].produit : null);
 export const emplacementsDe = (k) => PICKING_TOUS.filter((a) => produitEn(a) === k);
 export const aReserve = (k) => Object.keys(STOCK).some((a) => decoupe(a).n > 1 && STOCK[a].produit === k);
+// UN AUTRE SITE (chantier E-8 lot 5, ENT-8.19 : « préparer dans un entrepôt que tu ne connais pas ») : le même plan, un AUTRE stock de départ
+// (graine du site `cle`) et SES magasins. `preparation({ site: { cle, magasins: [{ id, nom, court }, …] } })`. Sans `site` : Ensuès.
+function baseSite(cle, magasins) {
+  const S = cle ? fabriquerStock(cle) : STOCK;
+  const produitEn_ = (a) => (S[a] ? S[a].produit : null);
+  return { STOCK: S, produitEn: produitEn_, emplacementsDe: (k) => PICKING_TOUS.filter((a) => produitEn_(a) === k),
+    aReserve: (k) => Object.keys(S).some((a) => decoupe(a).n > 1 && S[a].produit === k), MAGASINS: magasins || MAGASINS };
+}
 
 // ─────────────────────────────────────────────────────────────── les magasins (réels, Action dans le Sud-Est ; la livraison depuis Ensuès : construite)
 export const NIMES = { id: 'nimes', nom: 'Nîmes Cap Costières', court: 'Nîmes' };
@@ -129,6 +137,7 @@ export const MAGASINS = [
   { id: 'chateauneuf', nom: 'Châteauneuf-les-Martigues', court: 'Châteauneuf' },
   NIMES,
 ];
+const ENSUES = baseSite('', null);
 export const MENTION_PREPA = 'L’entrepôt, les adresses, les commandes et les codes de contrôle sont construits pour l’exercice. Action et Geodis ne '
   + 'publient pas l’organisation de l’entrepôt d’Ensuès ni la liste des magasins qu’il livre.';
 
@@ -154,9 +163,10 @@ const DEFAUTS = { lignes: 5, fragiles: 0, lourds: 1, abimes: 0, vides: 0, ordre:
 // DEUX MAGASINS (`magasins: 2`, chantier E-8 lot 4, ENT-8.18) : Nîmes et un autre, dans un ordre tiré ; `lignes` lignes, la moitié pour chacun
 // (`pour` : 0 ou 1) ; un produit COMMUN aux deux, sur deux lignes consécutives à la même adresse ; chaque palette tient dans les limites.
 export function tirerCommande(o, h) {
+  const B = o.B || ENSUES;
   const deux = o.magasins === 2;
   const n = deux ? o.lignes - 1 : o.lignes;
-  const magasin = o.magasin ? MAGASINS.find((m) => m.id === o.magasin) : h.choisir(deux ? MAGASINS.filter((m) => m !== NIMES) : MAGASINS);
+  const magasin = o.magasin ? B.MAGASINS.find((m) => m.id === o.magasin) : h.choisir(deux ? B.MAGASINS.filter((m) => m !== NIMES) : B.MAGASINS);
   // Les produits : `fragiles` fragiles, au moins `lourds` lourds, le reste parmi tous les autres ; tous différents.
   const pris = h.prendre(FRAGILES, o.fragiles);
   const autres = CODES.filter((k) => classeDe(k) !== 'fragile');
@@ -173,7 +183,7 @@ export function tirerCommande(o, h) {
       if (++pas > 5000) throw new Error('circuit trop court');
       if (!reste.length) return gi + 1 >= groupes.length ? [] : chercher(gi + 1, groupes[gi + 1], apres);
       for (const produit of h.melanger(reste)) {
-        for (const a of h.melanger(emplacementsDe(produit).filter((x) => rangCircuit(x) > apres))) {
+        for (const a of h.melanger(B.emplacementsDe(produit).filter((x) => rangCircuit(x) > apres))) {
           const suite = chercher(gi, reste.filter((k) => k !== produit), rangCircuit(a));
           if (suite) return [{ a, produit }, ...suite];
         }
@@ -183,7 +193,7 @@ export function tirerCommande(o, h) {
     lignes = chercher(0, groupes[0], -1);
     if (!lignes) throw new Error('circuit trop court');
   } else {
-    lignes = pris.map((produit) => ({ a: h.choisir(emplacementsDe(produit)), produit }));
+    lignes = pris.map((produit) => ({ a: h.choisir(B.emplacementsDe(produit)), produit }));
   }
   lignes.sort((x, y) => rangCircuit(x.a) - rangCircuit(y.a));
   let commun = -1;
@@ -200,9 +210,9 @@ export function tirerCommande(o, h) {
   const estCommun = (i) => deux && (i === commun || i === commun + 1);
   // Le picking des lignes : de quoi servir (au moins q + minimum), sauf la ligne en rupture (vide, sous son minimum).
   const idx = lignes.map((_, i) => i);
-  const vides = h.prendre(idx.filter((i) => aReserve(lignes[i].produit) && !estCommun(i)), o.vides);
+  const vides = h.prendre(idx.filter((i) => B.aReserve(lignes[i].produit) && !estCommun(i)), o.vides);
   // Une ligne de remplacement possible : un autre emplacement du même produit, plus loin dans le circuit, avant la ligne suivante.
-  const remplacantsDe = (i) => emplacementsDe(lignes[i].produit).filter((a) => a !== lignes[i].a && rangCircuit(a) > rangCircuit(lignes[i].a)
+  const remplacantsDe = (i) => B.emplacementsDe(lignes[i].produit).filter((a) => a !== lignes[i].a && rangCircuit(a) > rangCircuit(lignes[i].a)
     && (!lignes[i + 1] || rangCircuit(a) < rangCircuit(lignes[i + 1].a)) && !lignes.some((m) => m.a === a));
   const abimes = h.prendre(idx.filter((i) => !estCommun(i) && !vides.some((v) => Math.abs(v - i) <= 1) && remplacantsDe(i).length), o.abimes);
   if (abimes.length < o.abimes) throw new Error('aucune ligne de remplacement');
@@ -238,12 +248,13 @@ export function tirerCommande(o, h) {
 
 // Les contraintes d'équité, en clair (liste vide = jeu conforme). Rejouées sur 300 graines par le bloc `preparation-vocale`.
 export function verifierCommande(o, jeu) {
+  const B = o.B || ENSUES;
   const f = [];
   if (!jeu || !Array.isArray(jeu.lignes)) return ['jeu incomplet'];
   const L = jeu.lignes;
   const deux = o.magasins === 2;
   if (L.length !== o.lignes) f.push(`${L.length} lignes au lieu de ${o.lignes}`);
-  if (!MAGASINS.some((m) => m.id === jeu.magasin) || (o.magasin && jeu.magasin !== o.magasin)) f.push('magasin inconnu');
+  if (!B.MAGASINS.some((m) => m.id === jeu.magasin) || (o.magasin && jeu.magasin !== o.magasin)) f.push('magasin inconnu');
   // Deux magasins : une seule paire de lignes du même produit, consécutives, à la même adresse, une pour chaque magasin.
   const paires = L.map((l, i) => i).filter((i) => i && L[i].a === L[i - 1].a);
   const attendu = deux ? 1 : 0;
@@ -260,7 +271,7 @@ export function verifierCommande(o, jeu) {
   }
   L.forEach((l, i) => {
     const d = decoupe(l.a);
-    if (!d || d.n !== 1 || produitEn(l.a) !== l.produit) f.push(`ligne ${i + 1} : pas au picking de son produit`);
+    if (!d || d.n !== 1 || B.produitEn(l.a) !== l.produit) f.push(`ligne ${i + 1} : pas au picking de son produit`);
     if (!(l.q >= o.qMin && l.q <= o.qMax)) f.push(`ligne ${i + 1} : quantité hors de ${o.qMin} à ${o.qMax}`);
     if (i && rangCircuit(l.a) <= rangCircuit(L[i - 1].a) && !(deux && l.a === L[i - 1].a)) f.push(`ligne ${i + 1} : pas dans l'ordre du circuit`);
   });
@@ -282,7 +293,7 @@ export function verifierCommande(o, jeu) {
     if (!p) { f.push(`ligne ${i + 1} : picking absent`); return; }
     if (p.q > pleine(l.produit)) f.push(`ligne ${i + 1} : picking plus que plein`);
     const rupture = jeu.vides.includes(l.a);
-    if (rupture && !(p.q < p.min && p.q < l.q && aReserve(l.produit))) f.push(`ligne ${i + 1} : rupture mal faite`);
+    if (rupture && !(p.q < p.min && p.q < l.q && B.aReserve(l.produit))) f.push(`ligne ${i + 1} : rupture mal faite`);
     if (!rupture && p.q < L.filter((m) => m.a === l.a).reduce((t, m) => t + m.q, 0) + p.min) f.push(`ligne ${i + 1} : picking trop juste (le réapprovisionnement s'imposerait)`);
   });
   if (jeu.vides.length !== o.vides) f.push('nombre de lignes en rupture');
@@ -292,7 +303,7 @@ export function verifierCommande(o, jeu) {
     const i = L.findIndex((l) => l.a === a), r = jeu.remplacements[a];
     if (i < 0) { f.push('abîmé hors commande'); return; }
     if (jeu.vides.some((v) => Math.abs(L.findIndex((l) => l.a === v) - i) <= 1)) f.push('abîmé et rupture sur des lignes voisines');
-    if (!r || produitEn(r) !== L[i].produit || r === a || L.some((l) => l.a === r)) f.push('ligne de remplacement fausse');
+    if (!r || B.produitEn(r) !== L[i].produit || r === a || L.some((l) => l.a === r)) f.push('ligne de remplacement fausse');
     else if (rangCircuit(r) <= rangCircuit(a) || (L[i + 1] && rangCircuit(r) >= rangCircuit(L[i + 1].a))) f.push('remplacement hors du sens du circuit');
   });
   const codesA = (al) => PICKING_TOUS.filter((a) => a[0] === al).map((a) => jeu.codes[a]);
@@ -309,6 +320,13 @@ export function verifierCommande(o, jeu) {
 export function preparation(opts) {
   const o = Object.assign({}, DEFAUTS, opts);
   if (!o.id) throw new Error('action-prepa : il manque l’id de l’entrepôt');
+  if (o.site) {
+    const st = o.site;
+    if (!st.cle || !/^[a-z-]+$/.test(st.cle)) throw new Error('action-prepa : `site.cle` (des lettres minuscules) manque');
+    if (!Array.isArray(st.magasins) || !st.magasins.length || st.magasins.some((m) => !m || !m.id || !m.nom || !m.court)) throw new Error('action-prepa : `site.magasins` : une liste de { id, nom, court }');
+    if (o.magasins === 2) throw new Error('action-prepa : `site` ne va pas avec `magasins: 2` (deux magasins : Nîmes, depuis Ensuès)');
+    o.B = baseSite(st.cle, st.magasins);
+  } else o.B = ENSUES;
   const DECL = { tirer: (h) => tirerCommande(o, h), verifier: (jeu) => verifierCommande(o, jeu), essais: 40 };
   DECL.secours = tirerJeu(Object.assign({}, DECL, { secours: null }), `secours-${o.id}`).jeu;
   if (!DECL.secours) throw new Error(`action-prepa (${o.id}) : le tirage ne donne aucune commande conforme (tirer et verifier se contredisent)`);
@@ -320,12 +338,12 @@ export function preparation(opts) {
   };
   const fn = (graine /* , { niveau, copie } : le tirage ne dépend pas encore du niveau (lot 0) */) => {
     const { jeu } = jeuDe(graine);
-    const m = MAGASINS.find((x) => x.id === jeu.magasin);
+    const m = o.B.MAGASINS.find((x) => x.id === jeu.magasin);
     return {
       id: o.id, libelle: o.libelle || 'Préparer la commande', mode: 'preparation',
       ...(o.personnage ? { personnage: o.personnage } : {}),
       plan: Object.assign({}, PLAN, { zones: { quais: [quaiDe(jeu.quai)] } }),
-      gammes: GAMMES, produits: PRODUITS, stock: STOCK,
+      gammes: GAMMES, produits: PRODUITS, stock: o.B.STOCK,
       ...(o.regles ? { regles: o.regles } : {}),
       commande: Object.assign({
         num: jeu.num, client: m.nom, magasin: m.id, heure: jeu.depart, quai: quaiDe(jeu.quai), etiquette: m.court,
@@ -338,7 +356,8 @@ export function preparation(opts) {
       })() : {}),
       picking: jeu.picking,
       // Lus par les lots 1 et 3 du chantier E-8 (le moteur du lot 0 ne les lit pas encore).
-      codes: jeu.codes, abimes: jeu.abimes, remplacements: jeu.remplacements,
+      // `remplacements` reste tiré (les élèves témoins ne bougent pas) mais ne part plus : l'abîmé se remplace sur la même pile (25/10).
+      codes: jeu.codes, abimes: jeu.abimes,
       ...(o.jalons ? { jalons: o.jalons } : {}),
       // Le terminal vocal (chantier E-8, lots 1-2) : sans lui, la préparation est celle de Smoby (bon papier, ENT-5.6).
       ...(o.terminal ? { terminal: o.terminal } : {}),

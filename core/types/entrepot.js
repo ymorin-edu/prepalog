@@ -1662,8 +1662,8 @@ export function creerEntrepot(P, opts = {}) {
   if (PREP && M.vocal) {
     const V = creerVocal(P, M, opts, { G, ui, htmlPlan, htmlFace, pile: pileCartons,
       echap: (racine, fn) => { echap = { racine, fn }; }, clavier: auClavier });
-    V.jalons = (db) => jalonsEntrepot(db, P);
-    V.note = P.note ? (db) => noteEntrepot(db, P) : null;
+    V.jalons = (db) => jalonsEntrepot(db, P, opts.copie ? 'evaluation' : undefined);
+    V.note = P.note || opts.copie ? (db) => noteEntrepot(db, P, opts.copie ? 'evaluation' : undefined) : null;
     V.bonnesReponses = () => attendusVocal(M);
     return V;
   }

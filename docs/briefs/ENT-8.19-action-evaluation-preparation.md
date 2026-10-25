@@ -64,7 +64,7 @@ Vérifier, sans aide, que l'élève **prend son poste** et **lit sa mission** (C
 |---|---|---|---|---|
 | **Avant de commencer** | 4 questions, 1 chacune, règle du faux | **4** | moteur des questions | plancher 0 |
 | **Prendre en charge** (C3.1) | défaut signalé 1,5 · aucun faux signalement 0,5 · mission : 2 lignes, 1 chacune | **4** | inspection, fiche `mission` | « aucun faux » seulement si l'inspection est figée |
-| **Déstocker** (C3.2) | 5 lignes normales, 0,6 chacune · abîmé dit et remplacement pris 1,5 · vide dit et ligne reprise 1,5 | **6** | lignes, lot 3 | abîmé pris sans rien dire = faux |
+| **Déstocker** (C3.2) | 5 lignes normales, 0,6 chacune · abîmé dit et quantité reprise sur la pile 1,5 (25/10) · vide dit et ligne reprise 1,5 | **6** | lignes, lot 3 | abîmé pris sans rien dire = faux |
 | **Conditionner** (C3.3) | lourds en bas 1 · fragiles en haut 1 · poids et hauteur 1 · film 1 · étiquettes 2 | **6** | critères du lot 2 | jugés **sur ce qui est posé**, même si une ligne est fausse (décision de Tristan, 25/10 : une erreur ne se paie qu'une fois) ; rien à côté exigé ; palette vide = faux |
 | **Total** | | **20** | | |
 

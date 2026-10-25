@@ -97,7 +97,7 @@ sur le terminal · sur le rack.
 |---|---|---|---|---|
 | **Grouper par client** (C3.3) | chaque palette ne porte que ses lignes, après contrôle : 2,5 par palette | **5** | lot 4 | jugé sur l'état **final** (après déplacements) ; une palette vide = faux |
 | **Prélever** (C3.2) | 8 lignes justes, 0,25 chacune | **2** | `ligne-…` | — |
-| **Carton abîmé** (C3.2) | « Abîmé » dit et remplacement pris | **2** | lot 3 | pris sans rien dire = faux |
+| **Carton abîmé** (C3.2) | « Abîmé » dit et quantité reprise sur la pile (25/10) | **2** | lot 3 | pris sans rien dire = faux |
 | **Calage** (C3.3) | lourds en bas et fragiles en haut, 1 par palette | **2** | ordre de pose (et déplacements) | jugé seulement si la palette porte ses lignes |
 | **Poids et hauteur** (C3.3) | 1 par palette | **2** | palette | idem |
 | **Film et étiquettes** (C3.3) | film 0,5 par palette · étiquettes du **bon magasin** 1 par palette | **3** | `film`, `etiquettes` | étiquette d'un autre magasin = faux |

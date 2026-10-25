@@ -1945,6 +1945,54 @@ entrepot: {
   les trois temps ; les messages de faute disent *que* (« la palette dépasse le poids maximum du transporteur (800 kg) »).
 - `attendusPreparation(ENTREPOT)` (meilleurs tours, palette juste) : côté enseignant et pour les tests (valeurs à la main).
 
+### Préparation guidée à la voix, en cartons (`terminal`) — chantier E-8, 25/10/2026 — `core/types/entrepot-vocal.js`
+
+Le mode `preparation` avec un **`terminal`** dans la déclaration : le terminal vocal (celui de France Boissons, `terminal.js`)
+remplace le bon papier. Sans `terminal`, le mode `preparation` ci-dessus ne change pas. Détail et comptes rendus des lots :
+`docs/briefs/MOTEUR-preparation-vocale-cartons.md`. Exemple : `contenus/action-prepa-donnees.js` (une commande **tirée par
+élève**, `preparation(opts)` rend la fonction `(graine, { niveau, copie })`) ; page d'essai : les quatre cas « Préparation
+vocale » de `outils/essai-entrepot.html` ; tests : bloc `preparation-vocale`.
+
+**Ce que fait l'élève.** Le terminal dit « Allée B1, travée 03, niveau 1, emplacement 2. Code de contrôle ? ». Le code n'est
+écrit **que** sur l'étiquette de la lisse, dans la **vue de près** (clic sur l'emplacement dans la travée). De près, l'élève
+**sélectionne les cartons au clic** (ceux du dessus ; « Faire le tour » tourne la pile), **dit la quantité au terminal**, puis
+pose sa sélection : « Poser sur la palette » ou « À côté » (boutons en haut à gauche de la pile). La palette se monte dans
+**l'ordre de pose** ; les cartons « à côté » se posent quand le terminal a fini ; « ↶ Reposer le dernier » ; film et
+étiquettes ; « Vérifier ma préparation ». La palette reste à gauche de l'écran (plan, travée, vue de près).
+
+```js
+entrepot: preparation({
+  id: 'action-ent815', lignes: 5,                 // le tirage : lignes, fragiles, lourds, abimes, vides, ordre: 'favorable' | 'piege',
+  abimes: 1, vides: 1, magasins: 2,               // kgMax, hMax, magasin ; magasins: 2 = deux magasins (8.18)
+  terminal: { montrer?: 'travee', cocher?: true,  // aides de l'accompagné (jamais en copie)
+              montageSurPose?: true,              // les critères jugés sur ce qui est posé (évaluation)
+              cariste?: 'Léo', titre?, mots?, fin?, phraseBilan? },
+  site?: { cle: 'onnaing', magasins: [{ id, nom, court }, …] },   // un AUTRE site : autre stock, ses magasins (8.19)
+  personnage, regles, jalons?, libelle?,
+}),
+etapes: etapesEntrepot(ENTREPOT, { copie }),
+```
+
+- **Exceptions** (`abimes`, `vides`) : le carton abîmé est dessiné sur la face de devant de la pile (jamais écrit). L'élève
+  le sélectionne et dit « Abîmé : 1 » : il est mis de côté et le terminal **redit la quantité entière** ; l'élève reprend un
+  bon carton sur la même pile. Pris et posé sans rien dire, il part sur la palette, dessiné abîmé (`abime-dit` et `rienAbime`
+  faux). Un emplacement **vide** : le terminal refuse la quantité ; « Emplacement
+  vide » → le cariste descend une palette de réserve et la ligne est redite.
+- **Deux magasins** (`magasins: 2`) : le terminal dit « Pour Nîmes. » ; une palette par magasin ; le terminal fini,
+  « Contrôler mes palettes » montre chaque palette à côté de sa liste de colisage, un groupe se déplace d'une palette à
+  l'autre ; l'étiquette du magasin se choisit.
+- **Jalons** : un par ligne (dit = posé = demandé), `abime-dit`, `vide-dit`, `vide-reprise`,
+  `rienAbime`, puis les six critères de la palette (`lourds`, `fragiles`, `poids`, `hauteur`, `film`, `etiquettes`) ; à deux
+  magasins `grouper-1`, `grouper-2` et chaque critère par palette (`lourds-1`…). Les critères ne se jugent que si le terminal
+  est fini, rien à côté, **et** toutes les lignes justes — ou, avec `montageSurPose`, sur ce qui est posé (« une erreur ne se
+  paie qu'une fois »). Une palette vide ne gagne rien. Les codes faux sont comptés, jamais notés.
+- **Évaluation (copie)** : ni verdict, ni règles, ni aides, ni « Ce que le terminal sait de toi ». « **Valider ma
+  préparation** » (là dès le début : personne n'est bloqué) → Oui / Non → tout se fige et la copie est rendue, sauf
+  `rendCopie: false` dans la déclaration (« Préparation validée », la copie se rend par le bandeau ; l'élève regarde encore).
+- **Gestes** (questions au fil) : `entrepot:<id>:ouvrir:<adresse>`, `code:<ligne>`, `ligne:<ligne>`, `poser:palette`,
+  `poser:cote`, `pose:lourd|normal|fragile`, `fin`, `film`, `etiquettes`, `verifier`, `mot:<id>`, `abime`, `vide`, `reserve`,
+  `controle:ouvrir`, `controle:fermer`, `deplacer`, `valider` (copie).
+
 ### Mode `visite` : faire visiter une plateforme (second chantier, 05/10/2026) — `core/types/entrepot-visite.js`
 
 Brief `docs/briefs/MOTEUR-modes-visite.md`, maquette de la visite v2 (`docs/briefs/smoby/visite/`). Le moteur fournit des

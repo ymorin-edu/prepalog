@@ -29,7 +29,7 @@
 <body>
 <form class="essai-reglages" id="reglages">
   <b>Page d'essai</b> — chaque changement repart d'une base neuve :
-  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option><option value="preparation">③ Préparation (ENT-5.6)</option><option value="visite">Visite (ENT-5.3)</option><option value="masse">Stockage de masse (ENT-6.5)</option><option value="comptage">Masse, comptage (ENT-6.6)</option><option value="picking">Allée de picking (ENT-6.7)</option><option value="vocal">Préparation vocale, cartons (Action, E-8)</option><option value="vocal-ex">Préparation vocale, abîmé et vide (Action, E-8)</option><option value="vocal-deux">Préparation vocale, deux magasins (Action, E-8)</option></select></label>
+  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option><option value="preparation">③ Préparation (ENT-5.6)</option><option value="visite">Visite (ENT-5.3)</option><option value="masse">Stockage de masse (ENT-6.5)</option><option value="comptage">Masse, comptage (ENT-6.6)</option><option value="picking">Allée de picking (ENT-6.7)</option><option value="vocal">Préparation vocale, cartons (Action, E-8)</option><option value="vocal-ex">Préparation vocale, abîmé et vide (Action, E-8)</option><option value="vocal-deux">Préparation vocale, deux magasins (Action, E-8)</option><option value="vocal-eval">Préparation vocale, évaluation dans un autre site (Action, E-8)</option></select></label>
   <label>Temps <select name="temps"><option value="guidage">guidage</option><option value="entrainement">entraînement</option><option value="evaluation">évaluation (copie rendue)</option></select></label>
   <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant (bonnes réponses, visite : navigation libre)</option></select></label>
 </form>
@@ -54,6 +54,13 @@ const VOCAL_DEUX = preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2,
   personnage: { nom: 'Kevin', role: 'chef d’équipe', date: '6 h 00', texte: 'Deux magasins ce matin, deux palettes. Le terminal te dit pour qui à chaque ligne.' } });
 const VOCAL_EX = preparation({ id: 'essai-vocal-ex', lignes: 7, abimes: 1, vides: 1, terminal: {},
   personnage: { nom: 'Kevin', role: 'chef d’équipe', date: '6 h 00', texte: 'Regarde bien de près : un carton abîmé ne part pas au magasin. S’il n’y a rien, dis-le au terminal : je descends la réserve.' } });
+// Lot 5 : l'évaluation (copie) dans un AUTRE site (autre stock, ses magasins ; noms génériques ici), le profil d'ENT-8.19, montage jugé sur
+// ce qui est posé.
+const VOCAL_EVAL = preparation({ id: 'essai-vocal-eval', lignes: 7, fragiles: 1, abimes: 1, vides: 1, ordre: 'piege', terminal: { montageSurPose: true, cariste: 'Léo' },
+  site: { cle: 'essai', magasins: [{ id: 'magasin-1', nom: 'Magasin de la région n° 1', court: 'Magasin 1' }, { id: 'magasin-2', nom: 'Magasin de la région n° 2', court: 'Magasin 2' }] },
+  personnage: { nom: 'Léo', role: 'cariste', date: '6 h 00', texte: 'Le terminal te guide. Moi, je descends la réserve si tu me le demandes.' } });
+// `?sansRendu` : la même avec `rendCopie: false` (« Valider » fige sans rendre la copie ; la séance la rend par le bandeau).
+const VOCAL_EVAL_S = new URLSearchParams(location.search).has('sansRendu') ? (g, x) => Object.assign(VOCAL_EVAL(g, x), { rendCopie: false }) : VOCAL_EVAL;
 
 document.getElementById('mention').innerHTML = MENTION;
 const form = document.getElementById('reglages');
@@ -64,16 +71,17 @@ function monter() {
   // L'allée de picking (ENT-6.7) est un entraînement, sans évaluation pour l'instant.
   if (['visite', 'comptage'].includes(f.get('cas'))) form.temps.value = 'guidage';
   if (['picking', 'vocal', 'vocal-ex', 'vocal-deux'].includes(f.get('cas')) && form.temps.value === 'evaluation') form.temps.value = 'entrainement';
+  if (f.get('cas') === 'vocal-eval') form.temps.value = 'evaluation';
   const temps = ['visite', 'comptage'].includes(f.get('cas')) ? 'guidage' : form.temps.value;
   document.getElementById('mention').innerHTML = f.get('cas') === 'masse' ? MENTION_MASSE : f.get('cas') === 'comptage' ? MENTION_COMPTAGE
     : f.get('cas') === 'picking' ? MENTION_PICKING : f.get('cas').startsWith('vocal') ? MENTION_PREPA : MENTION;
   const hote = document.getElementById('hote');
   const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
   boite.hidden = true;
-  const VX = f.get('cas') === 'vocal-ex' ? VOCAL_EX : f.get('cas') === 'vocal-deux' ? VOCAL_DEUX : VOCAL;
+  const VX = { 'vocal-ex': VOCAL_EX, 'vocal-deux': VOCAL_DEUX, 'vocal-eval': VOCAL_EVAL_S }[f.get('cas')] || VOCAL;
   const U = f.get('cas').startsWith('vocal')
-    ? Object.assign(universPalettier({ poids: false }), { entrepot: VX, etapes: etapesEntrepot(VX),
-      ENTREPRISE: { id: 'essai-entrepot', nom: 'Action — essai de la préparation vocale', sousTitre: 'Entrepôt d’Ensuès-la-Redonne (13) — préparation', exercice: 'Essai de la préparation vocale' } })
+    ? Object.assign(universPalettier({ poids: false }), { entrepot: VX, copie: temps === 'evaluation', etapes: etapesEntrepot(VX, { copie: temps === 'evaluation' }),
+      ENTREPRISE: { id: 'essai-entrepot', nom: 'Action — essai de la préparation vocale', sousTitre: f.get('cas') === 'vocal-eval' ? 'Un autre entrepôt (essai) — préparation' : 'Entrepôt d’Ensuès-la-Redonne (13) — préparation', exercice: 'Essai de la préparation vocale' } })
     : univers({ cas: f.get('cas'), temps });
   const moteur = creerEntreprise(U);
   const db = {};

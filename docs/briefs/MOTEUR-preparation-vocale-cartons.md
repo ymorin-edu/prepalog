@@ -206,3 +206,19 @@ ENT-5.6 Smoby, ENT-6.7 France Boissons, le palettier (E-7) et les séances 8.11 
 - **En haut à gauche de la pile** : le nombre sélectionné, « Tout désélectionner », « **Poser sur la palette [X]** » / « **À côté** » (actifs quand le terminal attend la pose). L'élève **dit toujours la quantité au terminal** ; ce qui est posé, c'est la sélection : une quantité dite différente de la sélection rend la ligne fausse (jalon `ligne-*` : dit = posé = attendu).
 - **Le plan** montre la palette à gauche.
 - **Le carton abîmé est sur la face de devant** (vue 1 ; à droite en vue 4) et se sélectionne. « Abîmé » dit au terminal avec lui sélectionné : il est **mis de côté** (`ecartes`), il quitte la pile sans aller sur la palette. Pris et posé sans rien dire : il part sur la palette, dessiné abîmé (« aucun carton abîmé » faux).
+
+### Lot 5 — livré le 25/10/2026 (Claude, même fil)
+
+- **En copie** (`opts.copie`) : aucun verdict, aucune règle, ni l'aide de l'accompagné (`montrer`, `cocher`) ni « Ce que le terminal sait de toi ». « **Valider ma préparation** » est là dès le début (personne n'est bloqué : la commande pas finie ou des cartons à côté, la confirmation le dit) ; Oui / Non ; Oui **fige** (terminal, pose, film, étiquettes grisés ; l'écran revient à la palette) et rend la copie, sauf `rendCopie: false` (le bouton dit « Préparation validée », la séance rend la copie par le bandeau ; figé, l'élève regarde encore la travée et la pile, la tourne, rien ne se sélectionne). Geste `valider`. L'enseignant voit le bilan après.
+- **`terminal.montageSurPose: true`** : les critères de la palette se jugent sur ce qui est posé, même si une ligne est fausse (terminal fini, rien à côté, chaque ligne prise a des cartons posés ; une palette vide ou une ligne jamais posée ne gagne rien). À deux magasins, une palette est groupée si elle porte tous les cartons POSÉS de ses lignes.
+- **`terminal.cariste`** : celui qui descend la réserve (« Léo a descendu la réserve. »). Défaut : Kevin.
+- **Un autre site** : `preparation({ site: { cle, magasins: [{ id, nom, court }, …] } })` → le même plan, un autre stock de départ (graine du site) et SES magasins ; refusé avec `magasins: 2`. La séance 8.19 choisit la déclaration par `siteDeBase` (deux appels, `cle: 'onnaing'` et `cle: 'belleville'`) et nomme les magasins (à vérifier à la construction, sinon génériques).
+- Page d'essai : cas « Préparation vocale, évaluation dans un autre site » (en copie ; `?sansRendu` pour `rendCopie: false`). Bloc `preparation-vocale` : 18 cas.
+
+### Lot 6 — livré le 25/10/2026 (Claude, même fil)
+
+Section « Préparation guidée à la voix, en cartons (`terminal`) » de `activites/FICHE-SEANCE.md` (ce que fait l'élève, la déclaration, exceptions, deux magasins, jalons, évaluation, gestes) ; les quatre cas « Préparation vocale » de `outils/essai-entrepot.html` (guidé, abîmé et vide, deux magasins, évaluation dans un autre site). **Le chantier E-8 est fini** ; suivent les séances ENT-8.15 à 8.19.
+
+### Changement du 25/10/2026 (Tristan) : l'abîmé se remplace sur la même pile
+
+L'élève sélectionne la quantité (l'abîmé compris), dit « Abîmé : 1 » : l'abîmé est mis de côté, les bons restent sélectionnés et le terminal **redit la quantité entière** (« Prends 3 », ligne `surPlace` de `terminal.js`) ; il sélectionne un bon carton de plus sur la même pile, dit 3 et pose. **Plus de ligne de remplacement** : le jalon `abime-remplacement` disparaît, `abime-dit` = signalé (le bon nombre) et la quantité entière prise, dite et posée. L'élève qui ne signale pas perd `abime-dit` (et `rienAbime` s'il pose l'abîmé). La pile doit porter la quantité et les abîmés (contrôlé). `remplacements` reste tiré dans `action-prepa-donnees.js` (les élèves témoins ne bougent pas) mais ne part plus dans la déclaration.

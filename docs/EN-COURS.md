@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| E-8 lot 5 préparation vocale, évaluation en copie (thread Action) | core/types/entrepot-vocal.js, core/types/entrepot.js, contenus/action-prepa-donnees.js, outils/test/preparation-vocale.mjs, outils/essai-entrepot.html | 25/10 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

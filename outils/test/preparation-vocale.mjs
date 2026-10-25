@@ -19,13 +19,19 @@
 //
 // LOT 3 (25/10/2026) : le carton abîmé et l'emplacement vide. Cas « vocal-ex » de la page d'essai (profil `{ id: 'essai-vocal-ex', lignes: 7,
 // abimes: 1, vides: 1 }`, graine « temoin-1 »), relevé une fois et recopié À LA MAIN : Marseille Le Merlan, n° 4190 ; L1 NET 4 A1-T05-N1-E1 (99) ·
-// L2 LES 3 A2-T05-N1-E2 (23 ; 1 carton abîmé devant, picking 13 ; remplacement B1-T06-N1-E2, code 83) · L3 CRO 4 B2-T05-N1-E3 (35) · L4 BOU 3
+// L2 LES 3 A2-T05-N1-E2 (23 ; 1 carton abîmé devant, picking 13, remplacé sur la même pile depuis le 25/10) · L3 CRO 4 B2-T05-N1-E3 (35) · L4 BOU 3
 // B1-T04-N1-E3 (90) · L5 BOI 4 B1-T03-N1-E2 (86) · L6 SER 5 B2-T02-N1-E2 (33 ; VIDE, picking 0) · L7 CAH 5 B2-T01-N1-E3 (84).
 //
 // LOT 4 (25/10/2026) : deux magasins. Cas « vocal-deux » (profil `{ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1 }`, graine
 // « temoin-1 »), relevé une fois et recopié À LA MAIN : palette 0 Marseille La Valentine n° 4288, palette 1 Nîmes Cap Costières n° 4316 ;
 // L1 CRO 4 pour Nîmes et L2 CRO 5 pour La Valentine, tous deux en A1-T01-N1-E1 (le produit commun) · L3 NET 6 LV · L4 BOI 4 LV · L5 PEL 3 LV ·
 // L6 SER 4 N · L7 CAH 6 N (B1-T04-N1-E1, un abîmé, remplacement B2-T03-N1-E1) · L8 BOU 5 N.
+
+// LOT 5 (25/10/2026) : l'évaluation dans un autre site. Cas « vocal-eval » (profil `{ id: 'essai-vocal-eval', lignes: 7, fragiles: 1, abimes: 1,
+// vides: 1, ordre: 'piege', terminal: { montageSurPose: true, cariste: 'Léo' }, site: { cle: 'essai', magasins: [Magasin 1, Magasin 2] } }`,
+// graine « temoin-1 », en copie), relevé une fois et recopié À LA MAIN : Magasin de la région n° 2, n° 4681, QUAI 5, départ 8 h 15 ;
+// L1 ASS 3 A1-T02-N1-E1 (68 ; 1 abîmé, remplacé sur la même pile) · L2 BOU 6 A1-T04-N1-E2 (19) · L3 SER 6 A2-T04-N1-E3 (42) ·
+// L4 CRO 6 A1-T05-N1-E1 (30) · L5 CAH 4 A2-T06-N1-E3 (54) · L6 NET 4 B2-T06-N1-E2 (36) · L7 LES 5 B1-T05-N1-E3 (56 ; VIDE).
 
 export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
@@ -112,7 +118,7 @@ await v('Préparation tirée (lot 0) : les deux élèves témoins (valeurs écri
     const fx = D.preparation({ id: 'essai-prepa-ex', lignes: 7, abimes: 1, vides: 1 });
     const X = fx('temoin-1', { niveau: 'standard' });
     return { t1: resume('temoin-1'), t2: resume('temoin-2'), pick1: Q1.picking['A1-T03-N1-E1'], code1: Q1.codes['A1-T03-N1-E1'],
-      quais: Q1.plan.zones.quais, rupture: X.picking['B2-T03-N1-E1'], abimes: X.abimes, rempl: X.remplacements,
+      quais: Q1.plan.zones.quais, rupture: X.picking['B2-T03-N1-E1'], abimes: X.abimes, rempl: fx.jeuDe('temoin-1').jeu.remplacements,
       memeObjet: fn('temoin-1', { niveau: 'standard' }).commande === Q1.commande };
   });
   egal(r.t1, ['Marseille Saint-Loup', '4542', 'QUAI 6', '7 h 00', 'LES 4 A1-T03-N1-E1 · CRO 6 B2-T04-N1-E1 · BOU 4 B2-T03-N1-E2 · SER 5 B2-T02-N1-E3 · CAH 4 B2-T01-N1-E3'], 'témoin 1');
@@ -320,23 +326,24 @@ async function allerA(pe, a) {
 const taper = async (pe, x) => { await pe.fill('[data-terminal] input', String(x)); await pe.keyboard.press('Enter'); };
 const phrase = (pe) => pe.evaluate(() => document.querySelector('[data-terminal]').textContent.replace(/\s+/g, ' '));
 
-await v('Préparation vocale (lot 3) : les jalons du profil à exceptions (mêmes ids pour toutes les graines) ; une déclaration incohérente (abîmé sans remplacement) refusée', async () => {
+await v('Préparation vocale (lot 3) : les jalons du profil à exceptions (mêmes ids pour toutes les graines) ; une déclaration incohérente (pile trop courte pour la quantité et l’abîmé) refusée', async () => {
   const r = await pg.evaluate(async () => {
     const D = await import('/contenus/action-prepa-donnees.js');
     const E = await import('/core/types/entrepot.js');
     const fx = D.preparation({ id: 'essai-vocal-ex', lignes: 7, abimes: 1, vides: 1, terminal: {} });
     const Q = fx('temoin-1', { niveau: 'standard' });
     let err = '';
-    try { E.jalonsEntrepot({}, Object.assign({}, Q, { remplacements: {} })); } catch (x) { err = x.message; }
-    return { ids: E.etapesEntrepot(fx).map((x) => x.id), C: [Q.commande.client, Q.commande.num], err };
+    try { E.jalonsEntrepot({}, Object.assign({}, Q, { picking: Object.assign({}, Q.picking, { 'A2-T05-N1-E2': { q: 3, min: 2 } }) })); } catch (x) { err = x.message; }
+    return { ids: E.etapesEntrepot(fx).map((x) => x.id), C: [Q.commande.client, Q.commande.num], err, rempl: 'remplacements' in Q };
   });
-  egal(r.ids, ['ligne-1', 'ligne-2', 'ligne-3', 'ligne-4', 'ligne-5', 'abime-dit', 'abime-remplacement', 'vide-dit', 'vide-reprise',
+  egal(r.ids, ['ligne-1', 'ligne-2', 'ligne-3', 'ligne-4', 'ligne-5', 'abime-dit', 'vide-dit', 'vide-reprise',
     'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'rienAbime'], 'jalons');
   egal(r.C, ['Marseille Le Merlan', '4190'], 'commande du témoin');
-  vrai(r.err.includes('remplacement'), `abîmé sans remplacement : ${r.err}`);
+  vrai(r.err.includes('la quantité et les abîmés'), `une pile trop courte pour la quantité et l’abîmé : ${r.err}`);
+  egal(r.rempl, false, 'plus de remplacements dans la déclaration (l’abîmé se remplace sur la même pile)');
 });
 
-await v('Préparation vocale (lot 3), page d’essai : le carton abîmé se VOIT de près (jamais écrit) ; « Abîmé : 1 » le laisse, le terminal ajoute la ligne de remplacement ; l’emplacement vide refuse la quantité, « Emplacement vide » fait descendre la réserve par Kevin et la ligne est redite ; tout juste au bilan', async () => {
+await v('Préparation vocale (lot 3), page d’essai : le carton abîmé se VOIT de près (jamais écrit) ; sélectionné puis « Abîmé : 1 », il est mis de côté et le terminal redit « Prends 3 » : un bon carton de plus sur la même pile ; l’emplacement vide refuse la quantité, « Emplacement vide » fait descendre la réserve par Kevin et la ligne est redite ; tout juste au bilan', async () => {
   const pe = await ctx.newPage();
   pe.on('pageerror', (e) => erreurs.push('PAGEERROR (essai lot 3): ' + e.message));
   await ouvrirEx(pe);
@@ -347,17 +354,15 @@ await v('Préparation vocale (lot 3), page d’essai : le carton abîmé se VOIT
       for (let r = 0; r < 4; r++) { coins.push(await pe.locator('.pvc-pile [data-pvc-coin]').count()); await pe.click('[data-pvc-tourner="1"]'); }
       egal([coins, /abîm/i.test(await pe.textContent('.pvc-pres'))], [[1, 0, 0, 1], false], 'le carton abîmé se voit de face (vue 1, et vue 4 à droite), rien d’écrit');
       await taper(pe, code);
-      await prendre(pe, 1, { abime: true });
-      egal(await pe.locator('[data-pvc-carton][data-pvc-ab].pvc-sel').count(), 1, 'le carton abîmé se sélectionne');
+      await prendre(pe, 1, { abime: true }); await prendre(pe, 2);
+      egal([await pe.locator('[data-pvc-carton][data-pvc-ab].pvc-sel').count(), await pe.locator('g.pvc-sel').count()], [1, 3], 'trois cartons sélectionnés, dont l’abîmé');
       await pe.click('[data-vt-mot="abime"]'); await taper(pe, 1);
-      vrai((await phrase(pe)).includes('Compris : 1 abîmé.'), 'le terminal a compris');
-      egal([await pe.locator('[data-pvc-carton][data-pvc-ab]').count(), (await etatEx(pe)).ecartes], [0, [{ a, n: 1 }]], 'signalé : le carton abîmé est mis de côté');
-      await prendre(pe, 2); await taper(pe, 2);
+      vrai((await phrase(pe)).includes('Compris : 1 abîmé.') && (await phrase(pe)).includes('Prends 3.'), 'le terminal a compris et redit la quantité entière');
+      egal([await pe.locator('[data-pvc-carton][data-pvc-ab]').count(), (await etatEx(pe)).ecartes, await pe.locator('g.pvc-sel').count()], [0, [{ a, n: 1 }], 2],
+        'signalé : l’abîmé est mis de côté, les deux bons restent sélectionnés');
+      await prendre(pe, 1); await taper(pe, 3);
       await pe.click('[data-pvc-poser="0"]');
-      vrai((await phrase(pe)).includes('Allée B1, travée 06, niveau 1, emplacement 2. Code de contrôle ?'), 'la ligne de remplacement');
-      await allerA(pe, 'B1-T06-N1-E2');
-      await taper(pe, '83'); await prendre(pe, 1); await taper(pe, 1);
-      await pe.click('[data-pvc-poser="0"]');
+      vrai((await phrase(pe)).includes('Allée B2, travée 05, niveau 1, emplacement 3. Code de contrôle ?'), 'pas de ligne de remplacement : la ligne suivante');
       continue;
     }
     if (id === 'L6') {
@@ -384,7 +389,7 @@ await v('Préparation vocale (lot 3), page d’essai : le carton abîmé se VOIT
   await pe.close();
 });
 
-await v('Préparation vocale (lot 3) : le carton abîmé pris sans rien dire part sur la palette, DESSINÉ abîmé — « abîmé signalé », « remplacement » et « aucun carton abîmé » faux, le reste juste', async () => {
+await v('Préparation vocale (lot 3) : le carton abîmé pris sans rien dire part sur la palette, DESSINÉ abîmé — « abîmé signalé » et « aucun carton abîmé » faux, le reste juste', async () => {
   const pe = await ctx.newPage();
   pe.on('pageerror', (e) => erreurs.push('PAGEERROR (essai lot 3 b): ' + e.message));
   await ouvrirEx(pe);
@@ -402,11 +407,11 @@ await v('Préparation vocale (lot 3) : le carton abîmé pris sans rien dire par
   for (const k of ['avant', 'arriere', 'dessus']) await pe.check(`[data-pvc-etiq="0:${k}"]`);
   await pe.click('[data-pvc="verifier"]');
   egal(await pe.$$eval('[data-pvc-jalon]', (L) => L.filter((x) => x.dataset.ok !== 'true').map((x) => x.dataset.pvcJalon)),
-    ['abime-dit', 'abime-remplacement', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'rienAbime'], 'les fautes de l’abîmé (et la palette non jugée : une ligne fausse)');
+    ['abime-dit', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'rienAbime'], 'l’abîmé non signalé coûte des points (et la palette non jugée : une ligne fausse)');
   await pe.close();
 });
 
-await v('Préparation vocale (lot 3) : équité sur 300 graines des profils 8.16 et 8.19 — la préparation parfaite (bons mots, remplacement et réserve, pose dans le bon ordre) gagne tous les jalons, palette sous 1,80 m et 600 kg', async () => {
+await v('Préparation vocale (lot 3) : équité sur 300 graines des profils 8.16 et 8.19 — la préparation parfaite (bons mots, abîmé remplacé sur la pile, réserve, pose dans le bon ordre) gagne tous les jalons, palette sous 1,80 m et 600 kg', async () => {
   const r = await pg.evaluate(async () => {
     const D = await import('/contenus/action-prepa-donnees.js');
     const E = await import('/core/types/entrepot.js');
@@ -420,8 +425,7 @@ await v('Préparation vocale (lot 3) : équité sur 300 graines des profils 8.16
         const R = {}, EX = {}, groupes = [];
         D.bonOrdre(L).forEach((l) => {
           const ab = (Q.abimes || {})[l.a], vide = Q.picking[l.a] && Q.picking[l.a].q < l.q;
-          if (ab) { EX[id(l)] = { mot: 'abime', n: ab }; R[id(l)] = l.q - ab; R[`${id(l)}-r`] = ab;
-            groupes.push({ a: l.a, k: l.produit, q: l.q - ab, ligne: id(l) }, { a: Q.remplacements[l.a], k: l.produit, q: ab, ligne: `${id(l)}-r` }); }
+          if (ab) { EX[id(l)] = { mot: 'abime', n: ab }; R[id(l)] = l.q; groupes.push({ a: l.a, k: l.produit, q: l.q, ligne: id(l) }); }
           else if (vide) { EX[id(l)] = { mot: 'vide', n: l.q }; R[id(l)] = 0; R[`${id(l)}-r`] = l.q; groupes.push({ a: l.a, k: l.produit, q: l.q, ligne: `${id(l)}-r` }); }
           else { R[id(l)] = l.q; groupes.push({ a: l.a, k: l.produit, q: l.q, ligne: id(l) }); }
         });
@@ -437,7 +441,7 @@ await v('Préparation vocale (lot 3) : équité sur 300 graines des profils 8.16
 });
 
 /* ============================================= lot 4 : deux magasins, deux palettes, le contrôle */
-const POUR_DEUX = { L1: 1, L2: 0, L3: 0, L4: 0, L5: 0, L6: 1, L7: 1, 'L7-r': 1, L8: 1 };
+const POUR_DEUX = { L1: 1, L2: 0, L3: 0, L4: 0, L5: 0, L6: 1, L7: 1, L8: 1 };
 
 await v('Préparation vocale (lot 4) : deux magasins tirés sur 300 graines (Nîmes toujours l’un des deux, 4 lignes chacun, un produit commun sur deux lignes consécutives, aucun secours) ; la préparation parfaite gagne tous les jalons ; l’élève témoin (valeurs à la main)', async () => {
   const r = await pg.evaluate(async () => {
@@ -456,8 +460,7 @@ await v('Préparation vocale (lot 4) : deux magasins tirés sur 300 graines (Nî
       const R = {}, EX = {}, pal = [[], []];
       [0, 1].forEach((p) => D.bonOrdre(L.filter((l) => l.pour === p)).forEach((l) => {
         const ab = (Q.abimes || {})[l.a];
-        if (ab) { EX[id(l)] = { mot: 'abime', n: ab }; R[id(l)] = l.q - ab; R[`${id(l)}-r`] = ab;
-          pal[p].push({ a: l.a, k: l.produit, q: l.q - ab, ligne: id(l) }, { a: Q.remplacements[l.a], k: l.produit, q: ab, ligne: `${id(l)}-r` }); }
+        if (ab) { EX[id(l)] = { mot: 'abime', n: ab }; R[id(l)] = l.q; pal[p].push({ a: l.a, k: l.produit, q: l.q, ligne: id(l) }); }
         else { R[id(l)] = l.q; pal[p].push({ a: l.a, k: l.produit, q: l.q, ligne: id(l) }); }
       }));
       const e = { terminal: { i: 99, phase: 'code', reponses: R, exceptions: EX, codesFaux: {}, journal: [], debut: 1, fin: 2 },
@@ -467,15 +470,15 @@ await v('Préparation vocale (lot 4) : deux magasins tirés sur 300 graines (Nî
     const T = D.preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1, terminal: {} })('temoin-1', { niveau: 'standard' });
     return { secours, fautesJeu, nimes, fautes, ids: E.etapesEntrepot(fn).map((x) => x.id),
       dest: T.commande.destinataires.map((d) => `${d.client} ${d.num}`), lignes: T.commande.lignes.map((l) => `${l.produit} ${l.q} ${l.a} ${l.pour}`).join(' · '),
-      ab: T.abimes, rem: T.remplacements };
+      ab: T.abimes, rem: fn.jeuDe('temoin-1') && D.preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1 }).jeuDe('temoin-1').jeu.remplacements };
   });
   egal([r.secours, r.fautesJeu, r.nimes], [0, 0, 300], 'tirage');
   egal(r.fautes, {}, 'la préparation parfaite gagne tout');
-  egal(r.ids, ['ligne-1', 'ligne-2', 'ligne-3', 'ligne-4', 'ligne-5', 'ligne-6', 'ligne-7', 'abime-dit', 'abime-remplacement', 'grouper-1', 'grouper-2',
+  egal(r.ids, ['ligne-1', 'ligne-2', 'ligne-3', 'ligne-4', 'ligne-5', 'ligne-6', 'ligne-7', 'abime-dit', 'grouper-1', 'grouper-2',
     'lourds-1', 'lourds-2', 'fragiles-1', 'fragiles-2', 'poids-1', 'poids-2', 'hauteur-1', 'hauteur-2', 'film-1', 'film-2', 'etiquettes-1', 'etiquettes-2', 'rienAbime'], 'jalons');
   egal(r.dest, ['Marseille La Valentine 4288', 'Nîmes Cap Costières 4316'], 'les deux magasins du témoin');
   egal(r.lignes, 'CRO 4 A1-T01-N1-E1 1 · CRO 5 A1-T01-N1-E1 0 · NET 6 A1-T05-N1-E1 0 · BOI 4 A1-T06-N1-E1 0 · PEL 3 B2-T06-N1-E3 0 · SER 4 B1-T05-N1-E2 1 · CAH 6 B1-T04-N1-E1 1 · BOU 5 B2-T03-N1-E2 1', 'lignes du témoin');
-  egal([r.ab, r.rem], [{ 'B1-T04-N1-E1': 1 }, { 'B1-T04-N1-E1': 'B2-T03-N1-E1' }], 'abîmé du témoin');
+  egal([r.ab, r.rem], [{ 'B1-T04-N1-E1': 1 }, { 'B1-T04-N1-E1': 'B2-T03-N1-E1' }], 'abîmé du témoin (le remplacement reste tiré, non utilisé)');
 });
 
 await v('Préparation vocale (lot 4), page d’essai : le terminal dit pour qui ; tout posé sur UNE palette (le conseil de Yanis) → « grouper » faux sur les deux et les critères non jugés ; « Contrôler mes palettes » (liste de colisage à côté du dessin), les groupes déplacés → tout juste ; l’étiquette de l’autre magasin → « étiquettes » faux, et lui seul', async () => {
@@ -491,15 +494,10 @@ await v('Préparation vocale (lot 4), page d’essai : le terminal dit pour qui 
   for (const x of att) {
     await allerA(pe, x.emplacement);
     await taper(pe, x.code);
-    if (x.ligne === 'L7') { await pe.click('[data-vt-mot="abime"]'); await taper(pe, 1); await prendre(pe, 5); await taper(pe, 5); }
+    if (x.ligne === 'L7') { await pe.click('[data-vt-mot="abime"]'); await taper(pe, 1); await prendre(pe, 6); await taper(pe, 6); }
     else { await prendre(pe, x.prends); await taper(pe, x.prends); }
     if (x.ligne === 'L1') egal(await pe.$$eval('[data-pvc-poser]', (B) => B.map((b) => b.textContent.trim())), ['Poser sur la palette La Valentine', 'Poser sur la palette Nîmes', 'À côté'], 'une palette par magasin');
     await pe.click('[data-pvc-poser="0"]');
-    if (x.ligne === 'L7') {
-      await allerA(pe, 'B2-T03-N1-E1');
-      await taper(pe, (await pe.evaluate(async () => (await import('/contenus/action-prepa-donnees.js')).preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1, terminal: {} })('temoin-1').codes['B2-T03-N1-E1'])));
-      await prendre(pe, 1); await taper(pe, 1); await pe.click('[data-pvc-poser="0"]');
-    }
   }
   while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
   for (const p of [0, 1]) { await pe.selectOption(`[data-pvc-film="${p}"]`, '4'); await pe.selectOption(`[data-pvc-etiqmag="${p}"]`, String(p)); for (const k of ['avant', 'arriere', 'dessus']) await pe.check(`[data-pvc-etiq="${p}:${k}"]`); }
@@ -528,6 +526,154 @@ await v('Préparation vocale (lot 4), page d’essai : le terminal dit pour qui 
   egal(await ko(), ['etiquettes-1'], 'l’étiquette de Nîmes sur la palette de La Valentine');
   const G = await pe.evaluate(() => Object.keys((window.__essai.db.gestes || {})['essai-entrepot'] || {}).map((k) => k.replace('entrepot:essai-vocal-deux:', '')));
   egal(['controle:ouvrir', 'controle:fermer', 'deplacer', 'ligne:L3'].filter((x) => !G.includes(x)), [], 'gestes du lot 4');
+  await pe.close();
+});
+
+/* ============================================= lot 5 : l'évaluation, un autre site */
+const TEMOIN_EVAL = [['L1', 'A1-T02-N1-E1', '68', 3, 'ASS'], ['L2', 'A1-T04-N1-E2', '19', 6, 'BOU'], ['L3', 'A2-T04-N1-E3', '42', 6, 'SER'],
+  ['L4', 'A1-T05-N1-E1', '30', 6, 'CRO'], ['L5', 'A2-T06-N1-E3', '54', 4, 'CAH'], ['L6', 'B2-T06-N1-E2', '36', 4, 'NET'], ['L7', 'B1-T05-N1-E3', '56', 5, 'LES']];
+const CLASSE_EVAL = { ASS: 'fragile', BOU: 'normal', SER: 'normal', CRO: 'lourd', CAH: 'normal', NET: 'lourd', LES: 'lourd' };
+await v('Préparation vocale (lot 5) : `montageSurPose` — une ligne fausse (dit 5, posé 4) ne coûte que sa ligne, la palette se juge sur ce qui est posé ; sans l’option, elle coûte aussi tous les critères ; palette vide ou ligne jamais posée = aucun critère ; deux magasins : groupée sur ce qui est posé ; `rendCopie` et `cariste` contrôlés', async () => {
+  const r = await pg.evaluate(async () => {
+    const D = await import('/contenus/action-prepa-donnees.js');
+    const E = await import('/core/types/entrepot.js');
+    const RANG = { lourd: 0, normal: 1, fragile: 2 };
+    const etat = (Q, fausse, ordre) => {
+      const L = Q.commande.lignes, ids = L.map((l, i) => `L${i + 1}`);
+      const T = { i: L.length, phase: 'code', reponses: Object.fromEntries(L.map((l, i) => [ids[i], l.q])), codesFaux: {}, journal: [], debut: 1, fin: 2 };
+      const G = L.map((l, i) => ({ a: l.a, k: l.produit, q: l.q - (ids[i] === fausse ? 1 : 0), ligne: ids[i], pour: l.pour || 0 }))
+        .sort((x, y) => RANG[D.classeDe(x.k)] - RANG[D.classeDe(y.k)]);
+      const nb = Q.commande.destinataires ? 2 : 1;
+      const palettes = [...Array(nb)].map((_, p) => G.filter((g) => g.pour === p).map(({ pour, ...g }) => g));
+      return { terminal: T, palettes: ordre ? ordre(palettes) : palettes, film: [...Array(nb)].map(() => '4'), etiq: [...Array(nb)].map(() => ({ avant: true, arriere: true, dessus: true })),
+        etiqMag: [...Array(nb)].map((_, p) => String(p)) };
+    };
+    const juge = (Q, e) => E.jalonsEntrepot({ entrepots: { [Q.id]: e } }, Q).L.filter((j) => !j.ok).map((j) => j.id).join(' ');
+    const avec = D.preparation({ id: 'essai-vocal', lignes: 5, terminal: { montageSurPose: true } })('temoin-1');
+    const sans = D.preparation({ id: 'essai-vocal', lignes: 5, terminal: {} })('temoin-1');
+    const deuxA = D.preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, terminal: { montageSurPose: true } })('temoin-1');
+    const deuxS = D.preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, terminal: {} })('temoin-1');
+    const err = (P) => { try { E.jalonsEntrepot({}, P); return ''; } catch (x) { return x.message; } };
+    const e0 = etat(avec, 'L1');
+    return {
+      juste: juge(avec, etat(avec, null)), avec: juge(avec, e0), sans: juge(sans, etat(sans, 'L1')),
+      lourd: juge(avec, etat(avec, 'L1', (P) => [[...P[0].slice(1), P[0][0]]])),
+      vide: juge(avec, Object.assign({}, e0, { palettes: [[]] })),
+      jamais: juge(avec, Object.assign({}, e0, { palettes: [e0.palettes[0].filter((g) => g.ligne !== 'L3')] })),
+      deuxA: juge(deuxA, etat(deuxA, 'L3')), deuxS: juge(deuxS, etat(deuxS, 'L3')),
+      errs: [err(Object.assign({}, avec, { rendCopie: true })), err(Object.assign({}, avec, { rendCopie: false })), err(Object.assign({}, avec, { terminal: { cariste: '' } })),
+        err(Object.assign({}, avec, { terminal: { montageSurPose: 'oui' } }))],
+    };
+  });
+  const tout = 'ligne-1 ligne-2 ligne-3 ligne-4 ligne-5 lourds fragiles poids hauteur film etiquettes';
+  egal(r.juste, '', 'tout juste');
+  egal(r.avec, 'ligne-1', 'montage jugé sur ce qui est posé : la ligne fausse seule');
+  egal(r.sans, 'ligne-1 lourds fragiles poids hauteur film etiquettes', 'sans l’option : les critères non jugés');
+  egal(r.lourd, 'ligne-1 lourds', 'une ligne fausse et un lourd en haut : deux fautes, chacune une fois');
+  egal(r.vide, tout, 'palette vide : rien');
+  egal(r.jamais, 'ligne-1 ligne-3 lourds fragiles poids hauteur film etiquettes', 'une ligne prise jamais posée : aucun critère');
+  vrai(r.deuxA === 'ligne-3', `deux magasins, montage sur ce qui est posé : ${r.deuxA}`);
+  vrai(r.deuxS.startsWith('ligne-3 grouper-'), `deux magasins sans l’option : la palette de la ligne fausse n’est pas groupée (${r.deuxS})`);
+  vrai(r.errs[0].includes('rendCopie') && !r.errs[1] && r.errs[2].includes('cariste') && r.errs[3].includes('montageSurPose'), `contrôles : ${r.errs.join(' | ')}`);
+});
+
+await v('Préparation vocale (lot 5) : un autre site — un autre stock de départ (même plan), ses magasins ; 300 graines du profil d’ENT-8.19, aucun secours ni faute ; les étapes en copie ; l’élève témoin (valeurs à la main) ; un site mal déclaré refusé', async () => {
+  const r = await pg.evaluate(async () => {
+    const D = await import('/contenus/action-prepa-donnees.js');
+    const E = await import('/core/types/entrepot.js');
+    const MAG = [{ id: 'magasin-1', nom: 'Magasin de la région n° 1', court: 'Magasin 1' }, { id: 'magasin-2', nom: 'Magasin de la région n° 2', court: 'Magasin 2' }];
+    const o = { id: 'essai-vocal-eval', lignes: 7, fragiles: 1, abimes: 1, vides: 1, ordre: 'piege', terminal: { montageSurPose: true, cariste: 'Léo' }, site: { cle: 'essai', magasins: MAG } };
+    const fn = D.preparation(o);
+    const c = { secours: 0, fautes: 0, magasins: new Set() };
+    for (let i = 0; i < 300; i++) {
+      const { jeu, secours } = fn.jeuDe(`g${i}`);
+      if (secours) c.secours++;
+      if (D.verifierCommande(fn.options, jeu).length) c.fautes++;
+      c.magasins.add(jeu.magasin);
+    }
+    const Q = fn('temoin-1', { copie: true });
+    const diff = Object.keys(D.STOCK).filter((a) => !Q.stock[a] || Q.stock[a].produit !== D.STOCK[a].produit).length;
+    const err = (x) => { try { D.preparation(Object.assign({}, o, x)); return ''; } catch (y) { return y.message; } };
+    return { c: [c.secours, c.fautes, [...c.magasins].sort()], diff, ids: E.etapesEntrepot(fn, { copie: true }).map((x) => x.id),
+      C: [Q.commande.client, Q.commande.num, Q.commande.quai, Q.commande.heure],
+      L: Q.commande.lignes.map((l, i) => [`L${i + 1}`, l.a, Q.codes[l.a], l.q, l.produit]), ab: Q.abimes, rem: fn.jeuDe('temoin-1').jeu.remplacements, vide: Q.picking['B1-T05-N1-E3'].q,
+      errs: [err({ site: { cle: 'essai' } }), err({ site: { magasins: MAG } }), err({ magasins: 2, lignes: 8 })] };
+  });
+  egal(r.c, [0, 0, ['magasin-1', 'magasin-2']], '300 graines : aucun secours, aucune faute, les magasins du site seulement');
+  vrai(r.diff > 20, `un autre stock de départ (${r.diff} emplacements changent)`);
+  egal(r.ids, ['ligne-1', 'ligne-2', 'ligne-3', 'ligne-4', 'ligne-5', 'abime-dit', 'vide-dit', 'vide-reprise',
+    'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'rienAbime'], 'étapes en copie');
+  egal(r.C, ['Magasin de la région n° 2', '4681', 'QUAI 5', '8 h 15'], 'commande du témoin');
+  egal(r.L, TEMOIN_EVAL.map(([id, a, code, q, k]) => [id, a, code, q, k]), 'lignes du témoin');
+  egal([r.ab, r.rem, r.vide], [{ 'A1-T02-N1-E1': 1 }, { 'A1-T02-N1-E1': 'A1-T02-N1-E3' }, 0], 'l’abîmé (son remplacement reste tiré, non utilisé), l’emplacement vide');
+  vrai(r.errs[0].includes('site.magasins') && r.errs[1].includes('site.cle') && r.errs[2].includes('magasins: 2'), `sites mal déclarés : ${r.errs.join(' | ')}`);
+});
+
+async function ouvrirEval(pe) {
+  await pe.goto(BASE + 'outils/essai-entrepot.html');
+  await pe.selectOption('select[name=cas]', 'vocal-eval');
+  await pe.waitForSelector('.pvc [data-terminal]');
+}
+const valider = async (pe) => { await pe.click('[data-pvc="valider"]'); await pe.click('[data-pvc="validerOui"]'); };
+
+await v('Préparation vocale (lot 5), page d’essai en copie : ni règles, ni aide, ni verdict, ni « Ce que le terminal sait de toi » ; Léo descend la réserve ; « Valider ma préparation » (Non, puis Oui) fige tout et rend la copie : 15 / 15 ; avec `rendCopie: false`, figé sans rendre, regarder et tourner permis ; l’inaction : 0', async () => {
+  const pe = await ctx.newPage();
+  pe.on('pageerror', (e) => erreurs.push('PAGEERROR (essai lot 5): ' + e.message));
+  await ouvrirEval(pe);
+  egal([await pe.locator('[data-pe-regles]').count(), await pe.locator('[data-pvc-montre]').count(), await pe.getAttribute('.pvc', 'data-pe-temps')], [0, 0, 'evaluation'], 'ni règles ni aide, en évaluation');
+  const pose = (k) => (CLASSE_EVAL[k] === 'lourd' ? '0' : 'cote');
+  for (const [id, a, code, q, k] of TEMOIN_EVAL) {
+    await allerA(pe, a);
+    await taper(pe, code);
+    if (id === 'L1') {
+      await prendre(pe, 1, { abime: true }); await prendre(pe, 2);
+      await pe.click('[data-vt-mot="abime"]'); await taper(pe, 1);
+      await prendre(pe, 1); await taper(pe, 3); await pe.click(`[data-pvc-poser="${pose(k)}"]`);
+      continue;
+    }
+    if (id === 'L7') {
+      await taper(pe, q); await pe.click('[data-vt-mot="vide"]');
+      vrai((await phrase(pe)).includes('Léo a descendu la réserve.'), 'le cariste du site');
+      await allerA(pe, a); await taper(pe, code);
+    }
+    await prendre(pe, q); await taper(pe, q);
+    await pe.click(`[data-pvc-poser="${pose(k)}"]`);
+  }
+  // à côté : les normaux, puis le fragile
+  for (;;) {
+    const C = await pe.evaluate(() => (window.__essai.db.entrepots['essai-vocal-eval'].cote || []).map((g) => g.k));
+    if (!C.length) break;
+    const i = C.findIndex((k) => CLASSE_EVAL[k] === 'normal');
+    await pe.click(`[data-pvc-objet="${i < 0 ? 0 : i}"]`); await pe.click('[data-pvc-vers="0"]');
+  }
+  await pe.selectOption('[data-pvc-film="0"]', '4');
+  for (const k of ['avant', 'arriere', 'dessus']) await pe.check(`[data-pvc-etiq="0:${k}"]`);
+  egal([await pe.locator('[data-pvc-jalon]').count(), await pe.locator('[data-pvc="verifier"]').count(), /sait de toi/i.test(await pe.textContent('.pvc'))], [0, 0, false], 'aucun verdict, pas de « Vérifier », pas de bilan du terminal');
+  await pe.click('[data-pvc="valider"]');
+  vrai((await pe.textContent('[data-pvc-confirme]')).includes('Tu ne pourras plus rien changer'), 'la confirmation');
+  await pe.click('[data-pvc="validerNon"]');
+  egal([await pe.locator('[data-pvc-confirme]').count(), await pe.locator('[data-pvc="valider"]').count()], [0, 1], '« Non » : rien ne change');
+  await valider(pe);
+  await pe.waitForSelector('#essaiNote:not([hidden])');
+  vrai((await pe.textContent('#essaiNote')).includes('(15 / 15 jalons)'), `la copie rendue : ${(await pe.textContent('#essaiNote')).slice(0, 120)}`);
+  egal([await pe.isDisabled('[data-terminal] input'), await pe.isDisabled('[data-pvc-film="0"]'), (await pe.textContent('[data-pvc-valide]')).trim(), await pe.locator('.pvc-palettes').count() > 0],
+    [true, true, 'Copie rendue', true], 'figé, copie rendue : l’écran revient à la palette, terminal et film grisés');
+  const G = await pe.evaluate(() => Object.keys((window.__essai.db.gestes || {})['essai-entrepot'] || {}).map((k) => k.replace('entrepot:essai-vocal-eval:', '')));
+  vrai(G.includes('valider'), 'geste valider');
+  // `rendCopie: false` : « Valider » fige SANS rendre ; regarder (travée, de près, tourner) reste permis, rien ne se sélectionne
+  await pe.goto(BASE + 'outils/essai-entrepot.html?sansRendu');
+  await pe.selectOption('select[name=cas]', 'vocal-eval');
+  await pe.waitForSelector('.pvc [data-terminal]');
+  await valider(pe);
+  egal([(await pe.textContent('[data-pvc-valide]')).trim(), await pe.isHidden('#essaiNote'), await pe.isDisabled('[data-terminal] input')], ['Préparation validée', true, true], 'validée, copie pas rendue');
+  await allerA(pe, 'A2-T04-N1-E3');
+  await pe.locator('[data-pvc-carton]').first().dispatchEvent('click');
+  egal([await pe.locator('g.pvc-sel').count(), await pe.isDisabled('[data-pvc-tourner="1"]'), await pe.isDisabled('[data-pvc-poser="0"]')], [0, false, true], 'figé : la pile se regarde et se tourne, rien ne se sélectionne ni ne se pose');
+  // l'inaction
+  await ouvrirEval(pe);
+  await valider(pe);
+  await pe.waitForSelector('#essaiNote:not([hidden])');
+  vrai((await pe.textContent('#essaiNote')).includes('(0 / 15 jalons)'), `l’inaction : ${(await pe.textContent('#essaiNote')).slice(0, 80)}`);
   await pe.close();
 });
 

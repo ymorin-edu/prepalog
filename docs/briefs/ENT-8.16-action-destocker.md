@@ -45,7 +45,7 @@ terminal. Samia »
 ### Étape 1 — Préparer (Plan d'entrepôt, mode `preparation`, terminal vocal : lots 0 à 3)
 - **7 lignes, une palette, un magasin** : 5 lignes normales ; **1 ligne avec un carton abîmé devant** (vu de près, jamais écrit) ; **1
   emplacement vide** (tiroir vide de près).
-- Abîmé : « Abîmé : 1 » laisse le carton ; le terminal donne la **ligne de remplacement** (autre adresse du même produit) ; pris sans rien dire,
+- Abîmé (**changé le 25/10 par Tristan**) : l'élève sélectionne l'abîmé et dit « Abîmé : 1 » ; il est mis de côté et le terminal redit la quantité : le bon carton se **reprend sur la même pile** (plus de ligne de remplacement) ; pris sans rien dire,
   le carton part **abîmé** sur la palette (dessiné), jalon faux.
 - Vide : « Emplacement vide » → « Réserve demandée au cariste. » → **Kevin descend la palette de réserve** (geste de Smoby) → la ligne est redite.
 - Critères jugés : `lignesJustes` et les jalons d'exception (lot 3). Montage, film, étiquettes : non jugés (8.17).
@@ -68,7 +68,7 @@ politesse · fin. Seule la forme est notée (une erreur ne se paie qu'une fois).
 ### Fin
 Samia : « Merci. Jeudi, on regarde comment tu montes ta palette. Samia » ; bilan ; « Corriger » rouvre la préparation, la fiche et le message.
 
-**Mots cliquables** : anomalie, carton abîmé, emplacement vide, réapprovisionnement, réserve, ligne de remplacement, actualiser, stock.
+**Mots cliquables** : anomalie, carton abîmé, emplacement vide, réapprovisionnement, réserve, actualiser, stock.
 
 ## 4 bis. Questions au fil — proposées (somme 4)
 
@@ -98,7 +98,7 @@ faute. On le signale. »
 | Bloc | Cases | Poids | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|---|
 | **Prélever** (adressage, prélèvement) | 5 lignes normales justes, 1 chacune | **5** | `ligne-…` | codes faux non notés |
-| **Carton abîmé** (contrôler, signaler) | « Abîmé : 1 » dit 1,5 · ligne de remplacement prise 1,5 | **3** | jalons du lot 3 | pris sans rien dire = les deux faux |
+| **Carton abîmé** (contrôler, signaler) | « Abîmé : 1 » dit et quantité reprise sur la pile (jalon `abime-dit`, 25/10) | **3** | jalons du lot 3 | pris sans rien dire = faux |
 | **Emplacement vide** (signaler, réapprovisionner) | « Emplacement vide » dit 1,5 · ligne reprise après la réserve 1,5 | **3** | jalons du lot 3 | — |
 | **Rien d'abîmé sur la palette** | aucun carton abîmé posé | **1** | palette | seulement si toutes les lignes sont faites (sinon l'inaction gagne) |
 | **Ce que sait le système** (actualiser) | 3 lignes de la fiche, 1 chacune | **3** | fiche `stock` | jugée sur **ses** gestes, pas sur la bonne réponse générale |
