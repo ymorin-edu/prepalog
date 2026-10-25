@@ -206,7 +206,7 @@ await v('Préparation vocale (lots 1-2) : le jugement — rien avant la fin du t
   const tout = 'ligne-1 ligne-2 ligne-3 ligne-4 ligne-5 lourds fragiles poids hauteur film etiquettes';
   egal(r.neuf, tout, 'base neuve : rien de gagné');
   egal(r.encours, tout, 'terminal en cours : rien de jugé');
-  egal(r.vide, 'lourds fragiles poids hauteur film etiquettes', 'palette vide : les lignes oui, aucun critère');
+  egal(r.vide, tout, 'palette vide : ni lignes (rien de posé) ni critères');
   egal(r.aCote, 'lourds fragiles poids hauteur film etiquettes', 'un groupe encore à côté : aucun critère');
   egal(r.juste, '', 'ordre de pose juste');
   egal(r.lourd, 'lourds', 'un lourd posé en dernier');
@@ -240,13 +240,13 @@ await v('Préparation vocale (lots 1-2), page d’essai à 1366 × 768 : le code
     await pe.click(`[data-pe-emp="${a}"]`);
     egal(await pe.textContent('[data-pvc-code]'), code, `${id} : le code sur l’étiquette de la lisse`);
     await pe.fill('[data-terminal] input', code); await pe.keyboard.press('Enter');
+    await prendre(pe, q);
+    if (id === 'L1') egal(await pe.locator('[data-pvc-poser="0"]').isDisabled(), true, 'sélectionnés mais pas encore dits au terminal : pose fermée');
     await pe.fill('[data-terminal] input', String(q)); await pe.keyboard.press('Enter');
-    if (id === 'L1') {
-      egal((await etat()).pick[a], 17 - 5, 'L1 prise : le picking baisse de 5');
-      egal(await pe.textContent('[data-pvc-question]'), 'Où poses-tu les 5 cartons Nettoyant ?', 'la question de pose');
-    }
+    if (id === 'L1') egal(await pe.textContent('[data-pvc-question]'), 'Où poses-tu les 5 cartons Nettoyant ?', 'la question de pose');
     // L1 (un lourd) à côté : il sera posé après la fin, donc en haut — la faute « lourds » attendue au premier bilan.
     await pe.click(id === 'L1' ? '[data-pvc-poser="cote"]' : '[data-pvc-poser="0"]');
+    if (id === 'L1') egal((await etat()).pick[a], 17 - 5, 'L1 posée : le picking baisse de 5');
     while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
   }
   egal(faces, [0, 0, 0, 0, 0], 'pas de code dans la travée de face');
@@ -304,6 +304,13 @@ async function ouvrirEx(pe) {
   await pe.waitForSelector('.pvc [data-terminal]');
 }
 const etatEx = (pe) => pe.evaluate(() => JSON.parse(JSON.stringify(window.__essai.db.entrepots['essai-vocal-ex'])));
+// Sélectionner n cartons du dessus dans la vue de près (retour de Tristan, 25/10) : les abîmés évités, sauf `abime` (pris d'abord).
+async function prendre(pe, n, { abime = false } = {}) {
+  for (let i = 0; i < n; i++) {
+    const sel = abime && i === 0 ? '[data-pvc-carton][data-pvc-ab]' : '[data-pvc-carton]:not(.pvc-sel):not([data-pvc-ab])';
+    await pe.locator(sel).first().dispatchEvent('click');
+  }
+}
 async function allerA(pe, a) {
   while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
   const m = /^([AB]\d)-T(\d+)/.exec(a);
@@ -336,17 +343,20 @@ await v('Préparation vocale (lot 3), page d’essai : le carton abîmé se VOIT
   for (const [id, a, code, q] of TEMOIN_EX) {
     await allerA(pe, a);
     if (id === 'L2') {
-      const pres = await pe.evaluate(() => ({ dessin: document.querySelectorAll('.pvc-devant [data-pvc-abime]').length,
-        texte: /abîm/i.test(document.querySelector('.pvc-pres').textContent) }));
-      egal(pres, { dessin: 1, texte: false }, 'un carton abîmé dessiné devant, rien d’écrit');
+      const coins = [];
+      for (let r = 0; r < 4; r++) { coins.push(await pe.locator('.pvc-pile [data-pvc-coin]').count()); await pe.click('[data-pvc-tourner="1"]'); }
+      egal([coins, /abîm/i.test(await pe.textContent('.pvc-pres'))], [[1, 0, 0, 1], false], 'le carton abîmé se voit de face (vue 1, et vue 4 à droite), rien d’écrit');
       await taper(pe, code);
+      await prendre(pe, 1, { abime: true });
+      egal(await pe.locator('[data-pvc-carton][data-pvc-ab].pvc-sel').count(), 1, 'le carton abîmé se sélectionne');
       await pe.click('[data-vt-mot="abime"]'); await taper(pe, 1);
       vrai((await phrase(pe)).includes('Compris : 1 abîmé.'), 'le terminal a compris');
-      await taper(pe, 2);
+      egal([await pe.locator('[data-pvc-carton][data-pvc-ab]').count(), (await etatEx(pe)).ecartes], [0, [{ a, n: 1 }]], 'signalé : le carton abîmé est mis de côté');
+      await prendre(pe, 2); await taper(pe, 2);
       await pe.click('[data-pvc-poser="0"]');
       vrai((await phrase(pe)).includes('Allée B1, travée 06, niveau 1, emplacement 2. Code de contrôle ?'), 'la ligne de remplacement');
       await allerA(pe, 'B1-T06-N1-E2');
-      await taper(pe, '83'); await taper(pe, 1);
+      await taper(pe, '83'); await prendre(pe, 1); await taper(pe, 1);
       await pe.click('[data-pvc-poser="0"]');
       continue;
     }
@@ -361,7 +371,7 @@ await v('Préparation vocale (lot 3), page d’essai : le carton abîmé se VOIT
       await allerA(pe, a);
       egal(await pe.locator('[data-pvc-vide]').count(), 0, 'de près : les cartons sont là');
     }
-    await taper(pe, code); await taper(pe, q);
+    await taper(pe, code); await prendre(pe, q); await taper(pe, q);
     await pe.click('[data-pvc-poser="0"]');
   }
   while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
@@ -381,7 +391,7 @@ await v('Préparation vocale (lot 3) : le carton abîmé pris sans rien dire par
   for (const [id, a, code, q] of TEMOIN_EX) {
     await allerA(pe, a);
     if (id === 'L6') { await taper(pe, code); await pe.click('[data-vt-mot="vide"]'); await allerA(pe, a); }
-    await taper(pe, code); await taper(pe, q);
+    await taper(pe, code); await prendre(pe, q, { abime: id === 'L2' }); await taper(pe, q);
     await pe.click('[data-pvc-poser="0"]');
   }
   while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
@@ -479,13 +489,19 @@ await v('Préparation vocale (lot 4), page d’essai : le terminal dit pour qui 
   vrai((await phrase(pe)).includes('Pour Nîmes. Allée A1, travée 01, niveau 1, emplacement 1. Code de contrôle ?'), 'le terminal nomme le magasin');
   egal(await pe.$$eval('[data-pvc-montage] button', (B) => B.map((b) => b.textContent.trim())), [], 'rien à poser avant la prise');
   for (const x of att) {
+    await allerA(pe, x.emplacement);
     await taper(pe, x.code);
-    if (x.ligne === 'L7') { await pe.click('[data-vt-mot="abime"]'); await taper(pe, 1); await taper(pe, 5); }
-    else await taper(pe, x.prends);
-    if (x.ligne === 'L1') egal(await pe.$$eval('[data-pvc-poser]', (B) => B.map((b) => b.textContent.trim())), ['Palette La Valentine', 'Palette Nîmes', 'À côté, je les pose après'], 'une palette par magasin');
+    if (x.ligne === 'L7') { await pe.click('[data-vt-mot="abime"]'); await taper(pe, 1); await prendre(pe, 5); await taper(pe, 5); }
+    else { await prendre(pe, x.prends); await taper(pe, x.prends); }
+    if (x.ligne === 'L1') egal(await pe.$$eval('[data-pvc-poser]', (B) => B.map((b) => b.textContent.trim())), ['Poser sur la palette La Valentine', 'Poser sur la palette Nîmes', 'À côté'], 'une palette par magasin');
     await pe.click('[data-pvc-poser="0"]');
-    if (x.ligne === 'L7') { await taper(pe, (await pe.evaluate(async () => (await import('/contenus/action-prepa-donnees.js')).preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1, terminal: {} })('temoin-1').codes['B2-T03-N1-E1']))); await taper(pe, 1); await pe.click('[data-pvc-poser="0"]'); }
+    if (x.ligne === 'L7') {
+      await allerA(pe, 'B2-T03-N1-E1');
+      await taper(pe, (await pe.evaluate(async () => (await import('/contenus/action-prepa-donnees.js')).preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1, terminal: {} })('temoin-1').codes['B2-T03-N1-E1'])));
+      await prendre(pe, 1); await taper(pe, 1); await pe.click('[data-pvc-poser="0"]');
+    }
   }
+  while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
   for (const p of [0, 1]) { await pe.selectOption(`[data-pvc-film="${p}"]`, '4'); await pe.selectOption(`[data-pvc-etiqmag="${p}"]`, String(p)); for (const k of ['avant', 'arriere', 'dessus']) await pe.check(`[data-pvc-etiq="${p}:${k}"]`); }
   await pe.click('[data-pvc="verifier"]');
   const ko = () => pe.$$eval('[data-pvc-jalon]', (L) => L.filter((x) => x.dataset.ok !== 'true').map((x) => x.dataset.pvcJalon));

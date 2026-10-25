@@ -166,7 +166,7 @@ export function compilerVocal(M, err, libs) {
 
 /* ================================================================ le jugement */
 export const etatVocalNeuf = () => ({ terminal: terminalNeuf(), pick: {}, vides: [], palettes: [[]], cote: [], film: [], etiq: [], vus: {},
-  reserves: [], mainAbimes: 0, etiqMag: [], controles: 0, verifie: false, verifs: 0, premierGeste: null });
+  reserves: [], piles: {}, etiqMag: [], controles: 0, verifie: false, verifs: 0, premierGeste: null });
 const completer = (e) => { Object.entries(etatVocalNeuf()).forEach(([k, v]) => { if (e[k] == null) e[k] = v; }); return e; };
 
 // Une palette rejouée dans l'ordre de pose : couches (deux groupes de suite du même produit font une couche : la ligne et sa remplacement
@@ -191,12 +191,16 @@ export function jalonsVocal(M, e0) {
   const T = e.terminal || terminalNeuf(), R = T.reponses || {}, EX = T.exceptions || {}, fin = !!T.fin;
   const L = [];
   // Une ligne d'exception : le bon mot (et le bon nombre d'abîmés), puis le reste pris ; sa remplacement : la quantité attendue prise.
+  // Ce qui a été POSÉ pour chaque ligne, à SON adresse (palettes et à côté) : la sélection, qui peut différer du nombre dit au terminal.
+  const LT0 = lignesDuTerminal(M.vocal.lignes, T), adr = Object.fromEntries(LT0.map((l) => [l.id, l.a])), P_ = {};
+  [...(e.palettes || []).flat(), ...(e.cote || [])].forEach((g) => { if (g && g.a === adr[g.ligne]) P_[g.ligne] = (P_[g.ligne] || 0) + g.q; });
+  const dit = (id, n) => R[id] === n && (P_[id] || 0) === n;
   const juges = {
-    ligne: (j) => !EX[j.ligne] && R[j.ligne] === j.prends,
-    abimeDit: (j) => { const x = EX[j.ligne]; return !!x && x.mot === 'abime' && x.n === j.l.attendu.n && R[j.ligne] === j.l.prends - j.l.attendu.n; },
-    abimeRempl: (j) => R[`${j.ligne}-r`] === j.l.attendu.n,
+    ligne: (j) => !EX[j.ligne] && dit(j.ligne, j.prends),
+    abimeDit: (j) => { const x = EX[j.ligne]; return !!x && x.mot === 'abime' && x.n === j.l.attendu.n && dit(j.ligne, j.l.prends - j.l.attendu.n); },
+    abimeRempl: (j) => dit(`${j.ligne}-r`, j.l.attendu.n),
     videDit: (j) => !!EX[j.ligne] && EX[j.ligne].mot === 'vide',
-    videReprise: (j) => !!EX[j.ligne] && EX[j.ligne].mot === 'vide' && R[`${j.ligne}-r`] === j.l.prends,
+    videReprise: (j) => !!EX[j.ligne] && EX[j.ligne].mot === 'vide' && dit(`${j.ligne}-r`, j.l.prends),
   };
   M.jalons.filter((j) => j.ligne).forEach((j) => {
     const ok = fin && juges[j.cas || 'ligne'](j);
@@ -263,23 +267,45 @@ function abime(x, y, w, h) {
 export function creerVocal(P, M, opts, O) {
   if (opts.copie) throw new Error(`entrepot ${P.id} : la préparation vocale n'a pas encore d'évaluation (chantier E-8, lot 5)`);
   const ui = O.ui, G = O.G, V = M.vocal;
-  Object.assign(ui, { pres: null, main: null, regles: false, controle: false, dep: null });
+  Object.assign(ui, { pres: null, main: null, regles: false, controle: false, dep: null, sel: [], vue: 0 });
   const geste = (n) => `entrepot:${P.id}:${n}`;
   const TERM = creerTerminal({ lignes: V.lignes, textes: V.textes, titre: V.titre, mots: V.mots });
   const tempsDe = (api) => P.temps || (api && api.temps) || 'guidage';
-  const pickDe = (e, a) => (a in (e.pick || {}) ? e.pick[a] : M.pick0(a));
+  // LA PILE DU PICKING, carton par carton (retour de Tristan, 25/10) : l'élève SÉLECTIONNE les cartons au clic (seuls ceux du dessus, rien
+  // au-dessus d'eux), peut faire le tour de la pile, et pose sa sélection ; le terminal reçoit la quantité dite. État : `piles: { adresse:
+  // { base, retires: ['x,y,z'] } }` (base : les cartons au départ, rangés couche par couche ; `retires` : ceux qui sont partis).
+  const dims = (a) => M.produits[M.stock[a].produit].couches;
+  const baseDe = (e, a) => { const x = (e.piles || {})[a]; return x && x.base != null ? x.base : M.pick0(a); };
+  const rangement = (a, n) => {
+    const [W, D, L] = dims(a), out = [];
+    for (let z = 0; z < L + 4 && out.length < n; z++) for (let y = 0; y < D && out.length < n; y++) for (let x = 0; x < W && out.length < n; x++) out.push(`${x},${y},${z}`);
+    return out;
+  };
+  const presents = (e, a) => { const R = new Set(((e.piles || {})[a] || {}).retires || []); return rangement(a, baseDe(e, a)).filter((k) => !R.has(k)); };
+  const pickDe = (e, a) => (M.stock[a] && !(e.vides || []).includes(a) ? presents(e, a).length : 0);
+  // Les cartons ABÎMÉS (lot 3) : sur la couche du dessus de la pile de départ, sur la face de DEVANT (le y le plus grand : retour de Tristan,
+  // 25/10, « il doit être face visible ») — vus dès la première vue, et sélectionnables ; jamais écrits.
+  const abimesDe = (a) => {
+    const n = V.abimes[a] || 0;
+    if (!n) return new Set();
+    const C = rangement(a, M.pick0(a)), zMax = Math.max(...C.map((k) => +k.split(',')[2]));
+    const haut = C.filter((k) => +k.split(',')[2] === zMax);
+    const yMax = Math.max(...haut.map((k) => +k.split(',')[1]));
+    const bord = [...haut.filter((k) => +k.split(',')[1] === yMax), ...haut.filter((k) => +k.split(',')[1] !== yMax).reverse()];
+    return new Set(bord.slice(0, n));
+  };
+  // Un carton se prend s'il n'a rien au-dessus (un carton déjà sélectionné compte comme pris : on atteint celui du dessous).
+  const accessibles = (e, a, sel = []) => {
+    const S = new Set(presents(e, a)), pris = new Set(sel);
+    return [...S].filter((k) => { const [x, y, z] = k.split(',').map(Number), h = `${x},${y},${z + 1}`; return !S.has(h) || pris.has(h); });
+  };
+  const retirer = (e, a, cles) => {
+    const x = Object.assign({ base: baseDe(e, a), retires: [] }, (e.piles || {})[a]);
+    e.piles = Object.assign({}, e.piles, { [a]: { base: x.base, retires: [...(x.retires || []), ...cles] } });
+    e.pick = Object.assign({}, e.pick, { [a]: pickDe(e, a) });
+  };
   const court = V.court;
   const ligneEnCours = (e) => lignesDuTerminal(V.lignes, e.terminal)[e.terminal.i] || null;
-  // Les cartons abîmés encore devant la pile d'une adresse : ceux de la déclaration, moins ceux déjà pris (sur une palette ou à côté, ou en
-  // main). « Abîmé : n » les laisse au picking, devant : ils se voient toujours, l'élève prend les autres.
-  const abimesDevant = (e, a) => {
-    const pris = [...(e.palettes || []).flat(), ...(e.cote || [])].filter((g) => g && g.a === a).reduce((t, g) => t + (g.abimes || 0), 0);
-    return Math.max(0, (V.abimes[a] || 0) - pris - (e.mainAbimes && e.mainA === a ? e.mainAbimes : 0));
-  };
-  const laisses = (e, a) => {
-    const EX = (e.terminal || {}).exceptions || {};
-    return V.lignes.filter((l) => l.a === a && EX[l.id] && EX[l.id].mot === 'abime').reduce((t, l) => t + EX[l.id].n, 0);
-  };
   // « Emplacement vide » (ou tout mot) sur une ligne `bloque` : Kevin descend une palette de réserve du même produit (le geste de Smoby,
   // ENT-5.6 : la réserve libère son emplacement, le picking reçoit une palette pleine), et le terminal redit la ligne.
   function descendre(e, l, sig) {
@@ -287,7 +313,9 @@ export function creerVocal(P, M, opts, O) {
     const r = Object.keys(M.stock).find((x) => decoupe(x).n > 1 && M.stock[x].produit === l.produit && !(e.vides || []).includes(x));
     if (!r) return;
     e.vides = [...(e.vides || []), r];
-    e.pick = Object.assign({}, e.pick, { [l.a]: pickDe(e, l.a) + M.plein(l.a) });
+    // La palette de réserve devient la pile du picking (l'emplacement était vide).
+    e.piles = Object.assign({}, e.piles, { [l.a]: { base: M.plein(l.a), retires: [] } });
+    e.pick = Object.assign({}, e.pick, { [l.a]: pickDe(e, l.a) });
     e.reserves = [...(e.reserves || []), { a: l.a, r, h: Date.now() }];
     dire(`Kevin, le cariste, a descendu la palette de réserve <b>${ech(r)}</b> au picking <b>${ech(l.a)}</b>.`, 'ok');
     sig('reserve');
@@ -367,16 +395,57 @@ export function creerVocal(P, M, opts, O) {
 
   // LA VUE DE PRÈS d'un emplacement de picking : les cartons (la pile de la fiche de Smoby) et l'étiquette de la lisse, avec le code de
   // contrôle en gros. Une réserve, un emplacement vide : rien à prendre ici.
+  // La pile vue en perspective, tournée de `r` quarts de tour : chaque carton du dessus est un bouton (sélectionné : aplat bleu ardoise) ; un
+  // carton abîmé montre son coin enfoncé et son ruban déchiré sur sa face de devant (vue 1), à droite une fois la pile tournée (vue 4).
+  function svgPile(e, a, r) {
+    const [W, D] = dims(a), Wv = r % 2 ? D : W, Dv = r % 2 ? W : D;
+    const vers = (x, y) => [[x, y], [D - 1 - y, x], [W - 1 - x, D - 1 - y], [y, W - 1 - x]][r];
+    const S = presents(e, a), sel = new Set(ui.pres === a ? ui.sel : []), acc = new Set(accessibles(e, a, [...sel])), ab = abimesDe(a);
+    const Lh = Math.max(1, ...S.map((k) => +k.split(',')[2] + 1));
+    const A = 30, k8 = 0.87, bh = 0.8, Pj = (x, y, z) => [(x - y) * A * k8, (x + y) * A * 0.5 - z * bh * A];
+    const poly = (pts) => pts.map((q) => Pj(...q).map((v) => v.toFixed(1)).join(',')).join(' ');
+    const trait = '#6e4a22', b = -0.22 / bh;
+    let s2 = `<polygon points="${poly([[0, 0, 0], [Wv, 0, 0], [Wv, Dv, 0], [0, Dv, 0]])}" fill="#b98b55"/>`;
+    s2 += `<polygon points="${poly([[Wv, 0, b], [Wv, Dv, b], [Wv, Dv, 0], [Wv, 0, 0]])}" fill="#8f6532"/><polygon points="${poly([[0, Dv, b], [Wv, Dv, b], [Wv, Dv, 0], [0, Dv, 0]])}" fill="#a87b45"/>`;
+    // la face de devant du monde (y + 1), une fois tournée : devant (vue 1), à droite (vue 4), cachée sinon
+    const faceAb = r === 0 ? 'devant' : r === 3 ? 'droite' : '';
+    const C = S.map((key) => { const [x, y, z] = key.split(',').map(Number); const [vx, vy] = vers(x, y); return { key, vx, vy, z }; })
+      .sort((p, q) => (p.vx + p.vy + p.z) - (q.vx + q.vy + q.z) || p.z - q.z);
+    let n = 0;
+    C.forEach(({ key, vx: x, vy: y, z }) => {
+      const on = sel.has(key), clic = acc.has(key);
+      const haut = on ? '#9cc3e6' : '#e6c48f', droite = on ? '#6f9cc6' : '#b98a50', devant = on ? '#86b0d8' : '#d0a066';
+      let g = `<polygon points="${poly([[x, y, z + 1], [x + 1, y, z + 1], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]])}" fill="${haut}" stroke="${on ? 'var(--ardoise-fond)' : trait}" stroke-width="${on ? 2.4 : 1.1}" stroke-linejoin="round"/>
+        <polygon points="${poly([[x + 1, y, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x + 1, y, z + 1]])}" fill="${droite}" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>
+        <polygon points="${poly([[x, y + 1, z], [x + 1, y + 1, z], [x + 1, y + 1, z + 1], [x, y + 1, z + 1]])}" fill="${devant}" stroke="${trait}" stroke-width="1.1" stroke-linejoin="round"/>
+        <polygon points="${poly([[x + 0.44, y, z + 1], [x + 0.56, y, z + 1], [x + 0.56, y + 1, z + 1], [x + 0.44, y + 1, z + 1]])}" fill="${on ? '#7fa9d2' : '#c9a571'}" opacity=".9"/>`;
+      if (ab.has(key) && faceAb === 'droite') g += `<polygon points="${poly([[x + 1, y, z + 1], [x + 1, y + 0.45, z + 1], [x + 1, y, z + 0.5]])}" fill="#4a3216" data-pvc-coin/>
+        <polyline points="${poly([[x + 1, y + 0.55, z + 0.95], [x + 1, y + 0.45, z + 0.7], [x + 1, y + 0.6, z + 0.5], [x + 1, y + 0.48, z + 0.25]])}" fill="none" stroke="#1a1915" stroke-width="2"/>`;
+      if (ab.has(key) && faceAb === 'devant') g += `<polygon points="${poly([[x + 1, y + 1, z + 1], [x + 0.55, y + 1, z + 1], [x + 1, y + 1, z + 0.5]])}" fill="#4a3216" data-pvc-coin/>
+        <polyline points="${poly([[x + 0.45, y + 1, z + 0.95], [x + 0.55, y + 1, z + 0.7], [x + 0.4, y + 1, z + 0.5], [x + 0.52, y + 1, z + 0.25]])}" fill="none" stroke="#1a1915" stroke-width="2"/>`;
+      if (clic) { n += 1; g = `<g class="pvc-carton${on ? ' pvc-sel' : ''}" data-pvc-carton="${key}"${ab.has(key) ? ' data-pvc-ab' : ''} data-pe-cle="carton:${key}" tabindex="0" role="button" aria-pressed="${on}" aria-label="${ech(`Carton ${n} du dessus`)}">${g}</g>`; }
+      s2 += g;
+    });
+    const xs = [Pj(0, Dv, 0)[0], Pj(Wv, 0, 0)[0]], ys = [Pj(0, 0, Lh)[1], Pj(Wv, Dv, b)[1]], mg = 12;
+    return `<svg class="pvc-pile" viewBox="${(xs[0] - mg).toFixed(1)} ${(ys[0] - mg).toFixed(1)} ${(xs[1] - xs[0] + 2 * mg).toFixed(1)} ${(ys[1] - ys[0] + 2 * mg).toFixed(1)}" preserveAspectRatio="xMidYMid meet" role="group" aria-label="${ech(`Les cartons de ${a}, vue ${r + 1} sur 4`)}">${s2}</svg>`;
+  }
+  // LA VUE DE PRÈS : en haut à gauche, les outils (tourner autour de la pile, la sélection, « Poser sur … ») ; la pile ; l'étiquette de la lisse.
   function htmlPres(e, a) {
     const st = (e.vides || []).includes(a) ? null : M.stock[a];
     const d = decoupe(a);
     if (!st) return `<div class="pvc-pres" data-pvc-pres="${ech(a)}"><div class="pvc-vide">Emplacement vide.</div>${htmlLisse(a, null)}</div>`;
-    const p = M.produits[st.produit], q = pickDe(e, a), nAb = Math.min(q, abimesDevant(e, a));
-    const cartons = q > 0 ? O.pile(p.couches, q - M.plein(a), `Les cartons de ${a}`) : '<div class="pvc-vide" data-pvc-vide>Emplacement vide.</div>';
-    // Les cartons abîmés DEVANT la pile (lot 3) : dessinés, jamais écrits.
-    const devant = nAb ? `<svg class="pvc-devant" viewBox="0 0 ${nAb * 74 + 6} 60" role="img" aria-label="${ech(`Devant la pile : ${nAb > 1 ? `${nAb} cartons` : 'un carton'}, coin enfoncé, ruban déchiré`)}">${
-      Array.from({ length: nAb }, (_, i) => `<rect x="${i * 74 + 4}" y="6" width="68" height="50" fill="#d4a46a" stroke="#6e4a22" stroke-width="1.4"/>${abime(i * 74 + 4, 6, 68, 50)}`).join('')}</svg>` : '';
-    return `<div class="pvc-pres" data-pvc-pres="${ech(a)}"><div class="pvc-cartons">${cartons}${devant}</div>${htmlLisse(a, p, d)}</div>`;
+    const p = M.produits[st.produit], q = pickDe(e, a);
+    if (!q) return `<div class="pvc-pres" data-pvc-pres="${ech(a)}"><div class="pvc-vide" data-pvc-vide>Emplacement vide.</div>${htmlLisse(a, p, d)}</div>`;
+    const T = e.terminal, nSel = ui.pres === a ? ui.sel.length : 0, attend = !T.fin && T.phase === 'pose';
+    const bouton = (attrs, cle, lib, off, cls = 'btn') => `<button type="button" class="${cls}" ${attrs} data-pe-cle="${cle}" ${off ? 'disabled' : ''}>${lib}</button>`;
+    const peut = attend && nSel > 0;
+    const outils = `<div class="pvc-outils" data-pvc-outils>
+      <div class="pvc-tour">${bouton('data-pvc-tourner="-1"', 'b:tourner-', '↺', false, 'btn pvc-rond')}<span class="pe-petit">Faire le tour</span>${bouton('data-pvc-tourner="1"', 'b:tourner+', '↻', false, 'btn pvc-rond')}</div>
+      <div class="pvc-sel" data-pvc-nsel="${nSel}"><b>${nSel}</b> carton${nSel > 1 ? 's' : ''} sélectionné${nSel > 1 ? 's' : ''}${nSel ? ` ${bouton('data-pvc="desel"', 'b:desel', 'Tout désélectionner', false, 'btn pvc-petit-btn')}` : ''}</div>
+      <div class="pk-poser">${V.palettes.map((pl) => bouton(`data-pvc-poser="${pl.p}"`, `poser:${pl.p}`, `Poser sur la palette${V.deux ? ` ${ech(pl.etiquette)}` : ''}`, !peut, 'btn btn-p')).join('')}${
+        bouton('data-pvc-poser="cote"', 'poser:cote', 'À côté', !peut, 'btn pk-acote')}</div>
+      ${nSel && !attend && !T.fin ? '<div class="pe-petit" data-pvc-dis>Dis la quantité au terminal, puis pose.</div>' : ''}</div>`;
+    return `<div class="pvc-pres" data-pvc-pres="${ech(a)}">${outils}<div class="pvc-cartons">${svgPile(e, a, ui.vue)}</div>${htmlLisse(a, p, d)}</div>`;
   }
   function htmlLisse(a, p) {
     const code = P.codes[a];
@@ -392,10 +461,8 @@ export function creerVocal(P, M, opts, O) {
     let h = '<section class="pk-montage pvc-montage" data-pvc-montage aria-label="La palette">';
     if (!fin && T.phase === 'pose') {
       const l = ligneEnCours(e), n = T.reponses[l.id];
-      h += `<div class="pk-question" data-pvc-question>Où poses-tu ${ech(quoi(l.produit, n))} ?</div><div class="pk-poser">${
-        V.palettes.map((pl) => bouton(`data-pvc-poser="${pl.p}"`, `poser:${pl.p}`, V.deux ? `Palette ${ech(pl.etiquette)}` : 'Palette')).join('')}${
-        bouton('data-pvc-poser="cote"', 'poser:cote', 'À côté, je les pose après', false, 'btn pk-acote')}</div>`;
-    } else if (!fin) h += '<div class="pe-petit">Suis le terminal : va à l’emplacement, lis le code sur l’étiquette, prends, puis pose.</div>';
+      h += `<div class="pk-question" data-pvc-question>Où poses-tu ${ech(quoi(l.produit, n))} ?</div><div class="pe-petit">De près, sélectionne les cartons, puis « Poser sur la palette » ou « À côté », en haut à gauche de la pile.</div>`;
+    } else if (!fin) h += '<div class="pe-petit">Suis le terminal : va à l’emplacement, lis le code sur l’étiquette, sélectionne les cartons, dis la quantité au terminal, puis pose.</div>';
     if (cote.length) {
       h += `<div class="pk-cote" data-pvc-cote><b>À côté :</b> ${cote.map((g, k) => `<button type="button" class="pk-objet${ui.main === k ? ' pk-main' : ''}" data-pvc-objet="${k}"
         data-pe-cle="objet:${k}" aria-pressed="${ui.main === k}" ${fin ? '' : 'disabled'}>${ech(court(g.k))} × ${g.q}</button>`).join('')}
@@ -423,18 +490,28 @@ export function creerVocal(P, M, opts, O) {
   }
 
   /* --------------------------------------------------------- les gestes */
+  function ecarter(e) {
+    const a = ui.pres, ab = a ? abimesDe(a) : new Set(), cles = (ui.sel || []).filter((k) => ab.has(k));
+    if (!cles.length) return;
+    retirer(e, a, cles); ui.sel = ui.sel.filter((k) => !ab.has(k));
+    e.ecartes = [...(e.ecartes || []), { a, n: cles.length }];
+  }
   function poserLigne(e, dest, sig) {
     const T = e.terminal;
     if (T.fin || T.phase !== 'pose') return null;
-    const l = ligneEnCours(e), n = T.reponses[l.id] || 0, g = { a: l.a, k: l.produit, q: n, ligne: l.id };
-    if (e.mainAbimes) g.abimes = e.mainAbimes;
-    e.mainAbimes = 0; e.mainA = null;
+    // Ce qui est posé, c'est la SÉLECTION (le nombre dit au terminal peut être différent : la ligne est alors fausse).
+    const a = ui.pres, cles = ui.sel || [];
+    if (!a || !cles.length || !M.stock[a]) return null;
+    const l = ligneEnCours(e), ab = abimesDe(a), g = { a, k: M.stock[a].produit, q: cles.length, ligne: l.id };
+    const nAb = cles.filter((k) => ab.has(k)).length;
+    if (nAb) g.abimes = nAb;
+    retirer(e, a, cles); ui.sel = [];
     if (dest === 'cote') e.cote = [...(e.cote || []), g];
     else e.palettes[dest] = [...(e.palettes[dest] || []), g];
     e.verifie = false; noter(e);
     const r = TERM.poser(T);
     sig(dest === 'cote' ? 'poser:cote' : 'poser:palette');
-    if (dest !== 'cote') sig(`pose:${M.classe(l.produit)}`);
+    if (dest !== 'cote') sig(`pose:${M.classe(g.k)}`);
     sig(`ligne:${l.id}`);
     if (r.evt === 'fin') sig('fin');
     dire('');
@@ -454,16 +531,6 @@ export function creerVocal(P, M, opts, O) {
     e.palettes[p] = L.slice(0, -1);
     e.cote = [...(e.cote || []), L[L.length - 1]]; e.verifie = false; ui.main = null;
   }
-  // Une quantité acceptée par le terminal : les cartons quittent le picking (le terminal attend la pose).
-  // Les abîmés sont devant : pris d'abord, sauf ceux que l'élève a signalés (laissés) — ils partent avec le groupe (`mainAbimes`).
-  function preleve(e, l) {
-    const n = e.terminal.reponses[l.id] || 0;
-    if (n <= 0) return;
-    const dispo = Math.max(0, abimesDevant(e, l.a) - laisses(e, l.a));
-    e.mainAbimes = Math.min(n, dispo); e.mainA = l.a;
-    e.pick = Object.assign({}, e.pick, { [l.a]: Math.max(0, pickDe(e, l.a) - n) });
-  }
-
   // L'aide de l'accompagné : la travée de la ligne en cours, cernée sur le plan (jamais l'emplacement, jamais le code).
   function dessusPlan(e) {
     if (V.montrer !== 'travee' || e.terminal.fin) return '';
@@ -496,7 +563,8 @@ export function creerVocal(P, M, opts, O) {
       // Le terminal fini, la palette prend toute la place (les cartons à côté s'y posent, « Reposer » se voit) ; la travée reste ouvrable.
       if (ui.controle && T.fin) espace = htmlControle(e);
       else if (!ui.trav && T.fin) espace = htmlPalettes(e);
-      else if (!ui.trav) espace = `<div class="pe-plan">${O.htmlPlan(e, R, { dessus: dessusPlan(e) })}</div>`;
+      // Sur le plan aussi, la palette reste à gauche (retour de Tristan, 25/10).
+      else if (!ui.trav) espace = `<div class="pe-partage pvc-partage-plan">${htmlPalettes(e)}<div class="pe-plan">${O.htmlPlan(e, R, { dessus: dessusPlan(e) })}</div></div>`;
       else {
         const fil = `<div class="pe-entete"><div class="pe-fil">Plan › <b>Travée</b> <span class="pe-mono">${ech(ui.trav)}</span>${ui.pres ? ` › <b>De près</b> <span class="pe-mono">${ech(ui.pres)}</span>` : ''}</div>
           <div class="pe-msg-vue"><div class="pe-msg ${ui.msgType ? `pe-${ui.msgType}` : ''}" data-pe-msg>${ui.msg}</div></div>
@@ -529,7 +597,7 @@ export function creerVocal(P, M, opts, O) {
         if (el.tagName !== 'BUTTON') el.addEventListener('keydown', (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); fn(); } });
       };
       const fermer = () => {
-        if (ui.pres) { ui.focus = `emp:${ui.pres}`; ui.pres = null; }
+        if (ui.pres) { ui.focus = `emp:${ui.pres}`; ui.pres = null; ui.sel = []; }
         else if (ui.trav) { ui.focus = `trav:${ui.trav}`; ui.trav = null; }
         else return false;
         dire(''); redessiner(); return true;
@@ -559,6 +627,7 @@ export function creerVocal(P, M, opts, O) {
         activer(g, () => {
           const a = g.dataset.peEmp, d = decoupe(a);
           if (d.n > 1) { dire(`<b>${ech(a)}</b> : c’est la <b>réserve</b>. Tu prends au niveau 1, au sol.`, 'non'); redessiner(); return; }
+          if (ui.pres !== a) ui.sel = [];
           ui.pres = a; ui.focus = 'b:retour'; dire('');
           if (!e.vus[a]) { e.vus[a] = Date.now(); noter(e); }
           sig(`ouvrir:${a}`); sauver(); redessiner();
@@ -570,6 +639,16 @@ export function creerVocal(P, M, opts, O) {
       });
       const tout = () => (api.redessinerTout ? api.redessinerTout() : redessiner());
       const fait = (cle) => { if (cle !== undefined) ui.focus = cle; sauver(); redessiner(); };
+      // La pile : sélectionner un carton du dessus (ou le désélectionner), tourner autour, tout désélectionner.
+      racine.querySelectorAll('[data-pvc-carton]').forEach((c) => activer(c, () => {
+        const k = c.dataset.pvcCarton;
+        ui.sel = ui.sel.includes(k) ? ui.sel.filter((x) => x !== k) : [...ui.sel, k];
+        noter(e); ui.focus = `carton:${k}`; redessiner();
+      }));
+      racine.querySelectorAll('[data-pvc-tourner]').forEach((b) => activer(b, () => {
+        ui.vue = (ui.vue + 4 + Number(b.dataset.pvcTourner)) % 4; ui.focus = b.dataset.peCle; redessiner();
+      }));
+      racine.querySelectorAll('[data-pvc="desel"]').forEach((b) => activer(b, () => { ui.sel = []; ui.focus = 'b:tourner+'; redessiner(); }));
       racine.querySelectorAll('[data-pvc-poser]').forEach((b) => activer(b, () => {
         const d = b.dataset.pvcPoser;
         const evt = poserLigne(e, d === 'cote' ? 'cote' : +d, sig);
@@ -638,12 +717,13 @@ export function creerVocal(P, M, opts, O) {
           if (!l) return;
           noter(e);
           if (evt === 'code') sig(`code:${l.id}`);
-          if (evt === 'pris') preleve(e, l);
           const ex = (e.terminal.exceptions || {})[l.id];
           // Un mot dit (« Abîmé », « Manquant », « Emplacement vide ») : `mot:<id>` (publié une fois, l'environnement ne garde que le premier).
           if (evt === 'mot' && e.terminal.mot) sig(`mot:${e.terminal.mot.id}`);
           else if (ex) sig(`mot:${ex.mot}`);
           if (ex && l.bloque) descendre(e, l, sig);
+          // « Abîmé » dit avec des cartons abîmés sélectionnés : ils sont mis de côté (ils quittent la pile, sans aller sur la palette).
+          if ((evt === 'mot' && e.terminal.mot && e.terminal.mot.id === 'abime') || (evt === 'exception' && ex && ex.mot === 'abime')) ecarter(e);
           // La ligne d'exception finie (quoi qu'on ait dit) : `abime` / `vide`, pour les questions au fil des séances.
           if (l.attendu && (evt === 'reponse' || evt === 'fin' || evt === 'pris')) sig(l.attendu.mot);
           // Une ligne finie sans pose (un mot qui signale toute la ligne) : publiée comme une ligne posée.

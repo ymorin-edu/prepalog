@@ -199,3 +199,10 @@ ENT-5.6 Smoby, ENT-6.7 France Boissons, le palettier (E-7) et les séances 8.11 
   palette (`lourds-1`, `lourds-2`…), jugé seulement si la palette est groupée ; `etiquettes-p` exige l'étiquette de son magasin.
 - **Ce qui reste à la séance** (ENT-8.18) : le message de Yanis (`apresGeste('entrepot:<id>:ligne:L3')`), les poids par bloc, figer le terminal à
   « Corriger ». `terminal.cocher` (accompagné : la liste se coche quand le compte y est) est codé mais pas encore couvert par un test.
+
+### Retours de Tristan sur la vue de près — livré le 25/10/2026 (Claude, même fil)
+
+- **Les cartons se sélectionnent au clic** (seuls ceux du dessus, rien au-dessus d'eux ; un carton sélectionné libère celui du dessous). La pile se dessine carton par carton (état `piles: { adresse: { base, retires } }`) ; « **Faire le tour** » la tourne d'un quart de tour (4 vues).
+- **En haut à gauche de la pile** : le nombre sélectionné, « Tout désélectionner », « **Poser sur la palette [X]** » / « **À côté** » (actifs quand le terminal attend la pose). L'élève **dit toujours la quantité au terminal** ; ce qui est posé, c'est la sélection : une quantité dite différente de la sélection rend la ligne fausse (jalon `ligne-*` : dit = posé = attendu).
+- **Le plan** montre la palette à gauche.
+- **Le carton abîmé est sur la face de devant** (vue 1 ; à droite en vue 4) et se sélectionne. « Abîmé » dit au terminal avec lui sélectionné : il est **mis de côté** (`ecartes`), il quitte la pile sans aller sur la palette. Pris et posé sans rien dire : il part sur la palette, dessiné abîmé (« aucun carton abîmé » faux).

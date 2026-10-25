@@ -621,8 +621,8 @@ button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
 .pvc-cote{ display:flex; flex-direction:column; gap:6px; min-width:0; max-height:var(--pvc-cote, none); overflow:auto; overscroll-behavior:contain }
 .pvc-cote .vt{ margin:0 }
 .pvc-pres{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:8px 6px }
-.pvc-cartons{ width:100%; max-width:420px }
-.pvc-cartons svg:not(.pvc-devant){ width:100%; height:auto; max-height:calc(var(--pe-dispo, 420px) - 160px) }
+.pvc-cartons{ flex:1 1 auto; min-height:0; width:100%; display:flex; justify-content:center }
+.pvc-cartons svg{ height:100%; width:auto; max-width:100% }
 .pvc-vide{ padding:28px 10px; color:var(--encre-douce); font-weight:700; text-align:center }
 .pvc-lisse{ display:flex; align-items:center; gap:14px; background:#fbfaf6; color:#1a1915; border:2px solid #8a8478; border-radius:4px;
   padding:8px 14px; box-shadow:0 2px 0 #c9c3b6 }
@@ -638,7 +638,6 @@ button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
 .pvc-cmd .pe-bon{ font-size:.86rem }
 .pvc-survol{ min-height:1.3em; font-family:var(--mono, monospace) }
 .pvc-cote > *{ flex:none }
-.pvc-devant{ display:block; height:56px; width:auto; margin:-14px auto 0 }
 /* Deux magasins (lot 4) : les deux palettes côte à côte ; le contrôle, chaque palette à côté de sa liste de colisage. */
 .pvc-palettes.pvc-deux{ flex-direction:row }
 .pvc-palettes.pvc-deux > .pvc-pal{ flex:1 1 0 }
@@ -650,3 +649,17 @@ button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
 .pvc-colisage ul{ margin:4px 0 0; padding-left:1.1em }
 .pvc-ctl-svg svg{ width:100%; height:auto; max-height:calc(var(--pe-dispo, 460px) - 150px) }
 .pvc-coche{ color:var(--ardoise-fond) }
+/* La pile du picking carton par carton (retour de Tristan, 25/10) : les outils en haut à gauche, les cartons du dessus cliquables. */
+.pvc-pres{ position:relative; align-items:stretch }
+.pvc-outils{ display:flex; flex-direction:column; gap:5px; align-self:flex-start; background:var(--panneau); border:1px solid var(--filet);
+  border-radius:var(--r); padding:6px 8px; max-width:100% }
+.pvc-tour{ display:flex; align-items:center; gap:6px }
+.pvc-rond{ min-width:38px; padding:2px 8px; font-size:1.05rem }
+.pvc-petit-btn{ padding:1px 6px; font-size:.78rem; margin-left:6px }
+.pvc-sel{ font-size:.9rem }
+.pvc-carton{ cursor:pointer }
+.pvc-carton:focus-visible polygon:first-child{ stroke:var(--ardoise-fond); stroke-width:3 }
+.pvc-partage-plan{ grid-template-columns:minmax(0,1fr) minmax(0,2.3fr) }
+.pvc-pres{ height:var(--pe-dispo, 460px); box-sizing:border-box; padding-top:8px }
+.pvc-outils{ flex-direction:row; flex-wrap:wrap; align-items:center; gap:6px 10px; flex:none }
+.pvc-lisse{ flex:none }
