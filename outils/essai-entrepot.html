@@ -29,7 +29,7 @@
 <body>
 <form class="essai-reglages" id="reglages">
   <b>Page d'essai</b> — chaque changement repart d'une base neuve :
-  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option><option value="preparation">③ Préparation (ENT-5.6)</option><option value="visite">Visite (ENT-5.3)</option><option value="masse">Stockage de masse (ENT-6.5)</option><option value="comptage">Masse, comptage (ENT-6.6)</option><option value="picking">Allée de picking (ENT-6.7)</option></select></label>
+  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option><option value="preparation">③ Préparation (ENT-5.6)</option><option value="visite">Visite (ENT-5.3)</option><option value="masse">Stockage de masse (ENT-6.5)</option><option value="comptage">Masse, comptage (ENT-6.6)</option><option value="picking">Allée de picking (ENT-6.7)</option><option value="vocal">Préparation vocale, cartons (Action, E-8)</option></select></label>
   <label>Temps <select name="temps"><option value="guidage">guidage</option><option value="entrainement">entraînement</option><option value="evaluation">évaluation (copie rendue)</option></select></label>
   <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant (bonnes réponses, visite : navigation libre)</option></select></label>
 </form>
@@ -42,6 +42,12 @@ import { univers } from './outils/essai-entrepot.js';
 import { MENTION } from './contenus/entrepot-essai.js';
 import { MENTION as MENTION_MASSE, MENTION_COMPTAGE } from './contenus/entrepot-masse-essai.js';
 import { MENTION as MENTION_PICKING } from './contenus/entrepot-picking-essai.js';
+import { preparation, MENTION_PREPA } from './contenus/action-prepa-donnees.js';
+import { universPalettier } from './contenus/palettier-essai.js';
+import { etapesEntrepot } from './core/types/entrepot.js';
+// La préparation vocale d'Action (chantier E-8) : une commande tirée par élève ; ici, l'élève témoin (graine « temoin-1 »).
+const VOCAL = preparation({ id: 'essai-vocal', lignes: 5, terminal: { montrer: 'travee' },
+  personnage: { nom: 'Kevin', role: 'chef d’équipe', date: '6 h 00', texte: 'Tu prépares la commande du magasin. Le terminal te guide : écoute-le, va à l’emplacement, lis le code sur l’étiquette.' } });
 
 document.getElementById('mention').innerHTML = MENTION;
 const form = document.getElementById('reglages');
@@ -51,18 +57,22 @@ function monter() {
   // La visite est un guidage : pas d'évaluation (brief MOTEUR-modes-visite §6).
   // L'allée de picking (ENT-6.7) est un entraînement, sans évaluation pour l'instant.
   if (['visite', 'comptage'].includes(f.get('cas'))) form.temps.value = 'guidage';
-  if (f.get('cas') === 'picking' && form.temps.value === 'evaluation') form.temps.value = 'entrainement';
+  if (['picking', 'vocal'].includes(f.get('cas')) && form.temps.value === 'evaluation') form.temps.value = 'entrainement';
   const temps = ['visite', 'comptage'].includes(f.get('cas')) ? 'guidage' : form.temps.value;
   document.getElementById('mention').innerHTML = f.get('cas') === 'masse' ? MENTION_MASSE : f.get('cas') === 'comptage' ? MENTION_COMPTAGE
-    : f.get('cas') === 'picking' ? MENTION_PICKING : MENTION;
+    : f.get('cas') === 'picking' ? MENTION_PICKING : f.get('cas') === 'vocal' ? MENTION_PREPA : MENTION;
   const hote = document.getElementById('hote');
   const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
   boite.hidden = true;
-  const moteur = creerEntreprise(univers({ cas: f.get('cas'), temps }));
+  const U = f.get('cas') === 'vocal'
+    ? Object.assign(universPalettier({ poids: false }), { entrepot: VOCAL, etapes: etapesEntrepot(VOCAL),
+      ENTREPRISE: { id: 'essai-entrepot', nom: 'Action — essai de la préparation vocale', sousTitre: 'Entrepôt d’Ensuès-la-Redonne (13) — préparation', exercice: 'Essai de la préparation vocale' } })
+    : univers({ cas: f.get('cas'), temps });
+  const moteur = creerEntreprise(U);
   const db = {};
   moteur.rendre(neuf, {
     meta: { id: 'essai-entrepot', code: 'ESSAI', titre: 'Essai du plan d’entrepôt', portee: 'eleve', immersif: true, temps, copie: temps === 'evaluation' },
-    profil: { prenom: 'Essai', nom: 'Entrepôt', role: f.get('role') },
+    profil: { prenom: 'Essai', nom: 'Entrepôt', role: f.get('role'), uid: 'temoin-1' },
     jeu: { etat: () => db, sauver: () => {} },
     enregistrer: () => {}, quitter: () => { location.reload(); }, codeStock: 'ESSAI',
     lireScore: async () => null,

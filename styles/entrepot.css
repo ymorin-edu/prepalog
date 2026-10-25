@@ -613,3 +613,28 @@ button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
 .pal-bandeau-lend .pe-perso{ flex-basis:340px; max-width:38% }
 .vt-choix{ display:flex; gap:6px; margin-top:8px }
 .vt-choix .vt-btn{ flex:1 1 0; min-height:38px }
+
+/* Préparation guidée à la voix, en cartons (chantier E-8, `entrepot-vocal.js`) : le terminal et le montage à gauche, le plan ou la
+   travée à droite ; la palette de commande à gauche de la travée ouverte, la vue de près (cartons + étiquette de la lisse) à droite. */
+.pvc-jeu{ grid-template-columns:300px minmax(0,1fr) }
+@media (max-width:900px){ .pvc-jeu{ grid-template-columns:minmax(0,1fr) } }
+.pvc-cote{ display:flex; flex-direction:column; gap:6px; min-width:0; max-height:var(--pvc-cote, none); overflow:auto; overscroll-behavior:contain }
+.pvc-cote .vt{ margin:0 }
+.pvc-pres{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:8px 6px }
+.pvc-cartons{ width:100%; max-width:420px }
+.pvc-cartons svg{ width:100%; height:auto; max-height:calc(var(--pe-dispo, 420px) - 120px) }
+.pvc-vide{ padding:28px 10px; color:var(--encre-douce); font-weight:700; text-align:center }
+.pvc-lisse{ display:flex; align-items:center; gap:14px; background:#fbfaf6; color:#1a1915; border:2px solid #8a8478; border-radius:4px;
+  padding:8px 14px; box-shadow:0 2px 0 #c9c3b6 }
+.pvc-adr{ font-size:1.05rem; font-weight:800 }
+.pvc-des{ font-size:.9rem }
+.pvc-code{ display:flex; flex-direction:column; align-items:center; border-left:2px solid #8a8478; padding-left:14px; line-height:1 }
+.pvc-code small{ font-size:.7rem; text-transform:uppercase; letter-spacing:.06em }
+.pvc-code b{ font-size:2rem; font-weight:900 }
+.pvc-palettes{ display:flex; flex-direction:column; gap:8px; min-width:0 }
+.pvc-cible{ outline:3px dashed var(--ardoise-fond); outline-offset:2px; cursor:pointer }
+.pvc-bandeau .pe-perso{ flex:1 1 26em; max-width:34em }
+.pvc-cmd{ flex:1 1 18em; display:flex; flex-direction:column; justify-content:center; gap:1px; font-size:.9rem; line-height:1.3 }
+.pvc-cmd .pe-bon{ font-size:.86rem }
+.pvc-survol{ min-height:1.3em; font-family:var(--mono, monospace) }
+.pvc-cote > *{ flex:none }

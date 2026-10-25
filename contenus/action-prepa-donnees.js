@@ -304,6 +304,8 @@ export function preparation(opts) {
       // Lus par les lots 1 et 3 du chantier E-8 (le moteur du lot 0 ne les lit pas encore).
       codes: jeu.codes, abimes: jeu.abimes, remplacements: jeu.remplacements,
       ...(o.jalons ? { jalons: o.jalons } : {}),
+      // Le terminal vocal (chantier E-8, lots 1-2) : sans lui, la préparation est celle de Smoby (bon papier, ENT-5.6).
+      ...(o.terminal ? { terminal: o.terminal } : {}),
     };
   };
   fn.jeuDe = jeuDe;     // pour les tests et le côté enseignant : { jeu, essai, secours }

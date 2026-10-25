@@ -150,3 +150,18 @@ ENT-5.6 Smoby, ENT-6.7 France Boissons, le palettier (E-7) et les séances 8.11 
 - **Profils essayés sur 300 graines** (aucun jeu de secours, le moteur confirme l'équité) : 8.15 `{ lignes: 5 }` ; 8.16 `{ lignes: 7, abimes: 1,
   vides: 1 }` ; 8.17 `{ lignes: 6, lourds: 2, fragiles: 2, ordre: 'piege' }` ; 8.19 `{ lignes: 7, fragiles: 1, abimes: 1, vides: 1, ordre: 'piege' }`.
 - **Rien ne change** pour Smoby, le palettier ni les séances 8.11 à 8.14 (blocs `entrepot`, `smoby`, `palettier`, `action-811` à `action-814` relancés).
+
+### Lots 1 et 2 — livrés le 25/10/2026 (Claude, même fil)
+
+- **Fichiers** : créé `core/types/entrepot-vocal.js` (compilation des lignes du terminal, jugement, vue : terminal et montage à gauche, plan ou
+  travée à droite, vue de près avec l'étiquette de lisse et son code) ; modifié `core/types/entrepot.js` (une déclaration `mode: 'preparation'` qui
+  porte `terminal` passe par `compilerVocal`, `jalonsVocal`, `detailVocal`, `creerVocal` ; sans `terminal`, rien ne bouge), `styles/entrepot.css`
+  (classes `pvc-*` : le préfixe `pv-` est déjà pris par la visite), `contenus/action-prepa-donnees.js` (option `terminal` passée à la
+  déclaration), `outils/essai-entrepot.html` (cas « Préparation vocale, cartons (Action, E-8) », élève témoin graine « temoin-1 ») ; 4 cas
+  ajoutés à `outils/test/preparation-vocale.mjs` (contrôle de sabotage fait : la règle « lourds » neutralisée et le prélèvement coupé font tomber 2 cas).
+- **Jalons** : `ligne-L1` … `ligne-Ln` puis `lourds`, `fragiles`, `poids`, `hauteur`, `film`, `etiquettes`. Les critères ne sont jugés que si le
+  terminal est fini, toutes les lignes justes, rien « à côté » **et chaque carton pris posé sur une palette** (une base incomplète ne gagne rien).
+- **Ce qui diffère du brief** : pas d'option `voix` (le son est le réglage enseignant d'ENT-6.6, comme 6.7) ; `terminal.montrer: 'travee'` cerne,
+  pour l'élève accompagné, la travée de la ligne en cours sur le plan (jamais l'emplacement ni le code) ; le terminal fini, la palette prend toute
+  la place à droite (les cartons « à côté » s'y posent d'un clic) ; le bandeau donne le n° de commande, le magasin, le quai, l'heure de départ et
+  les limites de la palette (il n'y a plus de bon) ; la colonne du terminal défile seule (tient à 1366 × 768 et 1280 × 720, testé).

@@ -94,6 +94,7 @@ import { compilerMasse, etatMasseNeuf, jalonsMasse, solutionsMasse, creerMasse, 
 import { compilerPalettier, etatPalettierNeuf, jalonsPalettier, detailPalettier, attendusPalettier, creerPalettier,
   confieesPalettier, etatLisiblePalettier, declarationDe, ouSystemeCroitPalettier, ecartsComptage, etatLisibleComptage,
   chercheePalettier } from './entrepot-palettier.js';
+import { compilerVocal, etatVocalNeuf, jalonsVocal, attendusVocal, detailVocal, creerVocal } from './entrepot-vocal.js';
 import { niveauEleve } from '../tirage.js';
 import { ech, pad2 } from '../texte.js';
 import { noteProportionnelle } from '../notes.js';
@@ -344,7 +345,8 @@ function compilerPrep(M, err) {
     if (pick0(a) >= minPick(a)) err(`${a} : en rupture mais pas sous son minimum (le réapprovisionnement serait refusé)`);
     if (!Object.keys(M.stock).some((r) => decoupe(r).n > 1 && M.stock[r].produit === M.stock[a].produit)) err(`${a} : en rupture, sans palette de réserve de la même référence`);
   });
-  M.jalons = (P.jalons || TYPES_JALONS_PREP.filter((t) => t !== 'reappro' || ruptures.length).map((t) => ({ type: t })))
+  // Guidée à la voix (chantier E-8) : les jalons sont ceux du terminal, posés par `compilerVocal` à la fin.
+  if (!P.terminal) M.jalons = (P.jalons || TYPES_JALONS_PREP.filter((t) => t !== 'reappro' || ruptures.length).map((t) => ({ type: t })))
     .map((j) => {
       if (!JALONS_PREP[j.type]) err(`jalon de type inconnu : ${j.type} (types : ${TYPES_JALONS_PREP.join(', ')})`);
       return Object.assign({ id: j.type, lib: JALONS_PREP[j.type] }, j);
@@ -425,6 +427,7 @@ function compilerPrep(M, err) {
   Object.assign(M, { C, lignes, desordre, support, classe, plein, pick0, minPick, ruptures, point, longueurTour,
     tourLong: tour, cycle: cyc, metres: m, haut,
     meilleur: { serpentin: meilleur('serpentin'), retour: meilleur('retour') } });
+  if (P.terminal) compilerVocal(M, err, JALONS_PREP);
 }
 
 const etatPrepNeuf = () => ({ faits: [], pick: {}, vides: [], reappros: [], essaisReserve: [], parcours: null,
@@ -526,15 +529,15 @@ function solutions(M, id) {
   return [...M.litiges, ...M.toutes].filter((a) => !M.stock[a] && !fautes(M, {}, id, a).length);
 }
 
-export function etatNeuf(mode) {
-  if (mode === 'preparation') return etatPrepNeuf();
+export function etatNeuf(mode, vocal = false) {
+  if (mode === 'preparation') return vocal ? etatVocalNeuf() : etatPrepNeuf();
   if (mode === 'visite') return etatVisiteNeuf();
   if (mode === 'masse') return etatMasseNeuf();
   if (mode === 'picking') return etatPickingNeuf();
   if (mode === 'palettier') return etatPalettierNeuf();
   return { place: {}, verifie: false, verifs: 0, premierGeste: null, aideCharge: true };
 }
-const etatDe = (db, P) => (db && db.entrepots && db.entrepots[P.id]) || etatNeuf(P.mode);
+const etatDe = (db, P) => (db && db.entrepots && db.entrepots[P.id]) || etatNeuf(P.mode, !!P.terminal);
 
 // Les jalons d'une base. Rangement : une palette est juste si elle est posée ET qu'aucun critère n'est
 // faux à son adresse ; non posée = faux (l'inaction ne rapporte rien). Préparation : voir `jalonsPrep`.
@@ -550,7 +553,8 @@ export function jalonsEntrepot(db, P, temps = P.temps) {
     return { L: LP, ok: S.filter((l) => l.ok).length, total: S.length };
   }
   let L;
-  if (M.mode === 'preparation') L = jalonsPrep(M, Object.assign(etatPrepNeuf(), e), temps);
+  if (M.mode === 'preparation' && M.vocal) L = jalonsVocal(M, e);
+  else if (M.mode === 'preparation') L = jalonsPrep(M, Object.assign(etatPrepNeuf(), e), temps);
   else if (M.mode === 'visite') L = jalonsVisite(M, e);
   else if (M.mode === 'masse') L = jalonsMasse(M, Object.assign(etatMasseNeuf(), e));
   else if (M.mode === 'picking') L = jalonsPicking(M, Object.assign(etatPickingNeuf(), e));
@@ -622,6 +626,7 @@ export function noteEntrepot(db, P, temps = P.temps) {
       premierGeste: e.premierGeste || null } };
   }
   if (compiler(P).mode === 'palettier') return { score, max: N.sur, ok, total, detail: detailPalettier(compiler(P), e, L) };
+  if (compiler(P).vocal) return { score, max: N.sur, ok, total, detail: detailVocal(compiler(P), e, L) };
   if (compiler(P).mode === 'preparation') {
     const X = calculPrep(compiler(P), Object.assign(etatPrepNeuf(), e));
     return { score, max: N.sur, ok, total,
@@ -639,12 +644,14 @@ export function bonnesReponses(P) {
   if (M.mode === 'masse') return solutionsMasse(M);
   if (M.mode === 'picking') return attendusPicking(M);
   if (M.mode === 'palettier') return attendusPalettier(M);
+  if (M.vocal) return attendusVocal(M);
   return Object.fromEntries(Object.keys(M.pal).map((id) => [id, solutions(M, id)]));
 }
 // Ce que la préparation attend (page d'essai, côté enseignant, tests) : les meilleurs tours, et la
 // palette montée dans l'ordre du serpentin. JAMAIS montré à l'élève.
 export function attendusPreparation(P) {
   const M = compiler(P);
+  if (M.vocal) return attendusVocal(M);
   const juste = calculPrep(M, Object.assign(etatPrepNeuf(), { faits: M.lignes.map((l) => ({ a: l.a, k: l.produit, q: l.q })) }));
   const desordre = calculPrep(M, Object.assign(etatPrepNeuf(), { faits: M.desordre.map((i) => M.lignes[i]).map((l) => ({ a: l.a, k: l.produit, q: l.q })) }));
   return { serpentin: M.meilleur.serpentin, retour: M.meilleur.retour, poids: juste.poids, hauteur: juste.hauteur,
@@ -1346,6 +1353,12 @@ export function creerEntrepot(P, opts = {}) {
     return [x, y];
   }
   function htmlPlanPrep(e, R) {
+    // Guidée à la voix : ni tracé, ni numéros de ligne, ni palette sur le plan (elle est à gauche, sous le terminal).
+    if (M.vocal) {
+      const hR = 112, yR = G.yPr - 6 - hR;
+      return `<rect x="${G.ZX}" y="${yR}" width="${ZW}" height="${hR}" fill="none" stroke="var(--pe-jaune-sol)" stroke-width="3" stroke-dasharray="12 6"/>
+        <text x="${G.ZX + 10}" y="${yR + 20}" font-size="13" font-weight="800" fill="var(--encre)" ${TXT}>ZONE D’EXPÉDITION</text>`;
+    }
     const X = calculPrep(M, e);
     let s = '';
     if (X.trace.length) {
@@ -1641,6 +1654,15 @@ export function creerEntrepot(P, opts = {}) {
     V.jalons = (db) => jalonsEntrepot(db, P, temps);
     V.note = P.note || opts.copie ? (db) => noteEntrepot(db, P, temps) : null;
     V.bonnesReponses = () => bonnesReponses(P);
+    return V;
+  }
+  // La préparation guidée à la voix (chantier E-8, lots 1-2) emprunte de même le plan, la travée de face et la pile de cartons.
+  if (PREP && M.vocal) {
+    const V = creerVocal(P, M, opts, { G, ui, htmlPlan, htmlFace, pile: pileCartons,
+      echap: (racine, fn) => { echap = { racine, fn }; }, clavier: auClavier });
+    V.jalons = (db) => jalonsEntrepot(db, P);
+    V.note = P.note ? (db) => noteEntrepot(db, P) : null;
+    V.bonnesReponses = () => attendusVocal(M);
     return V;
   }
 

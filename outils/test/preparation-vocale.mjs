@@ -11,6 +11,11 @@
 //                  PEL 3 en B2-T06-N1-E3 · CAH 4 en B2-T01-N1-E3.
 //   Profil `{ id: 'essai-prepa-ex', lignes: 7, abimes: 1, vides: 1 }`, « temoin-1 » : rupture en B2-T03-N1-E1 (CAH, picking 0, min 8) ; carton
 //   abîmé en B1-T02-N1-E1 (SER), remplacement en B2-T02-N1-E3.
+//
+// LOTS 1-2 (25/10/2026) : le terminal vocal qui guide (`core/types/entrepot-vocal.js`) et le montage « Où poses-tu ? ». Élève témoin de la
+// page d'essai (cas « vocal », profil `{ id: 'essai-vocal', lignes: 5 }`, graine « temoin-1 »), relevé une fois et recopié À LA MAIN :
+//   Marseille Grand Littoral, n° 4705, QUAI 4, départ 8 h 45 ; L1 NET 5 en A2-T03-N1-E1 (code 69, picking 17) · L2 LES 5 en B1-T06-N1-E2
+//   (code 68) · L3 BOU 4 en B2-T06-N1-E2 (39) · L4 PEL 6 en B2-T06-N1-E3 (73) · L5 BOI 6 en B1-T05-N1-E3 (29). NET et LES sont lourds.
 
 export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
@@ -141,6 +146,143 @@ await v('Préparation tirée (lot 0) : dans l’environnement d’entreprise, de
   egal(r.ids, ['lignesJustes', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'parcours'], 'étapes communes');
   egal([r.j1, r.j2], ['ok', 'attente'], 'les mêmes prélèvements : justes pour le témoin 1, faux pour le témoin 2');
   vrai(r.erreur.includes('graine « c »'), `jalons qui changent selon la graine : ${r.erreur}`);
+});
+
+/* ============================================= lots 1-2 : le terminal qui guide, le montage */
+const TEMOIN_V = [['L1', 'A2-T03-N1-E1', '69', 5, 'NET'], ['L2', 'B1-T06-N1-E2', '68', 5, 'LES'], ['L3', 'B2-T06-N1-E2', '39', 4, 'BOU'],
+  ['L4', 'B2-T06-N1-E3', '73', 6, 'PEL'], ['L5', 'B1-T05-N1-E3', '29', 6, 'BOI']];
+
+await v('Préparation vocale (lots 1-2) : la déclaration avec `terminal` se compile — un jalon par ligne puis les six critères de la palette ; sans `terminal`, les jalons de Smoby ne bougent pas ; ce que le terminal attend (élève témoin, valeurs à la main)', async () => {
+  const r = await pg.evaluate(async () => {
+    const D = await import('/contenus/action-prepa-donnees.js');
+    const E = await import('/core/types/entrepot.js');
+    const fv = D.preparation({ id: 'essai-vocal', lignes: 5, terminal: {} });
+    const Q = fv('temoin-1', { niveau: 'standard' });
+    let err = '';
+    try { E.jalonsEntrepot({}, Object.assign({}, Q, { codes: Object.assign({}, Q.codes, { [Q.commande.lignes[2].a]: 'x' }) })); } catch (x) { err = x.message; }
+    return { ids: E.etapesEntrepot(fv).map((x) => x.id), sans: E.etapesEntrepot(D.preparation({ id: 'essai-prepa', lignes: 5 })).map((x) => x.id),
+      att: E.bonnesReponses(Q).map((x) => [x.ligne, x.emplacement, x.code, x.prends, x.produit]), C: [Q.commande.client, Q.commande.num, Q.commande.quai, Q.commande.heure], err };
+  });
+  egal(r.ids, ['ligne-L1', 'ligne-L2', 'ligne-L3', 'ligne-L4', 'ligne-L5', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes'], 'jalons du terminal');
+  egal(r.sans, ['lignesJustes', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'parcours'], 'sans terminal : Smoby');
+  egal(r.C, ['Marseille Grand Littoral', '4705', 'QUAI 4', '8 h 45'], 'commande du témoin');
+  egal(r.att, TEMOIN_V, 'ce que le terminal attend');
+  vrai(r.err.includes('code de contrôle'), `un code de contrôle invalide refuse la déclaration : ${r.err}`);
+});
+
+await v('Préparation vocale (lots 1-2) : le jugement — rien avant la fin du terminal, palette vide ou cartons à côté = aucun critère gagné ; ordre de POSE juste = tout juste ; un lourd posé en dernier, un fragile sous un normal, trop de film : chaque faute nomme son critère, et lui seul', async () => {
+  const r = await pg.evaluate(async () => {
+    const D = await import('/contenus/action-prepa-donnees.js');
+    const E = await import('/core/types/entrepot.js');
+    const fv = D.preparation({ id: 'essai-vocal', lignes: 5, terminal: {} });
+    const Q = fv('temoin-1', { niveau: 'standard' });
+    const L = Q.commande.lignes;
+    const g = (l, i) => ({ a: l.a, k: l.produit, q: l.q, ligne: `L${i + 1}` });
+    const groupes = L.map(g);
+    const T = { i: L.length, phase: 'code', reponses: Object.fromEntries(L.map((l, i) => [`L${i + 1}`, l.q])), codesFaux: {}, journal: [], debut: 1, fin: 2 };
+    const fini = { terminal: T, film: ['4'], etiq: [{ avant: true, arriere: true, dessus: true }] };
+    const bon = [...groupes.filter((x) => ['NET', 'LES'].includes(x.k)), ...groupes.filter((x) => !['NET', 'LES'].includes(x.k))];
+    const juge = (e) => { const J = E.jalonsEntrepot({ entrepots: { 'essai-vocal': e } }, Q).L; return J.filter((j) => !j.ok).map((j) => j.id).join(' '); };
+    // Un fragile (vase) sous un normal : la même commande, avec une ligne VAS ajoutée à la main sur le plan de pose.
+    const vas = { a: 'X', k: 'VAS', q: 2, ligne: 'L9' };
+    return {
+      neuf: juge({}), encours: juge({ terminal: Object.assign({}, T, { fin: null, i: 2 }), palettes: [bon.slice(0, 2)] }),
+      vide: juge(Object.assign({}, fini, { palettes: [[]] })), aCote: juge(Object.assign({}, fini, { palettes: [bon.slice(0, 4)], cote: [bon[4]] })),
+      juste: juge(Object.assign({}, fini, { palettes: [bon] })), lourd: juge(Object.assign({}, fini, { palettes: [[...bon.slice(1), bon[0]]] })),
+      film: juge(Object.assign({}, fini, { palettes: [bon], film: ['6'] })), etiq: juge(Object.assign({}, fini, { palettes: [bon], etiq: [{ avant: true, dessus: true }] })),
+      fragile: juge(Object.assign({}, fini, { palettes: [[...bon.slice(0, 2), vas, ...bon.slice(2)]] })),
+    };
+  });
+  const tout = 'ligne-L1 ligne-L2 ligne-L3 ligne-L4 ligne-L5 lourds fragiles poids hauteur film etiquettes';
+  egal(r.neuf, tout, 'base neuve : rien de gagné');
+  egal(r.encours, tout, 'terminal en cours : rien de jugé');
+  egal(r.vide, 'lourds fragiles poids hauteur film etiquettes', 'palette vide : les lignes oui, aucun critère');
+  egal(r.aCote, 'lourds fragiles poids hauteur film etiquettes', 'un groupe encore à côté : aucun critère');
+  egal(r.juste, '', 'ordre de pose juste');
+  egal(r.lourd, 'lourds', 'un lourd posé en dernier');
+  egal(r.film, 'film', 'six tours de film');
+  egal(r.etiq, 'etiquettes', 'étiquettes sur deux côtés non opposés');
+  egal(r.fragile, 'fragiles', 'un fragile sous des normaux');
+});
+
+await v('Préparation vocale (lots 1-2), page d’essai à 1366 × 768 : le code n’est lu QUE dans la vue de près ; le terminal guide ligne à ligne, le picking baisse ; « À côté » puis posé après la fin, « ↶ Reposer le dernier » ; le bilan juge l’ordre de POSE ; les gestes publiés', async () => {
+  const pe = await ctx.newPage();
+  pe.on('pageerror', (e) => erreurs.push('PAGEERROR (essai): ' + e.message));
+  pe.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs.push('CONSOLE (essai): ' + m.text()); });
+  await pe.goto(BASE + 'outils/essai-entrepot.html');
+  await pe.selectOption('select[name=cas]', 'vocal');
+  await pe.waitForSelector('.pvc [data-terminal]');
+  const etat = () => pe.evaluate(() => JSON.parse(JSON.stringify(window.__essai.db.entrepots['essai-vocal'])));
+  const ecran = await pe.evaluate(() => ({ cmd: document.querySelector('.pvc-cmd').textContent.replace(/\s+/g, ' ').trim(),
+    codes: document.querySelectorAll('[data-pvc-code]').length, cerne: document.querySelector('[data-pvc-montre]')?.dataset.pvcMontre,
+    phrase: document.querySelector('[data-terminal]').textContent.replace(/\s+/g, ' ') }));
+  egal(ecran.cmd.startsWith('Commande 4705 Marseille Grand Littoral QUAI 4 · départ 8 h 45'), true, `bandeau : ${ecran.cmd}`);
+  egal(ecran.codes, 0, 'aucun code de contrôle sur le plan');
+  egal(ecran.cerne, 'A2-T03', 'guidage : la travée de la ligne en cours cernée');
+  vrai(ecran.phrase.includes('Allée A2, travée 03, niveau 1, emplacement 1. Code de contrôle ?') && !/\b69\b/.test(ecran.phrase), 'le terminal dit l’adresse, jamais le code');
+  // un code faux, compté, jamais noté
+  await pe.fill('[data-terminal] input', '11'); await pe.keyboard.press('Enter');
+  const faces = [];
+  for (const [id, a, code, q] of TEMOIN_V) {
+    const m = /^([AB]\d)-T(\d+)/.exec(a);
+    await pe.click(`[data-pe-trav="${m[1]}-T${m[2]}"]`);
+    faces.push(await pe.locator('[data-pvc-code]').count());
+    await pe.click(`[data-pe-emp="${a}"]`);
+    egal(await pe.textContent('[data-pvc-code]'), code, `${id} : le code sur l’étiquette de la lisse`);
+    await pe.fill('[data-terminal] input', code); await pe.keyboard.press('Enter');
+    await pe.fill('[data-terminal] input', String(q)); await pe.keyboard.press('Enter');
+    if (id === 'L1') {
+      egal((await etat()).pick[a], 17 - 5, 'L1 prise : le picking baisse de 5');
+      egal(await pe.textContent('[data-pvc-question]'), 'Où poses-tu les 5 cartons Nettoyant ?', 'la question de pose');
+    }
+    // L1 (un lourd) à côté : il sera posé après la fin, donc en haut — la faute « lourds » attendue au premier bilan.
+    await pe.click(id === 'L1' ? '[data-pvc-poser="cote"]' : '[data-pvc-poser="0"]');
+    while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
+  }
+  egal(faces, [0, 0, 0, 0, 0], 'pas de code dans la travée de face');
+  let e = await etat();
+  egal([e.terminal.fin > 0, e.cote.map((x) => x.k), e.palettes[0].map((x) => x.k), e.terminal.codesFaux], [true, ['NET'], ['LES', 'BOU', 'PEL', 'BOI'], { L1: 1 }], 'fin du terminal');
+  egal(await pe.locator('[data-pvc="verifier"]').isDisabled(), true, 'Vérifier attend que rien ne soit à côté');
+  await pe.click('[data-pvc-objet="0"]'); await pe.click('[data-pvc-pal="0"]');
+  await pe.selectOption('[data-pvc-film="0"]', '4');
+  for (const k of ['avant', 'arriere', 'dessus']) await pe.check(`[data-pvc-etiq="0:${k}"]`);
+  await pe.click('[data-pvc="verifier"]');
+  const bilan = () => pe.$$eval('[data-pvc-jalon]', (L) => L.filter((x) => x.dataset.ok !== 'true').map((x) => x.dataset.pvcJalon));
+  egal(await bilan(), ['lourds'], 'premier bilan : le lourd posé en dernier');
+  // on corrige : tout reposer (cinq fois « Reposer le dernier »), puis poser les lourds d'abord
+  for (let i = 0; i < 5; i++) await pe.click('[data-pvc-reposer="0"]');
+  e = await etat();
+  egal([e.palettes[0].length, e.cote.map((x) => x.k), e.verifie], [0, ['NET', 'BOI', 'PEL', 'BOU', 'LES'], false], 'tout est reposé à côté');
+  for (const k of ['NET', 'LES', 'BOU', 'PEL', 'BOI']) {
+    const i = (await etat()).cote.findIndex((x) => x.k === k);
+    await pe.click(`[data-pvc-objet="${i}"]`); await pe.click('[data-pvc-vers="0"]');
+  }
+  await pe.click('[data-pvc="verifier"]');
+  egal(await bilan(), [], 'second bilan : tout juste');
+  const G = await pe.evaluate(() => Object.keys((window.__essai.db.gestes || {})['essai-entrepot'] || {}).filter((k) => k.startsWith('entrepot:essai-vocal:')).map((k) => k.slice(21)).sort());
+  egal(['code:L1', 'ligne:L5', 'ouvrir:A2-T03-N1-E1', 'poser:cote', 'poser:palette', 'pose:lourd', 'pose:normal', 'fin', 'film', 'etiquettes', 'verifier'].filter((x) => !G.includes(x)), [], `gestes publiés (${G.join(', ')})`);
+  await pe.close();
+});
+
+await v('Préparation vocale (lots 1-2) : l’écran tient sans défiler à 1366 × 768 et 1280 × 720 — le terminal et sa saisie visibles, le plan entier, aucune barre horizontale ; la colonne du terminal défile seule une fois la palette à finir', async () => {
+  const out = {};
+  for (const [w, h] of [[1366, 768], [1280, 720]]) {
+    const pe = await ctx.newPage();
+    await pe.setViewportSize({ width: w, height: h });
+    await pe.goto(BASE + 'outils/essai-entrepot.html');
+    await pe.selectOption('select[name=cas]', 'vocal');
+    await pe.waitForSelector('.pvc [data-terminal]');
+    // la page d'essai a ses réglages au-dessus : on mesure depuis le haut de l'écran d'entreprise
+    out[`${w}`] = await pe.evaluate(() => {
+      const ent = document.querySelector('.pvc').closest('.ent, #hote') || document.body;
+      window.scrollTo(0, document.querySelector('#hote').getBoundingClientRect().top + window.scrollY);
+      const r = (s) => document.querySelector(s).getBoundingClientRect();
+      return { saisie: r('[data-terminal] input').bottom <= innerHeight, plan: r('.pe-plan svg').bottom <= innerHeight + 2,
+        large: document.documentElement.scrollWidth <= innerWidth, cote: r('.pvc-cote').bottom <= innerHeight + 2 };
+    });
+    await pe.close();
+  }
+  egal(out, { 1366: { saisie: true, plan: true, large: true, cote: true }, 1280: { saisie: true, plan: true, large: true, cote: true } }, 'tient à l’écran');
 });
 
 egal(erreurs, [], 'aucune erreur dans la page');
