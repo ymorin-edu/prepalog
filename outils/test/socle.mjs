@@ -446,6 +446,7 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
     'ENT-8.13': 'CAP-C1.5',
     'ENT-8.14': 'CAP-C1.5',
     'ENT-8.15': 'CAP-C3.1',
+    'ENT-8.16': 'CAP-C3.2',
     'ENT-10.1': 'CAP-C1.1',
     'ENT-10.2': 'CAP-C1.2',
     'ENT-10.3': 'CAP-C1.2',

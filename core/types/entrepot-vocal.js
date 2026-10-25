@@ -296,7 +296,8 @@ export function creerVocal(P, M, opts, O) {
   // comme le palettier). Figé, l'élève regarde encore (plan, travée, de près) ; plus rien ne change. L'enseignant voit le bilan après.
   const COPIE = !!opts.copie;
   const ui = O.ui, G = O.G, V = M.vocal;
-  Object.assign(ui, { pres: null, main: null, regles: false, controle: false, dep: null, sel: [], vue: 0, confirmer: false });
+  // `regles.ouvertes` : « Les règles » ouvertes au départ seulement ; l'élève peut les refermer (elles couvrent le plan).
+  Object.assign(ui, { pres: null, main: null, regles: !!(P.regles && P.regles.ouvertes), controle: false, dep: null, sel: [], vue: 0, confirmer: false });
   const geste = (n) => `entrepot:${P.id}:${n}`;
   const TERM = creerTerminal({ lignes: V.lignes, textes: V.textes, titre: V.titre, mots: V.mots });
   const tempsDe = (api) => (COPIE ? 'evaluation' : P.temps || (api && api.temps) || 'guidage');
@@ -601,7 +602,7 @@ export function creerVocal(P, M, opts, O) {
       const t = tempsDe(api), estProf = !!(api && api.estProf), T = e.terminal;
       const per = P.personnage || {}, txt = typeof per.texte === 'string' ? per.texte : (per.texte || {})[t] || '';
       const RG = P.regles, C = M.C;
-      const regles = t !== 'evaluation' && RG ? `<details class="pe-regles" data-pe-regles ${ui.regles || RG.ouvertes ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
+      const regles = t !== 'evaluation' && RG ? `<details class="pe-regles" data-pe-regles ${ui.regles ? 'open' : ''}><summary data-pe-cle="b:regles">${ech(RG.titre || 'Les règles')} ▾</summary>
         <div class="pe-regles-corps"><b>${ech(RG.entete || 'Les règles de la préparation')}</b><ol>${(RG.lignes || []).map((x) => `<li>${x}</li>`).join('')}</ol>
         ${RG.encadre ? `<div class="pe-encadre">${RG.encadre}</div>` : ''}</div></details>` : '';
       const R = { t, g: t === 'guidage', entr: t === 'entrainement', eval: COPIE, fige: figee(e, api), aideCharge: false, regles: false, choisi: ui.pres };

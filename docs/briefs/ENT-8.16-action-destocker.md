@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md, docs/briefs/ENT-8.15-action-preparer.md (§0) puis docs/briefs/ENT-8.16-action-destocker.md en entier. Les lots 0 à 3 du chantier E-8 doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à implémenter (poids validés par Tristan le 25/10/2026)
+**Statut** : à valider par Tristan (construite le 25/10/2026, en ligne cachée aux élèves ; poids validés par Tristan le 25/10/2026)
 **Date du brief** : 25/10/2026, projet PREPALOG. **Modèle** : Sonnet (la vue est faite par E-8). **Durée estimée** : ≈ 3 h.
 **Place dans l'ordre** : après ENT-8.15. Attend les **lots 0 à 3** d'E-8 (le lot 3 : carton abîmé, emplacement vide, réserve descendue).
 
@@ -127,6 +127,22 @@ est lisible, sinon demande). Samia écrit en premier à « Vérifier ».
 Bloc `action-816` (alerte 7). Parcours juste (deux graines) 20/20 ; inaction 0/20 (« rien d'abîmé » non compté) ; carton abîmé pris sans rien dire
 (deux jalons faux, carton dessiné sur la palette, fiche jugée sur ce geste) ; « Emplacement vide » non dit (quantité refusée, jamais bloquant) ;
 confirmé, accompagné ; somme 20 ; `part` 4. Sabotage : fiche jugée contre la réponse « idéale » → le cas « abîmé pris sans rien dire » tombe.
+
+## 9 bis. Compte rendu de construction (25/10/2026)
+
+Fichiers : `contenus/action-ent816-donnees.js`, `contenus/action-ent816.js`, `contenus/questions/ENT-8.16.js`, `contenus/corriges/ENT-8.16.js`,
+`activites/action-destocker.js`, bloc `action-816` (7 cas). Moteur : « Les règles » ouvertes (`regles.ouvertes`) le sont au DÉPART seulement :
+l'élève peut les refermer (elles couvraient le plan et ne se refermaient plus, `core/types/entrepot-vocal.js`).
+Écarts avec le brief :
+- « Les mots du terminal ▾ » sont le menu « Les règles » renommé (ouvert au départ, replié au confirmé ; l'accompagné a une ligne d'aide par mot).
+- Le confirmé n'a pas la 8e ligne « manquant » bonus (le moteur veut les mêmes jalons à tous les niveaux).
+- La fiche : 2e ligne à trois choix (« vide » / « il manquait des cartons » / « il croit qu'il reste des cartons »), parce que « Manquant » dit sur
+  l'emplacement vide fait aussi descendre la réserve (jamais bloquant) ; la juste suit le mot que l'élève a dit.
+- Samia écrit « Bien reçu. Ce que tu dis au terminal, c'est le stock de demain. » (le brief disait « Exactement », qui serait un verdict).
+- Total de cartons de 21 à 42 (tirage partagé d'E-8, 3 à 6 par ligne), pas 25 à 35.
+- `q-tomber` : texte joint C. trav. L1331-2 (en entier, Légifrance) et un paragraphe qui RÉSUME la jurisprudence (faute lourde), sans citation.
+  À noter : un élève en PFMP n'est pas salarié ; la question parle du salarié.
+- « Avant de commencer » : `k-cariste`, `k-actualiser`, `img-vide` ajoutées (banque double du tirage).
 
 ## 10. Critères de validation par Tristan
 - Le carton abîmé **se voit** de près sans être écrit ; l'emplacement vide aussi.
