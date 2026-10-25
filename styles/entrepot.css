@@ -639,3 +639,14 @@ button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
 .pvc-survol{ min-height:1.3em; font-family:var(--mono, monospace) }
 .pvc-cote > *{ flex:none }
 .pvc-devant{ display:block; height:56px; width:auto; margin:-14px auto 0 }
+/* Deux magasins (lot 4) : les deux palettes côte à côte ; le contrôle, chaque palette à côté de sa liste de colisage. */
+.pvc-palettes.pvc-deux{ flex-direction:row }
+.pvc-palettes.pvc-deux > .pvc-pal{ flex:1 1 0 }
+.pvc-controle{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; align-items:start }
+@media (max-width:900px){ .pvc-controle{ grid-template-columns:minmax(0,1fr) } }
+.pvc-ctl-pal{ display:flex; flex-direction:column; gap:6px; border:1px solid var(--filet); border-radius:var(--r); padding:6px 8px; min-width:0 }
+.pvc-ctl-corps{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1.2fr); gap:8px; align-items:start }
+.pvc-colisage{ font-size:.88rem; line-height:1.35 }
+.pvc-colisage ul{ margin:4px 0 0; padding-left:1.1em }
+.pvc-ctl-svg svg{ width:100%; height:auto; max-height:calc(var(--pe-dispo, 460px) - 150px) }
+.pvc-coche{ color:var(--ardoise-fond) }

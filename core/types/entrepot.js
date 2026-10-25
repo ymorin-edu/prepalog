@@ -326,8 +326,10 @@ function compilerPrep(M, err) {
     if (d.n !== 1) err(`ligne ${i + 1} : ${l.a} n'est pas au picking (niveau N1)`);
     if (!M.stock[l.a] || M.stock[l.a].produit !== l.produit) err(`ligne ${i + 1} : le stock de ${l.a} n'est pas ${l.produit}`);
     if (!(l.q > 0)) err(`ligne ${i + 1} : quantité absente`);
-    if (vues.has(l.a)) err(`ligne ${i + 1} : ${l.a} est déjà sur le bon`);
-    vues.add(l.a);
+    // Deux magasins (chantier E-8, lot 4) : une adresse peut servir une ligne de chaque magasin (`pour`).
+    const cle = l.pour == null ? l.a : `${l.a}|${l.pour}`;
+    if (vues.has(cle)) err(`ligne ${i + 1} : ${l.a} est déjà sur le bon`);
+    vues.add(cle);
   });
   const desordre = C.desordre || lignes.map((_, i) => i);
   if ([...desordre].sort((a, b) => a - b).join() !== lignes.map((_, i) => i).join()) err('commande.desordre n’est pas un ordre des lignes');

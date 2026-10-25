@@ -151,9 +151,12 @@ export const bonOrdre = (L) => [...L].sort((a, b) => RANG_CLASSE[classeDe(a.prod
 /* ================================================================== le tirage d'une commande */
 const DEFAUTS = { lignes: 5, fragiles: 0, lourds: 1, abimes: 0, vides: 0, ordre: 'favorable', kgMax: KG_MAX, hMax: H_MAX, qMin: 3, qMax: 6 };
 
+// DEUX MAGASINS (`magasins: 2`, chantier E-8 lot 4, ENT-8.18) : Nîmes et un autre, dans un ordre tiré ; `lignes` lignes, la moitié pour chacun
+// (`pour` : 0 ou 1) ; un produit COMMUN aux deux, sur deux lignes consécutives à la même adresse ; chaque palette tient dans les limites.
 export function tirerCommande(o, h) {
-  const n = o.lignes;
-  const magasin = o.magasin ? MAGASINS.find((m) => m.id === o.magasin) : h.choisir(MAGASINS);
+  const deux = o.magasins === 2;
+  const n = deux ? o.lignes - 1 : o.lignes;
+  const magasin = o.magasin ? MAGASINS.find((m) => m.id === o.magasin) : h.choisir(deux ? MAGASINS.filter((m) => m !== NIMES) : MAGASINS);
   // Les produits : `fragiles` fragiles, au moins `lourds` lourds, le reste parmi tous les autres ; tous différents.
   const pris = h.prendre(FRAGILES, o.fragiles);
   const autres = CODES.filter((k) => classeDe(k) !== 'fragile');
@@ -183,19 +186,30 @@ export function tirerCommande(o, h) {
     lignes = pris.map((produit) => ({ a: h.choisir(emplacementsDe(produit)), produit }));
   }
   lignes.sort((x, y) => rangCircuit(x.a) - rangCircuit(y.a));
+  let commun = -1;
+  if (deux) {
+    // La ligne commune, doublée juste après elle ; les autres lignes réparties moitié-moitié.
+    commun = h.entier(0, lignes.length - 1);
+    const paire = h.melanger([0, 1]);
+    const autres = h.melanger([...Array(lignes.length - 1)].map((_, i) => i % 2));
+    let k = 0;
+    lignes.forEach((l, i) => { l.pour = i === commun ? paire[0] : autres[k++]; });
+    lignes.splice(commun + 1, 0, { a: lignes[commun].a, produit: lignes[commun].produit, pour: paire[1] });
+  }
   lignes.forEach((l) => { l.q = h.entier(o.qMin, o.qMax); });
+  const estCommun = (i) => deux && (i === commun || i === commun + 1);
   // Le picking des lignes : de quoi servir (au moins q + minimum), sauf la ligne en rupture (vide, sous son minimum).
   const idx = lignes.map((_, i) => i);
-  const vides = h.prendre(idx.filter((i) => aReserve(lignes[i].produit)), o.vides);
+  const vides = h.prendre(idx.filter((i) => aReserve(lignes[i].produit) && !estCommun(i)), o.vides);
   // Une ligne de remplacement possible : un autre emplacement du même produit, plus loin dans le circuit, avant la ligne suivante.
   const remplacantsDe = (i) => emplacementsDe(lignes[i].produit).filter((a) => a !== lignes[i].a && rangCircuit(a) > rangCircuit(lignes[i].a)
     && (!lignes[i + 1] || rangCircuit(a) < rangCircuit(lignes[i + 1].a)) && !lignes.some((m) => m.a === a));
-  const abimes = h.prendre(idx.filter((i) => !vides.some((v) => Math.abs(v - i) <= 1) && remplacantsDe(i).length), o.abimes);
+  const abimes = h.prendre(idx.filter((i) => !estCommun(i) && !vides.some((v) => Math.abs(v - i) <= 1) && remplacantsDe(i).length), o.abimes);
   if (abimes.length < o.abimes) throw new Error('aucune ligne de remplacement');
   const picking = {};
   lignes.forEach((l, i) => {
-    const min = minPicking(l.produit);
-    picking[l.a] = { q: vides.includes(i) ? 0 : Math.min(pleine(l.produit), l.q + min + h.entier(0, 12)), min };
+    const min = minPicking(l.produit), q = lignes.filter((m) => m.a === l.a).reduce((t, m) => t + m.q, 0);
+    if (!picking[l.a]) picking[l.a] = { q: vides.includes(i) ? 0 : Math.min(pleine(l.produit), q + min + h.entier(0, 12)), min };
   });
   const remplacements = {};
   abimes.forEach((i) => { remplacements[lignes[i].a] = h.choisir(remplacantsDe(i)); });
@@ -206,9 +220,11 @@ export function tirerCommande(o, h) {
     const tires = h.prendre([...Array(90).keys()].map((x) => String(x + 10)), ici.length);
     ici.forEach((a, i) => { codes[a] = tires[i]; });
   });
+  const num = String(h.entier(4100, 4899));
   return {
     magasin: magasin.id,
-    num: String(h.entier(4100, 4899)),
+    num,
+    ...(deux ? { magasins: h.melanger([magasin.id, NIMES.id]), nums: [num, String(Number(num) + h.entier(1, 40))] } : {}),
     quai: h.entier(1, 6),
     depart: `${h.choisir(['7', '8'])} h ${h.choisir(['00', '15', '30', '45'])}`,
     lignes,
@@ -225,25 +241,41 @@ export function verifierCommande(o, jeu) {
   const f = [];
   if (!jeu || !Array.isArray(jeu.lignes)) return ['jeu incomplet'];
   const L = jeu.lignes;
+  const deux = o.magasins === 2;
   if (L.length !== o.lignes) f.push(`${L.length} lignes au lieu de ${o.lignes}`);
   if (!MAGASINS.some((m) => m.id === jeu.magasin) || (o.magasin && jeu.magasin !== o.magasin)) f.push('magasin inconnu');
-  if (new Set(L.map((l) => l.produit)).size !== L.length) f.push('deux lignes du même produit');
-  if (new Set(L.map((l) => l.a)).size !== L.length) f.push('deux lignes à la même adresse');
+  // Deux magasins : une seule paire de lignes du même produit, consécutives, à la même adresse, une pour chaque magasin.
+  const paires = L.map((l, i) => i).filter((i) => i && L[i].a === L[i - 1].a);
+  const attendu = deux ? 1 : 0;
+  if (new Set(L.map((l) => l.produit)).size !== L.length - attendu) f.push('deux lignes du même produit');
+  if (new Set(L.map((l) => l.a)).size !== L.length - attendu || paires.length !== attendu) f.push('deux lignes à la même adresse');
+  if (deux) {
+    if (!Array.isArray(jeu.magasins) || jeu.magasins.length !== 2 || !jeu.magasins.includes(NIMES.id) || jeu.magasins[0] === jeu.magasins[1]) f.push('les deux magasins (Nîmes et un autre)');
+    if (paires.length === 1 && L[paires[0]].pour === L[paires[0] - 1].pour) f.push('la ligne commune pour un seul magasin');
+    [0, 1].forEach((p) => {
+      const M = L.filter((l) => l.pour === p), q = M.reduce((t, l) => t + l.q, 0);
+      if (M.length !== o.lignes / 2) f.push(`magasin ${p + 1} : ${M.length} lignes`);
+      if (q < 12 || q > 20) f.push(`magasin ${p + 1} : ${q} cartons (12 à 20)`);
+    });
+  }
   L.forEach((l, i) => {
     const d = decoupe(l.a);
     if (!d || d.n !== 1 || produitEn(l.a) !== l.produit) f.push(`ligne ${i + 1} : pas au picking de son produit`);
     if (!(l.q >= o.qMin && l.q <= o.qMax)) f.push(`ligne ${i + 1} : quantité hors de ${o.qMin} à ${o.qMax}`);
-    if (i && rangCircuit(l.a) <= rangCircuit(L[i - 1].a)) f.push(`ligne ${i + 1} : pas dans l'ordre du circuit`);
+    if (i && rangCircuit(l.a) <= rangCircuit(L[i - 1].a) && !(deux && l.a === L[i - 1].a)) f.push(`ligne ${i + 1} : pas dans l'ordre du circuit`);
   });
   if (f.length) return f;
   if (L.filter((l) => classeDe(l.produit) === 'fragile').length !== o.fragiles) f.push('nombre de fragiles');
   if (L.filter((l) => classeDe(l.produit) === 'lourd').length < o.lourds) f.push('pas assez de lourds');
-  const terminal = palette(L), bonne = palette(bonOrdre(L));
-  if (!bonne.lourds || !bonne.fragiles) f.push('la bonne palette casse une règle');
-  if (bonne.poids > o.kgMax) f.push(`la bonne palette dépasse ${o.kgMax} kg`);
-  if (bonne.hauteur > o.hMax + 1e-9) f.push(`la bonne palette dépasse ${o.hMax} m`);
-  if (o.ordre === 'favorable' && !(terminal.lourds && terminal.fragiles)) f.push('ordre favorable : poser dans l’ordre du circuit casse une règle');
-  if (o.ordre === 'piege' && terminal.lourds && terminal.fragiles) f.push('ordre piège : poser dans l’ordre du circuit ne casse aucune règle');
+  // Chaque palette (une par magasin) : la bonne tient dans les limites ; l'ordre du circuit est favorable ou piège comme demandé.
+  (deux ? [0, 1].map((p) => L.filter((l) => l.pour === p)) : [L]).forEach((LP) => {
+    const terminal = palette(LP), bonne = palette(bonOrdre(LP));
+    if (!bonne.lourds || !bonne.fragiles) f.push('la bonne palette casse une règle');
+    if (bonne.poids > o.kgMax) f.push(`la bonne palette dépasse ${o.kgMax} kg`);
+    if (bonne.hauteur > o.hMax + 1e-9) f.push(`la bonne palette dépasse ${o.hMax} m`);
+    if (o.ordre === 'favorable' && !(terminal.lourds && terminal.fragiles)) f.push('ordre favorable : poser dans l’ordre du circuit casse une règle');
+    if (o.ordre === 'piege' && !deux && terminal.lourds && terminal.fragiles) f.push('ordre piège : poser dans l’ordre du circuit ne casse aucune règle');
+  });
   // Le picking : chaque ligne servie, sauf la rupture (sous son minimum, une réserve du même produit existe).
   L.forEach((l, i) => {
     const p = jeu.picking[l.a];
@@ -251,7 +283,7 @@ export function verifierCommande(o, jeu) {
     if (p.q > pleine(l.produit)) f.push(`ligne ${i + 1} : picking plus que plein`);
     const rupture = jeu.vides.includes(l.a);
     if (rupture && !(p.q < p.min && p.q < l.q && aReserve(l.produit))) f.push(`ligne ${i + 1} : rupture mal faite`);
-    if (!rupture && p.q < l.q + p.min) f.push(`ligne ${i + 1} : picking trop juste (le réapprovisionnement s'imposerait)`);
+    if (!rupture && p.q < L.filter((m) => m.a === l.a).reduce((t, m) => t + m.q, 0) + p.min) f.push(`ligne ${i + 1} : picking trop juste (le réapprovisionnement s'imposerait)`);
   });
   if (jeu.vides.length !== o.vides) f.push('nombre de lignes en rupture');
   const ab = Object.keys(jeu.abimes);
@@ -295,11 +327,15 @@ export function preparation(opts) {
       plan: Object.assign({}, PLAN, { zones: { quais: [quaiDe(jeu.quai)] } }),
       gammes: GAMMES, produits: PRODUITS, stock: STOCK,
       ...(o.regles ? { regles: o.regles } : {}),
-      commande: {
+      commande: Object.assign({
         num: jeu.num, client: m.nom, magasin: m.id, heure: jeu.depart, quai: quaiDe(jeu.quai), etiquette: m.court,
         hMax: o.hMax, kgMax: o.kgMax, support: { ...SUPPORT },
-        lignes: jeu.lignes.map((l) => ({ a: l.a, produit: l.produit, q: l.q })),
-      },
+        lignes: jeu.lignes.map((l) => ({ a: l.a, produit: l.produit, q: l.q, ...(jeu.magasins ? { pour: l.pour } : {}) })),
+      }, jeu.magasins ? (() => {
+        // Deux magasins : une commande et une palette par magasin (`destinataires`, dans l'ordre de `pour`).
+        const D = jeu.magasins.map((id, p) => { const x = MAGASINS.find((y) => y.id === id); return { magasin: id, client: x.nom, etiquette: x.court, num: jeu.nums[p] }; });
+        return { destinataires: D, num: D.map((d) => d.num).join(' et '), client: D.map((d) => d.client).join(' et ') };
+      })() : {}),
       picking: jeu.picking,
       // Lus par les lots 1 et 3 du chantier E-8 (le moteur du lot 0 ne les lit pas encore).
       codes: jeu.codes, abimes: jeu.abimes, remplacements: jeu.remplacements,

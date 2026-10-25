@@ -41,6 +41,13 @@
 // `lignes` (les lignes normales, ligne-1…), `abime` (abime-dit, abime-remplacement), `vide` (vide-dit, vide-reprise), `rienAbime`.
 // Gestes : `mot:<id>`, `abime` / `vide` (la ligne d'exception finie), `reserve` (Kevin a descendu la réserve).
 //
+// LOT 4 (25/10/2026), DEUX MAGASINS : `commande.destinataires: [{ client, etiquette, num }, …]` et `pour` sur chaque ligne. Le terminal dit
+// « Pour Nîmes. Allée … » ; la pose propose une palette par magasin ; le terminal fini, « Contrôler mes palettes » montre chaque palette à
+// côté de sa liste de colisage, et un groupe se déplace d'une palette à l'autre ; l'étiquette se choisit (magasin) avant les faces. Jalons :
+// `grouper-1`, `grouper-2` (la palette porte tous les cartons de ses lignes et rien d'autre, état final), puis chaque critère par palette
+// (`lourds-1`…), jugé seulement si la palette est groupée ; `etiquettes-p` demande l'étiquette de SON magasin. Gestes : `controle:ouvrir`,
+// `controle:fermer`, `deplacer`. `terminal.cocher` (accompagné) : la liste de colisage se coche quand le compte y est.
+//
 // L'ÉTAT, dans la base de l'élève (`db.entrepots[<id>]`) :
 //   { terminal (voir `terminal.js`), pick: { adresse: cartons restants }, palettes: [[{ a, k, q, ligne }, …]] (l'ordre de pose),
 //     cote: [{ a, k, q, ligne }], film: ['4'], etiq: [{ avant: true, … }], vus: { adresse: date }, verifie, verifs, premierGeste }
@@ -87,8 +94,21 @@ export function compilerVocal(M, err, libs) {
   // la ligne est `bloque` (le terminal refuse la quantité tant que rien n'est dit) et sa remplacement, à la MÊME adresse, la redit une fois
   // la réserve descendue par Kevin.
   const abimes = P.abimes || {}, remplacements = P.remplacements || {};
+  // Lot 4 : DEUX MAGASINS (`commande.destinataires`, une palette chacun ; chaque ligne dit `pour` qui) : le terminal nomme le magasin à
+  // chaque ligne (« Pour Nîmes. Allée … »), la pose propose une palette par magasin.
+  const DEST = C.destinataires;
+  if (DEST && (!Array.isArray(DEST) || DEST.length < 2 || DEST.some((d) => !d || !d.client))) err('commande.destinataires : au moins deux { client, etiquette, num }');
+  const palettes = DEST ? DEST.map((d, p) => ({ p, client: d.client, etiquette: d.etiquette || d.client, num: d.num || '' }))
+    : [{ p: 0, client: C.client || '', etiquette: C.etiquette || C.client || '' }];
+  const pourDe = (l, i) => {
+    if (!DEST) return 0;
+    if (!Number.isInteger(l.pour) || l.pour < 0 || l.pour >= DEST.length) err(`ligne ${i + 1} : \`pour\` (le magasin, de 0 à ${DEST.length - 1}) manque`);
+    return l.pour;
+  };
+  const pourQui = (p) => (DEST ? `Pour ${palettes[p].etiquette}. ` : '');
   const lignes = M.lignes.map((l, i) => {
-    const L = { id: `L${i + 1}`, a: l.a, produit: l.produit, q: l.q, lieu: lieu(l.a), code: codeDe(l.a, `ligne ${i + 1}`),
+    const pour = pourDe(l, i);
+    const L = { id: `L${i + 1}`, a: l.a, produit: l.produit, q: l.q, pour, lieu: `${pourQui(pour)}${lieu(l.a)}`, code: codeDe(l.a, `ligne ${i + 1}`),
       prends: l.q, question: `${voix(l.produit)}. Prends ${l.q}.`, pose };
     const ab = abimes[l.a] || 0, vide = M.pick0(l.a) < l.q;
     if (ab && vide) err(`ligne ${i + 1} : ${l.a} ne peut pas être à la fois vide et abîmé`);
@@ -98,16 +118,18 @@ export function compilerVocal(M, err, libs) {
       const r = remplacements[l.a];
       if (!r || !M.stock[r] || M.stock[r].produit !== l.produit || decoupe(r).n !== 1) err(`ligne ${i + 1} : il faut une adresse de remplacement au picking, du même produit (\`remplacements['${l.a}']\`)`);
       Object.assign(L, { attendu: { mot: 'abime', n: ab },
-        remplacement: { a: r, produit: l.produit, lieu: lieu(r), code: codeDe(r, `ligne ${i + 1}, remplacement`), question: prendsN, pose } });
+        remplacement: { a: r, produit: l.produit, pour, lieu: `${pourQui(pour)}${lieu(r)}`, code: codeDe(r, `ligne ${i + 1}, remplacement`), question: prendsN, pose } });
     }
     if (vide) Object.assign(L, { attendu: { mot: 'vide' }, bloque: true,
-      remplacement: { a: l.a, produit: l.produit, lieu: `Kevin a descendu la réserve. ${lieu(l.a)}`, code: L.code, question: prendsN, pose } });
+      remplacement: { a: l.a, produit: l.produit, pour, lieu: `Kevin a descendu la réserve. ${pourQui(pour)}${lieu(l.a)}`, code: L.code, question: prendsN, pose } });
     return L;
   });
-  const palettes = [{ p: 0, client: C.client || '', etiquette: C.etiquette || C.client || '' }];
   const lAb = lignes.filter((l) => l.attendu && l.attendu.mot === 'abime'), lVi = lignes.filter((l) => l.attendu && l.attendu.mot === 'vide');
   const types = (P.jalons || [{ type: 'lignes' }, ...(lAb.length ? [{ type: 'abime' }] : []), ...(lVi.length ? [{ type: 'vide' }] : []),
-    ...CRITERES.map((t) => ({ type: t })), ...(lAb.length ? [{ type: 'rienAbime' }] : [])]).map((j) => j.type);
+    ...(DEST ? [{ type: 'grouper' }] : []), ...CRITERES.map((t) => ({ type: t })), ...(lAb.length ? [{ type: 'rienAbime' }] : [])]).map((j) => j.type);
+  // Deux palettes : `grouper` (chaque palette ne porte que ses lignes) et les critères, un jalon par palette (`lourds-1`, `lourds-2`…).
+  const parPalette = (id, lib, o) => (DEST ? palettes.map((pl) => Object.assign({ id: `${id}-${pl.p + 1}`, lib: `${lib} (${pl.etiquette})`, p: pl.p }, o))
+    : [Object.assign({ id, lib, p: 0 }, o)]);
   const jalons = [];
   const num = (l) => lignes.indexOf(l) + 1, suf = (k) => (k ? `-${k + 1}` : '');
   // Les ids ne dépendent pas de la graine (contrôle de `etapesEntrepot`) : les lignes NORMALES sont numérotées entre elles (ligne-1…),
@@ -127,12 +149,15 @@ export function compilerVocal(M, err, libs) {
     } else if (t === 'rienAbime') {
       if (!lAb.length) err('jalon « rienAbime » : aucune ligne n’a de carton abîmé (`abimes`)');
       jalons.push({ id: 'rienAbime', cas: 'rienAbime', lib: 'Aucun carton abîmé sur la palette' });
-    } else if (CRITERES.includes(t)) jalons.push({ id: t, critere: t, lib: libs[t] });
-    else err(`jalon de type « ${t} » : avec le terminal, les types sont lignes, abime, vide, rienAbime, ${CRITERES.join(', ')}`);
+    } else if (t === 'grouper') {
+      if (!DEST) err('jalon « grouper » : il faut deux magasins (`commande.destinataires`)');
+      jalons.push(...parPalette('grouper', 'Seulement ses lignes', { cas: 'grouper' }));
+    } else if (CRITERES.includes(t)) jalons.push(...parPalette(t, libs[t], { critere: t }));
+    else err(`jalon de type « ${t} » : avec le terminal, les types sont lignes, abime, vide, rienAbime, grouper, ${CRITERES.join(', ')}`);
   });
   if (!jalons.some((j) => j.ligne)) err('jalons : il faut le type « lignes » (un jalon par ligne)');
   M.jalons = jalons.map((j) => Object.assign({ type: j.critere || j.cas || 'ligne' }, j));
-  M.vocal = { lignes, mots, palettes, court, abimes, titre: D.titre || 'Préparation', montrer: D.montrer || '',
+  M.vocal = { lignes, mots, palettes, court, abimes, deux: !!DEST, cocher: !!D.cocher, titre: D.titre || 'Préparation', montrer: D.montrer || '',
     textes: { fin: D.fin || 'Commande terminée.', codeFaux: D.codeFaux || 'Code faux. Vérifie l’emplacement.',
       // « Emplacement vide » : le terminal appelle le cariste (lot 3) ; les autres mots, la phrase du terminal.
       comprisMot: (n, lib, combien) => (combien ? `Compris : ${n} ${lib.toLowerCase()}.` : `Compris : ${lib.toLowerCase()}. Réserve demandée au cariste.`) },
@@ -141,7 +166,7 @@ export function compilerVocal(M, err, libs) {
 
 /* ================================================================ le jugement */
 export const etatVocalNeuf = () => ({ terminal: terminalNeuf(), pick: {}, vides: [], palettes: [[]], cote: [], film: [], etiq: [], vus: {},
-  reserves: [], mainAbimes: 0, verifie: false, verifs: 0, premierGeste: null });
+  reserves: [], mainAbimes: 0, etiqMag: [], controles: 0, verifie: false, verifs: 0, premierGeste: null });
 const completer = (e) => { Object.entries(etatVocalNeuf()).forEach(([k, v]) => { if (e[k] == null) e[k] = v; }); return e; };
 
 // Une palette rejouée dans l'ordre de pose : couches (deux groupes de suite du même produit font une couche : la ligne et sa remplacement
@@ -187,10 +212,28 @@ export function jalonsVocal(M, e0) {
     L.push({ id: j.id, lib: j.lib, ok: fin && rien && complet && !(e.palettes || []).some((pl) => (pl || []).some((g) => g.abimes > 0)) });
   });
   const X = M.vocal.palettes.map((pl) => calculPalette(M, e.palettes[pl.p] || [], (e.film || [])[pl.p], (e.etiq || [])[pl.p]));
-  M.jalons.filter((j) => j.critere).forEach((j) => {
-    const ok = juge && X.every((x) => x.regles[j.critere]);
-    L.push({ id: j.id, lib: j.lib, ok, critere: j.critere, nonJuge: fin && rien && !lignesOk });
-  });
+  if (!M.vocal.deux) {
+    M.jalons.filter((j) => j.critere).forEach((j) => {
+      const ok = juge && X[0].regles[j.critere];
+      L.push({ id: j.id, lib: j.lib, ok, critere: j.critere, nonJuge: fin && rien && !lignesOk });
+    });
+  } else {
+    // Deux palettes (lot 4) : jugées sur l'état FINAL (après « Contrôler mes palettes »). Une palette est groupée si elle porte tous les
+    // cartons de ses lignes et rien d'autre (vide = faux) ; ses critères ne se jugent que si elle est groupée ; l'étiquette doit être celle
+    // de SON magasin.
+    const LT = lignesDuTerminal(M.vocal.lignes, T), pourDe = Object.fromEntries(LT.map((l) => [l.id, l.pour]));
+    const groupee = M.vocal.palettes.map((pl) => {
+      const G = e.palettes[pl.p] || [], ici = {};
+      G.forEach((g) => { ici[g.ligne] = (ici[g.ligne] || 0) + g.q; });
+      return fin && rien && G.length > 0 && G.every((g) => pourDe[g.ligne] === pl.p)
+        && LT.filter((l) => l.pour === pl.p).every((l) => (ici[l.id] || 0) === (R[l.id] || 0));
+    });
+    M.jalons.filter((j) => j.cas === 'grouper').forEach((j) => L.push({ id: j.id, lib: j.lib, ok: groupee[j.p], p: j.p }));
+    M.jalons.filter((j) => j.critere).forEach((j) => {
+      const bonne = j.critere !== 'etiquettes' || String((e.etiqMag || [])[j.p]) === String(j.p);
+      L.push({ id: j.id, lib: j.lib, ok: groupee[j.p] && X[j.p].regles[j.critere] && bonne, critere: j.critere, p: j.p, nonJuge: fin && rien && !groupee[j.p] });
+    });
+  }
   const rang = Object.fromEntries(M.jalons.map((j, i) => [j.id, i]));
   return L.sort((a, b) => rang[a.id] - rang[b.id]);
 }
@@ -203,7 +246,7 @@ export function detailVocal(M, e0, L) {
   const e = completer(Object.assign({}, e0)), T = e.terminal || terminalNeuf();
   return { jalons: L.map((l) => ({ jalon: l.lib, ok: l.ok, pris: l.pris, exception: l.exception })), codesFaux: T.codesFaux || {},
     vus: Object.keys(e.vus || {}), palettes: (e.palettes || []).map((p) => p.map((g) => `${g.k} ${g.q}`)), aCote: (e.cote || []).length,
-    verifs: e.verifs || 0, premierGeste: e.premierGeste || null };
+    verifs: e.verifs || 0, premierGeste: e.premierGeste || null, ...(M.vocal.deux ? { etiqMag: e.etiqMag || [], controles: e.controles || 0 } : {}) };
 }
 
 // Un carton abîmé, dessiné : le coin enfoncé (un triangle sombre) et le ruban déchiré (un zigzag) — des traits, lisibles en noir et blanc.
@@ -220,7 +263,7 @@ function abime(x, y, w, h) {
 export function creerVocal(P, M, opts, O) {
   if (opts.copie) throw new Error(`entrepot ${P.id} : la préparation vocale n'a pas encore d'évaluation (chantier E-8, lot 5)`);
   const ui = O.ui, G = O.G, V = M.vocal;
-  Object.assign(ui, { pres: null, main: null, regles: false });
+  Object.assign(ui, { pres: null, main: null, regles: false, controle: false, dep: null });
   const geste = (n) => `entrepot:${P.id}:${n}`;
   const TERM = creerTerminal({ lignes: V.lignes, textes: V.textes, titre: V.titre, mots: V.mots });
   const tempsDe = (api) => P.temps || (api && api.temps) || 'guidage';
@@ -280,8 +323,10 @@ export function creerVocal(P, M, opts, O) {
       y = top;
     });
     const et = (e.etiq || [])[pl.p] || {};
+    // Deux magasins : l'étiquette est celle que l'élève a choisie (elle peut être celle de l'autre magasin).
+    const mag = (e.etiqMag || [])[pl.p], texteEtq = !V.deux ? pl.etiquette : mag !== '' && mag != null && V.palettes[+mag] ? V.palettes[+mag].etiquette : '';
     if ((e.film || [])[pl.p] && X.couches.length) s += `<rect x="${X0 - 3}" y="${y - 2}" width="${W + 6}" height="${Yb - hp - y + 10}" fill="rgba(150,190,230,.22)" stroke="rgba(120,160,210,.8)" stroke-width="1.5" data-pvc-filme/>`;
-    if (et.avant && X.couches.length) s += `<rect x="${X0 + W - 70}" y="${(y + Yb - hp) / 2 - 14}" width="62" height="28" fill="#fbfaf6" stroke="#555"/><text x="${X0 + W - 39}" y="${(y + Yb - hp) / 2 + 4}" text-anchor="middle" font-size="9" font-weight="800" fill="#1a1915" ${TXT}>${ech(pl.etiquette)}</text>`;
+    if (et.avant && X.couches.length) s += `<rect x="${X0 + W - 70}" y="${(y + Yb - hp) / 2 - 14}" width="62" height="28" fill="#fbfaf6" stroke="#555"/><text x="${X0 + W - 39}" y="${(y + Yb - hp) / 2 + 4}" text-anchor="middle" font-size="9" font-weight="800" fill="#1a1915" ${TXT}>${ech(texteEtq)}</text>`;
     if (et.dessus && X.couches.length) s += `<rect x="${X0 + W / 2 - 22}" y="${y - 6}" width="44" height="6" fill="#fbfaf6" stroke="#555"/>`;
     const yMax = Yb - C.hMax * K;
     s += `<line x1="${X0 - 10}" y1="${yMax}" x2="${X0 + W + 10}" y2="${yMax}" stroke="var(--rouge)" stroke-width="2" stroke-dasharray="7 5"/>
@@ -289,13 +334,34 @@ export function creerVocal(P, M, opts, O) {
     return { X, svg: `<svg viewBox="0 0 460 ${H.toFixed(0)}" preserveAspectRatio="xMidYMid meet" role="img" aria-label="${ech(`Palette ${pl.client}, vue de face`)}">${s}</svg>` };
   }
   function htmlPalettes(e) {
-    return `<div class="pvc-palettes">${V.palettes.map((pl) => {
+    return `<div class="pvc-palettes${V.deux ? ' pvc-deux' : ''}">${V.palettes.map((pl) => {
       const { X, svg } = svgPalette(e, pl);
       const cible = ui.main != null && (e.terminal || {}).fin;
       return `<figure class="pe-palmini pvc-pal${cible ? ' pvc-cible' : ''}" data-pvc-pal="${pl.p}"${cible ? ` tabindex="0" role="button" data-pe-cle="pal:${pl.p}" aria-label="${ech(`Poser sur la palette ${pl.client}`)}"` : ''}>
-        <div class="pe-palcmd-tete"><b>Palette ${ech(pl.client)}</b>
+        <div class="pe-palcmd-tete"><b>Palette ${ech(V.deux ? pl.etiquette : pl.client)}</b>${V.deux && pl.num ? ` <span class="pe-petit">commande ${ech(pl.num)}</span>` : ''}
           <span class="pe-petit"><b data-pe-kg>${X.poids.toLocaleString('fr-FR')} kg</b> / ${M.C.kgMax} kg · <b data-pe-h>${virg(X.hauteur)} m</b> / ${virg(M.C.hMax)} m</span></div>
         <div class="pe-palsvg">${svg}</div></figure>`;
+    }).join('')}</div>`;
+  }
+
+  // « CONTRÔLER MES PALETTES » (lot 4, deux magasins) : pour chaque palette, la LISTE DE COLISAGE (ce que le système attend pour ce magasin,
+  // par produit) à côté du dessin ; les groupes posés se déplacent d'une palette à l'autre (clic sur le groupe, puis sur l'autre palette).
+  // Le système ne dit pas où est l'erreur ; l'accompagné (`terminal.cocher`) voit chaque ligne se cocher quand le compte y est.
+  function htmlControle(e) {
+    return `<div class="pvc-controle" data-pvc-controle>${V.palettes.map((pl) => {
+      const { X, svg } = svgPalette(e, pl), G = e.palettes[pl.p] || [];
+      const attendu = {};
+      M.lignes.forEach((l) => { if (l.pour === pl.p) attendu[l.produit] = (attendu[l.produit] || 0) + l.q; });
+      const ici = {};
+      G.forEach((g) => { ici[g.k] = (ici[g.k] || 0) + g.q; });
+      const cible = ui.dep && ui.dep.p !== pl.p;
+      const liste = Object.entries(attendu).map(([k, q]) => `<li data-pvc-colis="${ech(k)}">${V.cocher && ici[k] === q ? '<b class="pvc-coche" aria-label="présent">✓</b> ' : ''}${ech(M.produits[k].nom)} <b>× ${q}</b></li>`).join('');
+      const groupes = G.map((g, k) => `<button type="button" class="pk-objet${ui.dep && ui.dep.p === pl.p && ui.dep.k === k ? ' pk-main' : ''}" data-pvc-groupe="${pl.p}:${k}" data-pe-cle="groupe:${pl.p}:${k}"
+        aria-pressed="${!!(ui.dep && ui.dep.p === pl.p && ui.dep.k === k)}">${ech(court(g.k))} × ${g.q}</button>`).join('') || '<span class="pe-petit">Rien.</span>';
+      return `<section class="pvc-ctl-pal${cible ? ' pvc-cible' : ''}" data-pvc-ctl="${pl.p}"${cible ? ` tabindex="0" role="button" data-pe-cle="ctl:${pl.p}" aria-label="${ech(`Mettre sur la palette ${pl.etiquette}`)}"` : ''}>
+        <div class="pe-palcmd-tete"><b>Palette ${ech(pl.etiquette)}</b> <span class="pe-petit">commande ${ech(pl.num)} · ${X.poids.toLocaleString('fr-FR')} kg · ${virg(X.hauteur)} m</span></div>
+        <div class="pvc-ctl-corps"><div class="pvc-colisage"><b>Liste de colisage</b><ul>${liste}</ul></div><div class="pvc-ctl-svg">${svg}</div></div>
+        <div class="pk-cote pvc-ctl-groupes"><b>Sur la palette :</b> ${groupes}</div></section>`;
     }).join('')}</div>`;
   }
 
@@ -327,25 +393,30 @@ export function creerVocal(P, M, opts, O) {
     if (!fin && T.phase === 'pose') {
       const l = ligneEnCours(e), n = T.reponses[l.id];
       h += `<div class="pk-question" data-pvc-question>Où poses-tu ${ech(quoi(l.produit, n))} ?</div><div class="pk-poser">${
-        V.palettes.map((pl) => bouton(`data-pvc-poser="${pl.p}"`, `poser:${pl.p}`, V.palettes.length > 1 ? `Palette ${ech(pl.client)}` : 'Palette')).join('')}${
+        V.palettes.map((pl) => bouton(`data-pvc-poser="${pl.p}"`, `poser:${pl.p}`, V.deux ? `Palette ${ech(pl.etiquette)}` : 'Palette')).join('')}${
         bouton('data-pvc-poser="cote"', 'poser:cote', 'À côté, je les pose après', false, 'btn pk-acote')}</div>`;
     } else if (!fin) h += '<div class="pe-petit">Suis le terminal : va à l’emplacement, lis le code sur l’étiquette, prends, puis pose.</div>';
     if (cote.length) {
       h += `<div class="pk-cote" data-pvc-cote><b>À côté :</b> ${cote.map((g, k) => `<button type="button" class="pk-objet${ui.main === k ? ' pk-main' : ''}" data-pvc-objet="${k}"
         data-pe-cle="objet:${k}" aria-pressed="${ui.main === k}" ${fin ? '' : 'disabled'}>${ech(court(g.k))} × ${g.q}</button>`).join('')}
-        <div class="pe-petit">${fin ? (ui.main != null ? `Pose-le sur la palette.</div><div class="pk-poser">${V.palettes.map((pl) => bouton(`data-pvc-vers="${pl.p}"`, `vers:${pl.p}`, V.palettes.length > 1 ? `Sur la palette ${ech(pl.client)}` : 'Sur la palette')).join('')}` : 'Clique un groupe de cartons, puis la palette.') : 'Tu les poseras quand la commande sera terminée.'}</div></div>`;
+        <div class="pe-petit">${fin ? (ui.main != null ? `Pose-le sur la palette.</div><div class="pk-poser">${V.palettes.map((pl) => bouton(`data-pvc-vers="${pl.p}"`, `vers:${pl.p}`, V.deux ? `Sur la palette ${ech(pl.etiquette)}` : 'Sur la palette')).join('')}` : 'Clique un groupe de cartons, puis la palette.') : 'Tu les poseras quand la commande sera terminée.'}</div></div>`;
     }
     if (fin) {
-      h += `<div class="pk-reposer">${V.palettes.map((pl) => bouton(`data-pvc-reposer="${pl.p}"`, `reposer:${pl.p}`, `↶ Reposer le dernier${V.palettes.length > 1 ? ` (${ech(pl.client)})` : ''}`, !(e.palettes[pl.p] || []).length)).join('')}</div>`;
-      h += `<div class="pe-finir pk-finir"><b>Avant le quai</b>${V.palettes.map((pl) => `<div class="pk-fin-pal" data-pvc-fin="${pl.p}">${V.palettes.length > 1 ? `<b>Palette ${ech(pl.client)}</b>` : ''}
+      if (V.deux) {
+        // Deux magasins : contrôler (et déplacer) avant le film ; « Reposer le dernier » ne sert plus.
+        h += `<div class="pk-poser">${bouton('data-pvc="controle"', 'b:controle', ui.controle ? 'Fermer le contrôle' : 'Contrôler mes palettes', cote.length > 0, ui.controle ? 'btn' : 'btn btn-p')}</div>`;
+        if (ui.controle) h += `<div class="pe-petit" data-pvc-aide-ctl>${ui.dep ? 'Clique l’autre palette pour y mettre ce groupe.' : 'Compare chaque palette à sa liste. Un groupe mal placé : clique-le, puis l’autre palette.'}</div>`;
+      } else h += `<div class="pk-reposer">${V.palettes.map((pl) => bouton(`data-pvc-reposer="${pl.p}"`, `reposer:${pl.p}`, '↶ Reposer le dernier', !(e.palettes[pl.p] || []).length)).join('')}</div>`;
+      h += `<div class="pe-finir pk-finir"><b>Avant le quai</b>${V.palettes.map((pl) => `<div class="pk-fin-pal" data-pvc-fin="${pl.p}">${V.deux ? `<b>Palette ${ech(pl.etiquette)}</b>` : ''}
           <label>Film étirable : <select data-pvc-film="${pl.p}" data-pe-cle="film:${pl.p}"><option value="">— tours —</option>${[1, 2, 3, 4, 5, 6].map((n) => `<option value="${n}" ${String((e.film || [])[pl.p]) === String(n) ? 'selected' : ''}>${n}</option>`).join('')}</select> tours</label>
-          <div class="pe-etq">Étiquette « ${ech(pl.etiquette)} » sur : ${ETIQ_COTES.map(([k, lib]) => `<label><input type="checkbox" data-pvc-etiq="${pl.p}:${k}" data-pe-cle="etiq:${pl.p}:${k}" ${((e.etiq || [])[pl.p] || {})[k] ? 'checked' : ''}> ${lib}</label>`).join('')}</div></div>`).join('')}
-        <div class="pe-boutons">${bouton('data-pvc="verifier"', 'b:verifier', 'Vérifier ma préparation', cote.length > 0, 'btn btn-p')}</div></div>`;
+          <div class="pe-etq">${V.deux ? `<label>Étiquette du magasin : <select data-pvc-etiqmag="${pl.p}" data-pe-cle="etiqmag:${pl.p}"><option value="">— magasin —</option>${
+            V.palettes.map((q) => `<option value="${q.p}" ${String((e.etiqMag || [])[pl.p]) === String(q.p) ? 'selected' : ''}>${ech(q.etiquette)}</option>`).join('')}</select></label> sur : ` : `Étiquette « ${ech(pl.etiquette)} » sur : `}${ETIQ_COTES.map(([k, lib]) => `<label><input type="checkbox" data-pvc-etiq="${pl.p}:${k}" data-pe-cle="etiq:${pl.p}:${k}" ${((e.etiq || [])[pl.p] || {})[k] ? 'checked' : ''}> ${lib}</label>`).join('')}</div></div>`).join('')}
+        <div class="pe-boutons">${bouton('data-pvc="verifier"', 'b:verifier', V.deux ? 'Vérifier mes palettes' : 'Vérifier ma préparation', cote.length > 0, 'btn btn-p')}</div></div>`;
       if (e.verifie) {
         const nonJuge = jal.some((j) => j.nonJuge);
         h += `<div class="pm-bilan pk-bilan" data-pvc-bilan><b>Ma préparation</b>${jal.map((j) => `<div class="${j.nonJuge ? 'pe-petit' : j.ok ? 'pe-ok' : 'pe-ko'}" data-pvc-jalon="${ech(j.id)}" data-ok="${j.ok}">${
           j.nonJuge ? '— non jugé' : j.ok ? '✓' : '✗'} ${ech(j.lib)}</div>`).join('')}
-          <small>${nonJuge ? 'La palette n’est jugée que si toutes les lignes sont justes.' : ''}</small></div>`;
+          <small>${nonJuge ? (V.deux ? 'Une palette n’est jugée que si elle ne porte que ses lignes, toutes.' : 'La palette n’est jugée que si toutes les lignes sont justes.') : ''}</small></div>`;
       }
     }
     return `${h}</section>`;
@@ -405,7 +476,7 @@ export function creerVocal(P, M, opts, O) {
   return {
     signaux: [...M.vocal.lignes.flatMap((l) => [`code:${l.id}`, `ligne:${l.id}`]), ...Object.keys(P.codes || {}).map((a) => `ouvrir:${a}`),
       'poser:palette', 'poser:cote', 'pose:lourd', 'pose:normal', 'pose:fragile', 'fin', 'film', 'etiquettes', 'verifier',
-      ...M.vocal.mots.map((m) => `mot:${m.id}`), 'abime', 'vide', 'reserve'].map(geste),
+      ...M.vocal.mots.map((m) => `mot:${m.id}`), 'abime', 'vide', 'reserve', 'controle:ouvrir', 'controle:fermer', 'deplacer'].map(geste),
     id: P.id,
     nav: { libelle: P.libelle || 'Préparer la commande' },
     etatNeuf: etatVocalNeuf,
@@ -423,7 +494,8 @@ export function creerVocal(P, M, opts, O) {
       const jal = jalonsVocal(M, e);
       let espace;
       // Le terminal fini, la palette prend toute la place (les cartons à côté s'y posent, « Reposer » se voit) ; la travée reste ouvrable.
-      if (!ui.trav && T.fin) espace = htmlPalettes(e);
+      if (ui.controle && T.fin) espace = htmlControle(e);
+      else if (!ui.trav && T.fin) espace = htmlPalettes(e);
       else if (!ui.trav) espace = `<div class="pe-plan">${O.htmlPlan(e, R, { dessus: dessusPlan(e) })}</div>`;
       else {
         const fil = `<div class="pe-entete"><div class="pe-fil">Plan › <b>Travée</b> <span class="pe-mono">${ech(ui.trav)}</span>${ui.pres ? ` › <b>De près</b> <span class="pe-mono">${ech(ui.pres)}</span>` : ''}</div>
@@ -525,6 +597,29 @@ export function creerVocal(P, M, opts, O) {
         const [p, k] = c.dataset.pvcEtiq.split(':');
         e.etiq = V.palettes.map((pl) => Object.assign({}, (e.etiq || [])[pl.p] || {}));
         e.etiq[+p][k] = c.checked; e.verifie = false; sig('etiquettes'); fait(`etiq:${p}:${k}`);
+      }));
+      // Lot 4 : le contrôle des palettes, le déplacement d'un groupe, l'étiquette du magasin.
+      racine.querySelectorAll('[data-pvc="controle"]').forEach((b) => activer(b, () => {
+        ui.controle = !ui.controle; ui.dep = null; ui.trav = null; ui.pres = null;
+        if (ui.controle) e.controles = (e.controles || 0) + 1;
+        sig(ui.controle ? 'controle:ouvrir' : 'controle:fermer'); fait('b:controle');
+      }));
+      racine.querySelectorAll('[data-pvc-groupe]').forEach((b) => activer(b, () => {
+        const [p, k] = b.dataset.pvcGroupe.split(':').map(Number);
+        ui.dep = ui.dep && ui.dep.p === p && ui.dep.k === k ? null : { p, k }; ui.focus = `groupe:${p}:${k}`; redessiner();
+      }));
+      racine.querySelectorAll('[data-pvc-ctl][role="button"]').forEach((z) => activer(z, () => {
+        const q = +z.dataset.pvcCtl;
+        if (!ui.dep || ui.dep.p === q) return;
+        const L = [...(e.palettes[ui.dep.p] || [])], [g] = L.splice(ui.dep.k, 1);
+        if (!g) return;
+        e.palettes[ui.dep.p] = L; e.palettes[q] = [...(e.palettes[q] || []), g]; e.verifie = false; ui.dep = null;
+        sig('deplacer'); fait(`groupe:${q}:${e.palettes[q].length - 1}`);
+      }));
+      racine.querySelectorAll('[data-pvc-etiqmag]').forEach((c) => c.addEventListener('change', () => {
+        const p = +c.dataset.pvcEtiqmag;
+        e.etiqMag = V.palettes.map((pl) => ((e.etiqMag || [])[pl.p] == null ? '' : e.etiqMag[pl.p])); e.etiqMag[p] = c.value; e.verifie = false;
+        sig('etiquettes'); fait(`etiqmag:${p}`);
       }));
       racine.querySelectorAll('[data-pvc="verifier"]').forEach((b) => activer(b, () => {
         if ((e.cote || []).length || !e.terminal.fin) return;

@@ -21,6 +21,11 @@
 // abimes: 1, vides: 1 }`, graine « temoin-1 »), relevé une fois et recopié À LA MAIN : Marseille Le Merlan, n° 4190 ; L1 NET 4 A1-T05-N1-E1 (99) ·
 // L2 LES 3 A2-T05-N1-E2 (23 ; 1 carton abîmé devant, picking 13 ; remplacement B1-T06-N1-E2, code 83) · L3 CRO 4 B2-T05-N1-E3 (35) · L4 BOU 3
 // B1-T04-N1-E3 (90) · L5 BOI 4 B1-T03-N1-E2 (86) · L6 SER 5 B2-T02-N1-E2 (33 ; VIDE, picking 0) · L7 CAH 5 B2-T01-N1-E3 (84).
+//
+// LOT 4 (25/10/2026) : deux magasins. Cas « vocal-deux » (profil `{ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1 }`, graine
+// « temoin-1 »), relevé une fois et recopié À LA MAIN : palette 0 Marseille La Valentine n° 4288, palette 1 Nîmes Cap Costières n° 4316 ;
+// L1 CRO 4 pour Nîmes et L2 CRO 5 pour La Valentine, tous deux en A1-T01-N1-E1 (le produit commun) · L3 NET 6 LV · L4 BOI 4 LV · L5 PEL 3 LV ·
+// L6 SER 4 N · L7 CAH 6 N (B1-T04-N1-E1, un abîmé, remplacement B2-T03-N1-E1) · L8 BOU 5 N.
 
 export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
@@ -419,6 +424,95 @@ await v('Préparation vocale (lot 3) : équité sur 300 graines des profils 8.16
     return out;
   });
   egal(r, { v816: {}, v819: {} }, 'aucune faute sur la préparation parfaite');
+});
+
+/* ============================================= lot 4 : deux magasins, deux palettes, le contrôle */
+const POUR_DEUX = { L1: 1, L2: 0, L3: 0, L4: 0, L5: 0, L6: 1, L7: 1, 'L7-r': 1, L8: 1 };
+
+await v('Préparation vocale (lot 4) : deux magasins tirés sur 300 graines (Nîmes toujours l’un des deux, 4 lignes chacun, un produit commun sur deux lignes consécutives, aucun secours) ; la préparation parfaite gagne tous les jalons ; l’élève témoin (valeurs à la main)', async () => {
+  const r = await pg.evaluate(async () => {
+    const D = await import('/contenus/action-prepa-donnees.js');
+    const E = await import('/core/types/entrepot.js');
+    const fn = D.preparation({ id: 'v818', lignes: 8, magasins: 2, abimes: 1, terminal: {} });
+    let secours = 0, fautesJeu = 0, nimes = 0;
+    const fautes = {};
+    for (let i = 0; i < 300; i++) {
+      const { jeu, secours: sec } = fn.jeuDe(`g${i}`);
+      if (sec) secours++;
+      if (D.verifierCommande(fn.options, jeu).length) fautesJeu++;
+      if (jeu.magasins.includes('nimes')) nimes++;
+      const Q = fn(`g${i}`, { niveau: 'standard' }), L = Q.commande.lignes;
+      const id = (l) => `L${L.indexOf(l) + 1}`;
+      const R = {}, EX = {}, pal = [[], []];
+      [0, 1].forEach((p) => D.bonOrdre(L.filter((l) => l.pour === p)).forEach((l) => {
+        const ab = (Q.abimes || {})[l.a];
+        if (ab) { EX[id(l)] = { mot: 'abime', n: ab }; R[id(l)] = l.q - ab; R[`${id(l)}-r`] = ab;
+          pal[p].push({ a: l.a, k: l.produit, q: l.q - ab, ligne: id(l) }, { a: Q.remplacements[l.a], k: l.produit, q: ab, ligne: `${id(l)}-r` }); }
+        else { R[id(l)] = l.q; pal[p].push({ a: l.a, k: l.produit, q: l.q, ligne: id(l) }); }
+      }));
+      const e = { terminal: { i: 99, phase: 'code', reponses: R, exceptions: EX, codesFaux: {}, journal: [], debut: 1, fin: 2 },
+        palettes: pal, cote: [], film: ['4', '4'], etiq: [0, 1].map(() => ({ avant: true, arriere: true, dessus: true })), etiqMag: ['0', '1'] };
+      E.jalonsEntrepot({ entrepots: { v818: e } }, Q).L.filter((j) => !j.ok).forEach((j) => { fautes[j.id] = (fautes[j.id] || 0) + 1; });
+    }
+    const T = D.preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1, terminal: {} })('temoin-1', { niveau: 'standard' });
+    return { secours, fautesJeu, nimes, fautes, ids: E.etapesEntrepot(fn).map((x) => x.id),
+      dest: T.commande.destinataires.map((d) => `${d.client} ${d.num}`), lignes: T.commande.lignes.map((l) => `${l.produit} ${l.q} ${l.a} ${l.pour}`).join(' · '),
+      ab: T.abimes, rem: T.remplacements };
+  });
+  egal([r.secours, r.fautesJeu, r.nimes], [0, 0, 300], 'tirage');
+  egal(r.fautes, {}, 'la préparation parfaite gagne tout');
+  egal(r.ids, ['ligne-1', 'ligne-2', 'ligne-3', 'ligne-4', 'ligne-5', 'ligne-6', 'ligne-7', 'abime-dit', 'abime-remplacement', 'grouper-1', 'grouper-2',
+    'lourds-1', 'lourds-2', 'fragiles-1', 'fragiles-2', 'poids-1', 'poids-2', 'hauteur-1', 'hauteur-2', 'film-1', 'film-2', 'etiquettes-1', 'etiquettes-2', 'rienAbime'], 'jalons');
+  egal(r.dest, ['Marseille La Valentine 4288', 'Nîmes Cap Costières 4316'], 'les deux magasins du témoin');
+  egal(r.lignes, 'CRO 4 A1-T01-N1-E1 1 · CRO 5 A1-T01-N1-E1 0 · NET 6 A1-T05-N1-E1 0 · BOI 4 A1-T06-N1-E1 0 · PEL 3 B2-T06-N1-E3 0 · SER 4 B1-T05-N1-E2 1 · CAH 6 B1-T04-N1-E1 1 · BOU 5 B2-T03-N1-E2 1', 'lignes du témoin');
+  egal([r.ab, r.rem], [{ 'B1-T04-N1-E1': 1 }, { 'B1-T04-N1-E1': 'B2-T03-N1-E1' }], 'abîmé du témoin');
+});
+
+await v('Préparation vocale (lot 4), page d’essai : le terminal dit pour qui ; tout posé sur UNE palette (le conseil de Yanis) → « grouper » faux sur les deux et les critères non jugés ; « Contrôler mes palettes » (liste de colisage à côté du dessin), les groupes déplacés → tout juste ; l’étiquette de l’autre magasin → « étiquettes » faux, et lui seul', async () => {
+  const pe = await ctx.newPage();
+  pe.on('pageerror', (e) => erreurs.push('PAGEERROR (essai lot 4): ' + e.message));
+  await pe.goto(BASE + 'outils/essai-entrepot.html');
+  await pe.selectOption('select[name=cas]', 'vocal-deux');
+  await pe.waitForSelector('.pvc [data-terminal]');
+  const att = await pe.evaluate(async () => (await import('/core/types/entrepot.js')).bonnesReponses(
+    (await import('/contenus/action-prepa-donnees.js')).preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1, terminal: {} })('temoin-1', { niveau: 'standard' })));
+  vrai((await phrase(pe)).includes('Pour Nîmes. Allée A1, travée 01, niveau 1, emplacement 1. Code de contrôle ?'), 'le terminal nomme le magasin');
+  egal(await pe.$$eval('[data-pvc-montage] button', (B) => B.map((b) => b.textContent.trim())), [], 'rien à poser avant la prise');
+  for (const x of att) {
+    await taper(pe, x.code);
+    if (x.ligne === 'L7') { await pe.click('[data-vt-mot="abime"]'); await taper(pe, 1); await taper(pe, 5); }
+    else await taper(pe, x.prends);
+    if (x.ligne === 'L1') egal(await pe.$$eval('[data-pvc-poser]', (B) => B.map((b) => b.textContent.trim())), ['Palette La Valentine', 'Palette Nîmes', 'À côté, je les pose après'], 'une palette par magasin');
+    await pe.click('[data-pvc-poser="0"]');
+    if (x.ligne === 'L7') { await taper(pe, (await pe.evaluate(async () => (await import('/contenus/action-prepa-donnees.js')).preparation({ id: 'essai-vocal-deux', lignes: 8, magasins: 2, abimes: 1, terminal: {} })('temoin-1').codes['B2-T03-N1-E1']))); await taper(pe, 1); await pe.click('[data-pvc-poser="0"]'); }
+  }
+  for (const p of [0, 1]) { await pe.selectOption(`[data-pvc-film="${p}"]`, '4'); await pe.selectOption(`[data-pvc-etiqmag="${p}"]`, String(p)); for (const k of ['avant', 'arriere', 'dessus']) await pe.check(`[data-pvc-etiq="${p}:${k}"]`); }
+  await pe.click('[data-pvc="verifier"]');
+  const ko = () => pe.$$eval('[data-pvc-jalon]', (L) => L.filter((x) => x.dataset.ok !== 'true').map((x) => x.dataset.pvcJalon));
+  const nonJuges = () => pe.$$eval('[data-pvc-jalon]', (L) => L.filter((x) => x.textContent.includes('non jugé')).map((x) => x.dataset.pvcJalon));
+  const criteres = ['lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes'];
+  egal(await ko(), ['grouper-1', 'grouper-2', ...criteres.flatMap((c) => [`${c}-1`, `${c}-2`])], 'tout sur une palette : grouper faux, critères faux');
+  egal((await nonJuges()).length, 12, 'les critères « non jugés »');
+  // le contrôle : la liste de colisage de chaque palette, puis les groupes de Nîmes déplacés
+  await pe.click('[data-pvc="controle"]');
+  const ctl = await pe.evaluate(() => [...document.querySelectorAll('[data-pvc-ctl]')].map((z) => [...z.querySelectorAll('[data-pvc-colis]')].map((li) => li.textContent.trim())));
+  egal(ctl, [['Croquettes pour chien 4 kg × 5', 'Nettoyant multi-usages 1 L × 6', 'Boîtes de rangement 10 L × 4', 'Peluches × 3'],
+    ['Croquettes pour chien 4 kg × 4', 'Serviettes de bain × 4', 'Cahiers grand format × 6', 'Bougies parfumées × 5']], 'listes de colisage');
+  for (;;) {
+    const G = await pe.evaluate(() => window.__essai.db.entrepots['essai-vocal-deux'].palettes[0].map((g) => g.ligne));
+    const k = G.findIndex((x) => POUR_DEUX[x] === 1);
+    if (k < 0) break;
+    await pe.click(`[data-pvc-groupe="0:${k}"]`); await pe.click('[data-pvc-ctl="1"]');
+  }
+  await pe.click('[data-pvc="controle"]');
+  await pe.click('[data-pvc="verifier"]');
+  egal(await ko(), [], 'après le contrôle : tout juste (jugé sur l’état final)');
+  await pe.selectOption('[data-pvc-etiqmag="0"]', '1');
+  await pe.click('[data-pvc="verifier"]');
+  egal(await ko(), ['etiquettes-1'], 'l’étiquette de Nîmes sur la palette de La Valentine');
+  const G = await pe.evaluate(() => Object.keys((window.__essai.db.gestes || {})['essai-entrepot'] || {}).map((k) => k.replace('entrepot:essai-vocal-deux:', '')));
+  egal(['controle:ouvrir', 'controle:fermer', 'deplacer', 'ligne:L3'].filter((x) => !G.includes(x)), [], 'gestes du lot 4');
+  await pe.close();
 });
 
 egal(erreurs, [], 'aucune erreur dans la page');

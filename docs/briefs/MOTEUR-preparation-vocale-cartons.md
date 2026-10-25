@@ -182,3 +182,20 @@ ENT-5.6 Smoby, ENT-6.7 France Boissons, le palettier (E-7) et les séances 8.11 
 - **Ce qui diffère du brief** : deux groupes de suite du **même produit** font une seule couche (la ligne abîmée et sa remplacement se
   complètent ; sans cela, sept lignes plus une remplacement dépassaient 1,80 m) ; le « Manquant » du confirmé (8.16, bonus) n'est pas encore tiré
   par les données (le mot existe et se juge déjà comme une exception).
+
+### Lot 4 — livré le 25/10/2026 (Claude, même fil)
+
+- **Fichiers** : `contenus/action-prepa-donnees.js` (option `magasins: 2` : Nîmes et un autre magasin dans un ordre tiré, la moitié des lignes
+  chacun, un produit commun sur deux lignes consécutives à la même adresse, 12 à 20 cartons par magasin, chaque palette dans les limites ; la
+  déclaration porte `commande.destinataires` et `pour` sur chaque ligne ; rien ne bouge pour un seul magasin, témoins inchangés),
+  `core/types/entrepot.js` (une adresse peut servir une ligne de chaque magasin), `core/types/entrepot-vocal.js`, `styles/entrepot.css`,
+  `outils/essai-entrepot.html` (cas « Préparation vocale, deux magasins »), 2 cas ajoutés au bloc (300 graines : aucun secours, Nîmes toujours là,
+  la préparation parfaite gagne tout ; parcours « tout sur une palette » puis contrôle). Sabotage fait (« grouper » sans regarder le magasin des
+  groupes, étiquette du magasin ignorée : le parcours tombe).
+- **Vue** : « Pour Nîmes. Allée … » ; pose « Palette La Valentine · Palette Nîmes · À côté » ; le terminal fini, « Contrôler mes palettes » montre
+  chaque palette, sa liste de colisage (produit × quantité attendue pour ce magasin) et ses groupes ; clic sur un groupe puis sur l'autre palette
+  pour le déplacer (« Reposer le dernier » n'est plus proposé) ; l'étiquette se choisit par magasin avant les faces.
+- **Jalons** : `grouper-1`, `grouper-2` (état final : tous les cartons des lignes du magasin et rien d'autre ; vide = faux), puis chaque critère par
+  palette (`lourds-1`, `lourds-2`…), jugé seulement si la palette est groupée ; `etiquettes-p` exige l'étiquette de son magasin.
+- **Ce qui reste à la séance** (ENT-8.18) : le message de Yanis (`apresGeste('entrepot:<id>:ligne:L3')`), les poids par bloc, figer le terminal à
+  « Corriger ». `terminal.cocher` (accompagné : la liste se coche quand le compte y est) est codé mais pas encore couvert par un test.
