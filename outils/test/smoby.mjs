@@ -3527,6 +3527,21 @@ await v('Lot 0 : ENT-5.5 — palettes mal rangées, saisie fausse (validée : ir
   await pasBloque(T55, '__55', 'smoby-rangement', 'ENT-5.5');
 });
 
+// État des lieux du 25/10/2026 : un élève laissait P3 (en litige) au quai, envoyait tout, et ENT-5.6 restait fermée.
+// Sabotage : remettre « attente » pour une palette jamais posée fait tomber ce cas.
+await v('Lot 0 : ENT-5.5 — P3 jamais posée sur le plan, tout le reste envoyé : « pas rangée » (faux), la 5.6 s’ouvre ; à faire avant l’envoi à Kuehne+Nagel', async () => {
+  await monter55({ uid: 'u-55-oubli' });
+  await ranger55({ P1: RANGE55.P1, P2: RANGE55.P2, P4: RANGE55.P4 });
+  await saisir55();
+  await repondre55('Le stock de porteurs', STOCK55);
+  egal((await etapes55())['P3-rangee'], 'attente', 'P3 avant le dernier envoi');
+  await repondre55('Commande de Noël : la marchandise d’Arinthod', KN55);
+  const st = await etapes55();
+  egal(st, statuts55(['P3-rangee']), 'seule P3 est fausse');
+  await pasBloque(T55, '__55', 'smoby-rangement', 'ENT-5.5');
+  vrai(/P3/.test((await finLot0(T55, '__55', 'smoby-rangement')).texte), 'le bandeau ne nomme pas P3');
+});
+
 await v('Lot 0 : ENT-5.6 — une seule ligne, mauvais film, une étiquette, terminée et vérifiée : la 5.7 s’ouvre ; rien avant « Vérifier »', async () => {
   await monter56({ uid: 'u-56-pire' });
   await pg.click(`${T56} .ent-nav[data-vue="entrepot"]`);
@@ -3737,6 +3752,30 @@ await v('Verrou Smoby : 5.2 fermée sans la photo de 5.1 (même rangée dans la 
   egal(r.debloque, [null, 'Termine d\'abord ENT-5.3.'], '5.3 débloquée à la main');
   egal(r.spartooRien, 'Termine d\'abord ENT-1.1.', 'Spartoo sans photo');
   egal(r.spartooPhoto, [null, 'Termine d\'abord ENT-1.2.'], 'Spartoo avec la photo de 1.1 dans la base commune');
+});
+
+// État des lieux du 25/10/2026 : le bandeau annonçait « est ouverte » une séance que l'enseignant n'avait pas encore cochée
+// (« Conduite de séance ») ; l'élève ne trouvait pas la tuile. `suivante.ouverte === false` (core/app.js) change la phrase.
+// Sabotage : ignorer `ouverte` dans `core/types/entreprise-fin.js` fait tomber ce cas.
+await v('Bandeau de fin : la séance suivante pas encore cochée par l’enseignant n’est pas dite « ouverte », dans les 7 formes du bandeau', async () => {
+  const r = await pg.evaluate(async () => {
+    const F = await import('/core/types/entreprise-fin.js');
+    const etapes = [{ id: 'a', titre: 'A', ecran: 'fiche:x' }, { id: 'b', titre: 'B', ecran: 'fiche:x' }];
+    const ok = { a: 'ok', b: 'ok' }, ko = { a: 'ok', b: 'ko' }, err = { a: 'ok', b: 'erreur' };
+    const txt = (h) => { const d = document.createElement('div'); d.innerHTML = h; return d.textContent.replace(/\s+/g, ' '); };
+    const formes = (S) => [
+      F.bandeauAncien(err, { etapes, suiteAuBilan: true, suivante: S, retours: () => '' }),
+      F.bandeauAncien(ok, { etapes, suiteAuBilan: true, suivante: S, retours: () => '' }),
+      F.bandeauAncien(ko, { etapes, suiteAuBilan: true, suivante: S, retours: () => '' }),
+      F.bandeauFin(err, { etapes, correction: true, suivante: S, retours: () => '' }),
+      F.bandeauFin(ko, { etapes, premierEssai: true, suivante: S, retours: () => '' }),
+      F.bandeauFin(ok, { etapes, correction: true, suivante: S, retours: () => '' }),
+      F.bandeauFin(ko, { etapes, correction: true, suivante: S, retours: () => '', peutCorriger: true }),
+    ].map(txt);
+    return { ouverte: formes({ code: 'ENT-5.5', titre: 'T' }), fermee: formes({ code: 'ENT-5.5', titre: 'T', ouverte: false }) };
+  });
+  r.ouverte.forEach((t, i) => vrai(/ENT-5\.5/.test(t) && /ouverte/.test(t) && !/enseignant/.test(t), `forme ${i + 1}, séance cochée : ${t}`));
+  r.fermee.forEach((t, i) => vrai(/ENT-5\.5/.test(t) && /ton enseignant/.test(t) && !/est ouverte|déjà ouverte/.test(t), `forme ${i + 1}, pas cochée : ${t}`));
 });
 
 await v('Reprise Smoby : « remettre au début de 5.2 » remet 5.2 et 5.3 à leur base de départ (sans la photo de 5.1), laisse 5.1, une seule fois ; Spartoo inchangé', async () => {

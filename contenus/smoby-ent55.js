@@ -229,13 +229,18 @@ const entreJuste = (db, a) => {
 const att = (id) => ATTENDU.find((a) => a.palette === id);
 const statutRec = (db, ok, detail) => (!validee(db) ? { status: 'attente' } : ok ? { status: 'ok' } : { status: 'ko', detail });
 
+// Une palette jamais posée reste « à faire »… jusqu'à la réponse à Kuehne+Nagel, le dernier envoi de la séance : elle
+// vaut alors « pas rangée » (faux, 0 point comme avant). Sans cela, un élève qui laissait P3 au quai (« en litige, elle ne
+// va pas en stock ») envoyait tout sans jamais finir, et ENT-5.6 restait fermée (état des lieux du 25/10/2026). Posée
+// plus tard, elle est jugée sur sa place.
 const jalonsRangement = PALETTES.map((p) => ({
   id: `${p.id}-rangee`,
   titre: `${p.id} (${p.nom}) bien rangée`,
   verifier(db) {
     const l = lignePlan(db, p.id), e = etatPlan(db), ou = e && e.place && e.place[p.id];
     if (l && l.ok) return { status: 'ok' };
-    return ou ? { status: 'ko', detail: `posée en ${ou}` } : { status: 'attente' };
+    if (ou) return { status: 'ko', detail: `posée en ${ou}` };
+    return phrasesJustes(db, PHRASES_KN.id).envoye ? { status: 'ko', detail: 'pas rangée' } : { status: 'attente' };
   },
 }));
 

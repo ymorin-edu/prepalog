@@ -520,7 +520,9 @@ async function vueActivite(aid, avant) {
     try {
       const L = seancesDuParcours((await catalogue()).map((x) => x.meta), m.meta);
       const s = L[L.findIndex((x) => x.id === m.meta.id) + 1];
-      if (s) suivante = { code: s.code, titre: s.titre };
+      // `ouverte` : la classe la voit-elle ? Une séance `ouverture: 'prof'` pas encore cochée reste fermée au groupe même
+      // quand le parcours de l'élève la lui ouvre ; le bandeau le dit au lieu d'annoncer « est ouverte ».
+      if (s) suivante = { code: s.code, titre: s.titre, ouverte: profil.role === 'prof' || activiteVisible(s, objGroupe, demiDe(objGroupe, profil.uid)) };
     } catch (e) { /* pas de nom : le bandeau dit seulement « validée » */ }
   }
 

@@ -12,6 +12,11 @@
 
 import { ech } from '../ui.js';
 
+// La séance suivante est-elle ouverte à la classe ? `suivante.ouverte === false` : le parcours de l'élève la lui ouvre, mais
+// l'enseignant ne l'a pas encore cochée dans « Conduite de séance » (core/app.js). Le bandeau ne promet que ce qui est vrai
+// (état des lieux Smoby du 25/10/2026 : l'élève lisait « est ouverte », ne trouvait pas la tuile et appelait l'enseignant).
+const estOuverte = (S) => (S.ouverte === false ? 'attend que ton enseignant l’ouvre' : 'est ouverte');
+
 export function groupesDuBilan(etapes, st) {
   const L = [];
   etapes.forEach((e) => {
@@ -45,21 +50,21 @@ export function bandeauAncien(st, { etapes, suiteAuBilan, suivante, reinitialisa
           // Rien de faux, mais une étape que le site n'a pas pu juger : ni « validée » ni « à corriger ».
           const S = suivante;
           return `<div class="ent-fin" role="status" data-fin="averifier"><span class="ent-fin-ico" aria-hidden="true">?</span>
-            <div><b>Séance terminée.</b> Les étapes que le site a pu vérifier sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : '.'}
+            <div><b>Séance terminée.</b> Les étapes que le site a pu vérifier sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », ${estOuverte(S)}.` : '.'}
               ${aVerifier}${retours()}</div>
             <button class="btn ent-fin-btn" data-fin-quitter>Retour aux séances</button></div>`;
         }
         if (!faux.length) {
           const S = suivante;
           return `<div class="ent-fin ent-fin-ok" role="status" data-fin="ok"><span class="ent-fin-ico" aria-hidden="true">✓</span>
-            <div><b>Séance validée.</b> Toutes tes étapes sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : '.'}${retours()}</div>
+            <div><b>Séance validée.</b> Toutes tes étapes sont justes${S ? ` : la séance suivante, ${ech(S.code)} « ${ech(S.titre)} », ${estOuverte(S)}.` : '.'}${retours()}</div>
             <button class="btn ent-fin-btn" data-fin-quitter>Retour aux séances</button></div>`;
         }
         return `<div class="ent-fin ent-fin-ko" role="status" data-fin="ko"><span class="ent-fin-ico" aria-hidden="true">⚠</span>
           <div><b>Tu as tout fait, mais il reste quelque chose à corriger :</b>
             <ul>${faux.map((e) => `<li data-fin-jalon="${ech(e.id)}">${ech(e.titre)}</li>`).join('')}</ul>
             <span class="ent-fin-petit">${suiteAuBilan
-              ? `Relis ta trame à ces étapes.${suivante ? ` La séance suivante, ${ech(suivante.code)} « ${ech(suivante.titre)} », est ouverte.` : ''}`
+              ? `Relis ta trame à ces étapes.${suivante ? ` La séance suivante, ${ech(suivante.code)} « ${ech(suivante.titre)} », ${estOuverte(suivante)}.` : ''}`
               : `Relis ta trame à ces étapes. Si tu ne trouves pas, appelle ton professeur${reinitialisable ? ' ou réinitialise ta séance' : ''}.
             La séance suivante s'ouvrira quand tout sera juste.`}</span>${aVerifier}${retours()}</div></div>`;
 }
@@ -97,20 +102,20 @@ export function bandeauFin(st, { etapes, correction, premierEssai, suiteAuBilan,
         if (incertain) {
           return `<div class="ent-fin ent-fin-v2" role="status" data-fin="averifier"><div class="ent-fin-corps">
             <h2 class="ent-fin-t">Tu as fini.</h2>
-            <p>Les étapes que le site a pu vérifier sont justes.${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
+            <p>Les étapes que le site a pu vérifier sont justes.${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », ${estOuverte(S)}.` : ''}</p>
             ${liste}${aVerifierHtml(etapes, st)}${retours()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
         }
         // Sans « Corriger » : rien ne se rouvre, la note est celle du premier essai.
         if (!correction) {
           return `<div class="ent-fin ent-fin-v2 ${tout ? 'ent-fin-ok' : 'ent-fin-ko'}" role="status" data-fin="${tout ? 'ok' : 'ko'}"><div class="ent-fin-corps">
             <h2 class="ent-fin-t">${tout ? 'Tout est juste du premier coup ✓' : 'Tu as fini : voici ce que tu as réussi du premier coup.'}</h2>
-            <p>${tout ? 'Bravo.' : 'Ta note compte ton premier essai à chaque étape.'}${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
+            <p>${tout ? 'Bravo.' : 'Ta note compte ton premier essai à chaque étape.'}${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », ${estOuverte(S)}.` : ''}</p>
             ${liste}${aVerifierHtml(etapes, st)}${retours()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
         }
         if (tout) {
           return `<div class="ent-fin ent-fin-v2 ent-fin-ok" role="status" data-fin="ok"><div class="ent-fin-corps">
             <h2 class="ent-fin-t">Tout est juste ✓</h2>
-            <p>Bravo, toutes tes étapes sont justes.${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », est ouverte.` : ''}</p>
+            <p>Bravo, toutes tes étapes sont justes.${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », ${estOuverte(S)}.` : ''}</p>
             ${liste}${retours()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
         }
         // Une question ne se rouvre jamais (seule la première réponse compte) : le bandeau le dit quand l'une est fausse.
@@ -124,7 +129,7 @@ export function bandeauFin(st, { etapes, correction, premierEssai, suiteAuBilan,
         return `<div class="ent-fin ent-fin-v2 ent-fin-ko" role="status" data-fin="ko"><div class="ent-fin-corps">
           <h2 class="ent-fin-t">Tu as fini : voici ce qui est juste et ce qui est à corriger.</h2>
           ${fige}${questionsFausses}<p>${peutCorriger ? 'Tu peux corriger pour améliorer ta note, ou passer à la séance suivante'
-            : 'Tu peux passer à la séance suivante'}${S ? ` (${ech(S.code)}, déjà ouverte)` : ''}.</p>
+            : 'Tu peux passer à la séance suivante'}${S ? ` (${ech(S.code)}, ${S.ouverte === false ? 'que ton enseignant doit encore ouvrir' : 'déjà ouverte'})` : ''}.</p>
           ${liste}${aVerifierHtml(etapes, st)}${retours()}<div class="ent-fin-btns">${peutCorriger ? `<button class="btn btn-p ent-fin-corriger" data-fin-corriger>Corriger</button>
             <span class="ent-fin-gain">Corriger améliore ta note.</span>` : ''}
             <button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
