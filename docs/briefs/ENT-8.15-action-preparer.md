@@ -28,8 +28,7 @@ Ce qui n'a pas été tranché par Tristan est marqué **« proposé »** et repr
 - **Sans date** : le jour et l'heure seulement. 8.15 **un lundi, 6 h** ; 8.16 **le lendemain, 6 h** ; 8.17 **un jeudi, 6 h** ; 8.18 **un
   vendredi, 6 h** ; 8.19 (évaluation) **un mardi, 6 h**. *(Proposé : l'équipe commence à 5 h, l'élève stagiaire à 6 h, voir `q-nuit`.)*
 - **La vue** : préparation dans le **mode `preparation` du Plan d'entrepôt** (Smoby, ENT-5.6), **guidée par le terminal vocal** (France
-  Boissons, ENT-6.7), avec la pose **« Palette · À côté »** : chantier **E-8**. *(Option recommandée à Tristan le 25/10 ; si sa réponse diffère,
-  voir le §8 du brief moteur, et ces cinq briefs se relisent.)*
+  Boissons, ENT-6.7), avec la pose **« Palette · À côté »** : chantier **E-8**. *(Choisi par Tristan le 25/10/2026, 14 h 25.)*
 - **Vérifié** (offre France Travail 191TDTN, client « GEODIS/ACTION », actualisée le 29/04/2025) : à Ensuès, le préparateur travaille **à la
   voix**, avec un **scanner**, fait le **filmage** et la **mise à quai**, **CACES 1** exigé. Le reste est construit.
 - **Ce que le référentiel attend** (CAP 2026, fiche `referentiel-cap-ol.md`) :
@@ -207,4 +206,4 @@ contrôle ».
 ## 11. Questions ouvertes
 1. **Proposé** : poids du §5 (à valider avant de coder) ; questions au fil, retours et banque « Avant de commencer » ; produits fragiles ; heures.
 2. **Proposé** : le stagiaire commence à 6 h (`q-nuit`) ; texte de loi à relire sur Légifrance à la construction.
-3. **Dépend de la décision sur la vue** (terminal branché sur la préparation Smoby) : si Tristan choisit autrement, l'étape 3 se réécrit.
+3. **Tranché par Tristan (25/10, 14 h 25)** : la vue est la préparation Smoby guidée par le terminal vocal (E-8).

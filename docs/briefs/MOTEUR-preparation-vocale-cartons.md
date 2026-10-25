@@ -9,7 +9,7 @@
 **Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 25/10/2026, écrit dans le projet PREPALOG (cadrage de C3.1 à C3.3 chez Action).
 **Décision de Tristan** : la préparation d'Ensuès se joue dans **le mode `preparation` du Plan d'entrepôt (celui de Smoby, ENT-5.6), guidé par le
-terminal vocal (celui de France Boissons, ENT-6.7)**. *(Option recommandée, posée à Tristan le 25/10/2026 ; voir §8 si sa réponse diffère.)*
+terminal vocal (celui de France Boissons, ENT-6.7)**. *(Choisie par Tristan le 25/10/2026, 14 h 25, sur la carte de décision : « Préparation Smoby + terminal vocal ».)*
 **Modèle** : **Opus** pour les lots 1, 2 et 4 (comportement nouveau d'une vue) ; Sonnet pour les lots 0, 3, 5 et 6.
 **Durée estimée** : **≈ 18 à 22 h** (lot 0 ≈ 2 h · lot 1 ≈ 4-5 h · lot 2 ≈ 3-4 h · lot 3 ≈ 2-3 h · lot 4 ≈ 3-4 h · lot 5 ≈ 2-3 h · lot 6 ≈ 1 h).
 **Version courte** : lots 0 → 3 (≈ 11-14 h) suffisent pour construire **ENT-8.15, 8.16 et 8.17** ; les lots 4 et 5 servent à **8.18 et 8.19**.
