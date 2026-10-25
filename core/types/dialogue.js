@@ -462,6 +462,7 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
     function redessiner(focus) {
       garderFocus(z, () => { z.innerHTML = html(etat, api); });
       relier();
+      ajusterHauteur(z);
       const fil = z.querySelector('[data-dlg-fil]');
       if (fil) fil.scrollTop = fil.scrollHeight;
       if (focus && auClavier()) retrouverFocus(z, focus);
@@ -550,6 +551,8 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
     }
     ui.attente = false; ui.jeton++;
     relier();
+    ajusterHauteur(z);
+    suivreHauteur(z);
     const fil = z.querySelector('[data-dlg-fil]');
     if (fil) fil.scrollTop = fil.scrollHeight;
   }
@@ -562,6 +565,32 @@ export function creerTelephone(T, { personnes = {}, evaluation = false } = {}) {
     ouvrir(id) { if (parId.has(id)) { ui.sel = id; ui.vide = false; ui.attente = false; ui.jeton++; } },
     // Un appel est-il en cours dans cet état (questions au fil retenues, marque au menu) ?
     enCours: (etat) => M.dialogues.some((D) => appelEnCours(etat && etat[D.id])) };
+}
+
+// La hauteur de l'écran (25/10/2026, ENT-10.4) : dans une séance d'entreprise, la réserve n'est plus devinée (210 px) mais
+// mesurée : l'écran commence où il commence (sous le bandeau, les cartes des messages, les pastilles) et va jusqu'au bas de la
+// fenêtre. Un bandeau sur deux lignes et deux cartes réduites faisaient sortir la 4e réponse de la fenêtre. Hors séance
+// (page d'essai), la réserve de la feuille de style reste. Le plancher de 400 px de la feuille de style tient toujours.
+function ajusterHauteur(z) {
+  const d = z.querySelector('.dlg');
+  if (!d || !d.closest('.ent-page')) return;
+  const haut = d.getBoundingClientRect().top + window.scrollY;
+  d.style.setProperty('--dlg-reserve', `${Math.ceil(haut + 12)}px`);
+}
+// Ce qui est au-dessus de l'écran change de hauteur sans le redessiner (une carte arrive, se réduit, se ferme ; la fenêtre
+// change de taille) : on remesure. Un seul observateur par zone ; il se débranche quand l'écran n'est plus affiché.
+function suivreHauteur(z) {
+  if (z.__dlgSuivi || typeof ResizeObserver !== 'function') return;
+  const page = z.closest('.ent-page');
+  if (!page) return;
+  const obs = new ResizeObserver(() => {
+    if (!z.isConnected || !z.querySelector('.dlg')) { obs.disconnect(); z.__dlgSuivi = null; window.removeEventListener('resize', maj); return; }
+    ajusterHauteur(z);
+  });
+  const maj = () => ajusterHauteur(z);
+  for (const el of page.children) if (!el.contains(z)) obs.observe(el);
+  window.addEventListener('resize', maj);
+  z.__dlgSuivi = obs;
 }
 
 const heure = (t) => { const d = new Date(t); return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`; };
