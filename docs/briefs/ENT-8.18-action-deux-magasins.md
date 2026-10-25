@@ -111,7 +111,7 @@ sur le terminal · sur le rack.
 ## 6. Contenu (données)
 `contenus/action-ent818.js`, `contenus/questions/ENT-8.18.js`, `activites/action-deux-magasins.js`, `contenus/corriges/ENT-8.18.js`.
 Deux magasins tirés, **Nîmes toujours l'un des deux** (§0 d'ENT-8.15) ; 8 lignes (4 par magasin, 12 à 20 cartons par magasin) ; un produit
-commun aux deux, sur deux lignes consécutives ; un abîmé ; les deux palettes tiennent toujours dans 600 kg / 1,60 m (contrôle).
+commun aux deux, sur deux lignes consécutives ; un abîmé ; les deux palettes tiennent toujours dans 600 kg / 1,80 m (contrôle).
 
 ## 6 bis. Tirage et niveaux
 - Tirés : le second magasin, les lignes, la ligne abîmée, l'ordre du circuit (le produit commun toujours sur deux lignes consécutives).

@@ -56,7 +56,7 @@ arrive trop tôt, pose-le à côté. Samia »
 - **Film** (3 à 5 tours) et **étiquettes** (deux faces opposées + le dessus, au nom du magasin) : gestes de Smoby / 6.7.
 - « Vérifier ma préparation » : verdict par critère (le nom seul : « ✗ lourds en bas », « ✗ hauteur »). Les critères de montage ne sont jugés
   **que si les lignes sont justes et que rien ne reste à côté** (règle du moteur).
-- Guidage : « Les règles ▾ » ouvertes (lourds en bas, fragiles en haut, {600} kg et {1,60} m au plus, 3 à 5 tours, 3 étiquettes) ; de près,
+- Guidage : « Les règles ▾ » ouvertes (lourds en bas, fragiles en haut, {600} kg et {1,80} m au plus, 3 à 5 tours, 3 étiquettes) ; de près,
   la palette affiche son **poids** et sa **hauteur** en direct.
 
 ### Fin
@@ -106,7 +106,7 @@ de l'ordre de la palette. » · `q-film` « Sans film, la palette s'effondre au 
 
 ## 6. Contenu (données)
 `contenus/action-ent817.js`, `contenus/questions/ENT-8.17.js`, `activites/action-conditionner.js`, `contenus/corriges/ENT-8.17.js`.
-Limites proposées (E-8 §3) : **600 kg**, **1,60 m**, support 25 kg / 0,15 m ; film 3 à 5 tours ; étiquettes au nom du magasin. Commande : 6
+Limites proposées (E-8 §3) : **600 kg**, **1,80 m** (relevé au lot 0 d’E-8), support 25 kg / 0,15 m ; film 3 à 5 tours ; étiquettes au nom du magasin. Commande : 6
 lignes, la bonne palette tient **toujours** dans les limites (contrôle), et poser tout dans l'ordre du terminal casse **toujours** au moins une
 règle de calage (contrôle : la séance a un sens).
 

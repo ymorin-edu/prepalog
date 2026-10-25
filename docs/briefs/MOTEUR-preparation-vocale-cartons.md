@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md en entier, puis les têtes de core/types/entrepot.js (mode préparation), core/types/entrepot-picking.js (montage) et core/types/terminal.js. Fais l'état des lieux du §4 en lecture seule : dis-moi ce qui existe, ce qui contredit le brief, et propose un découpage en lots avec une durée par lot. N'écris rien avant ma réponse.
 > ```
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : en cours (lot 0 livré le 25/10/2026) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 25/10/2026, écrit dans le projet PREPALOG (cadrage de C3.1 à C3.3 chez Action).
 **Décision de Tristan** : la préparation d'Ensuès se joue dans **le mode `preparation` du Plan d'entrepôt (celui de Smoby, ENT-5.6), guidé par le
 terminal vocal (celui de France Boissons, ENT-6.7)**. *(Choisie par Tristan le 25/10/2026, 14 h 25, sur la carte de décision : « Préparation Smoby + terminal vocal ».)*
@@ -47,7 +47,7 @@ Boissons ne change (blocs `smoby`, `entrepot`, `fb-6.7`, `terminal` verts **sans
   plus de jalon « parcours le plus court » quand le terminal guide (c'est le système qui choisit le chemin).
 - **Lourds en bas, légers et fragiles en haut** : jugés sur **l'ordre de pose** (la pile se recalcule depuis l'ordre de pose, jamais rangée).
   Classes : `lourd` (> 10 kg le carton), `normal`, `fragile` (verre, céramique, décoration fragile). Comme Smoby : on dit **que**, jamais **de combien**.
-- **Poids et hauteur de la palette** : `kgMax`, `hMax` de la commande (proposé : 600 kg, 1,60 m, support 25 kg, 0,15 m) — comme Smoby.
+- **Poids et hauteur de la palette** : `kgMax`, `hMax` de la commande (600 kg, **1,80 m** — 1,60 m proposé au cadrage, trop bas pour 7 lignes d’une couche, relevé au lot 0 —, support 25 kg, 0,15 m) — comme Smoby.
 - **Film** : 3 à 5 tours (comme 6.7) ; **étiquettes** : deux faces opposées + le dessus (comme 6.7), texte = le magasin.
 - **Exceptions** : un carton abîmé se **voit** de près, il n'est écrit nulle part ; « Abîmé : 1 » le laisse au picking ; pris sans rien dire, il
   part sur la palette **abîmé** (dessiné). « Emplacement vide » → le terminal propose la **descente de réserve** (le geste de Smoby, confié au
@@ -131,3 +131,22 @@ ENT-5.6 Smoby, ENT-6.7 France Boissons, le palettier (E-7) et les séances 8.11 
 - **« Préparation Smoby, bon papier »** : ce brief est sans objet ; les séances déclarent le mode `preparation` tel quel (bon affiché) et seul le lot
   0 (tirage par élève) reste utile, plus le lot 5 (un plan par site).
 - **« Allée 3D de France Boissons »** : réécrire ce brief autour de `entrepot-picking.js` (cartons, critères de palette, évaluation).
+
+---
+
+## Compte rendu
+
+### Lot 0 — livré le 25/10/2026 (Claude, fil « Construire la préparation vocale Action »)
+
+- **Fichiers** : créé `contenus/action-prepa-donnees.js` (plan A1, A2, B1, B2 × 6 travées × 4 niveaux × 3 emplacements ; 11 produits : les 8 d'ENT-8.11,
+  noms et kg lus dans son module, plus `VER`, `VAS`, `ASS` fragiles ; stock fixe ; magasins ; `preparation(opts)` rend la fonction
+  `(graine, { niveau, copie })`) et `outils/test/preparation-vocale.mjs` (4 cas) ; modifié `core/types/entrepot.js` : `etapesEntrepot` accepte une
+  fonction de la graine dans tous les modes (liste de référence, contrôle « mêmes jalons » sur 2 niveaux et 8 graines, chaque `verifier` juge la
+  déclaration de l'élève ; le palettier garde `etapesPalettier`), et `declarationEntrepot(E, db)` exporté. **Alerte 7** : `preparation-vocale`
+  ajouté à `BLOCS` et au groupe 6 de `GROUPES` dans `outils/test.mjs`.
+- **Ce qui diffère du brief** : `hMax` = **1,80 m** (1,60 m proposé : sept lignes d'une couche dépassaient) ; la commande porte déjà `codes`,
+  `abimes` et `remplacements` (lus par les lots 1 et 3) ; une ligne en rupture (`vides: 1`) est aujourd'hui le réapprovisionnement de Smoby (jalon
+  `reappro`), ce que le lot 3 transformera en « Emplacement vide ».
+- **Profils essayés sur 300 graines** (aucun jeu de secours, le moteur confirme l'équité) : 8.15 `{ lignes: 5 }` ; 8.16 `{ lignes: 7, abimes: 1,
+  vides: 1 }` ; 8.17 `{ lignes: 6, lourds: 2, fragiles: 2, ordre: 'piege' }` ; 8.19 `{ lignes: 7, fragiles: 1, abimes: 1, vides: 1, ordre: 'piege' }`.
+- **Rien ne change** pour Smoby, le palettier ni les séances 8.11 à 8.14 (blocs `entrepot`, `smoby`, `palettier`, `action-811` à `action-814` relancés).

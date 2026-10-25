@@ -564,7 +564,29 @@ export function jalonsEntrepot(db, P, temps = P.temps) {
 
 // Les étapes à donner à `creerEntreprise` : un jalon = une étape du suivi. La visite rend aussi 'ko' (un
 // essai faux), pour que le repérage sache ce qui n'a pas été réussi du premier coup.
-export function etapesEntrepot(P) {
+// UNE FONCTION DE LA GRAINE (chantier E-8, lot 0, 25/10/2026 : la préparation d'Action tirée par élève) : comme `etapesPalettier`, la liste
+// est celle de la déclaration de RÉFÉRENCE (graine « », standard) et chaque `verifier` juge la déclaration de L'ÉLÈVE ; la séance ne se
+// charge pas si les jalons changent d'un niveau ou d'une graine à l'autre. Le palettier garde ses étapes à lui.
+export function etapesEntrepot(P, { copie = false } = {}) {
+  if (typeof P === 'function') {
+    const R = compiler(declarationDe(P, { aisance: 'standard' }, { copie }));
+    if (R.mode === 'palettier') return etapesPalettier(P, { copie });
+    const ids = (M) => jalonsEntrepot({}, M.P).L.map((l) => l.id).join();
+    const attendu = ids(R);
+    const autres = [...(copie ? [] : ['confirme', 'accompagne'].map((n) => [`niveau « ${n} »`, P('', { niveau: n, copie })])),
+      ...['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map((g) => [`graine « ${g} »`, P(g, { niveau: 'standard', copie })])];
+    autres.forEach(([qui, Q]) => {
+      if (ids(compiler(Q)) !== attendu) throw new Error(`entrepot ${R.P.id} : les jalons ne sont pas les mêmes pour tous les élèves (${qui}) : déclarer les mêmes jalons à toutes les graines et à tous les niveaux`);
+    });
+    const temps = copie ? 'evaluation' : undefined;
+    return jalonsEntrepot({}, R.P, temps).L.map(({ id, lib }) => ({
+      id, titre: lib,
+      verifier(db) {
+        const l = jalonsEntrepot(db, declarationDe(P, db, { copie }), temps).L.find((x) => x.id === id);
+        return { status: l && l.etat ? l.etat : l && l.ok ? 'ok' : 'attente' };
+      },
+    }));
+  }
   if (P && P.mode === 'palettier') return etapesPalettier(P);
   return jalonsEntrepot({}, P).L.map(({ id, lib }) => ({
     id, titre: lib,
@@ -651,6 +673,9 @@ export function placeMasse(db, P, id) { return placeDe(compiler(P), Object.assig
 // séance (lot 0 : la déclaration de l'élève est retrouvée par sa graine et son niveau, lus dans la base) ; `o.copie` en évaluation.
 // Les palettes confiées au cariste, [{ id, nom, adresse }] (les phrases du message à Kevin, ENT-8.11) ; l'état en clair
 // { enMain, posees, confiees, signalees: { P5: motif }, nouvelles, montees, tentativesHaut, valide }.
+// La déclaration d'UN élève quand la séance passe une fonction de la graine (tous modes ; un objet est rendu tel quel) : ce que lisent la note
+// (`noteEntrepot(db, declarationEntrepot(E, db))`), le corrigé et les tests.
+export const declarationEntrepot = (E, db, o = {}) => declarationDe(E, db || {}, o);
 export function palettesConfiees(db, P, o = {}) {
   const Q = declarationDe(P, db, o);
   return confieesPalettier(compiler(Q), etatDe(db, Q), niveauEleve(db, o));
