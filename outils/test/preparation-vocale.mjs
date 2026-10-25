@@ -16,6 +16,11 @@
 // page d'essai (cas « vocal », profil `{ id: 'essai-vocal', lignes: 5 }`, graine « temoin-1 »), relevé une fois et recopié À LA MAIN :
 //   Marseille Grand Littoral, n° 4705, QUAI 4, départ 8 h 45 ; L1 NET 5 en A2-T03-N1-E1 (code 69, picking 17) · L2 LES 5 en B1-T06-N1-E2
 //   (code 68) · L3 BOU 4 en B2-T06-N1-E2 (39) · L4 PEL 6 en B2-T06-N1-E3 (73) · L5 BOI 6 en B1-T05-N1-E3 (29). NET et LES sont lourds.
+//
+// LOT 3 (25/10/2026) : le carton abîmé et l'emplacement vide. Cas « vocal-ex » de la page d'essai (profil `{ id: 'essai-vocal-ex', lignes: 7,
+// abimes: 1, vides: 1 }`, graine « temoin-1 »), relevé une fois et recopié À LA MAIN : Marseille Le Merlan, n° 4190 ; L1 NET 4 A1-T05-N1-E1 (99) ·
+// L2 LES 3 A2-T05-N1-E2 (23 ; 1 carton abîmé devant, picking 13 ; remplacement B1-T06-N1-E2, code 83) · L3 CRO 4 B2-T05-N1-E3 (35) · L4 BOU 3
+// B1-T04-N1-E3 (90) · L5 BOI 4 B1-T03-N1-E2 (86) · L6 SER 5 B2-T02-N1-E2 (33 ; VIDE, picking 0) · L7 CAH 5 B2-T01-N1-E3 (84).
 
 export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
@@ -163,7 +168,7 @@ await v('Préparation vocale (lots 1-2) : la déclaration avec `terminal` se com
     return { ids: E.etapesEntrepot(fv).map((x) => x.id), sans: E.etapesEntrepot(D.preparation({ id: 'essai-prepa', lignes: 5 })).map((x) => x.id),
       att: E.bonnesReponses(Q).map((x) => [x.ligne, x.emplacement, x.code, x.prends, x.produit]), C: [Q.commande.client, Q.commande.num, Q.commande.quai, Q.commande.heure], err };
   });
-  egal(r.ids, ['ligne-L1', 'ligne-L2', 'ligne-L3', 'ligne-L4', 'ligne-L5', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes'], 'jalons du terminal');
+  egal(r.ids, ['ligne-1', 'ligne-2', 'ligne-3', 'ligne-4', 'ligne-5', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes'], 'jalons du terminal');
   egal(r.sans, ['lignesJustes', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'parcours'], 'sans terminal : Smoby');
   egal(r.C, ['Marseille Grand Littoral', '4705', 'QUAI 4', '8 h 45'], 'commande du témoin');
   egal(r.att, TEMOIN_V, 'ce que le terminal attend');
@@ -193,7 +198,7 @@ await v('Préparation vocale (lots 1-2) : le jugement — rien avant la fin du t
       fragile: juge(Object.assign({}, fini, { palettes: [[...bon.slice(0, 2), vas, ...bon.slice(2)]] })),
     };
   });
-  const tout = 'ligne-L1 ligne-L2 ligne-L3 ligne-L4 ligne-L5 lourds fragiles poids hauteur film etiquettes';
+  const tout = 'ligne-1 ligne-2 ligne-3 ligne-4 ligne-5 lourds fragiles poids hauteur film etiquettes';
   egal(r.neuf, tout, 'base neuve : rien de gagné');
   egal(r.encours, tout, 'terminal en cours : rien de jugé');
   egal(r.vide, 'lourds fragiles poids hauteur film etiquettes', 'palette vide : les lignes oui, aucun critère');
@@ -283,6 +288,137 @@ await v('Préparation vocale (lots 1-2) : l’écran tient sans défiler à 1366
     await pe.close();
   }
   egal(out, { 1366: { saisie: true, plan: true, large: true, cote: true }, 1280: { saisie: true, plan: true, large: true, cote: true } }, 'tient à l’écran');
+});
+
+/* ============================================= lot 3 : le carton abîmé, l'emplacement vide */
+const TEMOIN_EX = [['L1', 'A1-T05-N1-E1', '99', 4], ['L2', 'A2-T05-N1-E2', '23', 3], ['L3', 'B2-T05-N1-E3', '35', 4], ['L4', 'B1-T04-N1-E3', '90', 3],
+  ['L5', 'B1-T03-N1-E2', '86', 4], ['L6', 'B2-T02-N1-E2', '33', 5], ['L7', 'B2-T01-N1-E3', '84', 5]];
+async function ouvrirEx(pe) {
+  await pe.goto(BASE + 'outils/essai-entrepot.html');
+  await pe.selectOption('select[name=cas]', 'vocal-ex');
+  await pe.waitForSelector('.pvc [data-terminal]');
+}
+const etatEx = (pe) => pe.evaluate(() => JSON.parse(JSON.stringify(window.__essai.db.entrepots['essai-vocal-ex'])));
+async function allerA(pe, a) {
+  while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
+  const m = /^([AB]\d)-T(\d+)/.exec(a);
+  await pe.click(`[data-pe-trav="${m[1]}-T${m[2]}"]`);
+  await pe.click(`[data-pe-emp="${a}"]`);
+}
+const taper = async (pe, x) => { await pe.fill('[data-terminal] input', String(x)); await pe.keyboard.press('Enter'); };
+const phrase = (pe) => pe.evaluate(() => document.querySelector('[data-terminal]').textContent.replace(/\s+/g, ' '));
+
+await v('Préparation vocale (lot 3) : les jalons du profil à exceptions (mêmes ids pour toutes les graines) ; une déclaration incohérente (abîmé sans remplacement) refusée', async () => {
+  const r = await pg.evaluate(async () => {
+    const D = await import('/contenus/action-prepa-donnees.js');
+    const E = await import('/core/types/entrepot.js');
+    const fx = D.preparation({ id: 'essai-vocal-ex', lignes: 7, abimes: 1, vides: 1, terminal: {} });
+    const Q = fx('temoin-1', { niveau: 'standard' });
+    let err = '';
+    try { E.jalonsEntrepot({}, Object.assign({}, Q, { remplacements: {} })); } catch (x) { err = x.message; }
+    return { ids: E.etapesEntrepot(fx).map((x) => x.id), C: [Q.commande.client, Q.commande.num], err };
+  });
+  egal(r.ids, ['ligne-1', 'ligne-2', 'ligne-3', 'ligne-4', 'ligne-5', 'abime-dit', 'abime-remplacement', 'vide-dit', 'vide-reprise',
+    'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'rienAbime'], 'jalons');
+  egal(r.C, ['Marseille Le Merlan', '4190'], 'commande du témoin');
+  vrai(r.err.includes('remplacement'), `abîmé sans remplacement : ${r.err}`);
+});
+
+await v('Préparation vocale (lot 3), page d’essai : le carton abîmé se VOIT de près (jamais écrit) ; « Abîmé : 1 » le laisse, le terminal ajoute la ligne de remplacement ; l’emplacement vide refuse la quantité, « Emplacement vide » fait descendre la réserve par Kevin et la ligne est redite ; tout juste au bilan', async () => {
+  const pe = await ctx.newPage();
+  pe.on('pageerror', (e) => erreurs.push('PAGEERROR (essai lot 3): ' + e.message));
+  await ouvrirEx(pe);
+  for (const [id, a, code, q] of TEMOIN_EX) {
+    await allerA(pe, a);
+    if (id === 'L2') {
+      const pres = await pe.evaluate(() => ({ dessin: document.querySelectorAll('.pvc-devant [data-pvc-abime]').length,
+        texte: /abîm/i.test(document.querySelector('.pvc-pres').textContent) }));
+      egal(pres, { dessin: 1, texte: false }, 'un carton abîmé dessiné devant, rien d’écrit');
+      await taper(pe, code);
+      await pe.click('[data-vt-mot="abime"]'); await taper(pe, 1);
+      vrai((await phrase(pe)).includes('Compris : 1 abîmé.'), 'le terminal a compris');
+      await taper(pe, 2);
+      await pe.click('[data-pvc-poser="0"]');
+      vrai((await phrase(pe)).includes('Allée B1, travée 06, niveau 1, emplacement 2. Code de contrôle ?'), 'la ligne de remplacement');
+      await allerA(pe, 'B1-T06-N1-E2');
+      await taper(pe, '83'); await taper(pe, 1);
+      await pe.click('[data-pvc-poser="0"]');
+      continue;
+    }
+    if (id === 'L6') {
+      egal(await pe.locator('[data-pvc-vide]').count(), 1, 'de près : emplacement vide');
+      await taper(pe, code); await taper(pe, q);
+      vrai((await phrase(pe)).includes('Tu dois prendre 5. Si tu ne peux pas, dis'), 'la quantité juste refusée');
+      await pe.click('[data-vt-mot="vide"]');
+      const e = await etatEx(pe);
+      egal([e.reserves.map((x) => x.a), e.vides.length, e.pick[a] > 0], [[a], 1, true], 'Kevin a descendu la réserve');
+      vrai((await phrase(pe)).includes('Kevin a descendu la réserve. Allée B2, travée 02, niveau 1, emplacement 2. Code de contrôle ?'), 'la ligne redite');
+      await allerA(pe, a);
+      egal(await pe.locator('[data-pvc-vide]').count(), 0, 'de près : les cartons sont là');
+    }
+    await taper(pe, code); await taper(pe, q);
+    await pe.click('[data-pvc-poser="0"]');
+  }
+  while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
+  await pe.selectOption('[data-pvc-film="0"]', '4');
+  for (const k of ['avant', 'arriere', 'dessus']) await pe.check(`[data-pvc-etiq="0:${k}"]`);
+  await pe.click('[data-pvc="verifier"]');
+  egal(await pe.$$eval('[data-pvc-jalon]', (L) => L.filter((x) => x.dataset.ok !== 'true').map((x) => x.dataset.pvcJalon)), [], 'tout juste');
+  const G = await pe.evaluate(() => Object.keys((window.__essai.db.gestes || {})['essai-entrepot'] || {}).map((k) => k.replace('entrepot:essai-vocal-ex:', '')));
+  egal(['mot:abime', 'mot:vide', 'abime', 'vide', 'reserve'].filter((x) => !G.includes(x)), [], 'gestes du lot 3');
+  await pe.close();
+});
+
+await v('Préparation vocale (lot 3) : le carton abîmé pris sans rien dire part sur la palette, DESSINÉ abîmé — « abîmé signalé », « remplacement » et « aucun carton abîmé » faux, le reste juste', async () => {
+  const pe = await ctx.newPage();
+  pe.on('pageerror', (e) => erreurs.push('PAGEERROR (essai lot 3 b): ' + e.message));
+  await ouvrirEx(pe);
+  for (const [id, a, code, q] of TEMOIN_EX) {
+    await allerA(pe, a);
+    if (id === 'L6') { await taper(pe, code); await pe.click('[data-vt-mot="vide"]'); await allerA(pe, a); }
+    await taper(pe, code); await taper(pe, q);
+    await pe.click('[data-pvc-poser="0"]');
+  }
+  while (await pe.$('[data-pvc="retour"]')) await pe.click('[data-pvc="retour"]');
+  const e = await etatEx(pe);
+  egal(e.palettes[0].filter((g) => g.abimes).map((g) => [g.a, g.abimes]), [['A2-T05-N1-E2', 1]], 'le groupe porte son carton abîmé');
+  egal(await pe.locator('.pvc-pal [data-pvc-abime]').count(), 1, 'dessiné sur la palette');
+  await pe.selectOption('[data-pvc-film="0"]', '4');
+  for (const k of ['avant', 'arriere', 'dessus']) await pe.check(`[data-pvc-etiq="0:${k}"]`);
+  await pe.click('[data-pvc="verifier"]');
+  egal(await pe.$$eval('[data-pvc-jalon]', (L) => L.filter((x) => x.dataset.ok !== 'true').map((x) => x.dataset.pvcJalon)),
+    ['abime-dit', 'abime-remplacement', 'lourds', 'fragiles', 'poids', 'hauteur', 'film', 'etiquettes', 'rienAbime'], 'les fautes de l’abîmé (et la palette non jugée : une ligne fausse)');
+  await pe.close();
+});
+
+await v('Préparation vocale (lot 3) : équité sur 300 graines des profils 8.16 et 8.19 — la préparation parfaite (bons mots, remplacement et réserve, pose dans le bon ordre) gagne tous les jalons, palette sous 1,80 m et 600 kg', async () => {
+  const r = await pg.evaluate(async () => {
+    const D = await import('/contenus/action-prepa-donnees.js');
+    const E = await import('/core/types/entrepot.js');
+    const out = {};
+    for (const o of [{ id: 'v816', lignes: 7, abimes: 1, vides: 1 }, { id: 'v819', lignes: 7, fragiles: 1, abimes: 1, vides: 1, ordre: 'piege' }]) {
+      const fn = D.preparation(Object.assign({ terminal: {} }, o));
+      const fautes = {};
+      for (let i = 0; i < 300; i++) {
+        const Q = fn(`g${i}`, { niveau: 'standard' }), L = Q.commande.lignes;
+        const id = (l) => `L${L.indexOf(l) + 1}`;
+        const R = {}, EX = {}, groupes = [];
+        D.bonOrdre(L).forEach((l) => {
+          const ab = (Q.abimes || {})[l.a], vide = Q.picking[l.a] && Q.picking[l.a].q < l.q;
+          if (ab) { EX[id(l)] = { mot: 'abime', n: ab }; R[id(l)] = l.q - ab; R[`${id(l)}-r`] = ab;
+            groupes.push({ a: l.a, k: l.produit, q: l.q - ab, ligne: id(l) }, { a: Q.remplacements[l.a], k: l.produit, q: ab, ligne: `${id(l)}-r` }); }
+          else if (vide) { EX[id(l)] = { mot: 'vide', n: l.q }; R[id(l)] = 0; R[`${id(l)}-r`] = l.q; groupes.push({ a: l.a, k: l.produit, q: l.q, ligne: `${id(l)}-r` }); }
+          else { R[id(l)] = l.q; groupes.push({ a: l.a, k: l.produit, q: l.q, ligne: id(l) }); }
+        });
+        const e = { terminal: { i: 99, phase: 'code', reponses: R, exceptions: EX, codesFaux: {}, journal: [], debut: 1, fin: 2 },
+          palettes: [groupes], cote: [], film: ['4'], etiq: [{ avant: true, arriere: true, dessus: true }] };
+        E.jalonsEntrepot({ entrepots: { [o.id]: e } }, Q).L.filter((j) => !j.ok).forEach((j) => { fautes[j.id] = (fautes[j.id] || 0) + 1; });
+      }
+      out[o.id] = fautes;
+    }
+    return out;
+  });
+  egal(r, { v816: {}, v819: {} }, 'aucune faute sur la préparation parfaite');
 });
 
 egal(erreurs, [], 'aucune erreur dans la page');

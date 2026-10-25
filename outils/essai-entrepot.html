@@ -29,7 +29,7 @@
 <body>
 <form class="essai-reglages" id="reglages">
   <b>Page d'essai</b> — chaque changement repart d'une base neuve :
-  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option><option value="preparation">③ Préparation (ENT-5.6)</option><option value="visite">Visite (ENT-5.3)</option><option value="masse">Stockage de masse (ENT-6.5)</option><option value="comptage">Masse, comptage (ENT-6.6)</option><option value="picking">Allée de picking (ENT-6.7)</option><option value="vocal">Préparation vocale, cartons (Action, E-8)</option></select></label>
+  <label>Cas <select name="cas"><option value="rangement">① Rangement (ENT-5.5)</option><option value="preparation">③ Préparation (ENT-5.6)</option><option value="visite">Visite (ENT-5.3)</option><option value="masse">Stockage de masse (ENT-6.5)</option><option value="comptage">Masse, comptage (ENT-6.6)</option><option value="picking">Allée de picking (ENT-6.7)</option><option value="vocal">Préparation vocale, cartons (Action, E-8)</option><option value="vocal-ex">Préparation vocale, abîmé et vide (Action, E-8)</option></select></label>
   <label>Temps <select name="temps"><option value="guidage">guidage</option><option value="entrainement">entraînement</option><option value="evaluation">évaluation (copie rendue)</option></select></label>
   <label>Voir comme <select name="role"><option value="eleve">élève</option><option value="prof">enseignant (bonnes réponses, visite : navigation libre)</option></select></label>
 </form>
@@ -48,6 +48,9 @@ import { etapesEntrepot } from './core/types/entrepot.js';
 // La préparation vocale d'Action (chantier E-8) : une commande tirée par élève ; ici, l'élève témoin (graine « temoin-1 »).
 const VOCAL = preparation({ id: 'essai-vocal', lignes: 5, terminal: { montrer: 'travee' },
   personnage: { nom: 'Kevin', role: 'chef d’équipe', date: '6 h 00', texte: 'Tu prépares la commande du magasin. Le terminal te guide : écoute-le, va à l’emplacement, lis le code sur l’étiquette.' } });
+// Lot 3 : sept lignes, un carton abîmé devant une pile, un emplacement vide (le profil d'ENT-8.16).
+const VOCAL_EX = preparation({ id: 'essai-vocal-ex', lignes: 7, abimes: 1, vides: 1, terminal: {},
+  personnage: { nom: 'Kevin', role: 'chef d’équipe', date: '6 h 00', texte: 'Regarde bien de près : un carton abîmé ne part pas au magasin. S’il n’y a rien, dis-le au terminal : je descends la réserve.' } });
 
 document.getElementById('mention').innerHTML = MENTION;
 const form = document.getElementById('reglages');
@@ -57,15 +60,16 @@ function monter() {
   // La visite est un guidage : pas d'évaluation (brief MOTEUR-modes-visite §6).
   // L'allée de picking (ENT-6.7) est un entraînement, sans évaluation pour l'instant.
   if (['visite', 'comptage'].includes(f.get('cas'))) form.temps.value = 'guidage';
-  if (['picking', 'vocal'].includes(f.get('cas')) && form.temps.value === 'evaluation') form.temps.value = 'entrainement';
+  if (['picking', 'vocal', 'vocal-ex'].includes(f.get('cas')) && form.temps.value === 'evaluation') form.temps.value = 'entrainement';
   const temps = ['visite', 'comptage'].includes(f.get('cas')) ? 'guidage' : form.temps.value;
   document.getElementById('mention').innerHTML = f.get('cas') === 'masse' ? MENTION_MASSE : f.get('cas') === 'comptage' ? MENTION_COMPTAGE
-    : f.get('cas') === 'picking' ? MENTION_PICKING : f.get('cas') === 'vocal' ? MENTION_PREPA : MENTION;
+    : f.get('cas') === 'picking' ? MENTION_PICKING : f.get('cas').startsWith('vocal') ? MENTION_PREPA : MENTION;
   const hote = document.getElementById('hote');
   const neuf = hote.cloneNode(false); hote.replaceWith(neuf);
   boite.hidden = true;
-  const U = f.get('cas') === 'vocal'
-    ? Object.assign(universPalettier({ poids: false }), { entrepot: VOCAL, etapes: etapesEntrepot(VOCAL),
+  const VX = f.get('cas') === 'vocal-ex' ? VOCAL_EX : VOCAL;
+  const U = f.get('cas').startsWith('vocal')
+    ? Object.assign(universPalettier({ poids: false }), { entrepot: VX, etapes: etapesEntrepot(VX),
       ENTREPRISE: { id: 'essai-entrepot', nom: 'Action — essai de la préparation vocale', sousTitre: 'Entrepôt d’Ensuès-la-Redonne (13) — préparation', exercice: 'Essai de la préparation vocale' } })
     : univers({ cas: f.get('cas'), temps });
   const moteur = creerEntreprise(U);

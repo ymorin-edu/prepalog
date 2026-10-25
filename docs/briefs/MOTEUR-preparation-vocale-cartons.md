@@ -165,3 +165,20 @@ ENT-5.6 Smoby, ENT-6.7 France Boissons, le palettier (E-7) et les séances 8.11 
   pour l'élève accompagné, la travée de la ligne en cours sur le plan (jamais l'emplacement ni le code) ; le terminal fini, la palette prend toute
   la place à droite (les cartons « à côté » s'y posent d'un clic) ; le bandeau donne le n° de commande, le magasin, le quai, l'heure de départ et
   les limites de la palette (il n'y a plus de bon) ; la colonne du terminal défile seule (tient à 1366 × 768 et 1280 × 720, testé).
+
+### Lot 3 — livré le 25/10/2026 (Claude, même fil)
+
+- **Fichiers** : `core/types/entrepot-vocal.js` (exceptions), `core/types/terminal.js` (une ligne `bloque` : la quantité, même juste, est refusée
+  par la phrase des mots tant que rien n'est dit sur la ligne ; rien ne change pour les lignes sans `bloque`), `outils/essai-entrepot.html` (cas
+  « Préparation vocale, abîmé et vide », profil d'ENT-8.16), 5 cas ajoutés au bloc `preparation-vocale` (dont l'équité sur 300 graines des
+  profils 8.16 et 8.19 : la préparation parfaite gagne tout) ; sabotage fait (refus de la ligne vide coupé, carton abîmé non dessiné : 2 cas tombent).
+- **Carton abîmé** : dessiné devant la pile de près (coin enfoncé, ruban déchiré, aucun texte) ; « Abîmé : n » le laisse et le terminal ajoute la
+  ligne de remplacement ; pris sans rien dire, il part avec le groupe (`abimes` sur le groupe) et se dessine abîmé sur la palette.
+- **Emplacement vide** : la ligne dont le picking n'a pas de quoi servir (`picking.q` < quantité) ; « Emplacement vide » → « Compris : emplacement
+  vide. Réserve demandée au cariste. » ; Kevin descend une palette de réserve du même produit (elle libère son emplacement, le picking reçoit une
+  palette pleine) ; le terminal redit la ligne (« Kevin a descendu la réserve. Allée … Code de contrôle ? »).
+- **Jalons** : les lignes normales deviennent `ligne-1` … (numérotées entre elles : les ids ne dépendent plus de la graine) ; `abime-dit`,
+  `abime-remplacement`, `vide-dit`, `vide-reprise`, `rienAbime` (seulement si tout est posé). Gestes : `mot:<id>`, `abime`, `vide`, `reserve`.
+- **Ce qui diffère du brief** : deux groupes de suite du **même produit** font une seule couche (la ligne abîmée et sa remplacement se
+  complètent ; sans cela, sept lignes plus une remplacement dépassaient 1,80 m) ; le « Manquant » du confirmé (8.16, bonus) n'est pas encore tiré
+  par les données (le mot existe et se juge déjà comme une exception).

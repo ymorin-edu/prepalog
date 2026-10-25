@@ -622,7 +622,7 @@ button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
 .pvc-cote .vt{ margin:0 }
 .pvc-pres{ display:flex; flex-direction:column; align-items:center; gap:12px; padding:8px 6px }
 .pvc-cartons{ width:100%; max-width:420px }
-.pvc-cartons svg{ width:100%; height:auto; max-height:calc(var(--pe-dispo, 420px) - 120px) }
+.pvc-cartons svg:not(.pvc-devant){ width:100%; height:auto; max-height:calc(var(--pe-dispo, 420px) - 160px) }
 .pvc-vide{ padding:28px 10px; color:var(--encre-douce); font-weight:700; text-align:center }
 .pvc-lisse{ display:flex; align-items:center; gap:14px; background:#fbfaf6; color:#1a1915; border:2px solid #8a8478; border-radius:4px;
   padding:8px 14px; box-shadow:0 2px 0 #c9c3b6 }
@@ -638,3 +638,4 @@ button.pal-etiq-emp.pal-scannable:disabled{ cursor:default; opacity:.7 }
 .pvc-cmd .pe-bon{ font-size:.86rem }
 .pvc-survol{ min-height:1.3em; font-family:var(--mono, monospace) }
 .pvc-cote > *{ flex:none }
+.pvc-devant{ display:block; height:56px; width:auto; margin:-14px auto 0 }

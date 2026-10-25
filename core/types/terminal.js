@@ -37,6 +37,9 @@
 // - `pose` : après une quantité acceptée (non nulle), le terminal dit cette phrase et ATTEND : le champ se ferme jusqu'à ce que
 //   la vue hôte appelle `poser()` (la marchandise est posée) ; alors seulement la ligne suivante. Une fonction reçoit la
 //   quantité prise (« Pose ton fût. » / « Pose tes 2 fûts. », lot 4).
+// - `bloque: true` (chantier E-8, lot 3, préparation vocale d'Action) : l'emplacement est vide ; la quantité, même juste, est refusée
+//   (« Tu dois prendre n. Si tu ne peux pas, dis … ») tant qu'aucun mot n'a été dit sur la ligne. Sa `remplacement` (même adresse)
+//   redit la ligne une fois la réserve descendue.
 // - « Ce que le terminal sait de toi » : `bilanTerminal` (lignes, durée, codes faux, lignes par heure), non noté.
 //
 // LE NOM ET LE MODE « SCANNER » (chantier E-7, lot 2, 22/10/2026, palettier à adresse donnée ; `entrepot-palettier.js`) :
@@ -167,7 +170,10 @@ export function repondreTerminal(T, lignes, saisie, textes = {}, h = Date.now(),
     }
   } else if (l.prends != null) {
     const n = Number(v), r = reste(T, l);
-    if (n < r) { dit('t', X.moins(r, mots.map((m) => m.lib)), true); evt = 'refus'; }
+    // `bloque` (chantier E-8, lot 3) : il n'y a rien à prendre ici (l'emplacement est vide) ; tant que rien n'est signalé sur la
+    // ligne, même la quantité juste est refusée par la phrase des mots — jamais bloquant, les mots restent proposés.
+    if (l.bloque && !(T.exceptions || {})[l.id]) { dit('t', X.moins(r, mots.map((m) => m.lib)), true); evt = 'refus'; }
+    else if (n < r) { dit('t', X.moins(r, mots.map((m) => m.lib)), true); evt = 'refus'; }
     else if (n > r) { dit('t', X.trop(r), true); evt = 'refus'; }
     else {
       T.reponses[l.id] = n;
