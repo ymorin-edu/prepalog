@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md, docs/briefs/ENT-8.15-action-preparer.md (§0), docs/briefs/ENT-8.14-action-evaluation-stock.md (§0) puis docs/briefs/ENT-8.19-action-evaluation-preparation.md en entier. Les lots 0 à 5 du chantier E-8 doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à valider par Tristan (poids du §5) puis à implémenter
+**Statut** : à implémenter (poids validés par Tristan le 25/10/2026)
 **Date du brief** : 25/10/2026, projet PREPALOG. **Modèle** : Sonnet. **Durée estimée** : ≈ 3 h.
 **Place dans l'ordre** : après ENT-8.18 (évaluation d'avril dans la progression). Attend les **lots 0 à 5** d'E-8 (le lot 5 : copie, un plan
 par site).
@@ -58,14 +58,14 @@ Vérifier, sans aide, que l'élève **prend son poste** et **lit sa mission** (C
   descendue par {Léo}) ; l'ordre du circuit amène un fragile avant un lourd ; film, étiquettes ; « Valider ma préparation » fige, sans verdict.
 - **Rendre ma copie** (bandeau).
 
-## 5. Jalons / notation (sur 20) — **poids proposés, à valider par Tristan avant de coder**
+## 5. Jalons / notation (sur 20) — poids validés par Tristan (25/10/2026, 14 h 26)
 
 | Bloc | Cases | Poids | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|---|
 | **Avant de commencer** | 4 questions, 1 chacune, règle du faux | **4** | moteur des questions | plancher 0 |
 | **Prendre en charge** (C3.1) | défaut signalé 1,5 · aucun faux signalement 0,5 · mission : 2 lignes, 1 chacune | **4** | inspection, fiche `mission` | « aucun faux » seulement si l'inspection est figée |
 | **Déstocker** (C3.2) | 5 lignes normales, 0,6 chacune · abîmé dit et remplacement pris 1,5 · vide dit et ligne reprise 1,5 | **6** | lignes, lot 3 | abîmé pris sans rien dire = faux |
-| **Conditionner** (C3.3) | lourds en bas 1 · fragiles en haut 1 · poids et hauteur 1 · film 1 · étiquettes 2 | **6** | critères du lot 2 | jugés seulement si les lignes sont justes et rien à côté *(à confirmer : en évaluation, une ligne fausse ne doit pas coûter tout le montage — §11)* |
+| **Conditionner** (C3.3) | lourds en bas 1 · fragiles en haut 1 · poids et hauteur 1 · film 1 · étiquettes 2 | **6** | critères du lot 2 | jugés **sur ce qui est posé**, même si une ligne est fausse (décision de Tristan, 25/10 : une erreur ne se paie qu'une fois) ; rien à côté exigé ; palette vide = faux |
 | **Total** | | **20** | | |
 
 - **Deux témoins** (un par site) : 20/20 ; inaction : 0/20.
@@ -87,6 +87,6 @@ commencer » : « Je ne sais pas » et la règle du faux ; abîmé pris sans rie
 - 50 minutes suffisent au rythme du CAP.
 
 ## 11. Questions ouvertes
-1. **Proposé** : poids du §5 ; reprise des questions dans « Avant de commencer » ; magasins des sites d'évaluation.
-2. **À trancher à la validation des poids** : en évaluation, faut-il juger le montage même si une ligne est fausse (sur ce qui est posé) ?
-   Proposé : **oui en évaluation** (une erreur ne se paie qu'une fois), la règle « seulement si tout est juste » restant pour le guidage.
+1. **Tranché par Tristan (25/10)** : poids du §5. **Proposé** : reprise des questions dans « Avant de commencer » ; magasins des sites d'évaluation.
+2. **Tranché par Tristan (25/10/2026, 14 h 26)** : en évaluation, le montage se juge **sur ce qui est posé**, même si une ligne est fausse
+   (une erreur ne se paie qu'une fois) ; la règle « seulement si les lignes sont justes » reste pour le guidage et l'entraînement.

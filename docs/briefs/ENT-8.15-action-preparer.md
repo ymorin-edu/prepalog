@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md puis docs/briefs/ENT-8.15-action-preparer.md en entier. Les lots 0, 1 et 2 du chantier E-8 doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à valider par Tristan (poids du §5) puis à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : à implémenter (poids validés par Tristan le 25/10/2026) *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 25/10/2026, projet PREPALOG (cadrage de C3.1 à C3.3 chez Action, demande de Tristan : « tu vas cadrer 8.15 à 8.19, tu me
 poses que les questions importantes »).
 **Modèle** : **Opus** (séance nouvelle). **Durée estimée** : ≈ 4 h, après les lots 0 à 2 d'E-8. Ce qui prend le temps : la scène d'inspection
@@ -137,7 +137,7 @@ produit chez le magasin. » · `q-nuit` « Tu es protégé par la loi. À 18 ans
 | `k-quai` | Une commande prête va… | sur le quai de son camion | en réserve · au bureau |
 | `img-transpalette` | Cet engin, c'est… | un transpalette électrique | un chariot élévateur · un gerbeur (dessin du kit iso) |
 
-## 5. Jalons / notation (sur 20) — **poids proposés, à valider par Tristan avant de coder**
+## 5. Jalons / notation (sur 20) — poids validés par Tristan (25/10/2026, 14 h 26)
 
 | Bloc | Cases | Poids | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|---|
@@ -204,6 +204,6 @@ contrôle ».
 - 45 minutes suffisent.
 
 ## 11. Questions ouvertes
-1. **Proposé** : poids du §5 (à valider avant de coder) ; questions au fil, retours et banque « Avant de commencer » ; produits fragiles ; heures.
+1. **Tranché par Tristan (25/10)** : poids du §5. **Proposé** : questions au fil, retours et banque « Avant de commencer » ; produits fragiles ; heures.
 2. **Proposé** : le stagiaire commence à 6 h (`q-nuit`) ; texte de loi à relire sur Légifrance à la construction.
 3. **Tranché par Tristan (25/10, 14 h 25)** : la vue est la préparation Smoby guidée par le terminal vocal (E-8).

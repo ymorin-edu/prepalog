@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md, docs/briefs/ENT-8.15-action-preparer.md (§0) puis docs/briefs/ENT-8.17-action-conditionner.md en entier. Les lots 0 à 3 du chantier E-8 doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à valider par Tristan (poids du §5) puis à implémenter
+**Statut** : à implémenter (poids validés par Tristan le 25/10/2026)
 **Date du brief** : 25/10/2026, projet PREPALOG. **Modèle** : Sonnet. **Durée estimée** : ≈ 3 h.
 **Place dans l'ordre** : après ENT-8.16. Attend les **lots 0 à 3** d'E-8 (le lot 2 porte « Où poses-tu ? » et l'ordre de pose).
 
@@ -88,7 +88,7 @@ de l'ordre de la palette. » · `q-film` « Sans film, la palette s'effondre au 
 | `k-poids` | Une palette trop lourde… | ne doit pas partir : on la refait | part quand même · on la coupe en deux au magasin |
 | `img-fragile` | Ce pictogramme (un verre) veut dire… | fragile | boisson · recyclable |
 
-## 5. Jalons / notation (sur 20) — **poids proposés, à valider par Tristan avant de coder**
+## 5. Jalons / notation (sur 20) — poids validés par Tristan (25/10/2026, 14 h 26)
 
 | Bloc | Cases | Poids | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|---|
@@ -129,4 +129,4 @@ accompagné ; somme 20 ; `part` 4. Sabotage : critères lus sur l'ordre de prél
 - 45 minutes suffisent.
 
 ## 11. Questions ouvertes
-1. **Proposé** : poids du §5 ; questions, retours, banque ; limites de poids et de hauteur ; fiche « Lire un carton ».
+1. **Tranché par Tristan (25/10)** : poids du §5. **Proposé** : questions, retours, banque ; limites de poids et de hauteur ; fiche « Lire un carton ».

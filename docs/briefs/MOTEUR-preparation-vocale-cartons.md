@@ -99,6 +99,8 @@ fichier neuf `contenus/action-prepa-donnees.js` (le module d'ENT-8.11 est **lu, 
   piège rien de lui-même.
 
 ### Lot 5 — Évaluation, un plan par site (Sonnet, ≈ 2-3 h) — pour ENT-8.19
+- **En copie, les critères de montage se jugent sur ce qui est posé**, même si une ligne est fausse (décision de Tristan, 25/10 : une erreur ne
+  se paie qu'une fois) ; option de la déclaration, la règle « seulement si les lignes sont justes » restant celle du guidage.
 - `opts.copie` accepté avec `terminal` : aucun verdict, aucune règle dépliée, « Vérifier » remplacé par « Valider ma préparation » qui **fige**
   sans rendre (la copie se rend par le bandeau, comme le palettier `rendCopie: false`).
 - **Un plan par site** (Onnaing, Belleville) : la déclaration est choisie par `siteDeBase` (module `contenus/action-eval-sites.js`, **lu**).

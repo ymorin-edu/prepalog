@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/MOTEUR-preparation-vocale-cartons.md, docs/briefs/ENT-8.15-action-preparer.md (§0), docs/briefs/ENT-8.13-action-palette-a-cote.md (l'erreur induite) puis docs/briefs/ENT-8.18-action-deux-magasins.md en entier. Les lots 0 à 4 du chantier E-8 doivent être livrés. Fais l'état des lieux du §7, dis-moi ce qui contredit le brief, puis construis la séance. Annonce la durée avant de commencer.
 > ```
 
-**Statut** : à valider par Tristan (poids du §5) puis à implémenter
+**Statut** : à implémenter (poids validés par Tristan le 25/10/2026)
 **Date du brief** : 25/10/2026, projet PREPALOG. **Modèle** : Opus (erreur induite, deux palettes). **Durée estimée** : ≈ 4 h.
 **Place dans l'ordre** : après ENT-8.17. Attend les **lots 0 à 4** d'E-8 (le lot 4 : deux commandes, deux palettes, « Contrôler mes palettes »).
 **Décision de Tristan** (18/10/2026) : 8.18 = entraînement « deux commandes de magasins mélangées ».
@@ -91,7 +91,7 @@ les étiquettes et la réponse (la préparation au terminal reste figée : le co
 palette d'à côté · rien ; `img-etiquette` « Cette étiquette (nom du magasin, n° de commande) se colle… » — **sur la palette de ce magasin** ·
 sur le terminal · sur le rack.
 
-## 5. Jalons / notation (sur 20) — **poids proposés, à valider par Tristan avant de coder**
+## 5. Jalons / notation (sur 20) — poids validés par Tristan (25/10/2026, 14 h 26)
 
 | Bloc | Cases | Poids | Ce qu'il lit | Piège à éviter |
 |---|---|---|---|---|
@@ -135,5 +135,5 @@ terminal au lieu de l'état final → le parcours « suit Yanis puis corrige » 
 - 50 minutes suffisent.
 
 ## 11. Questions ouvertes
-1. **Proposé** : poids du §5 (et l'absence de bloc C3.1) ; questions, retours, banque ; Yanis comme auteur de l'erreur induite ; Nîmes toujours
+1. **Tranché par Tristan (25/10)** : poids du §5 (sans bloc C3.1 à part). **Proposé** : questions, retours, banque ; Yanis comme auteur de l'erreur induite ; Nîmes toujours
    dans le lot.
