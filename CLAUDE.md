@@ -6,6 +6,8 @@ décision de fond, la **finalité** ci-dessous passe avant tout.
 
 ## Qui est Tristan, comment travailler avec lui
 
+> **Dans le projet Claude (cloud), un fil ne lit pas ce fichier tout seul** : le lire en entier, puis `docs/EN-COURS.md` et `git status`, avant d'écrire. La mémoire du projet complète ce fichier (règles de Tristan, état des chantiers) mais le dépôt fait foi.
+
 - Enseignant en Bac Pro Logistique (lycée). Il **n'est pas développeur** : un peu de web (6 mois
   de formation), mais il ne débogue pas du code. Il juge **à l'écran**, pas dans le code.
 - **Tout se dit en français courant, sans jargon.** Quand une action de sa part devient

@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, docs/briefs/ENT-10.5-pelleau-camion-de-ramasse.md puis docs/briefs/ENT-10.6-pelleau-ramasse-du-mercredi.md en entier. Les poids du §5 sont validés par Tristan ; annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : livré (19/10/2026, non commité : le chef commite) · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 3 h (même structure
+**Statut** : livré (19/10/2026, commité et poussé) · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 3 h (même structure
 qu'ENT-10.5, tirage en plus).
 
 ---

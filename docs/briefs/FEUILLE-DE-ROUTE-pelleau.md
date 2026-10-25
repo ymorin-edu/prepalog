@@ -21,10 +21,10 @@ Le numéro 9 est pris par CHEP : Pelleau est l'**entreprise n° 10**, séances *
 
 | Bloc | Séances | Temps | État |
 |---|---|---|---|
-| C1.1 se situer | ENT-10.1 | guidage seul (C1.1 est évaluée chez Action, ENT-8.5, et revient à chaque découverte ; ses questions clés entrent dans l'ouverture notée d'ENT-10.4) | brief écrit (18/10) |
-| **C1.2 prendre son poste dans un entrepôt neuf** | 10.2 guidage · 10.3 entraînement, erreur induite tirée (« le site n'est pas fini » ou « l'engin n'a pas été contrôlé ») · 10.4 évaluation | 3 temps | briefs écrits (18/10) ; **vue nouvelle d'abord** |
-| **C1.3 recevoir le camion de ramasse** (« un camion, plusieurs clients ») | 10.5 guidage · 10.6 entraînement · 10.7 entraînement, erreur induite (feuille de ramasse fausse) · 10.8 évaluation | 3 temps | briefs écrits (18/10) ; **option de dépose d'abord** |
-| **C1.4 contrôler** | 10.9 guidage · 10.10 entraînement · 10.11 erreur induite (le piège du froid) · 10.12 évaluation | 3 temps | briefs écrits (18/10) |
+| C1.1 se situer | ENT-10.1 | guidage seul (C1.1 est évaluée chez Action, ENT-8.5, et revient à chaque découverte ; ses questions clés entrent dans l'ouverture notée d'ENT-10.4) | livré (19-20/10/2026, `pret: true, ouverture: 'prof'`) |
+| **C1.2 prendre son poste dans un entrepôt neuf** | 10.2 guidage · 10.3 entraînement, erreur induite tirée (« le site n'est pas fini » ou « l'engin n'a pas été contrôlé ») · 10.4 évaluation | 3 temps | livrés (19-20/10/2026, `pret: true, ouverture: 'prof'`) |
+| **C1.3 recevoir le camion de ramasse** (« un camion, plusieurs clients ») | 10.5 guidage · 10.6 entraînement · 10.7 entraînement, erreur induite (feuille de ramasse fausse) · 10.8 évaluation | 3 temps | livrés (19-20/10/2026, `pret: true, ouverture: 'prof'`) |
+| **C1.4 contrôler** | 10.9 guidage · 10.10 entraînement · 10.11 erreur induite (le piège du froid) · 10.12 évaluation | 3 temps | livrés (19-20/10/2026, `pret: true, ouverture: 'prof'`) |
 
 ## Règles communes à Pelleau (§0 de chaque brief)
 

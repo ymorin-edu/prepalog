@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, docs/briefs/MOTEUR-depose-par-client.md, docs/briefs/ENT-8.7-action-decharger.md (§4 à §7 : le modèle du quai) puis docs/briefs/ENT-10.5-pelleau-camion-de-ramasse.md en entier. L'option « dépose par client » doit être livrée. Les poids du §5 sont validés par Tristan ; fais l'état des lieux du §7, annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : livré (19/10/2026, non commité : le chef commite) · **Date** : 18/10/2026
+**Statut** : livré (19/10/2026, commité et poussé) · **Date** : 18/10/2026
 **Conversation d'origine** : Cowork, 18/10/2026, sur délégation. Décision de cadrage n° 4 de Tristan : **« un camion, plusieurs clients »** — le
 camion Pelleau rentre de ramasse avec les palettes de 2 ou 3 clients mélangées ; l'élève les sépare par client et les rapproche de l'**annonce** de
 chaque client. Vue : « étendre la dépose » (Tristan, 21 h 50).

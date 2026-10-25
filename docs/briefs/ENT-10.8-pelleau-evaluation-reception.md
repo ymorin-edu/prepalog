@@ -6,7 +6,7 @@
 > Lis CLAUDE.md, docs/EN-COURS.md, docs/briefs/FEUILLE-DE-ROUTE-pelleau.md, les briefs ENT-10.5 à ENT-10.7 puis docs/briefs/ENT-10.8-pelleau-evaluation-reception.md en entier. Les poids du §5 sont validés par Tristan ; annonce la durée et dis-moi si un point contredit le code.
 > ```
 
-**Statut** : livré · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 4 h.
+**Statut** : livré (19-20/10/2026, `pret: true, ouverture: 'prof'`) · **Date** : 18/10/2026 · Cowork, sur délégation · **Modèle** : Sonnet · **Durée estimée** : ≈ 4 h.
 
 ---
 
