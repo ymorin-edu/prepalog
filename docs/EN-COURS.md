@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Stellantis Tle temps 1 (ENT-13.1 à 13.5) | `activites/stellantis-*.js`, `contenus/stellantis*.js`, `outils/test/stellantis-*.mjs`, une ligne dans `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS/GROUPES), briefs 13.x | 26/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
