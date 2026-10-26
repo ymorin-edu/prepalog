@@ -142,9 +142,9 @@ await v('Niveaux : l’onglet montre élèves × entreprises (Cdiscount, plus ce
   vrai(picardAuCatalogue, 'activites/catalogue.js n’a plus d’entrée picard-ent42 : la déclaration d’essai est à revoir');
   const cols = await pg.$$eval('[data-col-scenario]', (L) => L.map((x) => x.dataset.colScenario));
   // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026), Action (8) depuis ENT-8.1 (15/10/2026), CHEP (9) depuis ENT-9.1 (18/10/2026), Mondial Relay (11) depuis ENT-11.1 (26/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
-  egal(cols, ['2', '4', '6', '7', '8', '9', '10', '11'], 'colonnes');
+  egal(cols, ['2', '4', '6', '7', '8', '9', '10', '11', '13'], 'colonnes');
   const noms = await pg.$$eval('[data-col-scenario] strong', (L) => L.map((x) => x.textContent.trim()));
-  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon', 'Action', 'CHEP', 'Transports Pelleau', 'Mondial Relay'], 'en-têtes');
+  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon', 'Action', 'CHEP', 'Transports Pelleau', 'Mondial Relay', 'Stellantis'], 'en-têtes');
   const valeurs = await pg.$$eval('[data-niveau-eleve]', (L) => [...new Set(L.map((s) => s.value))]);
   egal(valeurs, ['standard'], 'valeurs');
   egal(await pg.$$eval('[data-niveau-eleve]', (L) => L.length), cols.length * Object.keys(EL).length, 'cases');   // une case par élève et par colonne
@@ -549,6 +549,10 @@ const BANQUES_FIGEES = {
   // ENT-11.7 Mondial Relay (26/10/2026) : les quatre cas de la réclamation d'Inès.
   'contenus/mondial-relay-ent117-donnees.js': { cas: ['cas-a', 'cas-b', 'cas-c', 'cas-d'] },
   // ENT-12.2 IKEA (26/10/2026) : une pièce fixe, la commande de Mme Benali ; les poids et les prix sont des valeurs tirées.
+  // ENT-13.1, 13.3 et 13.4 Stellantis (27/10/2026).
+  'contenus/stellantis-ent131-donnees.js': { usine: ['sochaux'] },
+  'contenus/stellantis-ent133-donnees.js': { refs: ['VIS-M6', 'ECR-M6', 'CLP-PAN', 'AGR-PLA', 'CLP-CAB', 'VIS-M8', 'CAC-MON', 'AMP-W5', 'JNT-POR', 'POI-INT', 'AMP-H7', 'CAC-BAT', 'JNT-CAP', 'POI-EXT', 'FAS-PLA', 'RET-DRO', 'RET-GAU', 'FAS-HAB', 'FUS-15A', 'COL-NYL', 'BOU-RES', 'GRI-AER', 'SUP-RET', 'TAP-COF'] },
+  'contenus/stellantis-ent134-donnees.js': { refs: ['VIS-M6', 'ECR-M6', 'CLP-PAN', 'AGR-PLA', 'CLP-CAB', 'VIS-M8', 'CAC-MON', 'AMP-W5', 'JNT-POR', 'POI-INT', 'AMP-H7', 'CAC-BAT', 'JNT-CAP', 'POI-EXT', 'FAS-PLA', 'RET-DRO', 'RET-GAU', 'FAS-HAB', 'FUS-15A', 'COL-NYL', 'BOU-RES', 'GRI-AER', 'SUP-RET', 'TAP-COF'] },
   'contenus/ikea-ent121-donnees.js': { commande: ['commande-benali'] },
   'contenus/ikea-ent126-donnees.js': { commande: ['commande-benali'] },
   'contenus/ikea-ent122-donnees.js': { commande: ['commande-benali'] },
