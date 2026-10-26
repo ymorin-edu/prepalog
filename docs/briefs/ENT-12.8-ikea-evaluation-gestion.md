@@ -1,6 +1,6 @@
 # Brief de séance — ENT-12.8 IKEA, évaluation gestion : la facture de mars (2de, poste A — gestion, évaluation)
 
-**Statut** : à implémenter (dépend de la vérification de 12.4 §7)
+**Statut** : livré (27/10/2026) — `pret: true, ouverture: 'prof'`, à essayer à l'écran puis à ouvrir par Tristan
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10
 **Modèle** : Sonnet
 
@@ -70,3 +70,12 @@ fiche vide (jalon 4 faux) ; équité sur 500 tirages ; sabotage.
 ## 11. Questions ouvertes
 
 - [ ] Aucune de plus que 12.4.
+
+## Compte rendu *(rempli à la livraison, 27/10/2026)*
+
+- **Fichiers créés / modifiés** : `activites/ikea-evaluation-gestion.js`, `contenus/ikea-ent128.js`, `ikea-ent128-donnees.js`, `questions/ENT-12.8.js`, `corriges/ENT-12.8.js`, `outils/test/ikea-12.8.mjs` ; `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS et GROUPES).
+- **Écarts par rapport au brief** (et pourquoi) : Évaluation : trois erreurs tirées parmi six, copie rendue.
+- **Décisions prises en route** : voir `docs/decisions.md` (ligne IKEA du 26/10/2026 et suite).
+- **Tests** : bloc `ikea-12.8` (10 cas, valeurs attendues écrites à la main, cas éprouvés dans les deux sens) ; suite entière lancée avant le push.
+- **Commits** : `d2cb6d9`.
+- **Reste ouvert** : à essayer à l'écran par Tristan, puis à ouvrir au groupe de 2de dans « Conduite de séance ». Vérifié : la logique, les calculs et le moteur par les tests. Construit (non vérifié par une source) : les chiffres internes du centre et des camions, signalés en pied de document.

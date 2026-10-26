@@ -1,6 +1,6 @@
 # Brief de séance — ENT-12.4 IKEA, la facture du transporteur (2de, poste A — gestion, guidage)
 
-**Statut** : à implémenter (une vérification au moteur §7, peut-être une demande)
+**Statut** : livré (27/10/2026) — `pret: true, ouverture: 'prof'`, à essayer à l'écran puis à ouvrir par Tristan
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10
 **Modèle** : Sonnet
 
@@ -111,3 +111,12 @@ Ouvrir les pièces, marquer les lignes, recalculer, envoyer la réclamation ; vo
 
 - [ ] Le tarif du prestataire n'est pas public : entièrement construit, dit comme tel (oui).
 - [ ] Livraison manquée : le tarif prévoit un forfait (construit : 30 % du prix de la livraison) (oui).
+
+## Compte rendu *(rempli à la livraison, 27/10/2026)*
+
+- **Fichiers créés / modifiés** : `activites/ikea-facture-transporteur.js`, `contenus/ikea-ent124.js`, `ikea-ent124-donnees.js`, `ikea-facture.js`, `ikea-facture-ecrans.js`, `questions/ENT-12.4.js`, `corriges/ENT-12.4.js`, `outils/test/ikea-12.4.mjs` ; `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS et GROUPES).
+- **Écarts par rapport au brief** (et pourquoi) : Facture et tarif construits (le prestataire n'est pas nommé, comme décidé). Pas de bandeau de fin (le brief n'en demande pas).
+- **Décisions prises en route** : voir `docs/decisions.md` (ligne IKEA du 26/10/2026 et suite).
+- **Tests** : bloc `ikea-12.4` (12 cas, valeurs attendues écrites à la main, cas éprouvés dans les deux sens) ; suite entière lancée avant le push.
+- **Commits** : `ac6574d`.
+- **Reste ouvert** : à essayer à l'écran par Tristan, puis à ouvrir au groupe de 2de dans « Conduite de séance ». Vérifié : la logique, les calculs et le moteur par les tests. Construit (non vérifié par une source) : les chiffres internes du centre et des camions, signalés en pied de document.

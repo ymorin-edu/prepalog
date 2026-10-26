@@ -1,6 +1,6 @@
 # Brief de séance — ENT-12.6 IKEA, l'armoire de Mme Benali (2de, poste C — logistique, découverte)
 
-**Statut** : à implémenter (aucune vue nouvelle)
+**Statut** : livré (27/10/2026) — `pret: true, ouverture: 'prof'`, à essayer à l'écran puis à ouvrir par Tristan
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10
 **Modèle** : Sonnet
 
@@ -104,3 +104,12 @@ Préparer les deux commandes à la souris, appeler Moussa, voir le parcours et l
 - [ ] La règle « à deux au-delà de 25 kg ou 2 m » : consigne de site construite (oui ; à remplacer si Tristan connaît la règle
   réelle d'IKEA ; les cartons IKEA portent souvent un pictogramme « deux personnes », **non vérifié**).
 - [ ] Le mode préparation de 5.6 est en vue de dessus, pas en 3D : suffisant pour une découverte (oui).
+
+## Compte rendu *(rempli à la livraison, 27/10/2026)*
+
+- **Fichiers créés / modifiés** : `activites/ikea-armoire-preparation.js`, `contenus/ikea-ent126.js`, `ikea-ent126-donnees.js`, `questions/ENT-12.6.js`, `corriges/ENT-12.6.js`, `outils/test/ikea-12.6.mjs` ; `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS et GROUPES).
+- **Écarts par rapport au brief** (et pourquoi) : Quatre fiches (bon, ordre, à deux, caisse) au lieu du mode « préparation » du plan d'entrepôt : aucune demande au moteur (le brief §7 le permet). Tirage par élève (cliente, marge de volume, ordre de départ) : 500 graines vérifiées, aucun tirage de secours, environ la moitié des élèves ont des commandes qui tiennent dans la caisse. Le client « Moreau » sort moins souvent (≈ 10 %) : seuil du test abaissé à 30 sur 500. Une réponse juste à « ton-parcours » (1 point) peut tomber alors que rien d'autre n'est fait : voulu, c'est une lecture de son propre parcours.
+- **Décisions prises en route** : voir `docs/decisions.md` (ligne IKEA du 26/10/2026 et suite).
+- **Tests** : bloc `ikea-12.6` (16 cas, valeurs attendues écrites à la main, cas éprouvés dans les deux sens) ; suite entière lancée avant le push.
+- **Commits** : `6301ceb`.
+- **Reste ouvert** : à essayer à l'écran par Tristan, puis à ouvrir au groupe de 2de dans « Conduite de séance ». Vérifié : la logique, les calculs et le moteur par les tests. Construit (non vérifié par une source) : les chiffres internes du centre et des camions, signalés en pied de document.

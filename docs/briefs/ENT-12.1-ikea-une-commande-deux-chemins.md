@@ -1,6 +1,6 @@
 # Brief de séance — ENT-12.1 IKEA, une commande, deux chemins (2de, tous les postes, découverte)
 
-**Statut** : à implémenter (aucune vue nouvelle)
+**Statut** : livré (27/10/2026) — `pret: true, ouverture: 'prof'`, à essayer à l'écran puis à ouvrir par Tristan
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10 (`docs/briefs/ikea/CADRAGE-ikea-2de.md`)
 **Modèle** : Sonnet
 
@@ -109,3 +109,12 @@ Jouer la séance en élève : la carte, les deux parcours, le choix des modes ; 
 - [ ] Carte : seulement région et département, comme au CAP (oui).
 - [ ] Le texte de l'art. L541-10-8 et de l'art. L221-18 : à recopier depuis Légifrance au moment de construire (oui, date de
   consultation dans le document joint).
+
+## Compte rendu *(rempli à la livraison, 27/10/2026)*
+
+- **Fichiers créés / modifiés** : `activites/ikea-deux-chemins.js`, `contenus/ikea-ent121.js`, `ikea-ent121-donnees.js`, `questions/ENT-12.1.js`, `corriges/ENT-12.1.js`, `outils/test/ikea-12.1.mjs` ; `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS et GROUPES).
+- **Écarts par rapport au brief** (et pourquoi) : Séance en `parcours: true, correction: true, reinitialisable: true` (sans cela le bandeau de fin ✓/✗ que le brief §10 demande ne s'affiche pas). Les trois fiches s'ouvrent l'une après l'autre (`fermetures`) : carte, armoire, lampe, modes. Le départ des deux chemins est tiré par élève (au moins 2 inversions de l'ordre juste).
+- **Décisions prises en route** : voir `docs/decisions.md` (ligne IKEA du 26/10/2026 et suite).
+- **Tests** : bloc `ikea-12.1` (16 cas, valeurs attendues écrites à la main, cas éprouvés dans les deux sens) ; suite entière lancée avant le push.
+- **Commits** : `56cb098`.
+- **Reste ouvert** : à essayer à l'écran par Tristan, puis à ouvrir au groupe de 2de dans « Conduite de séance ». Vérifié : la logique, les calculs et le moteur par les tests. Construit (non vérifié par une source) : les chiffres internes du centre et des camions, signalés en pied de document.

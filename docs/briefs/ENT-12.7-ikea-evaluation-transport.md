@@ -1,6 +1,6 @@
 # Brief de séance — ENT-12.7 IKEA, évaluation transport : la livraison de ta cliente (2de, poste B — transport, évaluation)
 
-**Statut** : à implémenter (aucune vue nouvelle ; dépend des vérifications de 12.2 et 12.3)
+**Statut** : livré (27/10/2026) — `pret: true, ouverture: 'prof'`, à essayer à l'écran puis à ouvrir par Tristan
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10
 **Modèle** : Sonnet
 
@@ -80,3 +80,12 @@ Bloc `outils/test/ikea-12.7.mjs`. Cas : copie juste (20/20 hors questions) ; cha
 
 - [ ] Garder l'appel en évaluation (le plus long à construire) ou le remplacer par un courriel de la cliente à lire ? (le garder :
   OTM-C1.1 se juge sur l'écoute)
+
+## Compte rendu *(rempli à la livraison, 27/10/2026)*
+
+- **Fichiers créés / modifiés** : `activites/ikea-evaluation-transport.js`, `contenus/ikea-ent127.js`, `ikea-ent127-donnees.js`, `questions/ENT-12.7.js`, `corriges/ENT-12.7.js`, `outils/test/ikea-12.7.mjs` ; `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS et GROUPES).
+- **Écarts par rapport au brief** (et pourquoi) : Évaluation : `copie: true`, un jeu tiré par élève, pas de parcours.
+- **Décisions prises en route** : voir `docs/decisions.md` (ligne IKEA du 26/10/2026 et suite).
+- **Tests** : bloc `ikea-12.7` (14 cas, valeurs attendues écrites à la main, cas éprouvés dans les deux sens) ; suite entière lancée avant le push.
+- **Commits** : `6a635f9`.
+- **Reste ouvert** : à essayer à l'écran par Tristan, puis à ouvrir au groupe de 2de dans « Conduite de séance ». Vérifié : la logique, les calculs et le moteur par les tests. Construit (non vérifié par une source) : les chiffres internes du centre et des camions, signalés en pied de document.

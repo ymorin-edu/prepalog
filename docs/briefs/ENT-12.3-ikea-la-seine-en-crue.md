@@ -1,6 +1,6 @@
 # Brief de séance — ENT-12.3 IKEA, la Seine est en crue (2de, poste B — transport, entraînement)
 
-**Statut** : à implémenter (aucune vue nouvelle, une vérification au moteur §7)
+**Statut** : livré (27/10/2026) — `pret: true, ouverture: 'prof'`, à essayer à l'écran puis à ouvrir par Tristan
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10
 **Modèle** : Sonnet
 
@@ -108,3 +108,12 @@ Voir l'aléa arriver, replanifier à la souris, prévenir les bons clients, rép
 
 - [ ] Les camions de secours sont-ils électriques ? (non dit : « camion », sans plus)
 - [ ] Cote inventée du jour : 4,45 m, juste au-dessus du seuil vérifié de 4,30 m (oui, dite construite).
+
+## Compte rendu *(rempli à la livraison, 27/10/2026)*
+
+- **Fichiers créés / modifiés** : `activites/ikea-seine-en-crue.js`, `contenus/ikea-ent123.js`, `ikea-ent123-donnees.js`, `questions/ENT-12.3.js`, `corriges/ENT-12.3.js`, `outils/test/ikea-12.3.mjs` ; `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS et GROUPES).
+- **Écarts par rapport au brief** (et pourquoi) : Planning fixe (même crue pour tous) : séance de découverte en guidage. Pas de bandeau de fin (le brief n'en demande pas).
+- **Décisions prises en route** : voir `docs/decisions.md` (ligne IKEA du 26/10/2026 et suite).
+- **Tests** : bloc `ikea-12.3` (12 cas, valeurs attendues écrites à la main, cas éprouvés dans les deux sens) ; suite entière lancée avant le push.
+- **Commits** : `6c3cb87`.
+- **Reste ouvert** : à essayer à l'écran par Tristan, puis à ouvrir au groupe de 2de dans « Conduite de séance ». Vérifié : la logique, les calculs et le moteur par les tests. Construit (non vérifié par une source) : les chiffres internes du centre et des camions, signalés en pied de document.

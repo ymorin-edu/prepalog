@@ -15,7 +15,6 @@ const s = seanceEntreprise(IKEA, SEANCE, {
   questions: 'ENT-12.5',
   parcours: true,
   correction: true,
-  reinitialisable: true,
   pret: true,
   ouverture: 'prof',
 }, SEANCE.OPTIONS);

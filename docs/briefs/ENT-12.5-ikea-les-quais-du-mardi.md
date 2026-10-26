@@ -1,6 +1,6 @@
 # Brief de séance — ENT-12.5 IKEA, les quais du mardi (2de, poste C — logistique, découverte)
 
-**Statut** : à implémenter (aucune vue nouvelle)
+**Statut** : livré (27/10/2026) — `pret: true, ouverture: 'prof'`, à essayer à l'écran puis à ouvrir par Tristan
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10
 **Modèle** : Sonnet
 
@@ -105,3 +105,12 @@ Poser les camions à la souris, voir les conflits, subir le retard, replanifier.
 - [ ] Les quais réels de Gennevilliers sont « ouverts des deux côtés » au rez-de-chaussée (cross-dock) : on n'en parle pas en
   découverte (oui).
 - [ ] La caisse mobile vide qui revient de Bercy : la garder (elle relie au fil rouge) (oui).
+
+## Compte rendu *(rempli à la livraison, 27/10/2026)*
+
+- **Fichiers créés / modifiés** : `activites/ikea-quais-du-mardi.js`, `contenus/ikea-ent125.js`, `ikea-ent125-donnees.js`, `questions/ENT-12.5.js`, `corriges/ENT-12.5.js`, `outils/test/ikea-12.5.mjs` ; `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS et GROUPES).
+- **Écarts par rapport au brief** (et pourquoi) : Planning fixe pour tous (découverte, guidage), comme en 12.3 ; sept camions, six quais, le 26 réservé aux porteurs, le 22 pris par la veille jusqu'à 7 h. `parcours` + `correction` + `reinitialisable` posés comme en 12.1 (photo de fin, bandeau). En phase 2 le planning demande « Envoyer quand même » tant qu'il reste un problème : prévu par le moteur, le test le gère. La fiche de Samir accepte un envoi à moitié rempli (`incomplet`) : son jalon tombe, rien n'est refusé.
+- **Décisions prises en route** : voir `docs/decisions.md` (ligne IKEA du 26/10/2026 et suite).
+- **Tests** : bloc `ikea-12.5` (13 cas, valeurs attendues écrites à la main, cas éprouvés dans les deux sens) ; suite entière lancée avant le push.
+- **Commits** : `254107d`.
+- **Reste ouvert** : à essayer à l'écran par Tristan, puis à ouvrir au groupe de 2de dans « Conduite de séance ». Vérifié : la logique, les calculs et le moteur par les tests. Construit (non vérifié par une source) : les chiffres internes du centre et des camions, signalés en pied de document.

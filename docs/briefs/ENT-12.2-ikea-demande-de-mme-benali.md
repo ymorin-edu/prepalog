@@ -1,6 +1,6 @@
 # Brief de séance — ENT-12.2 IKEA, la demande de Mme Benali (2de, poste B — transport, guidage)
 
-**Statut** : à implémenter (aucune vue nouvelle, une vérification au moteur §7)
+**Statut** : livré (27/10/2026) — `pret: true, ouverture: 'prof'`, à essayer à l'écran puis à ouvrir par Tristan
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10
 **Modèle** : Sonnet
 
@@ -118,3 +118,12 @@ Jouer l'appel (y compris les répliques maladroites et ce que répond Mme Benali
 - [ ] Montrer à l'élève les deux prix (membre et non-membre) ou un seul ? (les deux : c'est le réel, et la question au fil s'en sert)
 - [ ] Tarif « dans la pièce » : appliqué au montant des seuls articles livrés ainsi, ou à toute la commande ? La page ne le dit pas
   (au montant de toute la commande hors lampe, simplification dite dans le document joint).
+
+## Compte rendu *(rempli à la livraison, 27/10/2026)*
+
+- **Fichiers créés / modifiés** : `activites/ikea-demande-cliente.js`, `contenus/ikea-ent122.js`, `ikea-ent122-donnees.js`, `contenus/ikea.js` (univers), `questions/ENT-12.2.js`, `corriges/ENT-12.2.js`, `outils/test/ikea-12.2.mjs` ; `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS et GROUPES).
+- **Écarts par rapport au brief** (et pourquoi) : Pas de bandeau de fin ni de `parcours` (le brief n'en demande pas) : à proposer à Tristan s'il le veut comme en 12.1.
+- **Décisions prises en route** : voir `docs/decisions.md` (ligne IKEA du 26/10/2026 et suite).
+- **Tests** : bloc `ikea-12.2` (11 cas, valeurs attendues écrites à la main, cas éprouvés dans les deux sens) ; suite entière lancée avant le push.
+- **Commits** : `ac6574d`.
+- **Reste ouvert** : à essayer à l'écran par Tristan, puis à ouvrir au groupe de 2de dans « Conduite de séance ». Vérifié : la logique, les calculs et le moteur par les tests. Construit (non vérifié par une source) : les chiffres internes du centre et des camions, signalés en pied de document.
