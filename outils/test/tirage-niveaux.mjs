@@ -546,6 +546,8 @@ const BANQUES_FIGEES = {
     colis: ['c-ines', 'c-livres', 'c-pull', 'c-gaz', 'c-fauteuil', 'c-tapis', 'c-miroir', 'c-outils', 'c-skis', 'c-ecran', 'c-meuble', 'c-croquettes',
       'c-surgeles'],
   },
+  // ENT-11.7 Mondial Relay (26/10/2026) : les quatre cas de la réclamation d'Inès.
+  'contenus/mondial-relay-ent117-donnees.js': { cas: ['cas-a', 'cas-b', 'cas-c', 'cas-d'] },
   // ENT-7.1 Decathlon (13/10/2026).
   // ENT-9.1 CHEP (18/10/2026) : le document partiel (Europe ou LPR mêlées), le document sans mouvement (Europe seules, ou commande), les bonus du confirmé.
   'contenus/chep-ent91-donnees.js': {

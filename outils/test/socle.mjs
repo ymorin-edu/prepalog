@@ -684,17 +684,12 @@ await v('compétences : la moyenne par spécialité, pour un groupe de 2de seule
   try {
     await rouvrir();
     if (!(await page.$('#tabSpe'))) throw new Error('pas de tableau par spécialité pour un groupe de 2de');
-    // L'avis « à prévoir en 2de » (chantier 12, 15/10/2026) : les OTM / AGOrA travaillées par Smoby sans évaluation
-    // de 2de y sont (AGO-1.1 ; le 26/10/2026, Mondial Relay en a fait sortir OTM-C2.1 (ENT-11.5), OTM-C2.2 (ENT-11.4)
-    // et AGO-3.1 (ENT-11.6), qu'il évalue en 2de), jamais une compétence logistique.
+    // L'avis « à prévoir en 2de » (chantier 12, 15/10/2026) listait les OTM / AGOrA travaillées en 2de sans évaluation.
+    // Depuis Mondial Relay (26/10/2026 : ENT-11.4 OTM-C2.2, ENT-11.5 OTM-C2.1, ENT-11.6 AGO-3.1, ENT-11.7 AGO-1.1),
+    // chacune a son évaluation de 2de : l'avis ne s'affiche plus. Le cas inverse (avis présent) est vérifié sur des
+    // séances fabriquées, plus bas (`sansEvaluation2de`).
     const avis = await page.$eval('#avisEval2de', (p) => p.textContent.replace(/\s+/g, ' ')).catch(() => null);
-    if (!avis) throw new Error('pas d\'avis « à prévoir en 2de »');
-    if (!/À prévoir en 2de/.test(avis) || !/AGO-1\.1/.test(avis)) throw new Error('avis 2de : ' + avis);
-    if (/OTM-C2\.1|OTM-C2\.2|AGO-3\.1/.test(avis)) throw new Error('une compétence évaluée en 2de reste dans l\'avis : ' + avis);
-    // Un code logistique = « C1.4 » sans préfixe (« OTM-C1.3 » n'en est pas un).
-    if (/(?<![A-Z-])C\d\.\d/.test(avis)) throw new Error('une compétence logistique dans l\'avis 2de : ' + avis);
-    const titre21 = await page.$$eval('#avisEval2de strong[title]', (l) => l.find((s) => s.textContent.trim() === 'AGO-1.1')?.getAttribute('title'));
-    if (titre21 !== "Préparation et prise en charge de la relation avec le client, l'usager ou l'adhérent") throw new Error('libellé en infobulle : ' + titre21);
+    if (avis) throw new Error('avis « à prévoir en 2de » alors que tout est évalué : ' + avis);
     const lu = await page.$$eval('#tabSpe', ([t]) => {
       const th = [...t.querySelectorAll('thead th')].map((x) => x.textContent.replace(/\s+/g, ' ').trim());
       const l = [...t.querySelectorAll('tbody tr')].find((x) => /SPECIALITE/.test(x.textContent));
