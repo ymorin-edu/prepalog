@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Journal de connexion élèves (dernière connexion + dernière activité dans le Suivi) | `core/backend-demo.js`, `core/backend-firebase.js`, `core/prof.js`, `firestore.rules`, `outils/test/` (bloc à voir), `docs/decisions.md` | 26/10/2026 |
 | Mondial Relay 2de (S3) : cadrage, briefs ENT-11.1 à 11.7, brief et maquette de la vue Tri (aucun code) | `docs/briefs/mondial-relay/`, `docs/briefs/ENT-11.*`, `docs/briefs/MOTEUR-vue-tri.md`, `docs/briefs/FEUILLE-DE-ROUTE-mondial-relay.md` | 26/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,

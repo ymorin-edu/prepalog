@@ -170,6 +170,10 @@ export async function creerBackendFirebase() {
         throw new Error(messageConnexion(e));
       }
       if (!courant) throw new Error('Profil introuvable. Prévenez votre enseignant.');
+      // Journal de connexion (26/10/2026) : l'heure de cette connexion, celle du serveur, remplace la précédente
+      // dans le profil (une seule date gardée). Sans attendre, et un refus (règles pas encore publiées) ne
+      // gêne en rien la connexion. Une écriture par connexion ; le Suivi la lit avec le profil, sans lecture de plus.
+      FS.updateDoc(dref('users', courant.uid), { derniereConnexion: FS.serverTimestamp() }).catch(() => {});
       notifier();
       return courant;
     },
@@ -464,7 +468,9 @@ export async function creerBackendFirebase() {
     async elevesDuGroupe(gid) {
       const q = FS.query(cref('users'), FS.where('groupes', 'array-contains', gid));
       const s = await FS.getDocs(q);
+      // `derniereConnexion` est une date Firestore : ramenée en millisecondes, comme les autres dates du site.
       return s.docs.map((d) => ({ uid: d.id, ...d.data() }))
+        .map((u) => (u.derniereConnexion && u.derniereConnexion.toMillis ? { ...u, derniereConnexion: u.derniereConnexion.toMillis() } : u))
         .filter((u) => u.role === 'eleve')
         .sort((a, b) => (a.nom + a.prenom).localeCompare(b.nom + b.prenom, 'fr'));
     },

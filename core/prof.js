@@ -13,7 +13,7 @@ import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, h
   demisDe, nomDemi, forcage } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
 import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve,
-  dateHeureRendu, renduAvantOuverture, verifierCopie } from './copie.js';
+  dateHeureRendu, heureRendu, renduAvantOuverture, verifierCopie } from './copie.js';
 import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence, metasPourNiveau, sansEvaluation2de } from './competences.js';
 
 // Le nom de famille d'une activité, d'après le préfixe de son code (voir CLAUDE.md) : bandeau du Suivi.
@@ -1281,6 +1281,37 @@ ${so.phrase}` : ''}`)}"
         ${blocs}</section>`;
     }
 
+    // Journal de connexion (26/10/2026, choix de Tristan) : pour chaque élève, sa dernière connexion (une seule date
+    // gardée dans son profil, remplacée à chaque connexion) et son dernier travail enregistré (la date `dateMaj` des
+    // résultats, déjà lus pour le tableau : aucune lecture de plus). Une note posée ou une copie ramassée par
+    // l'enseignant n'est pas un travail de l'élève : écartée.
+    function sectionConnexions() {
+      if (eleves.length === 0) return '';
+      const quand = (ts) => `${new Date(ts).toLocaleDateString('fr-FR', { weekday: 'short', day: '2-digit', month: '2-digit' })} à ${heureRendu(ts)}`;
+      const minuit = new Date().setHours(0, 0, 0, 0);
+      const date = (ts) => typeof ts === 'number' && ts > 0;
+      const lignes = eleves.map((e) => {
+        let dernier = null;
+        Object.values(par[e.uid] || {}).forEach((t) => {
+          if (t.parProf || t.ramasse || !date(t.dateMaj)) return;
+          if (!dernier || t.dateMaj > dernier.ts) dernier = { ts: t.dateMaj, aid: t.aid };
+        });
+        const meta = dernier && metasTous.find((m) => m.id === dernier.aid);
+        return `<tr data-connexion-eleve="${ech(e.uid)}"><td>${ech(e.nom)} ${ech(e.prenom)}</td>
+          <td data-connexion="connexion">${date(e.derniereConnexion) ? quand(e.derniereConnexion) : '—'}</td>
+          <td data-connexion="travail">${dernier ? `${quand(dernier.ts)}${meta ? ` <span class="note">(${ech(meta.code)})</span>` : ''}` : '—'}</td></tr>`;
+      }).join('');
+      const auj = eleves.filter((e) => date(e.derniereConnexion) && e.derniereConnexion >= minuit).length;
+      return `<section class="panneau" id="connexions">
+        <details class="reperage"><summary>Connexions des élèves — <span data-connexions-auj>${auj} sur ${eleves.length}</span> connecté${auj > 1 ? 's' : ''} aujourd'hui</summary>
+          <p class="note">Seule la dernière connexion de chaque élève est gardée (elle remplace la précédente). Le dernier travail
+            est le dernier enregistrement de l'élève dans une séance, avec son code entre parenthèses. « — » : rien d'enregistré
+            (connexions comptées à partir du 26/10/2026).</p>
+          <div style="overflow:auto"><table>
+            <thead><tr><th>Élève</th><th>Dernière connexion</th><th>Dernier travail</th></tr></thead>
+            <tbody>${lignes}</tbody></table></div></details></section>`;
+    }
+
     // Le tableau du suivi : deux rangées d'en-tête (bandeau entreprise ou famille, puis code), figées en haut,
     // et la colonne des noms figée à gauche (CSS `.suivi-cadre`). Une entreprise repliée tient en une colonne.
     const titreCol = (m) => `${m.titre}${aLaMain(m) ? ' — note saisie à la main'
@@ -1363,6 +1394,7 @@ ${so.phrase}` : ''}`)}"
           </div>
         </div>`}
       </section>
+      ${sectionConnexions()}
       ${sectionReperage()}
       ${seancesBase.length === 0 || eleves.length === 0 ? '' : `
       <section class="panneau" id="porteSortie">

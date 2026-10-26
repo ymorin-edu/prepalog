@@ -208,6 +208,16 @@ await v("un élève ne change ni son matricule ni son code", async () => {
   await assertFails(fsDe('e1').doc('users/e1').update({ matricule: '9999' }));
   await assertFails(fsDe('e1').doc('users/e1').update({ code: 'zz99' }));
 });
+// Journal de connexion (26/10/2026) : l'élève date SA connexion avec l'heure du serveur, et ne touche rien d'autre.
+const heureServeur = () => firebaseCompat.firestore.FieldValue.serverTimestamp();
+await v("un élève date sa propre connexion avec l'heure du serveur", () =>
+  assertSucceeds(fsDe('e1').doc('users/e1').update({ derniereConnexion: heureServeur() })));
+await v("journal de connexion : ni date choisie par l'élève, ni autre champ glissé avec, ni la connexion d'un camarade", async () => {
+  await assertFails(fsDe('e1').doc('users/e1').update({ derniereConnexion: new Date(2026, 0, 1) }));
+  await assertFails(fsDe('e1').doc('users/e1').update({ derniereConnexion: heureServeur(), nom: 'Emma D.' }));
+  await assertFails(fsDe('e1').doc('users/e2').update({ derniereConnexion: heureServeur() }));
+  await assertFails(fsDe('e1').doc('users/e1').update({ derniereConnexion: heureServeur(), role: 'prof' }));
+});
 await v("un élève ne glisse pas un champ inconnu dans son profil", () =>
   assertFails(fsDe('e1').doc('users/e1').update({ creePar: 'e1' })));
 await v("un élève ne change plus son prénom (15/10/2026)", () =>

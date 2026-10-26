@@ -186,6 +186,51 @@ await v('aménagements : le tiers-temps ne sort pas de l’onglet — ni dans l�
   if (/tiers/i.test(t)) throw new Error('le suivi de classe parle du tiers-temps');
 });
 
+// ── Journal de connexion (26/10/2026) : la connexion d'un élève écrit SA date, et elle seule ; le Suivi montre la
+// dernière connexion et le dernier travail de l'élève (une note posée par l'enseignant n'en est pas un).
+await v('journal de connexion : la connexion date le profil de l’élève, pas celui du témoin ; le Suivi affiche connexion et dernier travail', async () => {
+  const uid = await uidDe(MAT), temoin = await uidDe(TEMOIN);
+  // Témoin : une connexion ancienne (20/10 à 10 h 05), un travail le 21/10 à 9 h 30 et une note posée par l'enseignant plus tard.
+  const ancienne = new Date(2026, 9, 20, 10, 5).getTime(), travail = new Date(2026, 9, 21, 9, 30).getTime();
+  const gid = await pg.evaluate(({ t, ancienne, travail }) => {
+    const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
+    u[t].derniereConnexion = ancienne;
+    localStorage.setItem('prepalog:users', JSON.stringify(u));
+    const g = u[t].groupes[0];
+    if (localStorage.getItem(`prepalog:travaux/${g}/${t}/quiz-flux`)) throw new Error('le témoin a déjà un travail QUI-5 : le cas doit être revu');
+    const idx = JSON.parse(localStorage.getItem(`prepalog:travauxIdx/${g}`) || '[]');
+    localStorage.setItem(`prepalog:travaux/${g}/${t}/quiz-flux`, JSON.stringify({ uid: t, gid: g, aid: 'quiz-flux', score: 1, max: 2, dateMaj: travail }));
+    localStorage.setItem(`prepalog:travaux/${g}/${t}/zz-note-prof`, JSON.stringify({ uid: t, gid: g, aid: 'zz-note-prof', score: 0, parProf: true, dateMaj: Date.now() }));
+    localStorage.setItem(`prepalog:travauxIdx/${g}`, JSON.stringify([...idx, `${t}|quiz-flux`, `${t}|zz-note-prof`]));
+    return g;
+  }, { t: temoin, ancienne, travail });
+  const avant = Date.now();
+  await commeEleve(MAT, (await pg.evaluate((u) => JSON.parse(localStorage.getItem('prepalog:users'))[u].code, uid)));
+  const dates = await pg.evaluate(({ u, t }) => { const x = JSON.parse(localStorage.getItem('prepalog:users')); return [x[u].derniereConnexion, x[t].derniereConnexion]; }, { u: uid, t: temoin });
+  if (!(dates[0] >= avant && dates[0] <= Date.now())) throw new Error('connexion de l’élève non datée : ' + dates[0]);
+  if (dates[1] !== ancienne) throw new Error('la connexion d’un élève a touché le témoin : ' + dates[1]);
+  await commeProf();
+  await pg.click('#btnProfEspace');
+  await pg.click('[data-ong="suivi"]');
+  await pg.waitForSelector('#connexions');
+  const lu = await pg.$eval('#connexions', (s, { u, t }) => {
+    const l = (id, c) => s.querySelector(`[data-connexion-eleve="${id}"] [data-connexion="${c}"]`)?.textContent.replace(/\s+/g, ' ').trim();
+    return { moi: l(u, 'connexion'), temoin: l(t, 'connexion'), travail: l(t, 'travail'), resume: s.querySelector('[data-connexions-auj]').textContent };
+  }, { u: uid, t: temoin });
+  const jour = new Date().toLocaleDateString('fr-FR', { day: '2-digit', month: '2-digit' });
+  if (!lu.moi || !lu.moi.includes(jour)) throw new Error('connexion du jour non affichée : ' + JSON.stringify(lu));
+  if (!/20\/10 à 10 h 05/.test(lu.temoin)) throw new Error('connexion du témoin : ' + lu.temoin);
+  if (!/21\/10 à 09 h 30 \(QUI-/.test(lu.travail)) throw new Error('dernier travail du témoin (la note de l’enseignant ne compte pas) : ' + lu.travail);
+  if (!/^[1-9]\d* sur \d+$/.test(lu.resume)) throw new Error('résumé : ' + lu.resume);
+  // Ménage : les travaux injectés partent, le reste de l'index du groupe reste.
+  await pg.evaluate(({ g, t, idx }) => {
+    localStorage.removeItem(`prepalog:travaux/${g}/${t}/quiz-flux`);
+    localStorage.removeItem(`prepalog:travaux/${g}/${t}/zz-note-prof`);
+    const i = JSON.parse(localStorage.getItem(`prepalog:travauxIdx/${g}`) || '[]');
+    localStorage.setItem(`prepalog:travauxIdx/${g}`, JSON.stringify(i.filter((k) => k !== `${t}|quiz-flux` && k !== `${t}|zz-note-prof`)));
+  }, { g: gid, t: temoin });
+});
+
 await v('aménagements : aucune erreur JavaScript', async () => {
   if (erreursA.length) throw new Error(erreursA.slice(0, 3).join(' / '));
 });

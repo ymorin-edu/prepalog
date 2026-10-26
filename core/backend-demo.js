@@ -138,6 +138,8 @@ export function creerBackendDemo() {
       const uid = Object.keys(u).find((k) => u[k].matricule === m);
       if (!uid) throw new Error("Matricule inconnu. Vérifiez la saisie ou demandez à votre enseignant.");
       if (String(u[uid].code) !== String(code).trim()) throw new Error('Code incorrect.');
+      // Journal de connexion : l'heure de cette connexion remplace la précédente (miroir du mode réel).
+      u[uid].derniereConnexion = Date.now(); setUsers(u);
       courant = { uid, ...u[uid] };
       ecrire('session', uid);
       notifierAuth();

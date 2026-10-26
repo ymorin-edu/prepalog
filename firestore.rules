@@ -80,7 +80,8 @@ service cloud.firestore {
 
       // Mise à jour.
       //
-      // L'élève ne modifie RIEN de son profil, nom et prénom compris (audit du 15/10/2026).
+      // L'élève ne modifie RIEN de son profil, nom et prénom compris (audit du 15/10/2026), sauf
+      // l'heure de sa dernière connexion (voir plus bas, 26/10/2026).
       // Le 08/10/2026 (C1) il ne pouvait déjà changer que `nom` et `prenom` (liste blanche : plus
       // de groupe ajouté, ni de `matricule`, `code`, `role` ou aménagement touché). Reste que ces
       // deux champs sont ceux qu'affichent le suivi de classe et les exports : depuis la console du
@@ -93,6 +94,15 @@ service cloud.firestore {
       // celui d'un collègue, et ne change jamais un rôle. Le sien reste modifiable.
       allow update: if connecte() && request.resource.data.role == resource.data.role
         && estProf() && (uid == moi() || resource.data.get('role', '') == 'eleve');
+
+      // Seule exception côté élève (journal de connexion, 26/10/2026) : à chaque connexion, l'élève
+      // écrit l'heure de SA connexion dans son propre profil, et rien d'autre. L'heure est celle du
+      // serveur (`serverTimestamp()` côté site, d'où `== request.time`) : un élève ne peut ni l'antidater
+      // ni toucher un autre champ. Une seule date est gardée, remplacée à chaque connexion (collecte
+      // minimale). `get('role', '')` : le champ n'est jamais supposé exister.
+      allow update: if connecte() && uid == moi() && resource.data.get('role', '') == 'eleve'
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['derniereConnexion'])
+        && request.resource.data.derniereConnexion == request.time;
 
       // Suppression : l'enseignant efface un profil d'élève (supprimerEleve), jamais celui
       // d'un collègue. Chantier 11, lot 11b (09/10/2026) : on ne supprime que ce qu'on a créé, ou
