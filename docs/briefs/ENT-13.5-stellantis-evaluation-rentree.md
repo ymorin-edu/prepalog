@@ -1,6 +1,6 @@
 # Brief de séance — ENT-13.5 Stellantis Sochaux, évaluation de rentrée (Tle)
 
-**Statut** : à construire — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
+**Statut** : livré (27/10/2026, `pret: true, ouverture: 'prof'`) — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10 (`stellantis/CADRAGE-stellantis-tle.md`)
 **Modèle** : Sonnet (vues existantes, assemblage de 13.2 à 13.4)
 
@@ -103,11 +103,12 @@ Passer l'évaluation comme un élève, en une heure ; lire la copie et le corrig
 - [ ] Les seuils 80 % / 95 % rappelés dans la consigne de l'évaluation (oui).
 - [ ] C1.3 (planifier les quais) n'est pas réévaluée ici : elle l'a été en 1re ; 13.2 n'est qu'un entraînement (oui).
 
-## Compte rendu *(à remplir à la livraison)*
+## Compte rendu
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/stellantis-evaluation-rentree.js` ; `contenus/stellantis-ent135.js` (documents, messages, jalons), `stellantis-ent135-donnees.js` (tirage du jeu par élève, camion, plan, export, inventaire) ; `contenus/questions/ENT-13.5.js` ; `contenus/corriges/ENT-13.5.js` (corrigé par élève) ; `activites/index.js` et `catalogue.js` ; `outils/test.mjs` (ligne dans `BLOCS` et `GROUPES`, **touché, à dire à Tristan**) et `outils/test/stellantis-13.5.mjs`.
+- **Réponses aux vérifications du §7** : (1) oui, sans toucher au moteur : le quai, le geste tableur, le plan d'entrepôt et l'inventaire tiennent dans une même copie (le quai, le plan et l'inventaire sont des fonctions de la graine, comme ENT-4.4 de Picard ; le quai déclare `rendCopie: false` pour que sa clôture ne rende pas la copie). (2) repli du brief : la classe de rotation est sur la fiche de chaque palette (trois classes différentes par construction) ; le jalon porte sur le rangement seul.
+- **Écarts par rapport au brief** : (a) cinq anomalies du brief → quatre cas tirés : **visible** = cartons écrasés OU couche incomplète MAIS conforme au bon (le piège « tout refuser », à accepter), **au bon** = cartons manquants OU étiquette d'une autre référence (refuser, motif produit) ; « quantité différente » n'est pas tirée (le quai la juge comme un manquant) ; (b) le plan range les **trois palettes sans litige** (R1 à R3, identifiants différents de ceux du camion) : les palettes du camion sont mélangées (P1 à P5), l'élève n'est pas prévenu de celles qui sont sans litige ; (c) cinq palettes au camion (trois propres, une visible, une « au bon ») ; (d) l'inventaire a une ligne libre, relevé dans la messagerie, cause tirée (caisse reposée à côté ou sortie non saisie) ; (e) les trois questions au fil sont **notées** (`part: 2`, correction au bilan) : « Merci, je note » à l'écran, comme ENT-11.3 ; (f) « Avant de commencer » : huit questions pour quatre tirées (réception, calcul ABC, inventaire, droit) ; L133-3 et L123-12 sont les textes déjà relus (Légifrance injoignable le 26/10/2026) ; (g) dépôt unique, sans retour (`indications: 4`).
+- **Décisions prises en route** : poids = palettes 3 (5 × 0,6 : décision, motif et comptage) · réserves 1,5 + signature 0,5 · cumul 3 · classe 2 · rangement 2 (3 × 2/3) · écart 2 · questions au fil 2 · « Avant de commencer » 4 = 20 ; équité : A = les trois références les plus populaires, B = les cinq suivantes (attribution groupe par groupe), vérifiée sur 500 graines.
+- **Tests** : bloc `stellantis-13.5`, 22 cas verts (déclaration, équité sur 500 graines, deux élèves deux jeux, plan, export et contrôles, inventaire, parcours 20/20 pour deux élèves aux jeux différents, inaction, tout refuser, réserve vague, fichier non trié, palette A au fond, écart régularisé sans chercher, « Je ne sais pas », corrigé par élève). Durée du bloc : ≈ 3 min 30.
+- **Commits** : voir l'historique du 27/10/2026.
+- **Reste ouvert** : essai à l'écran par Tristan (en une heure ? sinon retirer le rangement, §11) ; variante « confirmé » : aucune (jamais de bonus en évaluation).

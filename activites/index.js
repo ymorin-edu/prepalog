@@ -137,6 +137,7 @@ export const ACTIVITES = [
   () => import('./stellantis-camions-du-matin.js'),
   () => import('./stellantis-methode-abc.js'),
   () => import('./stellantis-ranger-compter-abc.js'),
+  () => import('./stellantis-evaluation-rentree.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
