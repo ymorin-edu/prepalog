@@ -120,6 +120,7 @@ export const ACTIVITES = [
   () => import('./mondial-relay-au-tri.js'),
   () => import('./mondial-relay-evaluation-tri.js'),
   () => import('./mondial-relay-evaluation-planning.js'),
+  () => import('./mondial-relay-evaluation-renforts.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et

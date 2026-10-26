@@ -685,10 +685,10 @@ await v('compétences : la moyenne par spécialité, pour un groupe de 2de seule
     await rouvrir();
     if (!(await page.$('#tabSpe'))) throw new Error('pas de tableau par spécialité pour un groupe de 2de');
     // L'avis « à prévoir en 2de » (chantier 12, 15/10/2026) : les OTM / AGOrA travaillées par Smoby sans évaluation
-    // de 2de y sont (ENT-5.8 OTM-C2.1, ENT-5.1 AGO-3.1), jamais une compétence logistique.
+    // de 2de y sont (ENT-5.8 OTM-C2.1, AGO-1.1 ; AGO-3.1 en est sortie le 26/10/2026, ENT-11.6 l'évalue en 2de), jamais une compétence logistique.
     const avis = await page.$eval('#avisEval2de', (p) => p.textContent.replace(/\s+/g, ' ')).catch(() => null);
     if (!avis) throw new Error('pas d\'avis « à prévoir en 2de »');
-    if (!/À prévoir en 2de/.test(avis) || !/OTM-C2\.1/.test(avis) || !/AGO-3\.1/.test(avis)) throw new Error('avis 2de : ' + avis);
+    if (!/À prévoir en 2de/.test(avis) || !/OTM-C2\.1/.test(avis) || !/AGO-1\.1/.test(avis)) throw new Error('avis 2de : ' + avis);
     // Un code logistique = « C1.4 » sans préfixe (« OTM-C1.3 » n'en est pas un).
     if (/(?<![A-Z-])C\d\.\d/.test(avis)) throw new Error('une compétence logistique dans l\'avis 2de : ' + avis);
     const titre21 = await page.$$eval('#avisEval2de strong[title]', (l) => l.find((s) => s.textContent.trim() === 'OTM-C2.1')?.getAttribute('title'));

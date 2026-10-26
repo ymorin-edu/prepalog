@@ -1,6 +1,6 @@
 # Brief de séance — ENT-11.6 Mondial Relay, évaluation : les renforts de décembre (2de, poste A — gestion, évaluation)
 
-**Statut** : à implémenter (aucune vue nouvelle)
+**Statut** : à valider par Tristan (construit le 26/10/2026, voir « Compte rendu » en fin de fiche)
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé
 **Modèle** : Sonnet
 
@@ -69,7 +69,57 @@ Aucune : cas Personnel du Planning, fiche à remplir, phrases à choisir. Vérif
 
 ## 11. Questions ouvertes
 
-- [ ] Intérim : la notion est-elle déjà vue en 2de ? En S1, Tristan avait dit « l'intérim sera vu plus tard » (décision 15
+- [x] (tranché le 26/10/2026 : CDD saisonnier noté, intérim en réflexion non notée) Intérim : la notion est-elle déjà vue en 2de ? En S1, Tristan avait dit « l'intérim sera vu plus tard » (décision 15
   du cadrage S1). **Si elle n'a jamais été travaillée, la règle 15 interdit de la noter ici** : soit la demande de mission
   devient un CDD saisonnier (déjà vu en 5.1), soit l'intérim passe en question non notée. Proposé : CDD saisonnier noté,
   intérim en question de réflexion.
+
+## Compte rendu (Claude Code, 26/10/2026)
+
+**Statut : à valider par Tristan.** Séance construite avec `pret: true, ouverture: 'prof'` : fermée aux élèves tant que Tristan ne la coche pas dans « Conduite de séance ».
+Aucun fichier de `core/` ni `styles/base.css` touché. Rien de poussé.
+
+**Fichiers.** `activites/mondial-relay-evaluation-renforts.js` ; `contenus/mondial-relay-ent116.js` (documents, fiches, messages, jalons) ; `contenus/mondial-relay-ent116-donnees.js`
+(le jeu tiré, les décisions et les renforts qui s'en calculent) ; `contenus/questions/ENT-11.6.js` ; `contenus/corriges/ENT-11.6.js` (corrigé par élève, calculé depuis sa graine) ;
+bloc de test `outils/test/mr-11.6.mjs` (17 cas, inscrit dans `BLOCS` et dans le groupe 6 de `outils/test.mjs`) ; ligne dans `activites/index.js` ; `activites/catalogue.js` régénéré.
+
+**Décision de Tristan appliquée (26/10/2026, règle 15).** Les renforts sont embauchés en **CDD saisonnier** (noté). La « demande de mission à l'agence d'intérim » du brief devient une
+**fiche de demande de recrutement en CDD saisonnier** (poste, nombre, contrat, motif, dates, horaires de nuit, cinq mentions de l'offre). L'**intérim** n'apparaît que dans une
+question de réflexion **non notée** (`qui-paie-interim`, après l'envoi de la demande).
+
+**Déroulé.** Avant de commencer (4 questions tirées sur 8 : 2 de préparation, 2 de droit ; les deux questions ★ d'ENT-6.3 reprises) → ① fiche « Planning des nuits » : une décision par demande de
+congé (refuser, accorder, décaler), puis les renforts de chacune des 12 nuits → ② fiche « Demande de recrutement » (s'ouvre à l'envoi du planning) → ③ réponse par phrases à l'agent dont le
+congé est refusé → « Rendre ma copie ». Rien ne remonte avant la remise ; aucun bilan, aucun « Corriger », rien à l'écran ne dit juste ou faux.
+
+**Poids codés (total 20).** Avant de commencer 4 · nuits couvertes 4 (2 par semaine, toutes les nuits de la semaine doivent être exactes) · congés 3 (1 par demande) · contrat des renforts 3
+(poste 0,5 ; contrat 1,5 ; pourquoi 1) · demande de recrutement 3 (nombre 0,5 ; dates 0,75 ; horaires 0,5 ; cinq mentions 0,25) · réponse à l'agent 2 (décision 1 ; raison 1) · ton 1
+(salutation 0,5 ; formule de fin 0,5). Forme (ton) = 1 point sur 20. Aucun jalon à 0.
+
+**Écarts au brief.**
+1. **Planning tiré par élève : fiche et documents, pas la vue Planning.** Une vue `planning` est une déclaration fixe (ses cartes et lignes ne se calculent pas sur la base de l'élève :
+   `activites/FICHE-SEANCE.md`, « Pièges »), alors que la décision du 03/10/2026 veut un jeu tiré par élève. Le planning des nuits est donc une fiche (`blocs(db)`) et des documents (`html(db)`)
+   fonctions de la base. Le jeu est un contenu, pas une vue. **Demande au moteur (§7) : une vue Planning dont les cartes et le besoin se calculent sur la base de l'élève** (jeu tiré), si Tristan veut
+   retrouver la grille glisser-déposer d'ENT-6.3 ici. Le cas « Personnel » n'a pas été utilisé.
+2. **Univers incomplet.** `contenus/mondial-relay.js` ne porte pas six des neuf clés exigées par `seanceEntreprise` (catalogue, fournisseurs, clients…) : le contenu de la séance les fournit,
+   vides (aucun article en jeu).
+3. **Le tirage est posé par `tirage: true`** (graine = identifiant de l'élève, avant le volet). Sans cela le message de l'agent était écrit pour le jeu d'un élève « vide » (trouvé par le test).
+4. **L'agent qui écrit est toujours celui dont le congé doit être refusé** (la phrase de réponse est la même pour tous, calculée de SON jeu). Fuite minimale acceptée : l'élève qui voit
+   quel agent écrit peut en déduire quelle demande est à refuser. Alternative possible : un message de chaque agent (3 messages), à décider.
+5. **Une erreur de congé ne se paie qu'une fois** : les renforts sont jugés d'après les décisions de l'élève (un congé de pic accordé à tort, avec ses renforts recalculés, ne coûte que le point du congé).
+   « Renforts à 0 » et « renforts au maximum partout » ne rapportent rien (chaque semaine a au moins une nuit à renforcer ; les nuits de base valent toujours 0).
+
+**Vérifié / construit.** *Vérifié* (voir `contenus/mondial-relay.js`) : pic de fin d'année, équipes de tri renforcées, hub de Buchères du lundi au samedi. *Construit* (dit à l'écran par le pied des
+documents) : l'équipe de nuit (prénoms), le besoin de chaque nuit, les demandes de congé et leurs dates, les règles du planning de nuit, **les horaires de nuit 22 h – 5 h (non vérifiés)**.
+Articles du Code du travail cités dans le document « Le droit » : L3141-3, L3141-17 et L1242-10, **repris d'ENT-6.3 (relus le 10/10/2026 sur code.travail.gouv.fr)** ; l'article du travail temporaire
+(intérim) **n'est pas cité à l'écran** : **à relever sur Légifrance** (L1251-1 pressenti) avant de l'ajouter. Aucun accès à Légifrance ici : rien de nouveau n'a été cité de mémoire.
+
+**Questions au fil (3, toutes non notées).** `pourquoi-refus` (dès qu'un congé est refusé dans le planning de l'élève), `quel-contrat` et `qui-paie-interim` (à l'envoi de la demande de recrutement).
+Vérifié : bonne ou mauvaise réponse, la note ne bouge pas.
+
+**À vérifier à l'écran par Tristan.** (a) La fiche « Planning des nuits » : 3 listes de congé puis 12 listes de renforts, défilement et lisibilité à 1366 × 768 et sur un portable d'élève. (b) Le
+message de l'agent et la liste des phrases. (c) La fiche « Demande de recrutement » (le tableau oui/non des mentions). (d) Que l'entreprise n° 11 soit ajoutée au tableau `ENTREPRISES` de
+`activites/index.js` : sans cette ligne la séance est rangée sous « autres » (non fait ici : l'intégrateur la crée avec les autres séances ENT-11.x). (e) Aucune capture d'écran n'a été regardée
+par moi : seuls les tests pilotent l'écran.
+
+**Test existant modifié.** `outils/test/socle.mjs` (cas « compétences : la moyenne par spécialité, pour un groupe de 2de seulement ») attendait AGO-3.1 dans l'avis « à prévoir en 2de » ; ENT-11.6
+évalue AGO-3.1 en 2de, elle en sort légitimement. Le cas attend maintenant AGO-1.1 à la place.
