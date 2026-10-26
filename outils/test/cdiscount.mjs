@@ -1833,6 +1833,17 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (points(unefois) !== 8) throw new Error('liste cohérente avec une synthèse fausse : ' + points(unefois));
   });
 
+  await v('ENT-2.2 : une liste envoyée avant les paliers (20/10/2026) garde son ancien jugement — 3 bonnes sur 4 = 0 (comme avant), les 4 bonnes = 8 : les notes acquises ne bougent pas', async () => {
+    const points = (db) => Math.round(S2.ETAPES.filter((e) => /^liste/.test(e.id) && e.verifier(db).status === 'ok').reduce((t, e) => t + e.poids, 0) * 100) / 100;
+    const ancienne = (liste) => { const db = exporterC(ouvrirC()); deposerC(db); repondre(db, 'À recompter : ' + liste); declencher(S2, db);
+      db.mails.filter((m) => m.folder === 'out').forEach((m) => { m.ts = Date.UTC(2026, 9, 20, 10); }); return db; };
+    if (points(ancienne('CHG-20W, CAB-USBC-1M, COQ-UNI-01')) !== 0) throw new Error('ancienne liste à 3 bonnes : ' + points(ancienne('CHG-20W, CAB-USBC-1M, COQ-UNI-01')));
+    if (points(ancienne('CHG-20W, CAB-USBC-1M, BAT-10K, COQ-UNI-01')) !== 8) throw new Error('ancienne liste juste');
+    // Un nouvel envoi, lui, est jugé par paliers.
+    const db = ancienne('CHG-20W'); repondre(db, 'À recompter : CHG-20W, CAB-USBC-1M, COQ-UNI-01'); declencher(S2, db);
+    if (points(db) !== 4.5) throw new Error('nouvel envoi après une ancienne liste : ' + points(db));
+  });
+
   await v('ENT-2.2 : un écart tapé sans formule ne valide pas le jalon 2 ; une autre fonction que SI ne valide pas le 3', async () => {
     const db = exporterC(ouvrirC());
     deposerC(db, { tape: true });
@@ -2209,6 +2220,14 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     }
     const vide = ouvrir6(); deposer6(vide);
     if (S6.ETAPES.filter((e) => /^cinq/.test(e.id)).some((e) => e.verifier(vide).status !== 'attente')) throw new Error('sans liste : rien n\'est jugé');
+  });
+
+  await v('ENT-2.6 : une liste envoyée avant les paliers (20/10/2026) garde son ancien jugement — 4 bonnes sur 5 = 0 (comme avant), les 5 bonnes = 7,5', async () => {
+    const points = (db) => Math.round(S6.ETAPES.filter((e) => /^cinq/.test(e.id) && e.verifier(db).status === 'ok').reduce((t, e) => t + e.poids, 0) * 100) / 100;
+    const ancienne = (liste) => { const db = ouvrir6(); deposer6(db); repondre(db, 'À recompter : ' + liste); declencher(S6, db);
+      db.mails.filter((m) => m.folder === 'out').forEach((m) => { m.ts = Date.UTC(2026, 9, 20, 10); }); return db; };
+    if (points(ancienne('ECO-BT-01, CHG-20W, CLA-SF-01, BOU-17L')) !== 0) throw new Error('ancienne liste à 4 bonnes');
+    if (points(ancienne('ECO-BT-01, CHG-20W, CLA-SF-01, BOU-17L, MIX-PLG')) !== 7.5) throw new Error('ancienne liste juste');
   });
 
   await v('ENT-2.6 : erreurs — synthèse sur l\'export non nettoyé : jalons 1 et 2 ko ; NB.SI au lieu de NB.SI.ENS : 2 ko ; top 5 par fréquence : 4 ko ; date oubliée : BAT-10K et ko', async () => {

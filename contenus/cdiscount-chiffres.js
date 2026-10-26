@@ -253,11 +253,19 @@ const jalonControle = (id) => (db) => {
 // Part de la liste envoyée : bonnes références moins fausses (la meilleure des listes envoyées), jugée contre la synthèse de
 // l'élève comme le jalon `liste`. Trois jalons de palier (1, 2, 3) précèdent `liste` (la liste entière, sans rien en trop) : une
 // liste presque juste rapporte une partie des 8 points, une fausse référence en retire une bonne (26/10/2026, état des lieux des jalons).
+// NOTES DÉJÀ ACQUISES (règle de Tristan : une séance modifiée après passage ne change pas les notes) : une liste envoyée AVANT
+// `DEPUIS_PALIERS` garde son ancien jugement, tout ou rien (juste = les paliers sont tous acquis, sinon aucun).
+export const DEPUIS_PALIERS = Date.UTC(2026, 9, 26, 16, 30);
 function netteListe(db) {
-  const L = listes(db);
-  if (!L.length) return null;
+  const mails = ((db && db.mails) || [])
+    .filter((m) => m.folder === 'out' && nrm(m.toMail) === nrm(EQUIPE.cheffe.mail) && ligne(m.text, LIGNE_LISTE) !== null)
+    .map((m) => ({ ts: m.ts || 0, refs: I.extraireRefs(ligne(m.text, LIGNE_LISTE)) }))
+    .filter((x) => x.refs.length > 0);
+  if (!mails.length) return null;
   const att = listeAttendue(db);
-  return Math.max(...L.map((refs) => {
+  const juste = (refs) => refs.length === att.length && att.every((r) => refs.includes(r));
+  return Math.max(...mails.map(({ ts, refs }) => {
+    if (ts < DEPUIS_PALIERS) return juste(refs) ? att.length : -1;
     const uniques = [...new Set(refs)];
     const bonnes = uniques.filter((r) => att.includes(r)).length;
     return bonnes - (uniques.length - bonnes);

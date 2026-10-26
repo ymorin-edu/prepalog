@@ -319,14 +319,21 @@ export function cinqBonnes(refs, vals) {
 // Palier de la liste des cinq priorités (26/10/2026, état des lieux des jalons) : combien de références bien choisies, une mauvaise
 // en retirant une. « Bien choisie » = de valeur au moins égale à celle du 5e rang (les égalités sont tolérées, comme `cinqBonnes`).
 // Quatre jalons de palier précèdent `cinq` (la liste entière, juste) : une liste presque juste rapporte une partie des 7,5 points.
+// NOTES DÉJÀ ACQUISES (règle de Tristan : une séance modifiée après passage ne change pas les notes) : une liste envoyée AVANT
+// `DEPUIS_PALIERS` garde son ancien jugement, tout ou rien (juste = les paliers sont tous acquis, sinon aucun).
+export const DEPUIS_PALIERS = Date.UTC(2026, 9, 26, 16, 30);
 function netteCinq(db) {
-  const L = listes(db);
-  if (!L.length) return null;
+  const mails = ((db && db.mails) || [])
+    .filter((m) => m.folder === 'out' && nrm(m.toMail) === nrm(EQUIPE.cheffe.mail) && ligne(m.text, LIGNE_LISTE) !== null)
+    .map((m) => ({ ts: m.ts || 0, refs: extraireRefs(ligne(m.text, LIGNE_LISTE), MODELES) }))
+    .filter((x) => x.refs.length > 0);
+  if (!mails.length) return null;
   const vals = valeursDeReference(db);
   const tri = MODELES.map((r) => Math.abs(vals[r] || 0)).sort((a, b) => b - a);
   const seuil = tri[4];
   if (!(seuil > 0)) return 0;
-  return Math.max(...L.map((refs) => {
+  return Math.max(...mails.map(({ ts, refs }) => {
+    if (ts < DEPUIS_PALIERS) return cinqBonnes(refs, vals) ? 5 : -1;
     const uniques = [...new Set(refs)];
     const bonnes = uniques.filter((r) => Math.abs(vals[r] || 0) >= seuil).length;
     return bonnes - (uniques.length - bonnes);
