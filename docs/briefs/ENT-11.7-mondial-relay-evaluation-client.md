@@ -1,6 +1,6 @@
 # Brief de séance — ENT-11.7 Mondial Relay, évaluation : la lampe d'Inès (2de, poste A — gestion, évaluation)
 
-**Statut** : à implémenter (aucune vue nouvelle)
+**Statut** : à valider par Tristan (construite le 26/10/2026, aucune vue nouvelle)
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé
 **Modèle** : Sonnet
 
@@ -79,3 +79,18 @@ Aucune a priori (`dialogue`, documents joints, fiche, phrases à choisir). Véri
 
 - [ ] Montants des niveaux d'assurance N1 à N5 : à relever sur le site Mondial Relay avant d'écrire le cas (b).
 - [ ] La réclamation, côté particulier, se fait-elle bien comme dans l'offre Start (outil en ligne) ? À vérifier.
+
+## Compte rendu *(rempli par Claude Code à la livraison, 26/10/2026)*
+
+- **Fichiers créés / modifiés** : `activites/mondial-relay-evaluation-client.js`, `contenus/mondial-relay-ent117.js` (séance) et `contenus/mondial-relay-ent117-donnees.js` (données pures, chargeables sous Node : cas, tirage, répliques, phrases), `contenus/questions/ENT-11.7.js`, `contenus/corriges/ENT-11.7.js` (corrigé calculé depuis la graine de chaque élève), `outils/test/mr-11.7.mjs` (29 cas). Modifiés : `activites/index.js` (une ligne d'import, après `pelleau-evaluation-controle`), `activites/catalogue.js` (régénéré, 92 séances), `outils/test.mjs` (`'mr-11.7'` dans `BLOCS` et dans le groupe 6 de `GROUPES`). Rien dans `core/`, `styles/base.css` ni `contenus/mondial-relay.js`. Pas de ligne `ENTREPRISES` n° 11 ajoutée (à l'intégrateur).
+- **Écarts par rapport au brief** (et pourquoi) :
+  - Poids codés (16 + 4 d'ouverture = 20) : écoute 3 (numéro 1, situation 1, aucune promesse 1) ; règle 4 ; montant 3 ; dossier 3 (colis et date 1,5, dommage et suite 1,5) ; courriel 2 (décision 0,75, montant 0,75, rappel de la règle 0,5) ; ton 1. Le brief disait « décision, montant et délai » pour le courriel : le **délai de versement n'est pas écrit** (non vérifié), remplacé par le rappel de la règle (72 h, colis refusé au Point Relais).
+  - Le **montant ne compte que si la conclusion est juste aussi** (un « 0 » deviné, cas c et d, ne rapporte rien : un jalon ne récompense pas l'inaction).
+  - Les **questions au fil du §4 bis** sont posées en **réflexions non notées** (`reflexion: true`, trois : numéro d'abord, combien pour une lampe, prochain envoi) pour garder le total à 20 ; elles ne changent pas la note.
+  - Fiche « dossier » remplie dans les quatre cas (suite acceptée ou refusée selon le cas).
+  - Cas (b) : la **valeur déclarée est le prix de la lampe tiré** (construit, ≤ 500 €), annoncée comme telle dans le suivi ; **aucun montant de niveau d'assurance N1 à N5** n'est écrit nulle part.
+  - Tirage : 4 cas à parts égales, prix parmi 8 valeurs, jour de livraison parmi 19 jours (mardi à samedi), retard 0 à 2 jours (a, b, c) ou 5 à 6 jours (d) ; même chaîne de 11 jalons pour tous.
+- **Décisions prises en route** : voir `docs/decisions.md` (26/10/2026, ENT-11.7). Inès est fictive ; le suivi du colis porte la mention « suivi reconstitué pour l'exercice ».
+- **Tests** : bloc `mr-11.7`, 29/29. Éprouvés dans les deux sens : un parcours juste par cas (A, B, C, D = 20/20 à la remise, égal à `noter(db)`) ; sabotages jalon par jalon (appel, ton, règle, montant, dossier, courriel) où seul le jalon visé tombe ; réponse familière ou agressive = seul le ton tombe (1 point sur 20) ; inaction = 0 ; copie rendue et verrouillée ; deux élèves, deux cas, même élève même cas ; 400 graines (les quatre cas sortent, 70 à 130 fois chacun) ; aucune requête externe. Aussi verts : `socle fb-6.2 dialogue` (145/145), `questions dependances copie visibilite` (204/205, la seule chute est la garde `docs/EN-COURS.md`, qui cite des fichiers des autres agents absents de ce worktree : propre à l'intégration), `node outils/catalogue.mjs --verifier`.
+- **Commits** : voir la branche `worktree-agent-a7ccef91d2af57b66` (non poussée).
+- **Reste ouvert** : à regarder à l'écran par Tristan (rien n'a été vu en capture, seulement piloté à la souris dans Playwright) : lisibilité de l'appel et du suivi, ton des répliques d'Inès, cohérence des quatre cas. Questions §11 : montants N1 à N5 non relevés (volontairement non écrits) ; procédure de réclamation côté particulier non vérifiée (la fiche reste générique).
