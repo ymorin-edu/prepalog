@@ -1,8 +1,8 @@
 # Prepalog 2de — cadrage IKEA (entreprise n° 12, après Mondial Relay)
 
 Proposition de Claude du 26/10/2026. **Entreprise choisie par Tristan le 26/10/2026** (IKEA, parmi IKEA, Leroy Merlin et
-Yves Rocher : `/mnt/project-files/2de-apres-mondial-relay/proposition-entreprise-suivante.md`). **Le reste est à trancher
-(§7)**. Rien n'est construit. Suite de `docs/briefs/mondial-relay/CADRAGE-S3-mondial-relay.md`.
+Yves Rocher : `/mnt/project-files/2de-apres-mondial-relay/proposition-entreprise-suivante.md`). **Options du §7 validées par Tristan le 26/10/2026 (« tout ok »)** : les recommandations en gras. Briefs ENT-12.1 à 12.8
+écrits le 26/10 ; choix restants dans `docs/briefs/ikea/A-TRANCHER.md`. Rien n'est construit. Suite de `docs/briefs/mondial-relay/CADRAGE-S3-mondial-relay.md`.
 
 ## 1. Pourquoi IKEA, pourquoi après Mondial Relay
 
