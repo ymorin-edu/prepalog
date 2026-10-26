@@ -7,8 +7,8 @@ le 26/10/2026** (Stellantis Sochaux, parmi Stellantis, Royal Canin et Airbus :
 plus ; le bord de ligne (C2.3) et l'équipe (C3.4) reviennent **plus tard dans l'année**, dans la même usine. Retours de
 Tristan sur la première version : « pas assez visuel et c'est trop tôt pour des terminales, c'est une séance pour le début
 d'année, il faut que ça soit des révisions ; il faut aussi penser à ajouter la méthode ABC pour les terminales ».
-Rien n'est construit. Pages d'essai : `docs/briefs/stellantis/maquette-bord-de-ligne.html` (temps 2) et
-`docs/briefs/stellantis/maquette-abc.html` (temps 1).
+**ABC choisi par Tristan le 26/10/2026 : « en version tableur calcul »** (la page d'essai ABC visuelle est écartée et
+retirée du dépôt). Rien n'est construit. Page d'essai du temps 2 : `docs/briefs/stellantis/maquette-bord-de-ligne.html`.
 
 ## 1. Pourquoi Stellantis, et pourquoi en deux temps
 
@@ -85,9 +85,9 @@ rang : 13.1 à 13.5 viennent avant 13.6 à 13.12 à l'accueil, dans l'ordre de l
 |---|---|---|---|---|
 | ENT-13.1 | **Une voiture par minute** : situer Sochaux (carte de France), suivre une pièce du camion à la ligne (quai, transstockeur, robot, bord de ligne), lire les chiffres réels de l'usine (250 camions par jour, quelques heures de stock) ; ce que la logistique d'une usine a de différent d'un entrepôt de distribution | guidage (rappel) | C1.1 | `localiser`, `ordre`, questions |
 | ENT-13.2 | **Les camions du matin** : poser les camions des fournisseurs sur les quais (`planning`, mode quais), puis contrôler un camion de pièces contre son bon de livraison (`quai`), avec une anomalie à signaler ; c'est la réception de Picard et Spartoo, en usine | entraînement (révision) | C1.3, C1.4 | `planning`, `quai` |
-| ENT-13.3 | **La méthode ABC** : 15 à 20 références du magasin et leurs sorties de la semaine ; les classer, calculer les pourcentages cumulés, tracer les deux coupures (A, B, C), puis dire ce que ça change (où ranger, combien de fois compter) ; le collègue guide | guidage | ABC (C1.5, C1.6) | **page d'essai ABC** (vue nouvelle ou `grille`, option 2 du §9) |
-| ENT-13.4 | **Ranger et compter selon ABC** : refaire le classement seul sur une autre semaine, ranger les palettes reçues au transstockeur selon leur classe (A près de la sortie), puis l'inventaire tournant : compter **les A** cette semaine (« les A se comptent souvent, les C rarement ») et justifier les écarts | entraînement | ABC, C1.5, C1.6 | page ABC, plan d'entrepôt (rangement, critère rotation existant), inventaire |
-| ENT-13.5 | **Évaluation de rentrée** : un camion à recevoir, un classement ABC, quelques palettes à ranger, un écart à expliquer, tirés par élève ; questions clés reprises sans aide | évaluation | C1.4, C1.5, C1.6, ABC | `quai`, page ABC, plan d'entrepôt |
+| ENT-13.3 | **La méthode ABC au tableur** : exporter du logiciel les sorties de la semaine (15 à 20 références), et dans le tableur trier par sorties décroissantes, calculer le total, le pourcentage de chaque référence et le **pourcentage cumulé** en formules, donner la classe (A, B, C) avec `SI`, déposer le fichier ; puis dire ce que ça change (où ranger, combien de fois compter) ; le collègue guide | guidage | ABC (C1.5, C1.6) | **geste tableur** (exporter, traiter, déposer : `core/types/export-tableur.js`), questions |
+| ENT-13.4 | **Ranger et compter selon ABC** : refaire le classement seul au tableur sur une autre semaine (sur la **valeur** : sorties × prix, option 3), ranger les palettes reçues au transstockeur selon leur classe (A près de la sortie), puis l'inventaire tournant : compter **les A** cette semaine (« les A se comptent souvent, les C rarement ») et justifier les écarts | entraînement | ABC, C1.5, C1.6 | geste tableur, plan d'entrepôt (rangement, critère rotation existant), inventaire |
+| ENT-13.5 | **Évaluation de rentrée** : un camion à recevoir, un classement ABC, quelques palettes à ranger, un écart à expliquer, tirés par élève ; questions clés reprises sans aide | évaluation | C1.4, C1.5, C1.6, ABC | `quai`, geste tableur, plan d'entrepôt |
 
 ### Temps 2 — plus tard dans l'année (7 séances)
 
@@ -111,8 +111,15 @@ pondérés sur 20 (poids soumis à Tristan avant de coder).
   15 % ; C : 50 % pour 5 % ; A près des quais et en bas, C au fond et en haut ; sources : rackdestockage.eu, mecalux.fr,
   relevées pour le cadrage du plan d'entrepôt). Classer **sur la valeur** (quantité × prix) pour décider **combien de fois
   compter** est l'autre usage : option 3 du §9.
-- **Les gestes** : trier les références par sorties décroissantes, lire ou calculer le **pourcentage cumulé**, placer les
-  deux coupures, nommer la classe de chaque référence ; puis l'appliquer (ranger, compter).
+- **Les gestes, au tableur** (choix de Tristan) : exporter la liste du logiciel, **trier** par sorties décroissantes,
+  `=SOMME(...)` pour le total, la part de chaque référence (`=B2/B$18`), le **pourcentage cumulé** (`=C2`, puis
+  `=D2+C3` recopié vers le bas), la classe avec `=SI(D2<=80 %;"A";SI(D2<=95 %;"B";"C"))` ; déposer le fichier ; puis
+  appliquer (ranger, compter). Le contrôle porte sur les **valeurs** et sur la **présence des fonctions** (`SOMME`, `SI`),
+  comme pour Cdiscount 2.2 et 2.6 : c'est aussi la **révision du geste tableur de 1re**. Les seuils (80 % et 95 %) sont
+  donnés dans la consigne : la méthode se lit, elle ne se devine pas.
+- **Le graphique** (facultatif, ce que le tableur sait faire) : un histogramme des sorties et la courbe des cumuls ;
+  non contrôlé au dépôt (le contrôle ne lit pas les graphiques), il peut servir de question à l'écran (« lis sur ton
+  graphique… »).
 - **Un fait réel à discuter** (question au fil de 13.3 ou 13.4) : à Sochaux, chaque référence est **répartie sur les quatre
   allées** du transstockeur, pas regroupée près de la sortie ; pourquoi ? (pour qu'une panne d'allée n'arrête pas la
   ligne : la continuité passe avant la distance). L'élève apprend qu'ABC est une règle, pas une loi.
@@ -137,11 +144,11 @@ pondérés sur 20 (poids soumis à Tristan avant de coder).
 
 - `localiser`, `ordre`, `planning` (mode quais), `quai` (contrôle contre le BL), plan d'entrepôt (rangement avec le critère
   **rotation ABC**, déjà dans `core/types/entrepot.js`), inventaire : **tout existe**.
-- **La méthode ABC** : page d'essai `docs/briefs/stellantis/maquette-abc.html`. L'élève **range les références en barres**
-  (de la plus sortie à la moins sortie), la **courbe des pourcentages cumulés** se dessine au fur et à mesure, il **pose les
-  deux coupures** sur la courbe, puis il **range** les palettes A, B et C dans le transstockeur (près ou loin de la sortie).
-  Elle serait une petite vue nouvelle, réutilisable partout où l'on classe (ABC des clients, des fournisseurs, des pannes)
-  ; la version sans vue nouvelle fait le même travail dans `grille` (tableur), moins visuel (option 2 du §9).
+- **La méthode ABC** : au **tableur** (choix de Tristan, 26/10/2026), par le **geste tableur** qui existe déjà
+  (`core/types/export-tableur.js` : un bouton « Exporter » fabrique un vrai .xlsx depuis la base de l'élève, il le traite
+  dans Excel ou LibreOffice, il le dépose, le site contrôle valeurs et fonctions). **Aucune vue nouvelle au temps 1.**
+  Repli si la salle n'a pas de tableur : la `grille` intégrée (formules écrites dans la page), avec la liste **déjà
+  triée** par le logiciel (l'élève perd alors le geste « trier »).
 
 ### Temps 2 : la vue « Bord de ligne »
 
@@ -188,8 +195,8 @@ modèles.
 
 1. **Le temps 1** : **5 séances (13.1 à 13.5)** · 4 séances (13.2 et 13.4 fusionnées : réception et rangement dans la même
    heure).
-2. **La méthode ABC à l'écran** : **une petite vue nouvelle, d'après la page d'essai ABC** (barres, courbe, coupures,
-   rangement) · tout dans `grille` (tableur : trier, formule du cumul, classe), sans vue nouvelle.
+2. ~~La méthode ABC à l'écran~~ : **tranché par Tristan le 26/10 : au tableur**. Je propose le **geste tableur** (vrai
+   Excel : exporter, trier, formules, déposer) · repli : la `grille` intégrée, liste déjà triée.
 3. **Sur quoi classer** : **les sorties (où ranger) en 13.3, puis la valeur (combien de fois compter) en 13.4** · les
    sorties seulement.
 4. **Le temps 2** : **7 séances (13.6 à 13.12)**, placées où tu veux dans l'année · C2.3 seule d'abord (4 séances), C3.4 plus
@@ -199,8 +206,8 @@ modèles.
 
 ## 10. Durées
 
-- Ce cadrage et les deux pages d'essai : faits.
-- Une fois tes choix faits : les 5 briefs du temps 1, avec questions au fil, « Avant de commencer » et poids des jalons,
-  plus le brief moteur de la vue ABC : **environ 2 h**. Les 7 briefs du temps 2 et le brief moteur du bord de ligne :
+- Ce cadrage et la page d'essai du bord de ligne : faits.
+- Une fois tes choix faits : les 5 briefs du temps 1, avec questions au fil, « Avant de commencer » et poids des jalons :
+  **environ 2 h** (aucune vue nouvelle au temps 1). Les 7 briefs du temps 2 et le brief moteur du bord de ligne :
   environ 2 h 30, quand tu voudras.
-- Construction : une demi-journée par séance en moyenne ; la vue ABC environ une journée, la vue Bord de ligne 1 à 2 jours.
+- Construction : une demi-journée par séance en moyenne ; la vue Bord de ligne 1 à 2 jours (temps 2).
