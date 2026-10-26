@@ -549,6 +549,8 @@ const BANQUES_FIGEES = {
   // ENT-11.7 Mondial Relay (26/10/2026) : les quatre cas de la réclamation d'Inès.
   'contenus/mondial-relay-ent117-donnees.js': { cas: ['cas-a', 'cas-b', 'cas-c', 'cas-d'] },
   // ENT-12.2 IKEA (26/10/2026) : une pièce fixe, la commande de Mme Benali ; les poids et les prix sont des valeurs tirées.
+  'contenus/ikea-ent121-donnees.js': { commande: ['commande-benali'] },
+  'contenus/ikea-ent126-donnees.js': { commande: ['commande-benali'] },
   'contenus/ikea-ent122-donnees.js': { commande: ['commande-benali'] },
   'contenus/ikea-ent128-donnees.js': { erreurs: ['doublon', 'calcul', 'tarif', 'qte', 'nonfaite', 'supp'] },
   // ENT-7.1 Decathlon (13/10/2026).

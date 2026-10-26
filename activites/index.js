@@ -125,8 +125,11 @@ export const ACTIVITES = [
   () => import('./mondial-relay-evaluation-tournee.js'),
   () => import('./mondial-relay-evaluation-client.js'),
   // IKEA (centre de distribution clients de Gennevilliers) — ENT-12.x. 2de, poste B transport / poste A gestion / poste C logistique.
+  () => import('./ikea-deux-chemins.js'),
   () => import('./ikea-demande-cliente.js'),
   () => import('./ikea-seine-en-crue.js'),
+  () => import('./ikea-quais-du-mardi.js'),
+  () => import('./ikea-armoire-preparation.js'),
   () => import('./ikea-facture-transporteur.js'),
   () => import('./ikea-evaluation-transport.js'),
   () => import('./ikea-evaluation-gestion.js'),
