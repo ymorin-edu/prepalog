@@ -1,0 +1,456 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — bord de ligne (Stellantis, Sochaux)</title>
+<style>
+:root{--fond:#f4f1ea;--panneau:#fdfbf7;--survol:#f9f6ef;--encre:#1a1915;--doux:#555047;--filet:#e3ded3;--ardoise:#107c41;--vert:#0b7a41;--rouge:#9d2727;--terre:#9c620a;--bleu:#2f5f9e;--jauge:#8b857a}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--encre);font:15px/1.4 Inter,system-ui,"Segoe UI",sans-serif}
+button{font:inherit}
+.note{margin:6px 12px 0;font-size:12.5px;color:var(--doux);border:1px dashed var(--filet);border-radius:6px;padding:6px 10px;background:var(--panneau);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.note .modes{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.note .modes button{border:1px solid var(--filet);background:var(--fond);border-radius:6px;padding:3px 9px;cursor:pointer}
+.note .modes button[aria-pressed="true"]{border:2px solid var(--ardoise);color:var(--ardoise);font-weight:600}
+.bandeau{display:flex;align-items:center;gap:12px;margin:6px 12px 0;padding:5px 12px;border-radius:8px;background:#1c2541;color:#eef1f8;flex-wrap:wrap}
+.bandeau b{font-size:16px}.bandeau span{font-size:13px;opacity:.9}
+.bandeau .compteurs{margin-left:auto;display:flex;gap:8px}
+.bandeau .compteurs span{font:600 13px ui-monospace,Consolas,monospace;background:rgba(255,255,255,.12);border-radius:6px;padding:3px 9px;opacity:1}
+.consigne{margin:6px 12px 0;background:var(--panneau);border:1px solid var(--filet);border-left:4px solid var(--terre);border-radius:6px;padding:5px 10px;font-size:13.5px}
+.consigne b{font-size:12.5px;color:var(--doux);margin-right:6px}
+.grille{display:grid;grid-template-columns:minmax(0,1fr) 310px;gap:10px;margin:6px 12px 8px}
+@media (max-width:900px){.grille{grid-template-columns:minmax(0,1fr)}}
+.zone{background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:8px 10px;min-width:0}
+.zone h2{font-size:13.5px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
+.zone h2 small{font-weight:400;color:var(--doux)}
+svg{display:block;width:100%;height:auto}
+.arret{display:none;margin:6px 0 0;border:2px solid var(--rouge);color:var(--rouge);border-radius:6px;padding:5px 10px;font-weight:600;font-size:14px}
+.arret.ouv{display:block}
+.postes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
+@media (max-width:640px){.postes{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.poste{border:1px solid var(--filet);border-radius:8px;padding:6px 8px;background:var(--fond);display:flex;flex-direction:column;gap:5px}
+.poste.rupture{border:2px solid var(--rouge)}
+.poste .t{font-size:12px;color:var(--doux)}
+.poste .ref{font-weight:700;font-size:14px;line-height:1.2}
+.poste .conso{font-size:12px;color:var(--doux)}
+.emplts{display:flex;gap:6px}
+.emplt{flex:1;border:1.5px solid var(--encre);border-radius:4px;height:64px;position:relative;background:var(--panneau);overflow:hidden}
+.emplt.vide{border-style:dashed;border-color:var(--jauge)}
+.emplt i{position:absolute;left:0;right:0;bottom:0;background:var(--jauge);opacity:.45}
+.emplt b{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:600 13px ui-monospace,Consolas,monospace}
+.emplt em{position:absolute;top:2px;left:0;right:0;text-align:center;font-style:normal;font-size:10px;color:var(--doux)}
+.couv{font-size:12.5px}
+.couv.bas{color:var(--terre);font-weight:600}
+.couv.cache{visibility:hidden}
+.sequence{display:flex;gap:4px;flex-wrap:wrap;align-items:center;margin-top:8px;font-size:12.5px;color:var(--doux)}
+.sequence span{border:1px solid var(--filet);border-radius:4px;padding:1px 6px;font:600 12px ui-monospace,Consolas,monospace;color:var(--encre);background:var(--panneau)}
+.sequence span.s5008{border:1.5px solid var(--encre)}
+.cartes{display:flex;flex-direction:column;gap:5px;min-height:48px}
+.cartes .vide{color:var(--doux);font-size:13px;padding:6px 0}
+.carte{display:flex;gap:8px;align-items:center;text-align:left;border:1.5px solid var(--encre);background:#fbf8f1;border-radius:4px;padding:5px 8px;cursor:pointer;color:var(--encre)}
+.carte:hover{background:var(--survol)}
+.carte:focus-visible{outline:3px solid var(--bleu);outline-offset:2px}
+.carte[aria-pressed="true"]{border:3px solid var(--bleu);padding:3.5px 6.5px}
+.carte .k{font:700 11px ui-monospace,Consolas,monospace;border:1px solid var(--encre);border-radius:3px;padding:0 4px}
+.carte .d{flex:1;font-size:13px;line-height:1.2}
+.carte .d small{display:block;color:var(--doux);font-size:11.5px}
+.carte .age{font:600 12px ui-monospace,Consolas,monospace;color:var(--doux)}
+.carte .age.vieux{color:var(--terre)}
+.charge{font-size:12.5px;color:var(--doux);margin:6px 0 4px}
+.charge.trop{color:var(--rouge);font-weight:600}
+.robots{display:flex;flex-direction:column;gap:4px;margin-top:4px}
+.robot{display:flex;align-items:center;gap:8px;font-size:13px}
+.robot .nom{font:700 12px ui-monospace,Consolas,monospace;border:1px solid var(--filet);border-radius:4px;padding:1px 5px}
+.robot .etat{flex:1;color:var(--doux)}
+.actions{display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-top:6px}
+.btn{border:2px solid var(--encre);background:var(--panneau);border-radius:6px;padding:5px 12px;cursor:pointer;font-weight:600;color:var(--encre)}
+.btn:hover{background:var(--survol)}
+.btn:disabled{opacity:.45;cursor:default}
+.btn:focus-visible{outline:3px solid var(--bleu);outline-offset:2px}
+label.urg{font-size:13px;display:flex;gap:5px;align-items:center}
+.retour{font-size:13px;min-height:18px;margin-top:4px}
+.retour.ok{color:var(--vert)}.retour.ko{color:var(--rouge)}
+table.mag{width:100%;border-collapse:collapse;font-size:13px}
+table.mag td{padding:2px 4px;border-bottom:1px solid var(--filet)}
+table.mag td.n{text-align:right;font:600 13px ui-monospace,Consolas,monospace}
+.camion{font-size:12.5px;color:var(--doux);margin-top:4px}
+.camion.retard{color:var(--terre);font-weight:600}
+.droite{display:flex;flex-direction:column;gap:10px}
+.coach{display:none;border:1px solid var(--filet);border-left:4px solid var(--ardoise);border-radius:6px;background:var(--panneau);padding:6px 10px;margin-top:8px;font-size:13.5px}
+.coach.ouv{display:block}
+.coach button{margin-top:6px}
+/* fenêtre de message / question */
+.voile{position:fixed;inset:0;background:rgba(26,25,21,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+.voile.ouv{display:flex}
+.fenetre{background:var(--panneau);border:1px solid var(--filet);border-radius:10px;max-width:560px;width:100%;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+.fenetre .de{font-size:12.5px;color:var(--doux)}
+.fenetre h3{margin:2px 0 8px;font-size:16px}
+.fenetre p{margin:6px 0}
+.choix{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.choix button{text-align:left;border:1.5px solid var(--encre);background:var(--fond);border-radius:6px;padding:6px 10px;cursor:pointer;color:var(--encre)}
+.choix button:hover{background:var(--survol)}
+.choix button:disabled{cursor:default;opacity:.75}
+.choix button.juste{border:2px solid var(--vert);color:var(--vert);font-weight:600}
+.choix button.faux{color:var(--rouge);border-color:var(--rouge)}
+.bilan table{width:100%;border-collapse:collapse;font-size:14px;margin-top:6px}
+.bilan td{padding:4px 6px;border-bottom:1px solid var(--filet)}
+.bilan td.v{text-align:right;font-weight:600}
+.bilan .ok{color:var(--vert)}.bilan .ko{color:var(--rouge)}
+.pied{margin:4px 12px 12px;font-size:11.5px;color:var(--doux)}
+</style>
+</head>
+<body>
+
+<div class="note">
+  <span><b>Page d'essai</b> — vue « Bord de ligne » (Stellantis, Sochaux). Rien n'est branché au site, rien n'est noté.</span>
+  <span class="modes" role="group" aria-label="Réglages de l'essai">
+    <button type="button" id="mGuidage" aria-pressed="true">Guidage</button>
+    <button type="button" id="mEntr" aria-pressed="false">Entraînement</button>
+    <span style="width:8px"></span>
+    <button type="button" id="bPause">⏸ Pause</button>
+    <button type="button" id="bVite" aria-pressed="false">Vitesse ×2</button>
+    <button type="button" id="bRecom">Recommencer</button>
+  </span>
+</div>
+
+<div class="bandeau">
+  <b>Stellantis — Sochaux</b><span>Montage · ligne Peugeot 3008 / 5008 · équipe du matin</span>
+  <span class="compteurs"><span id="horloge">06:00</span><span id="cpt">0 / 90 voitures</span></span>
+</div>
+
+<div class="consigne" id="consigne"><b>Ta mission</b>Tu tiens l'approvisionnement de quatre postes de la ligne. Quand un contenant se vide,
+sa <strong>carte kanban</strong> tombe dans la boîte à droite : envoie un robot chercher un contenant plein au transstockeur avant que le poste n'en manque.
+Un robot porte <strong>2 contenants et 1 000 kg</strong> au plus.</div>
+
+<div class="grille">
+  <div class="zone">
+    <h2>La ligne <small id="vitesseTxt">une voiture par minute (ici accélérée)</small></h2>
+    <svg id="ligne" viewBox="0 0 800 92" role="img" aria-label="Ligne de montage"></svg>
+    <div class="arret" id="arret" role="alert"></div>
+    <div class="postes" id="postes"></div>
+    <div class="sequence" id="sequence"></div>
+    <div class="coach" id="coach" role="status"></div>
+  </div>
+
+  <div class="droite">
+    <div class="zone">
+      <h2>Boîte kanban <small>cartes à traiter</small></h2>
+      <div class="cartes" id="cartes"></div>
+      <div class="charge" id="charge">Choisis une ou deux cartes.</div>
+      <div class="robots" id="robots"></div>
+      <div class="actions">
+        <button type="button" class="btn" id="bEnvoyer" disabled>Envoyer un robot</button>
+        <label class="urg"><input type="checkbox" id="urgent"> appel urgent</label>
+      </div>
+      <div class="retour" id="retour" aria-live="polite"></div>
+    </div>
+    <div class="zone">
+      <h2>Transstockeur <small>contenants pleins en stock</small></h2>
+      <table class="mag" id="mag"></table>
+      <div class="camion" id="camion"></div>
+    </div>
+  </div>
+</div>
+
+<p class="pied">Document pédagogique — reconstitution, non contractuel. Vérifié (presse 2022-2026) : une voiture par minute, 3008 et 5008 sur la même ligne (environ 70 / 30), transstockeur
+qui alimente la ligne, robots qui portent une tonne, stock de quelques heures au bord de ligne, pièces commandées le matin à un équipementier voisin, une chaîne arrêtée immobilise environ 1 200 personnes.
+Construit : les références, les quantités par contenant, les poids, les délais des robots, les stocks, l'heure et le retard du camion.</p>
+
+<div class="voile" id="voile"><div class="fenetre" id="fenetre" role="dialog" aria-modal="true"></div></div>
+
+<script>
+'use strict';
+// ---------- Données de la séance (déclarées par le contenu dans le vrai moteur) ----------
+const REFS = [
+  { id: 'ROUE',  poste: 'Poste 1 · roues',     nom: 'Roues complètes',  contenant: 'palette', par: 28, poids: 560, besoin: { 3008: 4, 5008: 4 }, depart: [12, 28], mag: 20 },
+  { id: 'RETRO', poste: 'Poste 2 · portes',    nom: 'Rétroviseurs',     contenant: 'bac',     par: 30, poids: 60,  besoin: { 3008: 2, 5008: 2 }, depart: [20, 30], mag: 10 },
+  { id: 'PDB',   poste: 'Poste 3 · habitacle', nom: 'Planches de bord', contenant: 'rack',    par: 10, poids: 520, besoin: { 3008: 1, 5008: 1 }, depart: [6, 10],  mag: 3 },
+  { id: 'RANG3', poste: 'Poste 4 · sièges',    nom: 'Sièges du 3e rang', contenant: 'rack',   par: 6,  poids: 300, besoin: { 3008: 0, 5008: 1 }, depart: [3, 6],   mag: 5 },
+];
+const MOTIF = [3008, 3008, 5008, 3008, 3008, 3008, 5008, 3008, 3008, 5008]; // 7 / 3 comme la ligne réelle (environ 70 / 30)
+const DEBUT = 6 * 60, FIN = 7 * 60 + 30, OBJECTIF = 90;
+const TRAJET = 5, TRAJET_URGENT = 3, RETOUR = 1, NB_ROBOTS = 2, CHARGE_MAX = 1000, PLACES = 2;
+const CAMION = { ref: 'PDB', prevu: 6 * 60 + 30, retard: 7 * 60 + 15, secours: 6 * 60 + 38, racks: 8, annonce: 6 * 60 + 20 };
+const PERSONNES = 1200; // vérifié : une chaîne à l'arrêt immobilise environ 1 200 personnes
+
+// ---------- État ----------
+let S;
+function neuf() {
+  S = {
+    t: DEBUT, n: 0, arretMin: 0, arretCause: null, urgents: 0, envois: 0, envoisSimples: 0, retards: [],
+    pos: {}, mag: {}, cartes: [], sel: [], robots: [], fin: false, pause: false,
+    camion: { arrivee: CAMION.prevu, statut: 'prévu', livre: false },
+    questionFaite: false, reponseHeure: null, reponseAction: null, coachVu: {},
+  };
+  for (const r of REFS) {
+    S.pos[r.id] = r.depart.map(q => ({ reste: q }));
+    S.mag[r.id] = r.mag;
+  }
+  for (let i = 0; i < NB_ROBOTS; i++) S.robots.push({ id: 'R' + (i + 1), libreA: DEBUT, livraison: null });
+}
+let mode = 'guidage', vite = false, minuteur = null, numCarte = 0;
+const $ = id => document.getElementById(id);
+const hh = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+const modele = i => MOTIF[i % MOTIF.length];
+const ref = id => REFS.find(r => r.id === id);
+const surLigne = id => S.pos[id].reduce((s, c) => s + c.reste, 0);
+
+// Combien de voitures la ligne peut-elle encore monter avec ce qui est au bord de ligne ?
+function couverture(id) {
+  let reste = surLigne(id), k = 0;
+  const r = ref(id);
+  while (k < 200) { const b = r.besoin[modele(S.n + k)]; if (reste < b) break; reste -= b; k++; }
+  return k;
+}
+
+// ---------- Une minute de ligne ----------
+function minute() {
+  if (S.fin) return;
+  // arrivées : camion, robots
+  if (!S.camion.livre && S.t >= S.camion.arrivee) {
+    S.camion.livre = true; S.mag[CAMION.ref] += CAMION.racks; S.camion.statut = 'livré';
+  }
+  for (const rb of S.robots) if (rb.livraison && S.t >= rb.livraison.a) livrer(rb);
+  // la voiture du moment peut-elle passer ?
+  const m = modele(S.n);
+  const manque = REFS.filter(r => surLigne(r.id) < r.besoin[m]);
+  if (manque.length) {
+    S.arretMin++; S.arretCause = manque.map(r => r.nom).join(', ');
+  } else {
+    S.arretCause = null;
+    for (const r of REFS) consommer(r, r.besoin[m]);
+    S.n++;
+  }
+  S.t++;
+  if (S.t === CAMION.annonce) annonceRetard();
+  if (S.t >= FIN) terminer();
+  dessiner();
+}
+
+function consommer(r, q) {
+  const pile = S.pos[r.id];
+  while (q > 0) {
+    const c = pile[0], pris = Math.min(q, c.reste);
+    c.reste -= pris; q -= pris;
+    if (c.reste === 0) {
+      pile.shift();
+      S.cartes.push({ num: ++numCarte, ref: r.id, depuis: S.t });
+      if (mode === 'guidage' && !S.coachVu.carte) coach('carte');
+    }
+  }
+}
+
+function livrer(rb) {
+  for (const id of rb.livraison.refs) {
+    const pile = S.pos[id];
+    if (pile.length < PLACES) pile.push({ reste: ref(id).par });
+  }
+  rb.livraison = null;
+}
+
+// ---------- Envoyer un robot ----------
+function poidsSel() { return S.sel.reduce((s, n) => s + ref(S.cartes.find(c => c.num === n).ref).poids, 0); }
+function envoyer() {
+  const rb = S.robots.find(r => r.libreA <= S.t);
+  const cartes = S.sel.map(n => S.cartes.find(c => c.num === n));
+  const retour = $('retour');
+  if (!rb) { retour.className = 'retour ko'; retour.textContent = '✗ Aucun robot libre : attends le retour du premier.'; return; }
+  if (!cartes.length) return;
+  if (cartes.length > PLACES || poidsSel() > CHARGE_MAX) { retour.className = 'retour ko'; retour.textContent = '✗ Trop lourd ou trop de contenants pour un seul robot.'; return; }
+  for (const c of cartes) if (S.mag[c.ref] < 1) { retour.className = 'retour ko'; retour.textContent = '✗ Plus aucun contenant de ' + ref(c.ref).nom.toLowerCase() + ' au transstockeur.'; return; }
+  const urg = $('urgent').checked, d = urg ? TRAJET_URGENT : TRAJET;
+  for (const c of cartes) { S.mag[c.ref]--; S.retards.push(S.t - c.depuis); }
+  rb.livraison = { a: S.t + d, refs: cartes.map(c => c.ref) };
+  rb.libreA = S.t + d + RETOUR;
+  S.cartes = S.cartes.filter(c => !S.sel.includes(c.num));
+  S.sel = []; S.envois++; if (cartes.length === 1) S.envoisSimples++; if (urg) S.urgents++;
+  $('urgent').checked = false;
+  retour.className = 'retour';
+  retour.textContent = rb.id + ' part, livraison au bord de ligne à ' + hh(S.t + d) + '.';
+  dessiner();
+}
+
+// ---------- Le retard du camion (question au fil) ----------
+function annonceRetard() {
+  S.camion.arrivee = CAMION.retard; S.camion.statut = 'en retard';
+  const reste = surLigne('PDB') + S.mag.PDB * ref('PDB').par;
+  const juste = S.t + reste; // la ligne monte une voiture par minute, une planche par voiture
+  const choix = [juste, CAMION.retard, juste + 10, juste - 10].filter((v, i, a) => a.indexOf(v) === i);
+  melanger(choix);
+  ouvrir(`<div class="de">Message de Karim, chef d'équipe logistique · ${hh(S.t)}</div>
+    <h3>Le camion de planches de bord aura 45 minutes de retard</h3>
+    <p>Le transporteur vient d'appeler : le camion de l'équipementier, prévu à <b>${hh(CAMION.prevu)}</b>, arrivera vers <b>${hh(CAMION.retard)}</b>.</p>
+    <p>Regarde ce qui reste au bord de ligne et au transstockeur. <b>Si rien ne change et que la ligne tourne sans autre arrêt, à quelle heure s'arrêtera-t-elle faute de planches de bord ?</b></p>
+    <div class="choix" id="q1">${choix.map(v => `<button type="button" data-v="${v}">vers ${hh(v)}</button>`).join('')}</div>
+    <div id="q1r" class="retour"></div>`);
+  $('q1').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    const v = +b.dataset.v; S.reponseHeure = { v, juste };
+    for (const x of $('q1').querySelectorAll('button')) { x.disabled = true; if (+x.dataset.v === juste && mode === 'guidage') x.classList.add('juste'); }
+    if (mode === 'guidage') {
+      if (v !== juste) b.classList.add('faux');
+      $('q1r').innerHTML = v === juste ? '<span class="ok">✓ Juste.</span>' :
+        `<span class="ko">✗ Il reste ${reste} planches en tout (${surLigne('PDB')} au bord de ligne + ${S.mag.PDB} racks de ${ref('PDB').par}), une par voiture, une voiture par minute : ${hh(S.t)} + ${reste} min.</span>`;
+    } else $('q1r').textContent = 'Réponse notée. Tu verras la correction au bilan.';
+    setTimeout(question2, mode === 'guidage' ? 2200 : 900);
+  });
+}
+function question2() {
+  ouvrir(`<div class="de">Message de Karim · ${hh(S.t)}</div>
+    <h3>Que proposes-tu ?</h3>
+    <p>L'arrêt de la ligne immobiliserait environ <b>${PERSONNES} personnes</b>. L'équipementier est à une vingtaine de kilomètres.</p>
+    <div class="choix" id="q2">
+      <button type="button" data-v="secours">Demander un convoi de secours à l'équipementier et prévenir le chef d'atelier du montage</button>
+      <button type="button" data-v="attendre">Attendre le camion : il arrivera bien</button>
+      <button type="button" data-v="vider">Envoyer tout de suite les ${S.mag.PDB} racks du transstockeur au bord de ligne</button>
+    </div><div id="q2r" class="retour"></div>`);
+  $('q2').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    S.reponseAction = b.dataset.v;
+    for (const x of $('q2').querySelectorAll('button')) x.disabled = true;
+    if (b.dataset.v === 'secours') { S.camion.arrivee = CAMION.secours; S.camion.statut = 'convoi de secours'; }
+    const txt = {
+      secours: `Karim : « Je préviens l'atelier. Le convoi part, arrivée prévue à ${hh(CAMION.secours)}. »`,
+      attendre: `Karim : « D'accord… On croise les doigts. »`,
+      vider: `Karim : « Le bord de ligne n'a que ${PLACES} places par poste. Ça ne change rien au total qui reste. »`,
+    }[b.dataset.v];
+    $('q2r').textContent = txt;
+    setTimeout(fermer, 1800);
+  });
+}
+
+// ---------- Guidage : le collègue explique ----------
+function coach(cle) {
+  S.coachVu[cle] = true;
+  const textes = {
+    carte: `<b>Une carte kanban vient de tomber.</b> Un contenant s'est vidé : le poste travaille maintenant sur son <b>second contenant</b>.
+      La carte dit quoi rapporter. Clique-la, puis « Envoyer un robot ». Le robot met ${TRAJET} minutes : il faut qu'il arrive avant que le second contenant soit vide
+      (regarde « tient encore » sous le poste).
+      Tu n'as que deux robots : quand une autre carte attend, mets-les <b>deux dans le même robot</b> si le poids le permet.`,
+  };
+  const c = $('coach'); c.innerHTML = textes[cle] + '<br><button type="button" class="btn" id="coachOk">J\'ai compris, on continue</button>';
+  c.classList.add('ouv'); S.pause = true; majPause();
+  $('coachOk').addEventListener('click', () => { c.classList.remove('ouv'); S.pause = false; majPause(); });
+}
+
+// ---------- Fin ----------
+function terminer() {
+  S.fin = true; arreter();
+  const moy = S.retards.length ? Math.round(S.retards.reduce((a, b) => a + b, 0) / S.retards.length * 10) / 10 : 0;
+  const rh = S.reponseHeure;
+  ouvrir(`<div class="bilan"><div class="de">Fin de l'essai · ${hh(S.t)}</div><h3>Le bilan de ta matinée</h3>
+    <table>
+      <tr><td>Voitures montées</td><td class="v ${S.n >= OBJECTIF ? 'ok' : 'ko'}">${S.n} / ${OBJECTIF} ${S.n >= OBJECTIF ? '✓' : '✗'}</td></tr>
+      <tr><td>Minutes de ligne arrêtée</td><td class="v ${S.arretMin ? 'ko' : 'ok'}">${S.arretMin} ${S.arretMin ? '✗' : '✓'}</td></tr>
+      <tr><td>Temps perdu (personnes × minutes)</td><td class="v">${(S.arretMin * PERSONNES).toLocaleString('fr-FR')}</td></tr>
+      <tr><td>Robots envoyés (dont à un seul contenant)</td><td class="v">${S.envois} (${S.envoisSimples})</td></tr>
+      <tr><td>Délai moyen entre la carte et l'envoi</td><td class="v">${moy} min</td></tr>
+      <tr><td>Appels urgents</td><td class="v">${S.urgents}</td></tr>
+      <tr><td>Heure d'arrêt prévue (question)</td><td class="v ${rh && rh.v === rh.juste ? 'ok' : 'ko'}">${rh ? hh(rh.v) + (rh.v === rh.juste ? ' ✓' : ' ✗ (juste : ' + hh(rh.juste) + ')') : '—'}</td></tr>
+      <tr><td>Ta décision</td><td class="v ${S.reponseAction === 'secours' ? 'ok' : 'ko'}">${{ secours: 'convoi de secours ✓', attendre: 'attendre ✗', vider: 'vider le transstockeur ✗' }[S.reponseAction] || '—'}</td></tr>
+    </table>
+    <p style="font-size:13px;color:var(--doux)">Dans le site, chaque ligne deviendrait un jalon pondéré (poids à valider). Le premier résultat serait gardé.</p>
+    <div class="actions"><button type="button" class="btn" id="bRejouer">Recommencer</button></div></div>`);
+  $('bRejouer').addEventListener('click', () => { fermer(); recommencer(); });
+}
+
+// ---------- Dessin ----------
+function dessiner() {
+  $('horloge').textContent = hh(S.t);
+  $('cpt').textContent = S.n + ' / ' + OBJECTIF + ' voitures';
+  // la ligne : des voitures qui avancent
+  const svg = $('ligne'); let h = '';
+  h += '<rect x="10" y="40" width="780" height="14" rx="3" fill="none" stroke="#8b857a" stroke-width="1.5"/>';
+  REFS.forEach((r, i) => { const x = 110 + i * 180; h += `<line x1="${x}" y1="58" x2="${x}" y2="86" stroke="#8b857a" stroke-dasharray="3 3"/><text x="${x}" y="90" font-size="11" text-anchor="middle" fill="#555047">${r.poste.split(' · ')[0]}</text>`; });
+  for (let k = 0; k < 9; k++) {
+    const x = 20 + k * 92 + (S.arretCause ? 0 : 0), m = modele(Math.max(0, S.n - k) + 0);
+    if (S.n - k < 0) continue;
+    const big = m === 5008;
+    h += `<g transform="translate(${760 - k * 92 - 60},${big ? 14 : 18})"><rect width="${big ? 70 : 62}" height="${big ? 26 : 22}" rx="7" fill="#fdfbf7" stroke="#1a1915" stroke-width="${big ? 2 : 1.2}"/>
+      <text x="${(big ? 70 : 62) / 2}" y="${big ? 18 : 15}" font-size="11" text-anchor="middle" font-family="ui-monospace,Consolas,monospace" fill="#1a1915">${m}</text></g>`;
+  }
+  svg.innerHTML = h;
+  const ar = $('arret');
+  if (S.arretCause) { ar.classList.add('ouv'); ar.textContent = '✗ Ligne arrêtée depuis ' + S.arretMin + ' min : plus de ' + S.arretCause.toLowerCase() + ' au bord de ligne. ' + PERSONNES + ' personnes attendent.'; }
+  else ar.classList.remove('ouv');
+  // postes
+  $('postes').innerHTML = REFS.map(r => {
+    const pile = S.pos[r.id], cv = couverture(r.id), m = modele(S.n);
+    const emplts = [0, 1].map(i => {
+      const c = pile[i];
+      if (!c) return `<div class="emplt vide" title="emplacement vide"><em>${i ? 'd\'avance' : 'en cours'}</em></div>`;
+      return `<div class="emplt"><i style="height:${Math.round(c.reste / r.par * 100)}%"></i><em>${i ? 'd\'avance' : 'en cours'}</em><b>${c.reste}</b></div>`;
+    }).join('');
+    const rupt = S.arretCause && surLigne(r.id) < r.besoin[m];
+    return `<div class="poste${rupt ? ' rupture' : ''}"><div class="t">${r.poste}</div><div class="ref">${r.nom}</div>
+      <div class="conso">${r.besoin[3008] === r.besoin[5008] ? r.besoin[3008] + ' par voiture' : '1 par 5008, 0 par 3008'} · ${r.contenant} de ${r.par}</div>
+      <div class="emplts">${emplts}</div>
+      <div class="couv${cv <= TRAJET + 1 ? ' bas' : ''}${mode === 'entrainement' ? ' cache' : ''}">tient encore ${cv} voiture${cv > 1 ? 's' : ''}</div></div>`;
+  }).join('');
+  // séquence
+  const seq = []; for (let k = 0; k < 12; k++) { const m = modele(S.n + k); seq.push(`<span class="s${m}">${m}</span>`); }
+  $('sequence').innerHTML = 'Séquence à venir : ' + seq.join('');
+  // cartes
+  const cartes = $('cartes');
+  cartes.innerHTML = S.cartes.length ? S.cartes.map(c => {
+    const r = ref(c.ref), age = S.t - c.depuis;
+    return `<button type="button" class="carte" data-n="${c.num}" aria-pressed="${S.sel.includes(c.num)}">
+      <span class="k">${r.id}</span><span class="d">${r.nom}<small>${r.poste} · 1 ${r.contenant} de ${r.par} · ${r.poids} kg</small></span>
+      <span class="age${age >= 3 ? ' vieux' : ''}">${age} min</span></button>`;
+  }).join('') : '<div class="vide">Aucune carte : tous les postes ont leurs deux contenants.</div>';
+  const p = poidsSel(), ch = $('charge');
+  ch.className = 'charge' + (S.sel.length > PLACES || p > CHARGE_MAX ? ' trop' : '');
+  ch.textContent = S.sel.length ? `Chargement : ${S.sel.length} contenant${S.sel.length > 1 ? 's' : ''}, ${p} kg sur ${CHARGE_MAX}.` : 'Choisis une ou deux cartes.';
+  $('robots').innerHTML = S.robots.map(rb => {
+    let e = 'libre, au transstockeur';
+    if (rb.livraison) e = 'en route · au bord de ligne à ' + hh(rb.livraison.a);
+    else if (rb.libreA > S.t) e = 'revient · libre à ' + hh(rb.libreA);
+    return `<div class="robot"><span class="nom">${rb.id}</span><span class="etat">${e}</span></div>`;
+  }).join('');
+  $('bEnvoyer').disabled = !S.sel.length || S.fin;
+  // transstockeur
+  $('mag').innerHTML = REFS.map(r => `<tr><td>${r.nom}</td><td>${r.contenant}s de ${r.par}</td><td class="n">${S.mag[r.id]}</td></tr>`).join('');
+  const cm = $('camion');
+  cm.className = 'camion' + (S.camion.statut === 'en retard' ? ' retard' : '');
+  cm.textContent = S.camion.livre ? `Camion de planches de bord livré (${CAMION.racks} racks).` :
+    `Camion de planches de bord (${CAMION.racks} racks) : ${S.camion.statut}, arrivée ${hh(S.camion.arrivee)}.`;
+}
+
+// ---------- Fenêtre ----------
+function ouvrir(html) { $('fenetre').innerHTML = html; $('voile').classList.add('ouv'); S.pause = true; majPause(); const b = $('fenetre').querySelector('button'); if (b) b.focus(); }
+function fermer() { $('voile').classList.remove('ouv'); if (!S.fin) { S.pause = false; majPause(); } }
+
+// ---------- Horloge ----------
+function demarrer() { arreter(); minuteur = setInterval(() => { if (!S.pause) minute(); }, (mode === 'guidage' ? 1800 : 1100) / (vite ? 2 : 1)); }
+function arreter() { if (minuteur) clearInterval(minuteur); minuteur = null; }
+function majPause() { $('bPause').textContent = S.pause ? '▶ Reprendre' : '⏸ Pause'; }
+function melanger(a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } }
+function recommencer() { numCarte = 0; neuf(); $('retour').textContent = ''; $('coach').classList.remove('ouv'); dessiner(); demarrer(); majPause(); }
+
+// ---------- Écouteurs ----------
+$('cartes').addEventListener('click', e => {
+  const b = e.target.closest('.carte'); if (!b || S.fin) return;
+  const n = +b.dataset.n;
+  S.sel = S.sel.includes(n) ? S.sel.filter(x => x !== n) : [...S.sel, n];
+  dessiner();
+  const nb = document.querySelector(`.carte[data-n="${n}"]`); if (nb && e.detail === 0) nb.focus();
+});
+$('bEnvoyer').addEventListener('click', envoyer);
+$('bPause').addEventListener('click', () => { if (S.fin || $('voile').classList.contains('ouv')) return; S.pause = !S.pause; majPause(); });
+$('bVite').addEventListener('click', () => { vite = !vite; $('bVite').setAttribute('aria-pressed', vite); demarrer(); });
+$('bRecom').addEventListener('click', () => { fermer(); recommencer(); });
+function choisirMode(m) {
+  mode = m;
+  $('mGuidage').setAttribute('aria-pressed', m === 'guidage');
+  $('mEntr').setAttribute('aria-pressed', m === 'entrainement');
+  $('vitesseTxt').textContent = m === 'guidage' ? 'une voiture par minute (ici ralentie, le collègue t\'arrête au premier geste)' : 'une voiture par minute (ici accélérée, sans aide : à toi de calculer ce que tient chaque poste)';
+  fermer(); recommencer();
+}
+$('mGuidage').addEventListener('click', () => choisirMode('guidage'));
+$('mEntr').addEventListener('click', () => choisirMode('entrainement'));
+
+neuf(); dessiner(); demarrer();
+</script>
+</body>
+</html>
