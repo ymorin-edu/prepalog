@@ -99,6 +99,15 @@ reste sous toutes les limites).
 `docs/briefs/mondial-relay/maquette-tri-colis.html`, en ligne sur prepalog.fr. Retours de Tristan à noter au §8 avant de
 coder la vue.
 
-## 8. Retours d'écran de Tristan (à remplir)
+## 8. Retours d'écran de Tristan
+
+- **26/10/2026 (v1 → v2 de la page d'essai)** : (1) le **carton est cliquable** : de loin, son étiquette ne se lit pas ;
+  au clic, une fiche « Le colis de près » montre l'étiquette lisible (numéro, Point Relais, adresse, code postal et
+  commune) et **le carton dessiné avec ses trois dimensions** (cotes) ; (2) la **balance** est une balance numérique
+  **au milieu, sous le tapis** (afficheur à chiffres), plus de pastilles « Balance » et « Portique » ; (3) **envoyer
+  demande une validation** : l'élève choisit une sortie (ou l'écart et son motif), puis clique « Envoyer le colis en T3 »
+  (ou « Mettre le colis à l'écart ») ; clavier : 1 à 5 et 0 choisissent, Entrée valide. Conséquences : le temps par colis
+  de l'entraînement passe de 14 à 20 s (proposition) ; le motif « étiquette illisible » a désormais un colis (Les Riceys,
+  étiquette floue dans la fiche).
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
