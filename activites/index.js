@@ -134,6 +134,7 @@ export const ACTIVITES = [
   () => import('./ikea-evaluation-transport.js'),
   () => import('./ikea-evaluation-gestion.js'),
   // Stellantis (usine de Sochaux) — ENT-13.x. Terminale, temps 1 : la rentrée (13.1 à 13.5).
+  () => import('./stellantis-camions-du-matin.js'),
   () => import('./stellantis-methode-abc.js'),
   () => import('./stellantis-ranger-compter-abc.js'),
 ];

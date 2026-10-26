@@ -52,6 +52,7 @@ export const KARIM = { nom: 'Karim', mail: EQUIPE.karim.mail };
 
 // ─────────────────────────────────────────── les dates du scénario (septembre 2027, première période de PFMP)
 export const JOURS = {
+  mardi: { iso: '2027-09-14', lib: 'mardi 14 septembre 2027' },
   mercredi: { iso: '2027-09-15', lib: 'mercredi 15 septembre 2027' },
   jeudi: { iso: '2027-09-16', lib: 'jeudi 16 septembre 2027' },
   vendredi: { iso: '2027-09-24', lib: 'vendredi 24 septembre 2027' },

@@ -1,6 +1,6 @@
 # Brief de séance — ENT-13.2 Stellantis Sochaux, les camions du matin (Tle, rentrée)
 
-**Statut** : à construire — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
+**Statut** : livré (27/10/2026, `pret: true, ouverture: 'prof'`) — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10 (`stellantis/CADRAGE-stellantis-tle.md`)
 **Modèle** : Sonnet (vues existantes)
 
@@ -122,11 +122,12 @@ des Terminales (et pas plus longue qu'une heure).
 - [ ] Le camion contrôlé est celui des faisceaux, le plus urgent : ses palettes manquantes donnent le calcul du message (oui).
 - [ ] L133-3 en question notée en Tle (oui : la notion a été vue en 1re avec les réserves).
 
-## Compte rendu *(à remplir à la livraison)*
+## Compte rendu
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/stellantis-camions-du-matin.js` ; `contenus/stellantis-ent132.js` (documents, planning, messages, jalons), `stellantis-ent132-donnees.js` (quais, camions, palettes, message) ; `contenus/stellantis.js` (le `mardi 14 septembre 2027` ajouté à `JOURS`) ; `contenus/questions/ENT-13.2.js` ; `contenus/corriges/ENT-13.2.js` ; `activites/index.js` et `catalogue.js` ; `outils/test.mjs` (ligne dans `BLOCS` et `GROUPES`, **touché, à dire à Tristan**) et `outils/test/stellantis-13.2.mjs`.
+- **Réponses aux vérifications du §7** : (1) oui : la couverture se lit sur la carte du camion (ligne « Couverture à la ligne »). (2) oui, sans toucher au moteur : un jugement de priorité par une règle `critere` du planning (un camion urgent qui commence après son arrivée est un problème) ; le jalon ne se donne que si tout est posé. (3) **non** : le quai ne sait pas montrer « une palette annoncée au BL et absente ». Repli : le camion apporte quatre palettes ; la palette P4 arrive incomplète (6 cartons manquants sur 24). Le BL annonce 100 cartons, 94 arrivent, 3 sont écrasés (P3), 91 sont utilisables.
+- **Écarts par rapport au brief** : (a) planning et quai FIXES (comme ENT-12.5), donc pas de tirage (§6 bis) ; (b) l'avance du camion est de **45 minutes** (le créneau est de 15) ; (c) la règle de priorité est écrite aux élèves : un camion dont la pièce couvre moins de 3 heures est urgent et commence dès son arrivée (deux camions : planches de bord 2 h 30 et faisceaux 1 h 40) ; la matinée est faite pour que l'ordre d'arrivée échoue (aucun quai pour les faisceaux à 6 h 15) ; (d) calcul du message : la ligne prend 1 carton de faisceaux par minute (construit), la couverture se calcule sur les cartons utilisables (91 → 1 h 31) ; (e) message à Karim : deux lignes à choisir (ce qui est arrivé, la couverture), les autres lignes sont fixes ; (f) la question du quai 5 est posée à l'envoi du premier planning (le moteur ne sait pas la poser seulement à qui a fait l'erreur) ; (g) la question ★ L133-3 est **notée** : son texte est celui d'ENT-8.8 et 8.10, relu sur Légifrance le 17/10/2026 ; Légifrance n'a pas pu être rejoint le 26/10/2026 ; (h) « Avant de commencer » : 7 questions pour 3 tirées (le moteur exige au moins 2 par rubrique) ; la question de couverture n'est pas tirée ; (i) une réserve « vague » se juge sur le nombre de cartons écrit (le quai ne propose que des chiffres) ; (j) pas de variante « confirmé » (9e camion, étiquette fausse) : reste ouvert.
+- **Décisions prises en route** : 5 quais, quai 2 pris jusqu'à 6 h 30, quai 5 aux porteurs ; durée = 5 minutes par palette ; poids : arrivée 1, chevauchement 2, quai adapté 1, priorité 3, replanification 2, décisions 3 + comptages 1, réserves 1 + 1, déballage 0,5, signature 0,5, message 0,5 + 0,5, questions 3 (4 × 0,75) = 20 ; le quai n'ouvre qu'après le planning refait ; aucune aide « Vérifier mon planning ».
+- **Tests** : bloc `stellantis-13.2`, 15 cas verts (poids, données écrites à la main, ordre d'arrivée impossible, parcours à l'écran 20/20, priorité, semi au quai 5, reprise identique, palette écrasée acceptée, réserve imprécise, message faux, questions fausses, inaction, questions au bon geste).
+- **Commits** : voir l'historique du 27/10/2026.
+- **Reste ouvert** : variante confirmé ; essai à l'écran par Tristan : la matinée est-elle assez dure pour des Terminales, et tient-elle en une heure ?
