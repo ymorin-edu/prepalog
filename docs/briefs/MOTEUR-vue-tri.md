@@ -1,6 +1,6 @@
 # Chantier moteur — vue « Tri des colis » (pour Mondial Relay ENT-11.2 et 11.3, puis CAP Amazon, GLS, Bigblue)
 
-**Statut** : à implémenter (page d'essai à valider par Tristan d'abord)
+**Statut** : livré (26/10/2026)
 **Date du brief** : 26/10/2026 — Claude (cadrage S3 validé par Tristan le 26/10/2026 : « je prends tes propositions »)
 **Modèle** : Opus (vue nouvelle du moteur)
 **Page d'essai** : `docs/briefs/mondial-relay/maquette-tri-colis.html` (jetable ; elle FAIT FOI pour l'interaction une fois
@@ -121,3 +121,27 @@ coder la vue.
   arraché qui pend, bord déchiré ; il se reconnaît sans cliquer.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**26/10/2026 — Claude Code (Opus).** Livré : `core/types/tri.js` (déclaration, contrôles, bon tri calculé, dessin, vue, jalons), option `tri`
+de `creerEntreprise` (objet ou fonction de la graine, comme l'inspection), écran « Ligne de tri » dans « Mon poste », état
+`db.tris[<séance>][<id>]`, feuille `styles/tri.css` (chargée par `index.html`), section de `activites/FICHE-SEANCE.md`, séance d'essai
+`outils/essai-tri-colis.js`, bloc de tests `tri` (16 cas). La logique et le dessin de la page d'essai v4 sont repris tels quels.
+
+Ce qui a été tranché en route (décisions dans `docs/decisions.md`) :
+- **§5.1 Évaluation** : minuteur large, comme proposé (le temps est déclaré par la séance : 28 s pour ENT-11.3) ; tiers-temps × 4/3 ;
+  aucun bilan pour l'élève en évaluation (l'enseignant voit le tableau en jouant la séance).
+- **§5.2** : 5 sorties pour Mondial Relay ; la vue accepte de 2 à 9 (touches 1 à 9). **§5.3** : le motif « étiquette illisible » est gardé.
+- **Anomalie déduite, jamais écrite** : poids, taille (longueur ou somme), `etat: 'ouvert'` (carton), `etat: 'floue'` (étiquette).
+  Nouvel état `enfonce` : carton marqué mais fermé (le colis d'Inès), dessiné avec un coin écrasé, **il part**. `anomalie` écrit = contrôle.
+- **Plusieurs séries dans une même ligne** (ENT-11.2 : une guidée puis une à la cadence) : « Passer à la série suivante » après le bilan.
+- **Jalons à part juste** : `jalonTri(..., { mesure, series, coef })` rend la part juste par `fraction` (déjà lue par le moteur pour
+  « Avant de commencer ») : 4 colis sur 5 bien triés = 4/5 du poids. `fauxEcarts` est entier ou nul : aucun colis en règle écarté ni
+  laissé sur le tapis. Une série laissée passer donne 0 partout (testé).
+- **Pas d'attente entre deux colis** (la page d'essai attendait 1 à 3 s) : en guidage, le retour du colis précédent reste affiché sous le
+  colis suivant (« Colis MR … : ✓ Juste. »). Plus simple à tester, rien ne se perd.
+- Le temps qui reste au minuteur est gardé en mémoire : aller dans la messagerie et revenir ne le remet pas à neuf. Il s'arrête onglet
+  caché et pendant une question au fil.
+
+Vérifié : bloc `tri` 16/16 ; deux sabotages (motif non exigé, minuteur au premier colis) font tomber leurs cas ; tout tient sans défiler à
+1366 × 768 et 1280 × 720 (fiche ouverte, motifs affichés). Supposé : le rendu quand une question au fil s'ouvre à droite (la vue se
+resserre et la page défile un peu, le temps de répondre) : à regarder par Tristan ; pas d'animation du tapis (le colis change d'un coup).

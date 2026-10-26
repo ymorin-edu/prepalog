@@ -1,6 +1,6 @@
 # Brief de séance — ENT-11.2 Mondial Relay, première nuit au tri (2de, poste C — agent de tri, guidage)
 
-**Statut** : à implémenter, **après** le chantier moteur `MOTEUR-vue-tri.md` (vue Tri des colis)
+**Statut** : livré (26/10/2026), `pret: true, ouverture: 'prof'`
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé (`docs/briefs/mondial-relay/CADRAGE-S3-mondial-relay.md`)
 **Modèle** : Opus (séance nouvelle sur une vue nouvelle)
 
@@ -101,3 +101,29 @@ Jouer les deux séries ; lire le bilan ; vérifier que le colis d'Inès « marqu
 
 - [ ] Horaires de nuit au hub de Buchères : non vérifiés (annonces « nuit » ailleurs dans le réseau). Proposé : 22 h - 5 h, construit.
 - [ ] La ligne de tri manuelle derrière la machine : plausible, non vérifiée. La garder (proposé) en le disant.
+
+## Compte rendu *(rempli par Claude Code à la livraison)*
+
+**26/10/2026 — Claude Code (Opus).** Fichiers : `activites/mondial-relay-au-tri.js`, `contenus/mondial-relay-ent112.js`,
+`contenus/mondial-relay-colis.js` (banque commune à 11.2 et 11.3 : série guidée, 21 colis ordinaires, 12 à piège, 14 à écarter, 3 à la
+limite ; `tirerSerie`), `contenus/questions/ENT-11.2.js`, bloc de tests `mr-11.2` (7 cas).
+
+- Déroulé tenu : Avant de commencer (les 6 questions du §4 ter, non notées) → point d'étape « sécurité » (3 questions notées, ferme la ligne
+  de tri) → série 1 guidée (13 colis) → point d'étape « travail de nuit » → série 2 à la cadence (10 colis tirés : 3 écarts de motifs
+  différents, 2 pièges, 5 ordinaires, chaque tournée servie) → message de Romain.
+- **Écarts au brief** : (1) la sécurité est un point d'étape à 3 questions (la vue `inspection` ne sait pas dessiner un tapis) ; les
+  questions « image » (bouton rouge) sont en texte, sans image. (2) Série 1 : le colis MR 4417 2184 de la page d'essai (Bar-sur-Seine,
+  8 kg) devient le colis d'Inès (3,2 kg, 40 × 30 × 30, carton enfoncé, 13e colis) ; sa place en 10e est prise par un colis de Chaource.
+  (3) 20 s par colis à la cadence (et non 14 : retour de Tristan sur la page d'essai, le clic sur le carton puis la validation prennent
+  du temps). (4) Confirmé : 2 colis à la limite en plus (30,0 kg pile, qui part ; 151 cm, à l'écart) ; « étiquette à moitié lisible »
+  non faite (ambiguë : lisible ou non ?). Accompagné : 40 s. (5) Pas de corrigé à part (`corrige: false`) : le bilan de chaque série
+  donne colis par colis le tri de l'élève et le bon tri.
+- Poids : sécurité 3 (3 questions × 1) · en règle 5 · pièges 2 · écarts 4 · aucun faux écart 2 · questions au fil 4 (30 kg, colis d'Inès,
+  travail de nuit : 4/3 chacune) = 20. La série 2 compte pour un tiers dans « en règle », « écarts » et « aucun faux écart » (moitié du
+  poids de la série 1) ; les pièges ne se lisent que sur la série 1.
+- **Vérifié** : Code du travail L3122-2 (texte cité) et R4323-95 (reformulé), relevés le 26/10/2026 ; tout juste = 20/20 ; Inès écartée
+  fait tomber « aucun faux écart » ; série 2 laissée passer ne rapporte rien ; 300 graines respectent les contraintes ; le bon tri de la
+  série 1 est écrit à la main dans le test ; sabotage (Inès en carton ouvert) fait tomber trois cas.
+- **Construit** (dit dans « Bon à savoir ») : la ligne de tri manuelle derrière la machine, les horaires 22 h - 5 h, les commerces, les
+  numéros, poids et dimensions des colis, Romain. La raison du plafond de 30 kg donnée par Romain (le commerçant porte le colis seul) est
+  une explication de bon sens, pas une phrase de Mondial Relay.
