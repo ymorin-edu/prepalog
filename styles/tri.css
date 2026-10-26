@@ -1,0 +1,96 @@
+/* ============================================================
+   Vue « Tri des colis » (core/types/tri.js) — 26/10/2026, brief docs/briefs/MOTEUR-vue-tri.md.
+   D'après la page d'essai v4 validée par Tristan (docs/briefs/mondial-relay/maquette-tri-colis.html).
+   Le panneau ne prend que les variables de base.css, plus UNE couleur propre : le bleu du choix en cours (la sortie
+   choisie, le motif choisi, les cotes du carton), déclaré ici pour les trois cas comme dans base.css. Rien ne dit juste
+   ou faux pendant le tri : ni vert plein, ni rouge ; les bacs sont des petits cartons, juste ou pas.
+   La SCÈNE et la vue de près sont des images (comme le quai et l'inspection) : leur fond reste le leur en thème sombre.
+   À 1366 × 768 et 1280 × 720, tout tient dans un seul bloc, sans défiler (retour de Tristan, v3).
+   ============================================================ */
+
+:root, .theme-papier{ --tri-choix:#2f5f9e }
+:root[data-theme="sombre"]{ --tri-choix:#8fb8f0 }
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="clair"]){ --tri-choix:#8fb8f0 }
+}
+
+.tri{ display:grid; gap:6px; color:var(--encre); max-width:1250px }
+.tri-tete{ display:flex; flex-wrap:wrap; align-items:baseline; gap:4px 12px; font-size:14px }
+.tri-tete > span{ color:var(--encre-douce); font-size:13px }
+.tri-tete .tri-compteur{ margin-left:auto; font:600 13px var(--mono); color:var(--encre); border:1px solid var(--filet);
+  border-radius:6px; padding:2px 9px }
+.tri-consigne{ margin:0; background:var(--panneau); border:1px solid var(--filet); border-left:4px solid var(--terre);
+  border-radius:6px; padding:5px 10px; font-size:13.5px; line-height:1.4 }
+.tri-consigne b{ font-size:12.5px; color:var(--encre-douce); margin-right:6px }
+.tri-grille{ display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:10px }
+.tri-zone{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:8px 10px; min-width:0 }
+.tri-droite h3{ font-size:13.5px; margin:0 0 4px }
+.tri-haut{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:10px; align-items:stretch }
+.tri-scene{ display:block; width:100%; height:auto; max-height:240px }
+.tri-colis{ cursor:pointer }
+.tri-colis:focus{ outline:none }
+.tri-contour{ fill:none; stroke:transparent; stroke-width:3 }
+.tri-colis:hover .tri-contour, .tri-colis:focus-visible .tri-contour{ stroke:var(--tri-choix) }
+
+.tri-minuteur{ height:6px; border-radius:3px; background:var(--filet); overflow:hidden; margin:6px 0 2px }
+.tri-minuteur[hidden]{ display:none }
+.tri-minuteur i{ display:block; height:100%; background:var(--terre); transition:width .2s linear }
+
+/* --- la fiche du colis (au clic sur le carton) -------------------------- */
+.tri-fiche{ border:1px solid var(--filet); border-radius:8px; background:var(--fond); padding:6px 8px; display:flex;
+  flex-direction:column; gap:6px; min-height:240px }
+.tri-vide{ margin:auto; color:var(--encre-douce); font-size:14px; text-align:center; padding:0 10px }
+.tri-fiche-tete{ display:flex; justify-content:space-between; align-items:center; font-size:13.5px; font-weight:600 }
+.tri-fiche-tete .btn{ padding:2px 9px; font-weight:400 }
+.tri-fiche-carton svg{ display:block; width:100%; height:auto; max-height:140px }
+/* L'étiquette est un objet papier : sa teinte ne suit pas le thème. */
+.tri-etiq{ background:#fbf8f1; border:1px solid #9a948a; border-radius:3px; padding:5px 9px; font-size:13px; line-height:1.3; color:#1a1915 }
+.tri-num{ font:700 14px var(--mono) }
+.tri-dest{ font-size:16px; font-weight:800; margin-top:2px }
+.tri-cab{ height:18px; margin-top:4px; background:repeating-linear-gradient(90deg,#1a1915 0 2px,transparent 2px 4px,#1a1915 4px 7px,transparent 7px 9px) }
+.tri-mini{ font-size:10px; color:#6d675d; text-align:right; margin-top:3px }
+.tri-floue .tri-flou{ filter:blur(3.2px); user-select:none }
+
+/* --- sorties, motif, envoi ---------------------------------------------- */
+.tri-sorties{ display:grid; grid-template-columns:repeat(auto-fit,minmax(86px,1fr)); gap:6px; margin-top:6px }
+.tri-sortie{ border:2px solid var(--encre); background:var(--panneau); border-radius:8px; padding:6px 4px 4px; cursor:pointer;
+  font-weight:600; font-size:13.5px; font-family:inherit; color:var(--encre); display:flex; flex-direction:column; align-items:center; gap:1px; min-height:66px }
+.tri-sortie:hover{ background:var(--survol) }
+.tri-sortie:focus-visible{ outline:3px solid var(--tri-choix); outline-offset:2px }
+.tri-sortie[aria-pressed="true"]{ border:4px solid var(--tri-choix); padding:4px 2px 2px }
+.tri-sortie .tri-t{ font-size:16px }
+.tri-sortie small{ font-weight:400; font-size:11.5px; color:var(--encre-douce); text-align:center; line-height:1.2 }
+.tri-ecart{ border-style:dashed; border-color:var(--terre); color:var(--terre) }
+.tri-ecart[aria-pressed="true"]{ border-style:solid; border-color:var(--tri-choix) }
+.tri-sortie:disabled{ opacity:.45; cursor:default }
+.tri-kbd{ font:11px var(--mono); border:1px solid var(--filet); border-radius:3px; padding:0 4px; color:var(--encre-douce) }
+.tri-bac{ margin-top:auto; display:flex; flex-wrap:wrap-reverse; gap:2px; justify-content:center; min-height:16px; width:100% }
+.tri-bac i{ width:12px; height:9px; background:#c9a26b; border:1px solid #a9824f; border-radius:1px }
+.tri-valider{ display:flex; align-items:center; gap:10px; margin-top:6px; flex-wrap:wrap; min-height:38px }
+.tri-valider .tri-envoyer{ margin-left:auto }
+.tri-choix{ font-size:14px; color:var(--encre-douce) }
+.tri-choix b{ color:var(--encre) }
+.tri-motifs{ display:flex; gap:5px; flex-wrap:wrap; align-items:center; font-size:13px }
+.tri-motif{ border:1px solid var(--terre); color:var(--terre); background:transparent; border-radius:6px; padding:5px 9px;
+  font-weight:600; font-size:13px; font-family:inherit; cursor:pointer }
+.tri-motif[aria-pressed="true"]{ border:3px solid var(--tri-choix); color:var(--encre); padding:3px 7px }
+.tri-retour{ min-height:30px; margin-top:6px; font-size:13.5px; border-radius:6px; padding:4px 10px; background:var(--fond) }
+.tri-ok{ color:var(--vert); font-weight:600 }
+.tri-ko{ color:var(--rouge); font-weight:600 }
+
+/* --- plan de tri, règles, bilan ----------------------------------------- */
+.tri-plan, .tri-tab{ border-collapse:collapse; width:100%; font-size:12.5px }
+.tri-plan{ font-size:12px; line-height:1.3 }
+.tri-plan th, .tri-plan td, .tri-tab th, .tri-tab td{ border-bottom:1px solid var(--filet); padding:2px 4px; text-align:left; vertical-align:top }
+.tri-plan th, .tri-tab th{ font-size:12px; color:var(--encre-douce); font-weight:600 }
+.tri-plan td.tri-t{ font-weight:700; white-space:nowrap }
+.tri-regles{ font-size:12px; line-height:1.3; margin-top:6px; border-top:1px solid var(--filet); padding-top:6px }
+.tri-regles ul{ margin:4px 0 0; padding-left:18px }
+.tri-source{ color:var(--encre-douce); font-size:11.5px }
+.tri-bilan{ background:var(--panneau); border:1px solid var(--filet); border-radius:var(--r); padding:10px 12px }
+.tri-bilan h3{ font-size:16px; margin:0 0 6px }
+.tri-bilan td.tri-ok, .tri-bilan td.tri-ko{ font-weight:700 }
+.tri-ligne{ display:flex; gap:8px; flex-wrap:wrap; margin-top:8px }
+
+@media (max-width:860px){ .tri-grille, .tri-haut{ grid-template-columns:1fr } }
+@media (prefers-reduced-motion:reduce){ .tri-minuteur i{ transition:none } }

@@ -1501,6 +1501,34 @@ Un transpalette que ne nomme aucun point ni essai n'est pas dessiné (le n° 1 s
   `[data-i-nb]`, `[data-i-essai]`, `[data-i-chef]`, `[data-i-arret]`, `[data-i-fige]`, `[data-i-bilan]` ; `racine.__insp.zones()` rend
   les zones de clic. Feuille : `styles/inspection.css`. Bloc de tests : `inspection`.
 
+## Vue « Tri des colis » : `tri` — `core/types/tri.js`
+
+Écrite le 26/10/2026 (brief `docs/briefs/MOTEUR-vue-tri.md`, page d'essai v4 validée par Tristan :
+`docs/briefs/mondial-relay/maquette-tri-colis.html`) pour Mondial Relay ENT-11.2 et 11.3, puis le CAP (Amazon, GLS, Bigblue).
+L'élève est au **poste de lecture** d'une ligne de tri : le colis arrive sur la balance (afficheur à chiffres), il le **clique** pour lire
+son étiquette et voir ses trois cotes (« Le colis de près »), cherche la commune dans le **plan de tri** (à droite, avec les règles de mise
+à l'écart), choisit une **sortie** (ou « À l'écart » et son **motif**), puis **valide** (« Envoyer le colis en T3 »). Le format complet est
+en tête de `core/types/tri.js` ; un exemple qui tourne : `outils/essai-tri-colis.js`.
+
+- **Déclaration** : `tri: { id, libelle, lieu, qui, sorties (2 à 9), ecart, regles: { poidsMax, longueurMax, sommeMax, carton, etiquette,
+  source }, series: [{ id, titre, temps, secondes, consigne, colis: [{ n, commune, relais, rue, kg, dim: [L, l, H], etat, piege, geste,
+  anomalie }] }], fin }`, ou une fonction de la graine (série tirée par élève).
+- **Le bon tri se calcule**, jamais écrit : poids > `poidsMax`, plus grand côté > `longueurMax` ou somme > `sommeMax`, `etat: 'ouvert'`,
+  `etat: 'floue'` = à l'écart avec ce motif ; sinon la sortie de la commune. `etat: 'enfonce'` (marqué mais fermé) **part**. `anomalie`
+  écrit n'est qu'un contrôle : la séance ne se charge pas s'il contredit les mesures. Refusés aussi : commune dans deux sorties, colis à deux
+  anomalies, piège sur un colis à écarter, série `evaluation` hors copie (ou autre chose qu'`evaluation` en copie), minuteur sans `secondes`.
+- **Temps** : `guidage` (retour tout de suite, « Rejouer la série », le premier passage compte) ; `entrainement` (`secondes` par colis à
+  partir du deuxième, un colis laissé passer revient une fois en fin de série puis compte « non trié », bilan à la fin) ; `evaluation` (même
+  minuteur, aucun bilan pour l'élève). Tiers-temps : × 4/3. Minuteur arrêté onglet caché et pendant une question au fil.
+- **Jalons** : `jalonTri(decl, seance, { id, titre, mesure, series, coef, copie })`, à poser dans `etapes` avec `poids` et `groupe`.
+  Mesures : `communes`, `pieges`, `ecarts` (bon motif exigé), `fauxEcarts` (aucun colis en règle écarté ni laissé sur le tapis), `complet`.
+  La part juste passe par `fraction` (un jalon sur 5 avec 4 colis sur 5 bien triés rapporte 4). Rien ne se gagne sans trier.
+- **État** : `db.tris[<séance>][<id>]` ; **gestes** : `tri:<id>:<série>:fini`, `tri:<id>:<geste du colis>`.
+- **DOM** (tests) : `[data-t-tri]`, `[data-t-scene]`, `[data-t-colis]`, `[data-t-balance]`, `[data-t-fiche]`, `[data-t-etiquette]`,
+  `[data-t-carton]`, `button[data-t="sortie|motif|envoyer|fermer|suite|rejouer"]` (`data-s`, `data-m`), `[data-t-retour]`,
+  `[data-t-compteur]`, `[data-t-minuteur]`, `[data-t-bilan]`, `[data-t-ligne="<k>"]` ; `racine.__tri.avancer(s)` avance le minuteur.
+  **Clavier** : 1 à 9 choisissent la sortie, 0 l'écart, Entrée valide. Feuille : `styles/tri.css`. Bloc de tests : `tri`.
+
 ## Vue « Dialogue à choix » (l'écran Téléphone) — `core/types/dialogue.js`
 
 Écrite le 14/10/2026 (brief `docs/briefs/MOTEUR-vue-dialogue.md`, lots 1 et 2) pour Decathlon ENT-7.2 à 7.4, puis la 2de et le CAP.

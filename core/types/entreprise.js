@@ -24,6 +24,7 @@ import { creerTelephone, appelEnCours, appelRetenu, appels, journalCourt } from 
 import { creerEntrepot } from './entrepot.js';
 import { creerLocaliser } from './localiser.js';
 import { creerInspection } from './inspection.js';
+import { creerTri } from './tri.js';
 import { monterCalculette, demonterCalculette } from '../calculette.js';
 import { creerDocuments } from './documents.js';
 import { creerFiche } from './fiche.js';
@@ -294,6 +295,25 @@ export function creerEntreprise(U) {
   const INSP_FIXE = U.inspection && !INSP_TIRE ? creerInspection(U.inspection, { copie: COPIE }) : null;
   const inspDeBase = (db) => (INSP_TIRE ? inspDeGraine(graineDeBase(db), niveauEleve(db, { copie: COPIE })) : INSP_FIXE);
   let VINSP = INSP_TIRE ? inspDeGraine('') : INSP_FIXE;
+  // LA LIGNE DE TRI DES COLIS (26/10/2026, brief `docs/briefs/MOTEUR-vue-tri.md`) : un écran de plus, seulement si la séance déclare
+  // `tri` (format en tête de `core/types/tri.js`). Son état vit dans `db.tris[<séance>][<id>]`. Une déclaration fautive (commune
+  // dans deux sorties, colis à deux anomalies, anomalie écrite qui contredit les mesures…) empêche la séance de se charger. Comme
+  // l'inspection, elle peut être une FONCTION de la graine (et du niveau) : une série par élève.
+  const TRI_TIRE = typeof U.tri === 'function' ? U.tri : null;
+  const trisTires = new Map();
+  const triDeGraine = (g, niveau = 'standard') => {
+    const k = `${g}|${niveau}`;
+    if (!trisTires.has(k)) trisTires.set(k, creerTri(TRI_TIRE, { copie: COPIE, graine: g, niveau }));
+    return trisTires.get(k);
+  };
+  const TRI_FIXE = U.tri && !TRI_TIRE ? creerTri(U.tri, { copie: COPIE }) : null;
+  const triDeBase = (db) => (TRI_TIRE ? triDeGraine(graineDeBase(db), niveauEleve(db, { copie: COPIE })) : TRI_FIXE);
+  let VTRI = TRI_TIRE ? triDeGraine('') : TRI_FIXE;
+  if (TRI_TIRE && !COPIE) {
+    NIVEAUX_ELEVE.filter((n) => n !== 'standard').forEach((n) => {
+      try { triDeGraine('', n); } catch (x) { throw new Error(`tri du niveau « ${n} » : ${x.message}`); }
+    });
+  }
   if (INSP_TIRE && !COPIE) {
     NIVEAUX_ELEVE.filter((n) => n !== 'standard').forEach((n) => {
       try { inspDeGraine('', n); } catch (x) { throw new Error(`inspection du niveau « ${n} » : ${x.message}`); }
@@ -332,7 +352,7 @@ export function creerEntreprise(U) {
   }
   controlerIdentifiants([['quai', 'quais', [VQUAI].filter(Boolean)], ['planning', 'plannings', [VPL].filter(Boolean)],
     ["plan d'entrepôt", "plans d'entrepôt", [VENT].filter(Boolean)], ['fiche', 'fiches', VFICHES], ['animation', 'animations', VANIMS],
-    ['carte à situer', 'cartes à situer', [VLOC].filter(Boolean)], ['inspection', 'inspections', [VINSP].filter(Boolean)]]);
+    ['carte à situer', 'cartes à situer', [VLOC].filter(Boolean)], ['inspection', 'inspections', [VINSP].filter(Boolean)], ['ligne de tri', 'lignes de tri', [VTRI].filter(Boolean)]]);
   const vueAnim = (VA) => `animation:${VA.id}`;
   // LES GESTES connus de la séance (questions au fil, lot 3) : la liste que publie chaque vue déclarée. Un `apresGeste`
   // qui en cite un autre (faute de frappe, vue absente) empêche la séance de se charger : on ne découvre pas en classe
@@ -342,7 +362,7 @@ export function creerEntreprise(U) {
   const ficheDeVue = (v) => VFICHES.find((VF) => vueDeFiche(VF) === v) || null;
   {
     // La messagerie est de toutes les séances : son geste (le transfert d'un message, chantier D-1) est toujours connu.
-    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL, VCOUR, VLOC, VINSP, VTOUR].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
+    const connus = new Set([...VFICHES, ...VANIMS, VPL, VENT, VQUAI, VTEL, VCOUR, VLOC, VINSP, VTRI, VTOUR].filter(Boolean).flatMap((V) => V.signaux || []).concat(GESTE_TRANSFERT));
     // Le geste de transfert d'UN message (`messagerie:transfert:<clé>`) : connu pour les messages que le volet sème avec un
     // `transfert`, et pour ceux qu'il déclare dans `volet.transferables` (les messages qui arrivent plus tard, par un déclencheur).
     // Une clé qu'il ne déclare pas (faute de frappe) empêche la séance de s'ouvrir.
@@ -666,10 +686,11 @@ export function creerEntreprise(U) {
       // Jeu tiré par élève (quai, inventaire, ou `tirage: true` pour une séance qui ne tire que ses
       // données) : la graine (son identifiant) posée une fois pour toutes, AVANT le volet — qui peut
       // la lire — puis son quai et son inventaire.
-      if (QUAI_TIRE || INV_TIRE || INSP_TIRE || ENT_TIRE || (U.tirage && !TIR)) {
+      if (QUAI_TIRE || INV_TIRE || INSP_TIRE || TRI_TIRE || ENT_TIRE || (U.tirage && !TIR)) {
         if (poserGraine(db, ctx.profil.uid || prenom)) ctx.jeu.sauver();
         if (QUAI_TIRE) VQUAI = quaiDeBase(db);
         if (INSP_TIRE) VINSP = inspDeBase(db);
+        if (TRI_TIRE) VTRI = triDeBase(db);
         if (ENT_TIRE) VENT = entrepotDeBase(db);
         if (INV_TIRE) VINV = invDeGraine(graineDeBase(db));
       }
@@ -1381,6 +1402,7 @@ export function creerEntreprise(U) {
         if (v === 'entrepot') return !!VENT;
         if (v === 'localiser') return !!VLOC;
         if (v === 'inspection') return !!VINSP;
+        if (v === 'tri') return !!VTRI;
         if (v === 'fiche' || v.startsWith('fiche:')) {
           const VF = VFICHES.find((x) => vueDeFiche(x) === v);
           try { return !!VF && (!VF.quand || !!VF.quand(db)); } catch (x) { return false; }
@@ -1697,10 +1719,11 @@ export function creerEntreprise(U) {
                 ${MQ && MQ.ouverture ? item('ouverture', MQ.ouverture.titre || 'Avant de commencer') : ''}
                 ${item('accueil', 'Accueil')}
                 ${item('mail', 'Messagerie', nonLus)}
-                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VLOC && !VINSP && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', ordonnerPoste([
+                ${groupe((VPLAN || VTOUR || VITI) && !VFICHE && !VQUAI && !VPL && !VENT && !VINV && !VTEL && !VLOC && !VINSP && !VTRI && !VANIMS.length ? U.transportSection || 'Transport' : 'Mon poste', ordonnerPoste([
                   VITI && item('itineraires', VITI.nav.libelle),
                   VLOC && item('localiser', VLOC.nav.libelle),
                   VINSP && item('inspection', VINSP.nav.libelle),
+                  VTRI && item('tri', VTRI.nav.libelle),
                   ...VANIMS.filter((VA) => !VA.menuApres && (!VA.quand || VA.quand(db))).map((VA) => item(vueAnim(VA), VA.nav.libelle)),
                   ...VFICHES.filter((VF) => !VF.quand || VF.quand(db)).map((VF) => item(vueDeFiche(VF), VF.nav.libelle)),
                   // Une animation qui vient APRÈS les fiches dans le déroulé (`menuApres`, ENT-6.10) : listée après elles.
@@ -1997,6 +2020,7 @@ export function creerEntreprise(U) {
           telephone: VTEL && telOuvert() ? () => VTEL.html(etatTel(), apiTel()) : vueAccueil,
           localiser: VLOC ? () => VLOC.html(etatLoc(), apiLoc()) : vueAccueil,
           inspection: VINSP ? () => VINSP.html(etatInsp(), apiInsp()) : vueAccueil,
+          tri: VTRI ? () => VTRI.html(etatTri(), apiTri()) : vueAccueil,
           ...Object.fromEntries(VFICHES.map((VF) => [vueDeFiche(VF), () => vueFiche(VF)])),
           ...Object.fromEntries(VANIMS.map((VA) => [vueAnim(VA), () => VA.html(etatAnim(VA), apiAnim())])),
           fiche: VFICHE ? () => vueFiche(VFICHE) : vueAccueil,
@@ -2374,6 +2398,23 @@ export function creerEntreprise(U) {
         sauver: () => { if (!estProf) sauver(); },
       });
 
+      /* ---------------------------------------------------------- ligne de tri des colis */
+      // Cloisonnée par séance : `db.tris[<séance>][<id de la ligne>]` (format en tête de `core/types/tri.js`). L'enseignant joue sur une
+      // copie en mémoire. Pendant une question au fil (`gele()`), la vue ignore les gestes et son minuteur s'arrête ; après la remise
+      // d'une copie (`figee`), elle se consulte sans se modifier. Le tiers-temps de l'élève allonge le temps par colis (× 4/3).
+      const TRI_PROF = {};
+      function etatTri() {
+        if (estProf) return TRI_PROF[VTRI.id] || (TRI_PROF[VTRI.id] = VTRI.etatNeuf());
+        if (!db.tris) db.tris = {};
+        const S = db.tris[ctx.meta.id] || (db.tris[ctx.meta.id] = {});
+        return S[VTRI.id] || (S[VTRI.id] = VTRI.etatNeuf());
+      }
+      const apiTri = () => ({
+        db, seance: ctx.meta.id, estProf, signal, gele: gelActif, figee: rendue(),
+        tiersTemps: !!(ctx.tiersTemps || (ctx.profil && ctx.profil.tiersTemps)),
+        sauver: () => { if (!estProf) sauver(); },
+      });
+
       /* ---------------------------------------------------------- animation à questions */
       // Cloisonnée par séance : `db.animations[<id de l'animation de cette séance>]`. L'enseignant n'y
       // écrit rien (le lecteur le sait par `estProf`). Une réponse rangée n'est jamais suivie d'un redessin
@@ -2495,6 +2536,7 @@ export function creerEntreprise(U) {
         if (E.vue === 'telephone' && VTEL && telOuvert()) VTEL.brancher(z, etatTel(), apiTel());
         if (E.vue === 'localiser' && VLOC) VLOC.brancher(z, etatLoc(), apiLoc());
         if (E.vue === 'inspection' && VINSP) VINSP.brancher(z, etatInsp(), apiInsp());
+        if (E.vue === 'tri' && VTRI) VTRI.brancher(z, etatTri(), apiTri());
         // La calculette du site, sur l'écran du plan seulement (entraînement, évaluation : voir entrepot.js).
         // Posée sur la page, hors de la zone de la séance : elle prendrait l'accent de la charte (le rouge de
         // Smoby dirait « faux », un vert « juste »). Son bouton est donc à l'encre, quelle que soit l'entreprise.

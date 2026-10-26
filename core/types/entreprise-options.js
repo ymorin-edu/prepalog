@@ -64,6 +64,7 @@ export const OPTIONS = {
   telephone: { type: 'object', role: 'écran Téléphone : appels à répliques à choisir (`core/types/dialogue.js`), contacts sans dialogue' },
   localiser: { type: 'object', role: 'carte de France : situer chaque lieu (région → département → ville), trajet de la marchandise à la fin (`core/types/localiser.js`)' },
   inspection: { type: 'object|function', role: 'inspection du poste avant tout camion : local de charge et quai, marques, « Signaler à … », avertisseur, « C’est bon, je prends mon poste » (`core/types/inspection.js`) ; une fonction de la graine = une inspection tirée par élève' },
+  tri: { type: 'object|function', role: 'ligne de tri des colis : plan de tri, poste de lecture (balance, colis de près), sorties et mise à l’écart avec son motif, séries guidage · entraînement · évaluation (`core/types/tri.js`) ; une fonction de la graine = une série tirée par élève' },
   questions: { type: 'object', role: "questions au fil et points d'étape" },
   equipe: { type: 'object', role: 'personnes citées par les questions (en plus de `questions.personnes`) et destinataires d’un message à transférer' },
   // — Ce que le contenu fournit au moteur (chantier 9, lot 9b : le moteur n'importe plus aucun fichier de `contenus/`) —
