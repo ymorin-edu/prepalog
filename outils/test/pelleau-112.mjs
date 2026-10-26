@@ -568,12 +568,12 @@ await v('ENT-10.12 : « sous réserve de déballage » ajoutée : seul le jalon 
   await parcours(K, { cr: { ...K.cr, litiges: 'J’ai rangé les colis abîmés en stock avec les autres.' } });
   egal(ko(await note0()), ['cr-contenu'], 'la zone litiges fausse');
   await monter({ uid: K.graine });
-  await parcours(K, { cr: { ...K.cr, salutation: 'Salut mon pote,' } });
+  await parcours(K, { cr: { ...K.cr, salutation: 'Salut Erwan,' } });
   const n3 = await note0();
   egal(ko(n3), ['cr-forme'], 'salutation fautive');
   proche(n3.score, 19, 'note');
   await monter({ uid: K.graine });
-  await parcours(K, { cr: { ...K.cr, fin: 'Bisous' } });
+  await parcours(K, { cr: { ...K.cr, fin: 'Cordialement' } });
   egal(ko(await note0()), ['cr-forme'], 'fin fautive');
   const F = W.froid;
   await monter({ uid: F.graine });

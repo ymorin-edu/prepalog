@@ -303,11 +303,11 @@ export const FICHE_DOCS = {
 export const PHRASE_CONFLIT = `Le camion de jeux de société était au ${minQuai(CARTE.depart.ligne)} en même temps que les ${PARTENAIRE.court.toLowerCase()}.`;
 // La ligne « nouveau créneau » : calculée UNE FOIS, quand le mail entre dans la base (après l'envoi du planning), sur la pose envoyée.
 export const phrasesCompteRendu = (prenom) => ({ id: PHRASES_ID, melanger: true, lignes: [
-  { id: 'salutation', choix: ['Bonjour Romain,', 'Salut mon pote,', 'Monsieur le directeur,'], juste: 0 },
+  { id: 'salutation', choix: ['Bonjour Romain,', 'Salut Romain,', 'Monsieur le directeur,'], juste: 0 },
   { id: 'conflit', choix: [PHRASE_CONFLIT, `Le camion de jeux de société était au ${minQuai(HAVRE.quai)} en même temps que le camion du Havre.`,
     'Il n’y avait aucun problème sur le planigramme.'], juste: 0 },
   { id: 'creneau', choix: (db) => ligneCreneau(placeEnvoyee(db)).choix, juste: (db) => ligneCreneau(placeEnvoyee(db)).juste },
-  { id: 'fin', choix: [`Je reste à la réception. ${prenom}`, 'Bisous', 'À plus.'], juste: 0 },
+  { id: 'fin', choix: [`Je reste à la réception. ${prenom}`, 'Cordialement', 'À plus.'], juste: 0 },
 ] });
 
 // ─────────────────────────────────────────────────────────────── les messages de Romain (au tu ; date du scénario)

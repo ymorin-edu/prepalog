@@ -529,11 +529,11 @@ const PIEGES_QUAI = [autresQuais[0], autresQuais[autresQuais.length - 1]].map((q
 const PIEGES_HEURE = [...new Set(CAMIONS.map((c) => toMin(c.de)))].filter((m) => m > toMin(HAVRE.de)).sort((a, b) => a - b).slice(0, 2).map(heureLue);   // 8 h 30, 9 h
 const majuscule = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 export const phrasesCompteRendu = (prenom) => ({ id: PHRASES_ID, melanger: true, lignes: [
-  { id: 'salutation', choix: ['Bonjour Samia,', 'Salut ma grande,', 'Madame la directrice,'], juste: 0 },
+  { id: 'salutation', choix: ['Bonjour Samia,', 'Salut Samia,', 'Madame la directrice,'], juste: 0 },
   { id: 'quai', choix: [QUAI_HAVRE, ...PIEGES_QUAI].map((q) => `${majuscule(q)} est prêt pour le camion du Havre.`), juste: 0 },
   { id: 'heure', choix: [HEURE_HAVRE, ...PIEGES_HEURE].map((h) => `Le camion est attendu à ${h}.`), juste: 0 },
   { id: 'manque', choix: [`Il manque un transpalette chargé : Kevin a mis celui du ${QUAI_HAVRE} en charge.`, 'Il ne manque rien.', 'Il manque la clé du magasin.'], juste: 0 },
-  { id: 'fin', choix: [`Je t’attends au quai. ${prenom}`, 'Bisous', 'À plus.'], juste: 0 },
+  { id: 'fin', choix: [`Je t’attends au quai. ${prenom}`, 'Cordialement', 'À plus.'], juste: 0 },
 ] });
 
 // ─────────────────────────────────────────────────────────────── les messages

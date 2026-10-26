@@ -223,11 +223,11 @@ export function phrasesLoueur(prenom) {
   return {
     id: MSG,
     lignes: [
-      { id: 'bonjour', choix: ['Bonjour,', 'Salut !', 'Coucou,'], juste: 0 },
+      { id: 'bonjour', choix: ['Bonjour,', 'Salut !', 'Hello,'], juste: 0 },
       { id: 'vehicule', choix: CHOIX_VEHICULE, juste: 0 },
       { id: 'quand', choix: ['pour ce vendredi 18 juin, de 09:00 jusqu’au retour du camion ce soir.', 'pour ce vendredi 18 juin, dès 06:00.',
         'pour toute la semaine prochaine.'], juste: 0 },
-      { id: 'formule', choix: [`Cordialement, ${prenom}, exploitation France Boissons Buchelay`, 'À plus !', 'Bisous'], juste: 0 },
+      { id: 'formule', choix: [`Cordialement, ${prenom}, exploitation France Boissons Buchelay`, 'À plus !', 'Cordialement'], juste: 0 },
     ],
     melanger: true,
   };

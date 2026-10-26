@@ -691,7 +691,7 @@ await v('ENT-10.8 : rendre compte — « Tout est conforme aux annonces » sur u
     proche(n.score, 18.5, `note (${k})`);
   }
   await monter({ uid: CAMIONS.plus.uid });
-  await parcours(CAMIONS.plus, { cr: { salutation: 'Yo !', ecart: CAMIONS.plus.ecart, fin: 'Bisous' } });
+  await parcours(CAMIONS.plus, { cr: { salutation: 'Bonjour à tous,', ecart: CAMIONS.plus.ecart, fin: 'Cordialement' } });
   const n = await noter();
   egal(ko(n), ['cr-salutation', 'cr-fin'], 'la forme seule');
   proche(n.score, 19.5, 'note (forme 0,5)');
@@ -704,7 +704,7 @@ await v('ENT-10.8 : pire cas — tout faux (ouverture fausse, heure et quai faux
   await parcours(K, { prep: { heure: '6 h 30', quai: 'B', palettes: '5' }, dial: { feuille: 'decharge', regles: 'volant' }, envois: [],
     depose: { P4: 'AK1', P3: 'AV1', P2: 'allee-1', P1: 'autre-quai-1' },
     rapp: { 'recues-ar-vag': '4', 'resultat-ar-vag': 'trop', 'recues-agri-kerlann': '1', 'resultat-agri-kerlann': 'manque', 'feuille-juste': 'ar-vag>agri-kerlann', 'feuille-corriger': 'rature' },
-    cr: { salutation: 'Yo !', ecart: 'Ar Vag : 1 palette de moins que l’annonce.', fin: 'Bisous' } });
+    cr: { salutation: 'Bonjour à tous,', ecart: 'Ar Vag : 1 palette de moins que l’annonce.', fin: 'Cordialement' } });
   const n = await noter();
   egal(JALONS.filter((j) => n.detail[j] !== 'ko'), [], 'tous les jalons faux');
   proche(n.score, 0, 'note');

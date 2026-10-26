@@ -435,7 +435,7 @@ await v('ENT-10.2 : pire cas — tout faux (photos au premier essai, défaut sig
   await jouer({ fautesVisite: { vestiaire: 2, reception: 1, quai: 1, bureau: 1 }, q: Q_FAUSSES,
     poste: { essai: false, points: [['site-en-ordre']], Q: Q_FAUSSES, avant: async () => { await I.valider(); await pause(); await I.cliquerPoint('site-manque'); await I.signaler(); await pause(); await qFil(Q_FAUSSES); } },
     attente: ['quai-b'], lire: { 'l-loic-quai': 'B', 'l-premier-libre': '07:30' }, r: 'B', t: 16,
-    cr: { salutation: 'Salut mon grand,', engin: 'Le transpalette n° 1 est en panne.', manque: 'Il ne manque rien.', heure: 'Loïc ne revient pas ce matin.', fin: 'Bisous' } });
+    cr: { salutation: 'Salut Erwan,', engin: 'Le transpalette n° 1 est en panne.', manque: 'Il ne manque rien.', heure: 'Loïc ne revient pas ce matin.', fin: 'Cordialement' } });
   const n = await note();
   egal(n.score, 0, 'note : ' + JSON.stringify(n.detail));
   egal(await bandeau(), tout('ko'), 'bandeau');

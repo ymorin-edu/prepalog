@@ -181,8 +181,8 @@ export const MANQUE_LIGNES = { quoi: 'ce qui ne va pas', pas: 'ce qu’on ne fai
 export const justeSignalement = (jeu, ligne) => choixSignalement(jeu)[ligne].find((c) => c.juste).v;
 
 // ─────────────────────────────────────────────────────────────── rendre compte (phrases à choisir, `juste: 0`, mélangées à l'écran)
-export const SALUTATIONS = ['Bonjour Erwan,', 'Salut mon grand,', 'Yo,'];
-export const fins = (prenom) => [`À tout à l’heure. ${prenom}`, 'Bisous', 'Voilà.'];
+export const SALUTATIONS = ['Bonjour Erwan,', 'Salut Erwan,', 'Bonjour,'];
+export const fins = (prenom) => [`À tout à l’heure. ${prenom}`, 'Cordialement', 'Voilà.'];
 export const phrasesCompteRendu = (prenom, db) => {
   const jeu = jeuDeBase(db), d = D(jeu.defaut), a = D(autreDefaut(jeu));
   return { id: PHRASES_ID, melanger: true, lignes: [

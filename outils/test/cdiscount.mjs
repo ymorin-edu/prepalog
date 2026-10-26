@@ -1808,6 +1808,31 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (stC(db2).liste !== 'ko') throw new Error('liste vraie contre une synthèse fausse : ' + stC(db2).liste);
   });
 
+  await v('ENT-2.2 : la liste par paliers (26/10/2026) — 3 bonnes sur 4 = 4,5 sur 8 ; une fausse en retire une bonne ; rien de juste = 0', async () => {
+    const points = (db) => Math.round(S2.ETAPES.filter((e) => /^liste/.test(e.id) && e.verifier(db).status === 'ok').reduce((t, e) => t + e.poids, 0) * 100) / 100;
+    const jouer = (liste) => { const db = exporterC(ouvrirC()); deposerC(db); repondre(db, 'À recompter : ' + liste); declencher(S2, db); return db; };
+    const cas = [
+      ['les 4 bonnes', 'CHG-20W, CAB-USBC-1M, BAT-10K, COQ-UNI-01', 8],
+      ['3 bonnes sur 4', 'CHG-20W, CAB-USBC-1M, COQ-UNI-01', 4.5],
+      ['4 bonnes + 1 fausse (ECO)', 'CHG-20W, CAB-USBC-1M, BAT-10K, COQ-UNI-01, ECO-BT-01', 4.5],
+      ['2 bonnes sur 4', 'CHG-20W, CAB-USBC-1M', 3],
+      ['1 bonne', 'CHG-20W', 1.5],
+      ['2 bonnes + 2 fausses', 'CHG-20W, CAB-USBC-1M, ECO-BT-01, AMP-LED-E27', 0],
+      ['aucune bonne', 'ECO-BT-01, AMP-LED-E27', 0],
+    ];
+    for (const [nom, liste, attendu] of cas) {
+      const p = points(jouer(liste));
+      if (p !== attendu) throw new Error(nom + ' : ' + p + ' au lieu de ' + attendu);
+    }
+    // Amorce vide : rien n'est jugé (attente), aucun point.
+    const vide = exporterC(ouvrirC()); deposerC(vide); repondre(vide, 'À recompter : '); declencher(S2, vide);
+    if (S2.ETAPES.filter((e) => /^liste/.test(e.id)).some((e) => e.verifier(vide).status !== 'attente')) throw new Error('amorce vide : ' + JSON.stringify(stC(vide)));
+    // Une erreur ne se paie qu'une fois : synthèse fausse (BAT à 0), liste cohérente avec elle (3 références) → les 8 points.
+    const unefois = exporterC(ouvrirC()); deposerC(unefois, { syn: { 'BAT-10K': 0 } });
+    repondre(unefois, 'À recompter : CAB-USBC-1M, CHG-20W, COQ-UNI-01'); declencher(S2, unefois);
+    if (points(unefois) !== 8) throw new Error('liste cohérente avec une synthèse fausse : ' + points(unefois));
+  });
+
   await v('ENT-2.2 : un écart tapé sans formule ne valide pas le jalon 2 ; une autre fonction que SI ne valide pas le 3', async () => {
     const db = exporterC(ouvrirC());
     deposerC(db, { tape: true });
@@ -2168,6 +2193,24 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
     if (!db.mails.some((m) => m.subject === 'Les cinq recomptages' && /Merci\. Je lance les cinq recomptages\./.test(m.text))) throw new Error('accusé de Nadia');
   });
 
+  await v('ENT-2.6 : la liste par paliers (26/10/2026) — 4 bonnes sur 5 = 4 sur 7,5 ; une mauvaise en retire une bonne ; la liste de fréquence ne rapporte que ce qu\'elle a de juste', async () => {
+    const points = (db) => Math.round(S6.ETAPES.filter((e) => /^cinq/.test(e.id) && e.verifier(db).status === 'ok').reduce((t, e) => t + e.poids, 0) * 100) / 100;
+    const jouer = (liste) => { const db = ouvrir6(); deposer6(db); repondre(db, 'À recompter : ' + liste); declencher(S6, db); return db; };
+    const cas = [
+      ['les 5 bonnes', 'ECO-BT-01, CHG-20W, CLA-SF-01, BOU-17L, MIX-PLG', 7.5],
+      ['4 bonnes sur 5', 'ECO-BT-01, CHG-20W, CLA-SF-01, BOU-17L', 4],
+      ['5 bonnes + 1 mauvaise', 'ECO-BT-01, CHG-20W, CLA-SF-01, BOU-17L, MIX-PLG, CAB-USBC-1M', 4],
+      ['3 bonnes + 2 mauvaises', 'ECO-BT-01, CHG-20W, CLA-SF-01, CAB-USBC-1M, COQ-UNI-01', 1],
+      ['2 bonnes + 2 mauvaises', 'ECO-BT-01, CHG-20W, CAB-USBC-1M, COQ-UNI-01', 0],
+    ];
+    for (const [nom, liste, attendu] of cas) {
+      const p = points(jouer(liste));
+      if (p !== attendu) throw new Error(nom + ' : ' + p + ' au lieu de ' + attendu);
+    }
+    const vide = ouvrir6(); deposer6(vide);
+    if (S6.ETAPES.filter((e) => /^cinq/.test(e.id)).some((e) => e.verifier(vide).status !== 'attente')) throw new Error('sans liste : rien n\'est jugé');
+  });
+
   await v('ENT-2.6 : erreurs — synthèse sur l\'export non nettoyé : jalons 1 et 2 ko ; NB.SI au lieu de NB.SI.ENS : 2 ko ; top 5 par fréquence : 4 ko ; date oubliée : BAT-10K et ko', async () => {
     const sale = ouvrir6(); deposer6(sale, { sale: true });
     if (st6(sale).nettoye !== 'ko' || st6(sale).constats !== 'ko') throw new Error('sale : ' + JSON.stringify(st6(sale)));
@@ -2372,10 +2415,10 @@ Suite à donner : Réclamation auprès de Gardéo, livraison incomplète`;
   await v('ENT-2.1, 2.2, 2.3, 2.4, 2.6 : poids (lot 4, validés par Tristan le 10/10/2026) — tables du contenu = tables écrites à la main, total 20, aucune notation « avancement »', async () => {
     const TABLES = {
       'cdiscount-mouvements': { actuel: 2, reception: 3, commandes: 3.5, 'retour-casse': 3, inventaire: 3, erreur: 5.5 },
-      'cdiscount-chiffres': { export: 2, ecart: 3, si: 3, synthese: 4, liste: 8 },
+      'cdiscount-chiffres': { export: 2, ecart: 3, si: 3, synthese: 4, 'liste-1': 1.5, 'liste-2': 1.5, 'liste-3': 1.5, liste: 3.5 },
       'cdiscount-inventaire': { comptage: 4, ecarts: 3, rangements: 6, temoin: 4.5, taux: 2.5 },
       'cdiscount-regularise': { export: 1.5, averifier: 1.5, parmotif: 2, ajustements: 3, reception: 2, quantites: 2, valeur: 2, motif: 3.5, suite: 2.5 },
-      'cdiscount-priorites': { export: 1.5, nettoye: 3, constats: 4, valeur: 4, cinq: 7.5 },
+      'cdiscount-priorites': { export: 1.5, nettoye: 3, constats: 4, valeur: 4, 'cinq-1': 1, 'cinq-2': 1, 'cinq-3': 1, 'cinq-4': 1, cinq: 3.5 },
     };
     for (const [nom, attendu] of Object.entries(TABLES)) {
       const S = await imp(`contenus/${nom}.js`);

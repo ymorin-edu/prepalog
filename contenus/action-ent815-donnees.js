@@ -129,9 +129,9 @@ export function lignesFiche(M) {
 export const melangerPour = (db, quoi, L) => { const g = graineDeBase(db); return g ? hasard(`${g}|${ID}|${quoi}`).melanger(L) : L.slice(); };
 
 // ─────────────────────────────────────────────────────────────── ④ le message à Samia (phrases calculées sur LA MISSION)
-export const SALUTATIONS = ['Bonjour Samia,', 'Salut ma belle,', 'Samia !'];
+export const SALUTATIONS = ['Bonjour Samia,', 'Salut Samia,', 'Samia !'];
 export const POLITESSES = ['Bonne journée !', 'Débrouille-toi.', 'C’est bon, lâche-moi.'];
-export const finsDe = (prenom) => [prenom, 'Bisous'];
+export const finsDe = (prenom) => [prenom, 'Cordialement'];
 export const phrasePrete = (mag, quai) => `La commande de ${mag} est prête, quai ${quai}.`;
 // La juste dit SA mission ; les pièges : un autre quai, un autre magasin, « pas finie ».
 export function choixPrete(M) {

@@ -299,8 +299,8 @@ for (const [nom, r, faux, points] of PIEGES_BON) {
     egal(n.score, points, 'note');
   });
 }
-await v('ENT-6.2 : « Salut Malo ! » → seul le jalon du ton est faux ; « Bisous » et « C’est bon, j’ai noté ta commande. » aussi ; la ligne « vides » fausse ne coûte rien', async () => {
-  for (const [ligne, t, faux, points] of [['salutation', 'Salut Malo !', ['msg-ton'], 18], ['fin', 'Bisous', ['msg-ton'], 18],
+await v('ENT-6.2 : « Salut Malo ! » → seul le jalon du ton est faux ; « Cordialement » seul et « C’est bon, j’ai noté ta commande. » aussi ; la ligne « vides » fausse ne coûte rien', async () => {
+  for (const [ligne, t, faux, points] of [['salutation', 'Salut Malo !', ['msg-ton'], 18], ['fin', 'Cordialement', ['msg-ton'], 18],
     ['commande', 'C’est bon, j’ai noté ta commande.', ['msg-ton'], 18], ['vides', 'Gardez vos vides jusqu’à la prochaine fois.', [], 20],
     ['rupture', 'Il ne nous reste que 2 fûts d’Affligem : je vous propose 2 fûts d’Edelweiss à la place.', ['msg-rupture'], 17],
     ['livraison', 'Vous serez livré samedi 19 juin, comme vous le souhaitez.', ['msg-livraison'], 18]]) {

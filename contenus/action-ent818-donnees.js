@@ -77,7 +77,7 @@ export function missionDe(jeu) {
 }
 
 // ─────────────────────────────────────────────────────────────── la réponse à Yanis (la ligne du fond dit la règle, non calculée)
-export const SALUTATIONS = ['Salut Yanis,', 'Yo le vieux,', 'Yanis !'];
+export const SALUTATIONS = ['Salut Yanis,', 'Monsieur Yanis,', 'Yanis !'];
 export const FONDS = ['Je fais une palette par magasin, sinon on se trompe au quai.', 'OK, je mets tout ensemble.', 'Fais-le toi-même.'];
 export const POLITESSES = ['Bon courage !', 'Débrouille-toi.', 'Lâche-moi.'];
-export const finsDe = (prenom) => [prenom, 'Bisous'];
+export const finsDe = (prenom) => [prenom, 'Cordialement'];

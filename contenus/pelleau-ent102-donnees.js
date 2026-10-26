@@ -205,13 +205,13 @@ export const melangerPour = (db, quoi, L) => { const g = graineDeBase(db || {});
 export const phrasesCompteRendu = (prenom, db) => {
   const d = defautDeBase(db);
   return { id: PHRASES_ID, melanger: true, lignes: [
-    { id: 'salutation', choix: ['Bonjour Erwan,', 'Salut mon grand,', 'Monsieur le directeur général,'], juste: 0 },
+    { id: 'salutation', choix: ['Bonjour Erwan,', 'Salut Erwan,', 'Monsieur le directeur général,'], juste: 0 },
     { id: 'engin', choix: ['J’ai contrôlé le transpalette n° 1 : il est en ordre.', 'Je n’ai pas eu le temps de regarder le transpalette.',
       'Le transpalette n° 1 est en panne.'], juste: 0 },
     { id: 'manque', choix: [SITE[d].phrase, 'Il ne manque rien.', SITE[autre(d)].phrase], juste: 0 },
     { id: 'heure', choix: [`Loïc revient à ${HEURE_LOIC} au ${QUAI_LOIC}.`, `Loïc revient à ${heureLue(toMin(SUIVANT.de))} au ${AUTRE_QUAI}.`,
       'Loïc ne revient pas ce matin.'], juste: 0 },
-    { id: 'fin', choix: [`Je suis au quai A. ${prenom}`, 'Bisous', 'À plus.'], juste: 0 },
+    { id: 'fin', choix: [`Je suis au quai A. ${prenom}`, 'Cordialement', 'À plus.'], juste: 0 },
   ] };
 };
 

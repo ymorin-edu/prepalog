@@ -218,8 +218,8 @@ export function valeursCause(db) {
 }
 
 /* ================================================================== les phrases du compte rendu (brief §6.2), calculées */
-export const SALUTATIONS = ['Bonjour Samia,', 'Salut,', 'Hé Samia !'];
-export const finsDe = (prenom) => [prenom, 'À plus', 'Bisous'];
+export const SALUTATIONS = ['Bonjour Samia,', 'Salut,', 'Salut Samia,'];
+export const finsDe = (prenom) => [prenom, 'À plus', 'Cordialement'];
 const pl = (n, mot) => `${n} ${mot}${n > 1 ? 's' : ''}`;
 // La ligne juste : `adresses` comptées (les siennes) et `ecarts` (les lignes de sa fiche). Les pièges : un autre nombre d'écarts, ou « Tout est bon. ».
 export const bilanJuste = (adresses, ecarts) => `${adresses} adresse${adresses > 1 ? 's' : ''} comptée${adresses > 1 ? 's' : ''}, ${pl(ecarts, 'écart')} signalé${ecarts > 1 ? 's' : ''} dans la fiche.`;

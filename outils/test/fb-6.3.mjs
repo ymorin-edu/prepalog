@@ -218,7 +218,7 @@ await v('ENT-6.3 : parcours juste — 20/20 ; Kevin retiré et saisonnier à l�
   const L = (await entrants()).filter((m) => m.subject === 'RE : Mon congé d’été');
   egal(L.map((m) => m.text), ['Pas accordé… Dommage, j’avais déjà prévenu ma famille. Du 23 août au 3 septembre, c’est tard, mais je prends.\n\nLucas'], 'réponse de Lucas');
   // La réponse de l'élève à Lucas : non notée, n'importe laquelle.
-  await phrases63('RE : Mon congé d’été', { comprendre: 'Ce n’est pas mon problème.', suite: 'Inès va tout arranger.', 'au-revoir': 'Bisous' });
+  await phrases63('RE : Mon congé d’été', { comprendre: 'Ce n’est pas mon problème.', suite: 'Inès va tout arranger.', 'au-revoir': 'Bonne journée.' });
   await annonce63();
   const n = await note();
   egal([n.score, n.max], [20, 20], 'note');
@@ -253,7 +253,7 @@ const PIEGES63 = [
   ['CDI', { ann: { contrat: 'cdi' } }, ['annonce-contrat']],
   ['dates sans fin, rattaché à Inès', { ann: { dates: 'sans-fin', rattache: 'ines' } }, ['annonce-dates', 'annonce-rattache']],
   ['« Ton congé est annulé »', { msg: { decision: 'Ton congé du 12 au 23 juillet est annulé.' } }, ['msg-decision']],
-  ['« Salut Lucas ! » et « Bisous »', { msg: { salutation: 'Salut Lucas !', fin: 'Bisous' } }, ['msg-salutation', 'msg-fin']],
+  ['« Salut Lucas ! » et « Cordialement » seul', { msg: { salutation: 'Salut Lucas !', fin: 'Cordialement' } }, ['msg-salutation', 'msg-fin']],
 ];
 for (const [nom, o, faux] of PIEGES63) {
   await v(`ENT-6.3 : piège ${nom} → seul${faux.length > 1 ? 's' : ''} ${faux.join(', ')} faux (${points63(faux)}/20)`, async () => {
@@ -310,7 +310,7 @@ await v('ENT-6.3 : pire cas — plannings envoyés vides, tout faux (questions c
   await aller('planning');
   await envoyerPlanning63();
   await phrases63('Mon congé d’été', { salutation: 'Salut Lucas !', decision: 'Ton congé du 12 au 23 juillet est accepté.', raison: 'Karim ne veut pas que tu partes du 12 au 23 juillet.',
-    proposition: 'Tu n’auras pas de congé cet été.', fin: 'Bisous' }, FAUSSES63);
+    proposition: 'Tu n’auras pas de congé cet été.', fin: 'Cordialement' }, FAUSSES63);
   await annonce63({ intitule: 'pl', contrat: 'stage', dates: 'tot', rattache: 'nadia',
     mentions: { permis: false, age: true, manutention: false, sexe: true, nationalite: true, lieu: false, famille: true, horaires: false } }, FAUSSES63);
   const n = await note();

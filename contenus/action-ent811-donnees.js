@@ -284,9 +284,9 @@ export function choixDemande(L, ids = ['P1', 'P2', 'P3', 'P4', 'P5']) {
   const C = [demande(L), demande([{ ...L[0], id: autre }, ...L.slice(1)]), demande([{ ...L[0], adresse: voisine(L[0].adresse) }, ...L.slice(1)])];
   return [...new Set(C)];
 }
-export const SALUTATIONS = ['Bonjour Kevin,', 'Yo Kevin,', 'Kevin !'];
+export const SALUTATIONS = ['Bonjour Kevin,', 'Salut Kevin,', 'Kevin !'];
 export const POLITESSES = ['Merci !', 'Vite.', 'Dépêche.'];
-export const finsDe = (prenom) => [prenom, 'Bisous'];
+export const finsDe = (prenom) => [prenom, 'Cordialement'];
 
 /* ================================================================== aides de lecture (contenu, questions, corrigé, tests) */
 export const niveauDeBase = (db) => niveauEleve(db);

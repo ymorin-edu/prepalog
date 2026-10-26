@@ -440,7 +440,7 @@ await v('ENT-10.3 : fiche « Signalement » et phrases conformes à SA variante 
 
 await v('ENT-10.3 : compte rendu — « ce que j’ai vu » d’un AUTRE défaut, « ce que j’ai fait » faux, salutation familière → ✗ ; Erwan répond toujours le même message (il ne dit pas si le détail est juste)', async () => {
   await monter({ uid: EL.b.uid });
-  await jouer(EL.b, { cr: { vu: 'Tout était en ordre.', fait: 'J’ai commencé avec le n° 2.', salutation: 'Salut mon grand,' } });
+  await jouer(EL.b, { cr: { vu: 'Tout était en ordre.', fait: 'J’ai commencé avec le n° 2.', salutation: 'Salut Erwan,' } });
   const n = await note();
   egal(faux(n), ['cr-vu', 'cr-fait', 'cr-salutation'], 'jalons faux');
   proche(n.score, 20 - 0.75 - 0.75 - 0.5, 'note');
@@ -489,7 +489,7 @@ await v('ENT-10.3 : pire cas — tout faux (mauvaise réponse à Yann deux fois,
   await jouer(EL.c, { y1: ['vas-y', 'controle'], y2: ['commence', 'refuse'], q: Q_FAUSSES,
     poste: { essais: [], points: [['ordre-1']], Q: Q_FAUSSES },
     fiche: { quoi: 'arretUrgence', pas: 'quai-b', fait: 'comme-d-habitude' },
-    cr: { salutation: 'Yo,', vu: 'Tout était en ordre.', fait: 'J’ai attendu ton retour sans rien faire.', fin: 'Bisous' } });
+    cr: { salutation: 'Bonjour,', vu: 'Tout était en ordre.', fait: 'J’ai attendu ton retour sans rien faire.', fin: 'Cordialement' } });
   const n = await note();
   egal(n.score, 0, 'note : ' + JSON.stringify(n.detail));
   egal(await bandeau(), tout('ko'), 'bandeau');

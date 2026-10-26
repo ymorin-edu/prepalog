@@ -218,11 +218,11 @@ export const RAPPELS = [
   'Pour un colis abîmé, il suffit de nous écrire quand vous le souhaitez.',
 ];
 export const phrasesReponse = (prenom) => ({ id: PHRASES_ID, melanger: true, lignes: [
-  { id: 'salutation', choix: ['Bonjour Madame Garnier,', 'Salut Inès,', 'Coucou,'], juste: 0 },
+  { id: 'salutation', choix: ['Bonjour Madame Garnier,', 'Salut Inès,', 'Bonjour,'], juste: 0 },
   { id: 'decision', choix: DECISIONS.map((d) => d.phrase), juste: (db) => rangDecision(situationDe(db)) },
   { id: 'montant', choix: (db) => MONTANTS(situationDe(db)).map((m) => m.phrase), juste: (db) => rangMontant(situationDe(db)) },
   { id: 'regle', choix: RAPPELS, juste: 0 },
-  { id: 'fin', choix: [`Cordialement, ${prenom}, service client Mondial Relay`, 'Bisous', 'À plus !'], juste: 0 },
+  { id: 'fin', choix: [`Cordialement, ${prenom}, service client Mondial Relay`, 'Cordialement', 'À plus !'], juste: 0 },
 ] });
 
 // ─────────────────────────────────────────────────────────────── lire la base (sans interface)

@@ -348,8 +348,8 @@ export function justePhraseLucas(db) {
   if (r === 'non-3j') return 1;
   return dateLucas(db).dansLesDelais ? 0 : 1;
 }
-export const SALUTATIONS = ['Bonjour Romain,', 'Salut chef,', 'Coucou,'];
-export const finsDe = (prenom) => [prenom, 'Bisous', 'À plus.'];
+export const SALUTATIONS = ['Bonjour Romain,', 'Salut Romain,', 'Bonjour,'];
+export const finsDe = (prenom) => [prenom, 'Cordialement', 'À plus.'];
 export const phrasesCompteRendu = (prenom) => ({ id: PHRASES_ID, melanger: true, lignes: [
   { id: 'salutation', choix: SALUTATIONS.slice(), juste: 0 },
   { id: 'reception', choix: (d) => choixReception(d), juste: 0 },

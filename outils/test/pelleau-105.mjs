@@ -366,7 +366,7 @@ await v('ENT-10.5 : pire cas — tout faux (5 palettes, maladroit à chaque rép
     avant: async () => { await QA.cestBon(); arret = await pg.textContent(`${Z} [data-q-secu-arret]`).catch(() => ''); await QA.marquer('lampe'); await QA.signaler(); await qrep(Q_FAUSSES); },
     depose: { P4: ['AK1', 'AV1'], P3: ['AK2', 'AV2'], P2: ['allee-1', 'AK1'], P1: ['quaiB-1', 'AK2'] },
     rapp: { 'recues-ar-vag': '3', 'resultat-ar-vag': 'trop', 'recues-agri-kerlann': '3', 'resultat-agri-kerlann': 'conforme' },
-    cr: { salutation: 'Yo !', ecart: 'Tout est conforme aux annonces.', fin: 'Bisous' } });
+    cr: { salutation: 'Bonjour à tous,', ecart: 'Tout est conforme aux annonces.', fin: 'Cordialement' } });
   vrai(arret.length > 0 && !/lampe/i.test(arret), 'Yann arrête sans nommer la lampe : ' + arret);
   const n = await note();
   egal(JALONS.filter((j) => n.detail[j] !== 'ko'), [], 'tous les jalons faux');

@@ -203,8 +203,8 @@ export function choixLitiges(jeu) {
     'J’ai rangé les cartons abîmés en stock avec les autres.', 'J’ai rendu les cartons abîmés au chauffeur.'];
 }
 export const LIGNE_RECU = `J’ai contrôlé les ${PALETTES.length} palettes du camion du Havre.`;
-export const SALUTATIONS = ['Bonjour Samia,', 'Salut ma grande,', 'Madame la directrice,'];
-export const finsDe = (prenom) => [`Je reste au quai. ${prenom}`, 'Bisous', 'À plus.'];
+export const SALUTATIONS = ['Bonjour Samia,', 'Salut Samia,', 'Madame la directrice,'];
+export const finsDe = (prenom) => [`Je reste au quai. ${prenom}`, 'Cordialement', 'À plus.'];
 export const phrasesCompteRendu = (prenom, jeu) => ({ id: PHRASES_ID, melanger: true, lignes: [
   { id: 'salutation', choix: SALUTATIONS.slice(), juste: 0 },
   { id: 'recu', texte: LIGNE_RECU },

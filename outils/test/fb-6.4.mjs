@@ -437,7 +437,7 @@ await v('ENT-6.4 : message à Nadia — la phrase « en stock avec les autres »
 });
 
 await v('ENT-6.4 : message à Nadia — lignes de réserves fausses (« Tout est conforme. ») et ton familier : seule la ligne des réserves coûte (1 point) ; salutation et fin pèsent 0', async () => {
-  const n = await parcours64({ uid: 'fb64-ton', msg: { reserves: 'Tout est conforme.', salutation: 'Salut !', fin: 'Bisous' } });
+  const n = await parcours64({ uid: 'fb64-ton', msg: { reserves: 'Tout est conforme.', salutation: 'Salut !', fin: 'Cordialement' } });
   egal(etats64(n), sauf64(['msg-reserves']), 'jalons');
   egal(n.score, 19, 'note');
   egal((await entrants()).filter((m) => m.subject === `RE : ${NOM64}`).map((m) => m.text),

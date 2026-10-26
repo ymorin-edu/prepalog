@@ -401,7 +401,7 @@ await v('ENT-10.9 : inaction et pire cas (temoin-1) — rien fait : 0 (aucun jal
   egal(etats.filter(([, s]) => s === 'ok'), [], 'aucun jalon vrai sans rien faire (quai ouvert)');
   await quai(T1, { pal: { P1: [40, 'accepter'], P2: [40, 'reserves', 'manquant'], P3: [40, 'accepter'], P4: [39, 'reserves', 'avarie'] }, res: { P2: '4', P4: '1' },
     deballage: true, q: FAUSSES_Q });
-  await compteRendu({ salutation: 'Salut mon pote,', reserves: 'Tout est conforme, aucune réserve.', litiges: 'J’ai rendu les colis abîmés à Loïc.', fin: 'Bisous' }, FAUSSES_Q);
+  await compteRendu({ salutation: 'Salut Erwan,', reserves: 'Tout est conforme, aucune réserve.', litiges: 'J’ai rendu les colis abîmés à Loïc.', fin: 'Cordialement' }, FAUSSES_Q);
   const n = await note();
   proche(n.score, 1, 'note (la signature seule)');
   egal(jalonsFaux(n), JALONS.filter((j) => j !== 'signature'), 'tous les jalons faux sauf la signature');

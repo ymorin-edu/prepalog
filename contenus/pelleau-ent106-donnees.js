@@ -271,5 +271,5 @@ export function choixEcart(jeu) {
 }
 // La ligne imposée « reçu » (« 4 palettes : 3 Ar Vag, 1 Agri-Kerlann, triées en zone de réception. »).
 export const ligneRecu = (jeu) => `${pal(nbPalettes(jeu))} : ${CLIENTS_106.map((c) => `${compte(jeu, c)} ${NOM_DIT[c]}`).join(', ')}, triées en zone de réception.`;
-export const SALUTATIONS = ['Salut Maëlys,', 'Madame,', 'Yo !'];
-export const fins = (prenom) => [`Je reste à la réception si besoin. ${prenom}`, 'Bisous', 'Ciao.'];
+export const SALUTATIONS = ['Salut Maëlys,', 'Madame,', 'Bonjour à tous,'];
+export const fins = (prenom) => [`Je reste à la réception si besoin. ${prenom}`, 'Cordialement', 'Merci.'];

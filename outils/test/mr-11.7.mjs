@@ -343,14 +343,14 @@ await v('ENT-11.7 : sabotage de l’appel (cas A) — numéro non demandé (« r
   await sabotage('m117-d', { appel: ['presente', 'promet', 'reformule', 'verifier'] }, ['ecoute-numero', 'ecoute-promesse'], 18, 'promesse au numéro');
 });
 
-await v('ENT-11.7 : sabotage du ton (cas A) — « agressif » ou « familier » à l’accueil → le ton seul tombe (19) ; « familier » au numéro → « numéro » et ton (18) ; « agacé » à la fin → « promesse » et ton (18) ; « Salut Inès, » → le ton seul (19) ; « Bisous » → le ton seul (19) ; la forme pèse 1 point sur 20', async () => {
+await v('ENT-11.7 : sabotage du ton (cas A) — « agressif » ou « familier » à l’accueil → le ton seul tombe (19) ; « familier » au numéro → « numéro » et ton (18) ; « agacé » à la fin → « promesse » et ton (18) ; « Salut Inès, » → le ton seul (19) ; « Cordialement » seul → le ton seul (19) ; la forme pèse 1 point sur 20', async () => {
   await sabotage('m117-d', { appel: ['agressif', 'numero', 'reformule', 'verifier'] }, ['ton'], 19, 'accueil agressif');
   await sabotage('m117-d', { appel: ['familier', 'numero', 'reformule', 'verifier'] }, ['ton'], 19, 'accueil familier');
   await sabotage('m117-d', { appel: ['presente', 'familier', 'reformule', 'verifier'] }, ['ecoute-numero', 'ton'], 18, 'numéro tutoyé');
   await sabotage('m117-d', { appel: ['presente', 'numero', 'reformule', 'agace'] }, ['ecoute-promesse', 'ton'], 18, 'agacé');
   await sabotage('m117-d', { cr: { salutation: 'Salut Inès,' } }, ['ton'], 19, 'salutation familière');
-  await sabotage('m117-d', { cr: { salutation: 'Coucou,' } }, ['ton'], 19, 'salutation « coucou »');
-  await sabotage('m117-d', { cr: { fin: 'Bisous' } }, ['ton'], 19, 'fin « Bisous »');
+  await sabotage('m117-d', { cr: { salutation: 'Bonjour,' } }, ['ton'], 19, 'salutation « Bonjour, » sans nom');
+  await sabotage('m117-d', { cr: { fin: 'Cordialement' } }, ['ton'], 19, 'fin « Cordialement » seul');
 });
 
 await v('ENT-11.7 : sabotage de la règle — cas A : « toujours droit » → « règle » ET « montant » tombent (13) ; la bonne conclusion avec le prix de la lampe (65) → « montant » seul (17) ; 500 → « montant » seul ; cas C : « recevable » avec 0 € (un zéro deviné) → les deux tombent (13) ; la bonne conclusion avec 25 → « montant » seul ; cas D : « retiré » → les deux', async () => {
@@ -517,7 +517,7 @@ await v('ENT-11.7 : rien ne dit juste ou faux avant la remise — parcours enti�
   await monter({ uid: 'm117-b', rep: OUV_FAUSSES });
   await jouer('m117-b', { appel: ['agressif', 'promet', 'faux-fait', 'agace'], regle: { conclusion: 'toujours', montant: 500 },
     dossier: { colis: 'MR 1', livraison: '2026-11-01', dommage: 'retard', suite: 'refusee' },
-    cr: { salutation: 'Coucou,', decision: DEC.toujours, montant: ENTIER, regle: 'Pour un colis abîmé, il suffit de nous écrire quand vous le souhaitez.', fin: 'Bisous' } });
+    cr: { salutation: 'Bonjour,', decision: DEC.toujours, montant: ENTIER, regle: 'Pour un colis abîmé, il suffit de nous écrire quand vous le souhaitez.', fin: 'Cordialement' } });
   await qFil();
   const ecran = await texte();
   vrai(!JUGE.test(ecran), 'un mot qui juge à l’écran : ' + (ecran.match(JUGE) || [])[0]);

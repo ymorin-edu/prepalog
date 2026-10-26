@@ -449,7 +449,7 @@ await v('ENT-11.4 : un seul jalon tombe à la fois — message à Samia faux («
   await parcours('C', { samia: lignesSamia('C', { raison: 'Je n’ai pas regardé le repos, ça ira.' }) });
   n = await noter();
   egal([ko(n), n.score], [['message'], points(['message'])], 'raison fausse');
-  await parcours('C', { samia: lignesSamia('C', { salutation: 'Coucou !', formule: 'Bisous' }) });
+  await parcours('C', { samia: lignesSamia('C', { salutation: 'Bonjour,', formule: 'Cordialement' }) });
   n = await noter();
   egal([ko(n), n.score], [[], 20], 'la forme du message ne coûte rien (salutation et fin non jugées)');
 });

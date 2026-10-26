@@ -293,14 +293,14 @@ export function phrasesInes(prenom) {
   return {
     id: MSG_INES,
     lignes: [
-      { id: 'bonjour', choix: ['Bonjour Inès,', 'Coucou Inès !'], juste: 0 },
+      { id: 'bonjour', choix: ['Bonjour Inès,', 'Salut Inès !'], juste: 0 },
       { id: 'futs', choix: [`Fûts : ${euros(REEL.montant.futs)} de consigne à facturer (${pl(REEL.ecart.futs, 'fût')} de plus chez Malo).`,
         `Fûts : avoir de ${euros(REEL.montant.futs)}.`, `Fûts : ${euros(LIVRES.futs * CONSIGNES.fut)} à facturer.`], juste: 0 },
       { id: 'casiers', choix: [`Casiers : avoir de ${euros(REEL.montant.casiers)} (${pl(casiersMoins, 'casier')} de moins chez Malo).`,
         `Casiers : ${euros(REEL.montant.casiers)} à facturer.`, `Casiers : avoir de ${euros(VIDES_TICKET.casiers * CONSIGNES.casier)}.`], juste: 0 },
       { id: 'heineken', choix: [`Facture ${HEINEKEN.livre} Heineken 30 L : le ${HEINEKEN.commande}e a été refusé.`,
         `Facture les ${HEINEKEN.commande} Heineken commandés.`], juste: 0 },
-      { id: 'merci', choix: [`Merci, ${prenom}`, 'Bisous'], juste: 0 },
+      { id: 'merci', choix: [`Merci, ${prenom}`, 'Merci.'], juste: 0 },
     ],
     melanger: true,
   };

@@ -594,11 +594,11 @@ await v('ENT-10.4 : 300 graines — chaque jeu de lieux a un facile, un moyen, u
 });
 
 // ─────────────────────────────────────────────────────────── le compte rendu
-await v('ENT-10.4 : compte rendu — jugé ligne par ligne : la phrase de l’AUTRE défaut du site → ✗ (−0,75) ; celle d’un autre défaut de l’engin → ✗ (−0,75) ; « en ordre » → ✗ ; l’heure de Loïc au quai B → ✗ (−0,5) ; « Salut mon grand, » → ✗ (−0,5) ; « Bisous » → ✗ (−0,5) ; les phrases justes suivent le défaut', async () => {
+await v('ENT-10.4 : compte rendu — jugé ligne par ligne : la phrase de l’AUTRE défaut du site → ✗ (−0,75) ; celle d’un autre défaut de l’engin → ✗ (−0,75) ; « en ordre » → ✗ ; l’heure de Loïc au quai B → ✗ (−0,5) ; « Salut Erwan, » → ✗ (−0,5) ; « Cordialement » → ✗ (−0,5) ; les phrases justes suivent le défaut', async () => {
   const cas = [
     ['site', SITE_DIT.affichage, 'cr-site', 0.75], ['engin', `J’ai contrôlé le transpalette n° 1 : ${ENGIN_DIT.batterie}. Je ne m’en sers pas.`, 'cr-engin', 0.75],
     ['engin', 'J’ai contrôlé le transpalette n° 1 : il est en ordre.', 'cr-engin', 0.75], ['heure', 'La Biscuiterie Ar Vag livre à 7 h 15 au quai B.', 'cr-heure', 0.5],
-    ['salutation', 'Salut mon grand,', 'cr-salutation', 0.5], ['fin', 'Bisous', 'cr-fin', 0.5],
+    ['salutation', 'Salut Erwan,', 'cr-salutation', 0.5], ['fin', 'Cordialement', 'cr-fin', 0.5],
   ];
   for (const [ligne, phrase, jalon, poids] of cas) {
     await monter({ uid: 'p104-a' });

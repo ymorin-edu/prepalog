@@ -316,6 +316,33 @@ export function cinqBonnes(refs, vals) {
   return dessus.every((r) => refs.includes(r)) && refs.every((r) => Math.abs(vals[r] || 0) >= seuil);
 }
 
+// Palier de la liste des cinq priorités (26/10/2026, état des lieux des jalons) : combien de références bien choisies, une mauvaise
+// en retirant une. « Bien choisie » = de valeur au moins égale à celle du 5e rang (les égalités sont tolérées, comme `cinqBonnes`).
+// Quatre jalons de palier précèdent `cinq` (la liste entière, juste) : une liste presque juste rapporte une partie des 7,5 points.
+function netteCinq(db) {
+  const L = listes(db);
+  if (!L.length) return null;
+  const vals = valeursDeReference(db);
+  const tri = MODELES.map((r) => Math.abs(vals[r] || 0)).sort((a, b) => b - a);
+  const seuil = tri[4];
+  if (!(seuil > 0)) return 0;
+  return Math.max(...L.map((refs) => {
+    const uniques = [...new Set(refs)];
+    const bonnes = uniques.filter((r) => Math.abs(vals[r] || 0) >= seuil).length;
+    return bonnes - (uniques.length - bonnes);
+  }));
+}
+const MOTS_PALIER = { 1: 'une', 2: 'deux', 3: 'trois', 4: 'quatre' };
+const jalonPalier = (k) => ({
+  id: `cinq-${k}`,
+  titre: `Priorités à recompter : au moins ${MOTS_PALIER[k]} bien choisie${k > 1 ? 's' : ''} (une mauvaise en retire une)`,
+  verifier(db) {
+    const n = netteCinq(db);
+    if (n === null) return { status: 'attente' };
+    return n >= k ? { status: 'ok' } : { status: 'ko' };
+  },
+});
+
 const jalonControle = (id) => (db) => {
   const r = resultatDepot(db, ID_DEPOT);
   const c = r.depose ? r.controles[id] : null;
@@ -328,6 +355,7 @@ const JALONS = [
   { id: 'nettoye', titre: 'Export nettoyé', verifier: jalonControle('nettoye') },
   { id: 'constats', titre: 'Constats comptés depuis le dernier inventaire (NB.SI.ENS)', verifier: jalonControle('constats') },
   { id: 'valeur', titre: 'Écarts chiffrés en euros (RECHERCHEV)', verifier: jalonControle('valeur') },
+  jalonPalier(1), jalonPalier(2), jalonPalier(3), jalonPalier(4),
   {
     id: 'cinq',
     titre: 'Les cinq bonnes priorités',
@@ -346,6 +374,10 @@ export const BAREME = {
   nettoye: [3],
   constats: [4],
   valeur: [4],
-  cinq: [7.5],
+  'cinq-1': [1],
+  'cinq-2': [1],
+  'cinq-3': [1],
+  'cinq-4': [1],
+  cinq: [3.5],
 };
 export const ETAPES = ponderer(JALONS, BAREME, 'ENT-2.6');

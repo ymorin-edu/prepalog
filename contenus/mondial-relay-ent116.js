@@ -249,12 +249,12 @@ export const phrasesReponse = (prenom, db) => {
   const jeu = jeuDeBase(db), z = agentRefuse(jeu), nom = nomAgent(jeu, z), nuits = nuitsTexte(z.nuits);
   const nuitPic = z.nuits.map((i) => NUITS[i]).find((n) => n.pic);
   return { id: PHRASES_ID, melanger: true, lignes: [
-    { id: 'salutation', choix: [`Bonjour ${nom},`, 'Yo !', 'Coucou !'], juste: 0 },
+    { id: 'salutation', choix: [`Bonjour ${nom},`, 'Salut !', 'Bonjour,'], juste: 0 },
     { id: 'decision', choix: [`Ta demande de congé pour les nuits ${nuits} ne peut pas être accordée.`, `Ta demande de congé pour les nuits ${nuits} est accordée.`,
       `Ta demande de congé pour les nuits ${nuits} est annulée.`], juste: 0 },
     { id: 'raison', choix: [`La nuit du ${nuitPic.lib} est une nuit de pic : pendant le pic, il n’y a pas de congé, toute l’équipe est nécessaire.`,
       'Romain ne veut pas que tu partes.', 'Tu as déjà eu trop de congés cette année.'], juste: 0 },
-    { id: 'fin', choix: [`Je reste à ta disposition. Cordialement, ${prenom}, pour Hélène`, 'Désolé !', 'Bisous'], juste: 0 },
+    { id: 'fin', choix: [`Je reste à ta disposition. Cordialement, ${prenom}, pour Hélène`, 'Désolé !', 'Cordialement'], juste: 0 },
   ] };
 };
 

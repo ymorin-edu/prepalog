@@ -287,8 +287,8 @@ export const ligneControle = (jeu) => {
   const n = (c) => jeu.palettes.filter((p) => p.client === c).length;
   return `J’ai contrôlé les ${jeu.palettes.length} palettes de la ramasse : ${CLIENTS_112.filter((c) => n(c) > 0).map((c) => `${n(c)} ${NOM_DIT[c]}`).join(', ')}.`;
 };
-export const SALUTATIONS = ['Bonjour Erwan,', 'Salut mon pote,', 'Monsieur le directeur,'];
-export const finsDe = (prenom) => [`Je reste au quai. ${prenom}`, 'Bisous', 'À plus.'];
+export const SALUTATIONS = ['Bonjour Erwan,', 'Salut Erwan,', 'Monsieur le directeur,'];
+export const finsDe = (prenom) => [`Je reste au quai. ${prenom}`, 'Cordialement', 'À plus.'];
 // Les lignes qui jugent le CONTENU du compte rendu (3 points) : les réserves, la zone litiges et — s'il y en a une — la palette non stockée. La forme : salutation, fin.
 export const lignesContenu = (jeu) => ['reserves', 'litiges', ...(kerveguenDe(jeu) ? ['kerveguen'] : [])];
 export const phrasesCompteRendu = (prenom, jeu) => ({ id: PHRASES_ID, melanger: true, lignes: [

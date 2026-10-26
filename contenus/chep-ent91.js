@@ -128,7 +128,7 @@ export const CONSEIL = [
 export const FIN = (prenom) => [
   `Je reste à votre disposition. Bien cordialement, ${prenom} — CHEP France, Templemars`,
   `À plus, ${prenom}`,
-  `Bisous, ${prenom}`,
+  `Bien à vous`,
 ];
 export const phrasesReponse = (prenom) => ({ id: PHRASES_ID, melanger: true, lignes: [
   { id: 'salut', texte: 'Bonjour Madame Caron,' },

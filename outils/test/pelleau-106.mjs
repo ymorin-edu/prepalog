@@ -465,7 +465,7 @@ await v('ENT-10.6 : pire cas — tout faux (maladroit à chaque réplique, « C�
     apresBon: async () => { arret = await present('[data-q-secu-arret]'); },
     depose: Object.fromEntries(SORTIE.map((p) => [p, [autre[p], K.cases[p]]])),
     rapp: { 'recues-ar-vag': '2', 'resultat-ar-vag': 'conforme', 'recues-agri-kerlann': '2', 'resultat-agri-kerlann': 'trop' },
-    cr: { salutation: 'Yo !', ecart: 'Tout est conforme aux annonces.', fin: 'Bisous' } });
+    cr: { salutation: 'Bonjour à tous,', ecart: 'Tout est conforme aux annonces.', fin: 'Cordialement' } });
   egal(arret, false, 'Yann n’arrête pas l’élève (entraînement)');
   const n = await note();
   egal(JALONS.filter((j) => n.detail[j] !== 'ko'), [], 'tous les jalons faux');

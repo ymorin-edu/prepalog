@@ -279,7 +279,7 @@ await v('ENT-8.4 : jalons sans écran — rien d’envoyé : tout « à faire »
   egal(await ko((d) => { d.docs.ouvrir = 'pret'; }), ['ouvrir'], '« oui, tout est prêt »');
   egal(await ko((d) => { d.docs.dabord = 'ouvrir'; }), ['dabord'], 'ouvrir quand même');
   egal(await ko((d) => { d.cr.conflit = 'Il n’y avait aucun problème sur le planigramme.'; }), ['cr-conflit'], 'aucun problème');
-  egal(await ko((d) => { d.cr.salutation = 'Salut mon pote,'; d.cr.fin = 'Bisous'; }), ['cr-salutation', 'cr-fin'], 'forme');
+  egal(await ko((d) => { d.cr.salutation = 'Salut Romain,'; d.cr.fin = 'Cordialement'; }), ['cr-salutation', 'cr-fin'], 'forme');
   // Envoyer le planning sans la carte (retirée) : faux, jamais « à faire ».
   egal((await jalonsSans({ planning: [null] }))['v1-replace'], 'ko', 'planning envoyé sans la carte');
 });
@@ -461,7 +461,7 @@ await v('ENT-8.4 : inaction et pire cas — rien fait : 0 ; camion laissé à la
     lieux: { 'l-retours': '6', 'l-quai': '1', 'l-bureau': '2', 'l-charge': '5' }, qui: { 't-bl': 'romain', 't-ranger': 'ines', 't-equipe': 'lucas' },
     lire: { 'l-q1-10h': 'aucun', trouve: 'vaisselle' }, quai: null,
     docs: { transport: 'facture', commande: 'livraison', ouvrir: 'pret', dabord: 'ouvrir' },
-    cr: { salutation: 'Salut mon pote,', conflit: 'Il n’y avait aucun problème sur le planigramme.', creneau: 'Je l’ai mis au quai 3 de 10 h 30 à 12 h.', fin: 'Bisous' },
+    cr: { salutation: 'Salut Romain,', conflit: 'Il n’y avait aucun problème sur le planigramme.', creneau: 'Je l’ai mis au quai 3 de 10 h 30 à 12 h.', fin: 'Cordialement' },
     q: FAUSSES_Q,
   });
   const n = await note();

@@ -164,8 +164,8 @@ export function entrepotDe(graine, { niveau = 'standard' } = {}) {
 // transfert, ou null) }. Chaque ligne : la juste en premier (`juste: 0`), l'ordre affiché est tiré par élève. Une erreur ne se paie qu'une fois :
 // « où » et « ce que j'ai fait » sont justes s'ils disent ce qu'il a VRAIMENT fait (pas trouvée, laissée là…). « C'est la faute de Kevin. » ne
 // coûte que la forme (COORDINATION n° 7) : la ligne « ce qui s'est passé » est jugée juste avec elle aussi (`contenus/action-ent813.js`).
-export const SALUTATIONS = ['Bonjour Samia,', 'Salut,', 'Coucou Samia !'];
-export const finsDe = (prenom) => [prenom, 'Bisous'];
+export const SALUTATIONS = ['Bonjour Samia,', 'Salut,', 'Salut Samia,'];
+export const finsDe = (prenom) => [prenom, 'Cordialement'];
 export const FAUTE_KEVIN = 'C’est la faute de Kevin.';
 export const NE_SAIS_PAS = 'Je ne sais pas.';
 export const PASSE = {

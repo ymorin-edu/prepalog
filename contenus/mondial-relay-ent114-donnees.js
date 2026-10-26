@@ -295,10 +295,10 @@ export function phrasesSamia(prenom, jeu) {
         'T2 est doublée : j’ai mis deux chauffeurs sur la même tournée T2, sans camion en plus.',
         'T2 est doublée : j’ai posé T2 bis avec le renfort, qui part dès 06:00.'];
   return { id: MSG, melanger: true, lignes: [
-    { id: 'salutation', choix: ['Salut Samia,', 'Bonjour Madame la directrice,', 'Coucou !'], juste: 0 },
+    { id: 'salutation', choix: ['Salut Samia,', 'Bonjour Madame la directrice,', 'Bonjour,'], juste: 0 },
     { id: 'changement', choix: bonne, juste: 0 },
     { id: 'raison', choix: ['J’ai vérifié pour chacun le permis, les 11 h de repos et la conduite.',
       'J’ai posé les tournées au hasard, ça passera.', 'Je n’ai pas regardé le repos, ça ira.'], juste: 0 },
-    { id: 'formule', choix: [`À tout à l’heure, ${prenom}`, 'Bisous', 'Cordialement, Madame'], juste: 0 },
+    { id: 'formule', choix: [`À tout à l’heure, ${prenom}`, 'Cordialement', 'Cordialement, Madame'], juste: 0 },
   ] };
 }

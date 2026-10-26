@@ -484,8 +484,8 @@ await v('ENT-8.12 : parcours juste à l’écran (témoin 1, standard) — 20 / 
   await ouvrirMail('Un mot pour finir'); await capture('6-message-samia'); await pg.click(Q('[data-repondre]'));
   await pg.waitForSelector(Q('#formPhr:not([hidden])'));
   egal((await choixDe('bilan')).sort(), [bilanJuste(6, 2), bilanJuste(6, 3), 'Tout est bon.'].sort(), 'le bilan calculé sur SES comptes (6 adresses, 2 écarts) + un autre nombre + « Tout est bon. »');
-  egal((await choixDe('salutation')).sort(), ['Bonjour Samia,', 'Hé Samia !', 'Salut,'].sort(), 'salutations');
-  egal((await choixDe('fin')).sort(), ['Bisous', 'Lea', 'À plus'].sort(), 'fins');
+  egal((await choixDe('salutation')).sort(), ['Bonjour Samia,', 'Salut Samia,', 'Salut,'].sort(), 'salutations');
+  egal((await choixDe('fin')).sort(), ['Cordialement', 'Lea', 'À plus'].sort(), 'fins');
   await repondreSamia(PHR(6, 2), BONNES_Q, true);
   egal(VUS.slice(-1), ['q-argent'], 'q-argent à l’envoi du message à Samia');
   egal(VUS, ['q-pourquoi', 'q-aveugle', 'q-colisage', 'q-robot', 'q-que-faire', 'q-cause', 'q-argent'], 'les sept questions, une fois chacune, dans cet ordre');
@@ -574,7 +574,7 @@ await v('ENT-8.12 : inaction → 0 / 20 ; « Terminer » sans rien compter (conf
   egal((await etatC()).fini, true, 'terminé sans rien compter');
   await fiche({}, FAUSSES_Q);
   egal(await pg.$$eval(Q('[data-fiche-champ]'), (L) => L.length), 0, 'aucune ligne dans la fiche');
-  await repondreSamia({ salutation: 'Hé Samia !', bilan: 'Il y a des écarts partout.', fin: 'Bisous' }, FAUSSES_Q);
+  await repondreSamia({ salutation: 'Salut Samia,', bilan: 'Il y a des écarts partout.', fin: 'Cordialement' }, FAUSSES_Q);
   const n = await note();
   vrai(COMPTAGE.every((j) => n.detail[j] === 'ko'), 'tout le comptage ✗, aucun « à faire » : ' + COMPTAGE.map((j) => n.detail[j]));
   egal([n.detail['fiche-signaler'], n.detail['fiche-cause'], n.detail['samia-forme']], ['ko', 'ko', 'ko'], 'fiche sans ligne : les deux ✗ ; forme ✗');

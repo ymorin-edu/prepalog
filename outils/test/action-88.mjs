@@ -346,7 +346,7 @@ await v('ENT-8.8 : inaction et pire cas (temoin-1) — rien fait : 0 ; tout faux
   const n0 = await note(); egal(n0 ? n0.score : 0, 0, 'inaction');
   await quai(T1, { pal: { P1: [39, 'reserves', 'manquant'], P2: [24, 'reserves', 'manquant'], P3: [20, 'accepter'], P4: [48, 'accepter'] }, res: { P1: '1', P2: '3' },
     deballage: true, q: FAUSSES_Q });
-  await compteRendu({ salutation: 'Salut ma grande,', reserves: 'Tout est conforme, aucune réserve.', litiges: 'J’ai rendu les cartons abîmés au chauffeur.', fin: 'Bisous' }, FAUSSES_Q);
+  await compteRendu({ salutation: 'Salut Samia,', reserves: 'Tout est conforme, aucune réserve.', litiges: 'J’ai rendu les cartons abîmés au chauffeur.', fin: 'Cordialement' }, FAUSSES_Q);
   const n = await note();
   proche(n.score, 1, 'note (la signature seule)');
   egal(jalonsFaux(n), JALONS.filter((j) => j !== 'signature'), 'tous les jalons faux sauf la signature');

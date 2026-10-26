@@ -257,7 +257,7 @@ export function phrasesMalo(prenom) {
   return {
     id: REPONSE,
     lignes: [
-      { id: 'salutation', choix: ['Bonjour Malo,', 'Salut Malo !', 'Coucou,'], juste: 0 },
+      { id: 'salutation', choix: ['Bonjour Malo,', 'Salut Malo !', 'Bonjour,'], juste: 0 },
       { id: 'commande', choix: ['Votre commande pour la Fête de la musique est bien enregistrée.', 'C’est bon, j’ai noté ta commande.'], juste: 0 },
       { id: 'rupture', choix: CHOIX_RUPTURE.map((c) => c.phrase), juste: 0 },
       { id: 'livraison', choix: CHOIX_LIVRAISON.map((c) => c.phrase), juste: 0 },
@@ -265,7 +265,7 @@ export function phrasesMalo(prenom) {
         `Le chauffeur reprendra vos ${V.futs} fûts et ${V.casiers} casiers vides.`,
         `Le chauffeur reprendra vos ${V.casiers} fûts et ${V.futs} casiers vides.`,
         'Gardez vos vides jusqu’à la prochaine fois.'], juste: 0 },
-      { id: 'fin', choix: [`Cordialement, ${prenom}, administration des ventes France Boissons`, 'Bisous', 'À plus !'], juste: 0 },
+      { id: 'fin', choix: [`Cordialement, ${prenom}, administration des ventes France Boissons`, 'Cordialement', 'À plus !'], juste: 0 },
     ],
     melanger: true,
   };

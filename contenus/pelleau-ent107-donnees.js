@@ -132,8 +132,8 @@ export const ligneRecu = (jeu) => {
   const tout = CLIENTS_107.every((c) => resultat(jeu, c) === 'conforme');
   return `${pal(nbPalettes())} : ${CLIENTS_107.map((c) => `${reellesDe(jeu, c).length} ${NOM_DIT[c]}`).join(', ')}${tout ? ', conformes aux annonces' : ''}.`;
 };
-export const SALUTATIONS = ['Salut Maëlys,', 'Madame,', 'Yo !'];
-export const fins = (prenom) => [`Je reste à la réception si besoin. ${prenom}`, 'Bisous', 'Ciao.'];
+export const SALUTATIONS = ['Salut Maëlys,', 'Madame,', 'Bonjour à tous,'];
+export const fins = (prenom) => [`Je reste à la réception si besoin. ${prenom}`, 'Cordialement', 'Merci.'];
 
 // ─────────────────────────────────────────────────────────────── l'inspection sur la scène (un défaut tiré parmi trois)
 export const OBJETS = {

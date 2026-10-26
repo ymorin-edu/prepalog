@@ -296,11 +296,11 @@ export function phrasesLucas(prenom) {
   return {
     id: MSG,
     lignes: [
-      { id: 'salutation', choix: ['Bonjour Lucas,', 'Salut Lucas !', 'Coucou Lucas !'], juste: 0 },
+      { id: 'salutation', choix: ['Bonjour Lucas,', 'Salut Lucas !', 'Lucas !'], juste: 0 },
       { id: 'decision', choix: CHOIX_DECISION.map((c) => c.phrase), juste: 0 },
       { id: 'raison', choix: CHOIX_RAISON, juste: 0 },
       { id: 'proposition', choix: CHOIX_PROPOSITION.map((c) => c.phrase), juste: 0 },
-      { id: 'fin', choix: [`Je reste à ta disposition. Cordialement, ${prenom}, pour Inès`, 'Désolé !', 'Bisous'], juste: 0 },
+      { id: 'fin', choix: [`Je reste à ta disposition. Cordialement, ${prenom}, pour Inès`, 'Désolé !', 'Cordialement'], juste: 0 },
     ],
     melanger: true,
   };
@@ -314,7 +314,7 @@ export function phrasesReponse(prenom) {
       { id: 'comprendre', choix: ['Je comprends que ce soit décevant pour toi.', 'Ce n’est pas mon problème.', 'Tu n’avais qu’à demander plus tôt !'], juste: 0 },
       { id: 'suite', choix: ['Si tu veux en parler, Karim peut te recevoir : c’est lui qui décide des congés.', 'Inès va tout arranger.',
         'De toute façon, on ne peut plus rien changer.'], juste: 0 },
-      { id: 'au-revoir', choix: [`Bonne fin de journée, ${prenom}`, 'Bisous'], juste: 0 },
+      { id: 'au-revoir', choix: [`Bonne fin de journée, ${prenom}`, 'Bonne journée.'], juste: 0 },
     ],
     melanger: true,
   };

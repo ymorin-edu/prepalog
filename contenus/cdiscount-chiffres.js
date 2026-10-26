@@ -250,6 +250,31 @@ const jalonControle = (id) => (db) => {
   return { status: c.ok ? 'ok' : 'ko', detail: `${c.justes} juste(s) sur ${c.total}.` };
 };
 
+// Part de la liste envoyée : bonnes références moins fausses (la meilleure des listes envoyées), jugée contre la synthèse de
+// l'élève comme le jalon `liste`. Trois jalons de palier (1, 2, 3) précèdent `liste` (la liste entière, sans rien en trop) : une
+// liste presque juste rapporte une partie des 8 points, une fausse référence en retire une bonne (26/10/2026, état des lieux des jalons).
+function netteListe(db) {
+  const L = listes(db);
+  if (!L.length) return null;
+  const att = listeAttendue(db);
+  return Math.max(...L.map((refs) => {
+    const uniques = [...new Set(refs)];
+    const bonnes = uniques.filter((r) => att.includes(r)).length;
+    return bonnes - (uniques.length - bonnes);
+  }));
+}
+const MOTS_PALIER = { 1: 'une', 2: 'deux', 3: 'trois' };
+const jalonPalier = (k) => ({
+  id: `liste-${k}`,
+  titre: `Liste à recompter : au moins ${MOTS_PALIER[k]} bonne${k > 1 ? 's' : ''} référence${k > 1 ? 's' : ''} (une fausse en retire une)`,
+  verifier(db) {
+    const n = netteListe(db);
+    if (n === null) return { status: 'attente' };
+    const att = listeAttendue(db);
+    return att.length && n >= Math.min(k, att.length) ? { status: 'ok' } : { status: 'ko' };
+  },
+});
+
 const JALONS = [
   {
     id: 'export',
@@ -259,6 +284,7 @@ const JALONS = [
   { id: 'ecart', titre: 'Écart calculé en formule', verifier: jalonControle('ecart') },
   { id: 'si', titre: 'Références en écart isolées avec SI', verifier: jalonControle('si') },
   { id: 'synthese', titre: 'Constats comptés par référence avec NB.SI', verifier: jalonControle('synthese') },
+  jalonPalier(1), jalonPalier(2), jalonPalier(3),
   {
     id: 'liste',
     titre: 'Bonne liste à recompter',
@@ -278,6 +304,9 @@ export const BAREME = {
   ecart: [3],
   si: [3],
   synthese: [4],
-  liste: [8],
+  'liste-1': [1.5],
+  'liste-2': [1.5],
+  'liste-3': [1.5],
+  liste: [3.5],
 };
 export const ETAPES = ponderer(JALONS, BAREME, 'ENT-2.2');

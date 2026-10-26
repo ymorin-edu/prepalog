@@ -497,7 +497,7 @@ await v('ENT-8.2 : questions au fil — F corrigée tout de suite (retour de Sam
   // K : au premier choix de la ligne « fin », « Merci, je note ».
   await ouvrirMail('Rends-moi compte');
   await pg.click(`${Z} [data-repondre]`);
-  await pg.selectOption(`${Z} [data-phrase="fin"]`, { label: 'Bisous' }); await pause();
+  await pg.selectOption(`${Z} [data-phrase="fin"]`, { label: 'Cordialement' }); await pause();
   egal(await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau), 'pourquoi-rendre-compte', 'K au choix de la fin');
   await pg.click(`${Z} [data-q-choix="organiser"][data-q="pourquoi-rendre-compte"]`); await pg.click(`${Z} [data-q-repondre="pourquoi-rendre-compte"]`); await pause();
   vrai(await present('[data-q-merci]'), 'K : « Merci, je note »');
@@ -515,7 +515,7 @@ await v('ENT-8.2 : pire cas — tout faux : premier bilan, la séance est finie 
     fautesVisite: { quai: 1, bureau: 5, vestiaire: 4, reception: 2 },
     qui: { 't-bl': 'samia', 't-ranger': 'julie', 't-equipe': 'kevin' }, lire: { 'l-havre-heure': '08:30', 'l-q3-combien': '4' },
     quai: 'Q1', t: 0, docs: { commande: 'facture', livraison: 'facture', transport: 'facture' }, avant: ['cle', 'conges'],
-    cr: { salutation: 'Salut ma grande,', quai: 'Quai 4 est prêt pour le camion du Havre.', heure: 'Le camion est attendu à 9 h.', manque: 'Il ne manque rien.', fin: 'À plus.' },
+    cr: { salutation: 'Salut Samia,', quai: 'Quai 4 est prêt pour le camion du Havre.', heure: 'Le camion est attendu à 9 h.', manque: 'Il ne manque rien.', fin: 'À plus.' },
     q: FAUSSES_Q,
   });
   const n = await note();

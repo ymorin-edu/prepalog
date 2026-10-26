@@ -289,7 +289,7 @@ export function phrasesRelais(prenom) {
       { id: 'cause', choix: () => parCause(CAUSE_RELAIS), juste: causeJuste },
       { id: 'suite', choix: () => parCause(SUITE_RELAIS), juste: causeJuste },
       { id: 'delai', choix: DELAI, juste: 0 },
-      { id: 'fin', choix: ['Cordialement,', 'Bisous,', 'À+'], juste: 0 },
+      { id: 'fin', choix: ['Cordialement,', 'Merci,', 'À+'], juste: 0 },
       { id: 'signature', texte: `${prenom}, agence Mondial Relay de Buchères` },
     ],
     melanger: true,
@@ -299,11 +299,11 @@ export function phrasesExpeditrice(prenom) {
   return {
     id: MSG_EXPEDITEUR,
     lignes: [
-      { id: 'salut', choix: ['Bonjour Madame Brisset,', 'Salut Camille,', 'Coucou Camille,'], juste: 0 },
+      { id: 'salut', choix: ['Bonjour Madame Brisset,', 'Salut Camille,', 'Bonjour Camille,'], juste: 0 },
       { id: 'cause', choix: () => parCause(CAUSE_EXPEDITRICE), juste: causeJuste },
       { id: 'suite', choix: () => parCause(SUITE_EXPEDITRICE), juste: causeJuste },
       { id: 'indemnite', choix: INDEMNITE, juste: 0 },
-      { id: 'fin', choix: ['Cordialement,', 'Bisous,', 'À+'], juste: 0 },
+      { id: 'fin', choix: ['Cordialement,', 'Merci,', 'À+'], juste: 0 },
       { id: 'signature', texte: `${prenom}, agence Mondial Relay de Buchères` },
     ],
     melanger: true,

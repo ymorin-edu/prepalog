@@ -179,5 +179,5 @@ export function choixEcart() {
 }
 // La ligne imposée « reçu » (« 4 palettes : 2 Ar Vag, 2 Agri-Kerlann, triées en zone de réception. »).
 export const ligneRecu = () => `${pal(nbPalettes())} : ${CLIENTS_105.map((c) => `${palettesDe(c).length} ${NOM_DIT[c]}`).join(', ')}, triées en zone de réception.`;
-export const SALUTATIONS = ['Salut Maëlys,', 'Madame,', 'Yo !'];
-export const fins = (prenom) => [`Je reste à la réception si besoin. ${prenom}`, 'Bisous', 'Ciao.'];
+export const SALUTATIONS = ['Salut Maëlys,', 'Madame,', 'Bonjour à tous,'];
+export const fins = (prenom) => [`Je reste à la réception si besoin. ${prenom}`, 'Cordialement', 'Merci.'];

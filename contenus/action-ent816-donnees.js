@@ -96,9 +96,9 @@ export function lignesFiche(D) {
 export const melangerPour = (db, quoi, L) => { const g = graineDeBase(db); return g ? hasard(`${g}|${ID}|${quoi}`).melanger(L) : L.slice(); };
 
 // ─────────────────────────────────────────────────────────────── le message à Samia (phrases calculées sur ce qu'il a signalé ; seule la forme compte)
-export const SALUTATIONS = ['Bonjour Samia,', 'Salut ma belle,', 'Samia !'];
+export const SALUTATIONS = ['Bonjour Samia,', 'Salut Samia,', 'Samia !'];
 export const POLITESSES = ['Bonne journée !', 'Débrouille-toi.', 'C’est bon, lâche-moi.'];
-export const finsDe = (prenom) => [prenom, 'Bisous'];
+export const finsDe = (prenom) => [prenom, 'Cordialement'];
 const AB_DIT = (a) => `Un carton était abîmé en ${a} : je l’ai signalé et laissé au picking.`;
 const AB_RIEN = 'Je n’ai vu aucun carton abîmé.';
 const VI_DIT = (a) => `L’emplacement ${a} était vide : Kevin a descendu la réserve.`;

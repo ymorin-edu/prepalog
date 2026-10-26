@@ -237,12 +237,12 @@ export const melangerPour = (db, quoi, L) => { const g = graineDeBase(db || {});
 export const phrasesCompteRendu = (prenom, db) => {
   const s = defautSiteDeBase(db), e = defautEnginDeBase(db);
   return { id: PHRASES_ID, melanger: true, lignes: [
-    { id: 'salutation', choix: ['Bonjour Erwan,', 'Salut mon grand,', 'Monsieur le directeur général,'], juste: 0 },
+    { id: 'salutation', choix: ['Bonjour Erwan,', 'Salut Erwan,', 'Monsieur le directeur général,'], juste: 0 },
     { id: 'engin', choix: [phraseEngin(e), phraseEngin(autreEngin(e)), PHRASE_ENGIN_OK], juste: 0 },
     { id: 'site', choix: [SITE[s].phrase, 'Il ne manque rien.', SITE[autreSite(s)].phrase], juste: 0 },
     { id: 'heure', choix: [`La Biscuiterie Ar Vag livre à ${HEURE_ARVAG} au ${QUAI_ARVAG}.`,
       `La Biscuiterie Ar Vag livre à ${heureLue(toMin(LOIC.de))} au ${AUTRE_QUAI}.`, 'La Biscuiterie Ar Vag ne livre pas ce matin.'], juste: 0 },
-    { id: 'fin', choix: [`À tout à l’heure. ${prenom}`, 'Bisous', 'Voilà.'], juste: 0 },
+    { id: 'fin', choix: [`À tout à l’heure. ${prenom}`, 'Cordialement', 'Voilà.'], juste: 0 },
   ] };
 };
 

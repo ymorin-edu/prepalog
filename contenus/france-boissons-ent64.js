@@ -138,11 +138,11 @@ export function phrasesNadia(prenom) {
   return {
     id: PHRASES_ID,
     lignes: [
-      { id: 'salutation', choix: ['Bonjour Nadia,', 'Salut !', 'Coucou Nadia'], juste: 0 },
+      { id: 'salutation', choix: ['Bonjour Nadia,', 'Salut !', 'Nadia,'], juste: 0 },
       { id: 'recu', texte: LIGNE_RECU },
       { id: 'reserves', choix: CHOIX_RESERVES.map((c) => c.phrase), juste: 0 },
       { id: 'fut-fuit', choix: CHOIX_FUT.map((c) => c.phrase), juste: 0 },
-      { id: 'fin', choix: [`Cordialement, ${prenom}`, 'À plus !', 'Bisous'], juste: 0 },
+      { id: 'fin', choix: [`Cordialement, ${prenom}`, 'À plus !', 'Cordialement'], juste: 0 },
     ],
     melanger: true,
   };

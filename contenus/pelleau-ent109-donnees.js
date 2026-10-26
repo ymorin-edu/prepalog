@@ -234,8 +234,8 @@ export function choixLitiges(jeu) {
 }
 // La ligne imposée : ce qui a été contrôlé (« J'ai contrôlé les 4 palettes de la ramasse : 2 Ar Vag, 2 Agri-Kerlann. »).
 export const ligneControle = () => `J’ai contrôlé les ${PALETTES.length} palettes de la ramasse : ${CLIENTS_109.map((c) => `${palettesDuClient(c).length} ${NOM_DIT[c]}`).join(', ')}.`;
-export const SALUTATIONS = ['Bonjour Erwan,', 'Salut mon pote,', 'Monsieur le directeur,'];
-export const finsDe = (prenom) => [`Je reste au quai. ${prenom}`, 'Bisous', 'À plus.'];
+export const SALUTATIONS = ['Bonjour Erwan,', 'Salut Erwan,', 'Monsieur le directeur,'];
+export const finsDe = (prenom) => [`Je reste au quai. ${prenom}`, 'Cordialement', 'À plus.'];
 export const phrasesCompteRendu = (prenom, jeu) => ({ id: PHRASES_ID, melanger: true, lignes: [
   { id: 'salutation', choix: SALUTATIONS.slice(), juste: 0 },
   { id: 'controle', texte: ligneControle() },

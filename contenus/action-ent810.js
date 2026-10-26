@@ -166,9 +166,9 @@ export const TELEPHONE = {
 // ─────────────────────────────────────────────────────────────── ④ rendre compte (phrases ; seule « ma réception » est notée)
 export const phrasesCompteRendu = (prenom, db) => { const Q = equipeDe(siteEleve(db));
   return { id: PHRASES_ID, melanger: true, lignes: [
-    { id: 'salutation', choix: [`Bonjour ${Q.tuteur},`, 'Salut mon pote,', 'Madame, Monsieur le directeur,'], juste: 0 },
+    { id: 'salutation', choix: [`Bonjour ${Q.tuteur},`, `Salut ${Q.tuteur},`, 'Madame, Monsieur le directeur,'], juste: 0 },
     { id: 'reception', choix: (d) => ligneReception(d).choix, juste: (d) => ligneReception(d).juste },
-    { id: 'fin', choix: [`Je reste au quai. ${prenom}`, 'Bisous', 'À plus.'], juste: 0 },
+    { id: 'fin', choix: [`Je reste au quai. ${prenom}`, 'Cordialement', 'À plus.'], juste: 0 },
   ] }; };
 
 // ─────────────────────────────────────────────────────────────── les messages du tuteur (au tu ; date du scénario ; jamais juste ni faux)

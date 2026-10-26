@@ -277,11 +277,11 @@ export const FICHE_DOCS = {
 // la fiche des documents, donc après celui du planning) : la phrase juste est celle de ce que l’élève a POSÉ et RÉPONDU.
 export const phrasesCompteRendu = (prenom, db) => { const Q = equipeDe(siteEleve(db));
   return { id: PHRASES_ID, melanger: true, lignes: [
-    { id: 'salutation', choix: [`Bonjour ${Q.tuteur},`, 'Salut mon pote,', 'Madame, Monsieur le directeur,'], juste: 0 },
+    { id: 'salutation', choix: [`Bonjour ${Q.tuteur},`, `Salut ${Q.tuteur},`, 'Madame, Monsieur le directeur,'], juste: 0 },
     { id: 'creneau', choix: (d) => ligneCreneau(placeEnvoyee(d)).choix, juste: (d) => ligneCreneau(placeEnvoyee(d)).juste },
     { id: 'quai', choix: PHRASES_QUAI, juste: (d) => justeQuai(d) },
     { id: 'manque', choix: (d) => choixManque(commandeDe(d)), juste: (d) => justeManque(d) },
-    { id: 'fin', choix: [`Je reste à la réception. ${prenom}`, 'Bisous', 'À plus.'], juste: 0 },
+    { id: 'fin', choix: [`Je reste à la réception. ${prenom}`, 'Cordialement', 'À plus.'], juste: 0 },
   ] }; };
 
 // ─────────────────────────────────────────────────────────────── les messages (au tu ; date du scénario ; jamais juste ni faux)

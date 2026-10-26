@@ -576,7 +576,7 @@ await vv('ENT-10.11 : inaction et pire cas (temoin-1) — rien fait : 0 (aucun j
   await quai(T1, { pal: { P1: [32, 'accepter'], P2: [40, 'accepter'], P3: [40, 'reserves', 'manquant'], P4: [39, 'reserves', 'avarie'] }, res: { P3: '4', P4: '1' },
     deballage: true, q: FAUSSES_Q });
   await fiche(['fond', 'dehors'], FAUSSES_Q);
-  await compteRendu({ salutation: 'Salut mon pote,', kerveguen: 'J’ai rangé la palette de Kervéguen au rack du fond, le plus frais.', reserves: 'Tout est conforme, aucune réserve.', fin: 'Bisous' }, FAUSSES_Q);
+  await compteRendu({ salutation: 'Salut Erwan,', kerveguen: 'J’ai rangé la palette de Kervéguen au rack du fond, le plus frais.', reserves: 'Tout est conforme, aucune réserve.', fin: 'Cordialement' }, FAUSSES_Q);
   const n = await note();
   proche(n.score, 2 + 0.5, 'note (l’entretien juste et la signature)');
   egal(jalonsFaux(n), JALONS.filter((j) => !['ceder', 'signature'].includes(j)), 'tous les jalons faux sauf l’entretien et la signature');

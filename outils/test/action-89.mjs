@@ -454,7 +454,7 @@ await v('ENT-8.9 : inaction et pire cas (témoin récent) — rien fait : 0 ; to
     pal: { P1: [23, 'reserves', 'manquant'], P2: [40, 'reserves', 'avarie'], P3: [25, 'accepter'], P4: [36, 'reserves', 'manquant'] },
     res: { P1: '1', P2: '1', P4: '3' }, deballage: true });
   await ficheLucas({ 'aurait-du': 'rien', protester: 'oui-an', palette: 'stock' }, FAUSSES_Q);
-  await compteRendu({ salutation: 'Coucou,', reception: 'Tout est conforme, aucune réserve.', lucas: 'Ce n’est pas grave, je la mets en stock.', fin: 'Bisous' }, FAUSSES_Q);
+  await compteRendu({ salutation: 'Bonjour,', reception: 'Tout est conforme, aucune réserve.', lucas: 'Ce n’est pas grave, je la mets en stock.', fin: 'Cordialement' }, FAUSSES_Q);
   const n = await note();
   // Restent justes : la signature (obligatoire pour continuer), P2 et P1 posées du premier coup (les deux pièges sont grisés pour tous, comme ENT-8.7).
   egal(JALONS.filter((j) => n.detail[j] === 'ok'), ['depose-P1', 'depose-P2', 'signature'], 'tout faux sauf la signature et les deux dernières palettes');
