@@ -25,6 +25,7 @@ const s = seanceEntreprise(DECATHLON, SEANCE, {
   temps: 'guidage',
   bareme: 20,           // jalons pondérés (17) + questions notées (3), somme = 20
   parcours: true,
+  bilanListe: true,       // bandeau de fin ✓/✗ par blocs, sans « Corriger » (26/10/2026, choix de Tristan)
   precedente: 'decathlon-choix-transporteur',
   suiteAuBilan: true,
   niveauxPrevus: ['confirme'],   // bonus du confirmé : une instruction fausse de plus (« hayon élévateur »)

@@ -28,6 +28,7 @@ const s = seanceEntreprise(SMOBY, SEANCE, {
   bareme: 20,           // jalons pondérés, somme des poids = 20
   // Parcours strict : ne s'ouvre qu'à l'élève qui a validé ENT-5.5 (voir core/parcours.js).
   parcours: true,
+  bilanListe: true,       // bandeau de fin ✓/✗ par blocs, sans « Corriger » (26/10/2026, choix de Tristan)
   // Elle ouvre la suivante dès qu'elle est finie, justes ou faux (lot 0 de SMOBY-notation-5.3-5.8 : aucun élève bloqué).
   suiteAuBilan: true,
   precedente: 'smoby-rangement',

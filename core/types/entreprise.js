@@ -1270,7 +1270,10 @@ export function creerEntreprise(U) {
       // cases sont jugées au premier essai, l'élève recommence quand même jusqu'à trouver. Il l'implique aussi, et
       // prend le bandeau par blocs ✓ / ✗ : ✓ « du premier coup », ✗ « après une erreur » (sans `correction`).
       const PREMIER_ESSAI = !!(U.entrepot && U.entrepot.premierEssai);
-      const SUITE_AU_BILAN = CORRECTION || PREMIER_ESSAI || !!(ctx.meta && ctx.meta.suiteAuBilan);
+      // LISTE SEULE (`meta.bilanListe`, 26/10/2026, choix de Tristan : « le bandeau de fin là où c'est nécessaire ») : le bandeau par blocs
+      // ✓ / ✗ sans « Corriger » ni note moyennée, pour une séance dont les cases se jugent au fil ou ne se rouvrent pas. Sans `correction`.
+      const LISTE_SEULE = !CORRECTION && !!(ctx.meta && ctx.meta.bilanListe);
+      const SUITE_AU_BILAN = CORRECTION || PREMIER_ESSAI || LISTE_SEULE || !!(ctx.meta && ctx.meta.suiteAuBilan);
       const fini = (st) => bilanComplet(st) || (SUITE_AU_BILAN && typeof U.seanceFinie === 'function' && !!U.seanceFinie(db));
       // Copie rendue : plus rien ne s'écrit dans la base, même si un geste passait le verrou.
       // Le menu de gauche suit la base : voir `listeMenu()`. Seule la liste change, et seulement si son HTML diffère ; le focus et le
@@ -1487,7 +1490,7 @@ export function creerEntreprise(U) {
           if (typeof t === 'function') { try { t = t(db); } catch (x) { signaler(`le titre de bilan du jalon « ${e.id} » plante`, x); t = null; } }
           return typeof t === 'string' && t ? Object.assign({}, e, { titre: t }) : e;
         });
-        return bandeauFinHtml(st, { etapes: etapesVues, correction: CORRECTION, premierEssai: PREMIER_ESSAI, suiteAuBilan: SUITE_AU_BILAN,
+        return bandeauFinHtml(st, { etapes: etapesVues, correction: CORRECTION, premierEssai: PREMIER_ESSAI, listeSeule: LISTE_SEULE, suiteAuBilan: SUITE_AU_BILAN,
           suivante: ctx.suivante, reinitialisable: ctx.meta.reinitialisable, avecQuestions: !!MQ, finFige: U.finFige,
           retours: retoursAuBilan, peutCorriger: ecransAFaire(st).length > 0, detail: DETAIL ? { libelle: libelleEcran } : null });
       }

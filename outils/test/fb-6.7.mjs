@@ -248,10 +248,11 @@ await v('ENT-6.7 : parcours juste — un code faux (redemandé, trace, rien de p
   const n = await note();
   egal([n.score, n.max], [20, 20], 'note');
   egal(etats67(n), sauf67([]), 'jalons');
-  // Sans « Corriger » : le bandeau d'origine, « Séance validée », avec le retour de la question corrigée au bilan.
-  egal(await pg.$eval(`${Z} [data-fin]`, (e) => e.dataset.fin), 'ok', 'bandeau « Séance validée »');
+  // Sans « Corriger » (`bilanListe`, 26/10/2026) : le bandeau par blocs ✓ / ✗, tout ✓ ici, avec le retour de la question corrigée au bilan.
+  egal(await pg.$eval(`${Z} [data-fin]`, (e) => e.dataset.fin), 'ok', 'bandeau tout juste');
   vrai(/D’où « Abîmé » au terminal, avant le départ\./.test(await pg.textContent(`${Z} [data-fin]`)), 'le retour de la question sur le fût cabossé, au bilan');
-  egal(await bandeau(), [], 'aucune étape fausse nommée');
+  const B = await bandeau();
+  vrai(B.length > 0 && B.every((x) => x[1] === 'ok'), 'tous les blocs ✓ : ' + JSON.stringify(B));
   egal((await etat67()).terminal.codesFaux, { 'A-T01': 1 }, 'trace du code faux');
   egal((await entrants()).filter((m) => m.subject === 'RE : la commande de Malo').map((m) => m.text),
     ['Parfait, Lea. Les deux palettes partent demain 6 h avec Lucas.\n\nLe fût cabossé, je le passe en casse : sinon, demain, le stock mentirait.\n\nNadia'], 'Nadia');
@@ -326,7 +327,7 @@ await v('ENT-6.7 : questions — les trois fausses = −4 (deux tout de suite, l
   egal(n.score, 16, '20 − 1 − 1,5 − 1,5');
   egal(etats67(n), sauf67([]), 'les jalons ne bougent pas');
   egal(await pg.$eval(`${Z} [data-fin]`, (e) => e.dataset.fin), 'ko', 'bandeau');
-  egal((await bandeau()).map((x) => x[0]), ['question:code-emplacement', 'question:materiel-employeur', 'question:futs-abimes-vendeur'], 'les trois questions nommées');
+  egal((await bandeau()).filter((x) => x[1] === 'ko').map((x) => x[0]), ['question:code-emplacement', 'question:materiel-employeur', 'question:futs-abimes-vendeur'], 'les trois questions nommées');
   vrai(/La séance suivante, ENT-6\.8/.test(await pg.textContent(`${Z} [data-fin]`)) || !/s'ouvrira quand tout sera juste/.test(await pg.textContent(`${Z} [data-fin]`)),
     'aucun élève bloqué : la suite ne dépend pas de « tout juste »');
   egal((await base()).questions[ID67]['futs-abimes-vendeur'].premiere, 'malo', 'réponse rangée');

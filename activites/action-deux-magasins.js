@@ -26,6 +26,7 @@ const s = seanceEntreprise(ACTION, SEANCE, {
   temps: 'entrainement',
   bareme: 20,
   parcours: true,
+  bilanListe: true,       // bandeau de fin ✓/✗ par blocs, sans « Corriger » (26/10/2026, choix de Tristan)
   bilanDetail: true,
   precedente: 'action-conditionner',
   niveauxPrevus: ['confirme', 'accompagne'],
