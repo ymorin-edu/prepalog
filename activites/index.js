@@ -221,9 +221,9 @@ export const ENTREPRISES = [
   // Logo officiel du site (PNG, le site n'offre pas de SVG ; accord de Tristan du 18/10/2026, lot A) ; charte : `contenus/pelleau.js`.
   { n: 10, nom: 'Transports Pelleau', metier: 'Transporteur devenu entreposeur — entrepôt neuf de Gouesnou', logo: './contenus/trames/logos/pelleau.png' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bordeaux construit de la charte ; charte : `contenus/mondial-relay.js`.
-  { n: 11, nom: 'Mondial Relay', metier: 'Colis et Points Relais — hub et agence de Buchères (Aube)', logo: './contenus/trames/logos/mondial-relay-texte.svg' },
+  { n: 11, nom: 'Mondial Relay', metier: 'Colis et Points Relais — hub et agence de Buchères (Aube)', logo: './contenus/trames/logos/mondial-relay.png' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu construit de la charte ; charte : `contenus/ikea.js`.
-  { n: 12, nom: 'IKEA', metier: 'Livraison de meubles — centre de distribution clients de Gennevilliers (Hauts-de-Seine)', logo: './contenus/trames/logos/ikea-texte.svg' },
+  { n: 12, nom: 'IKEA', metier: 'Livraison de meubles — centre de distribution clients de Gennevilliers (Hauts-de-Seine)', logo: './contenus/trames/logos/ikea.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre

@@ -14,10 +14,13 @@
 // (version du 10/08/2026) : engagement sur la date et le créneau, reprise de l'ancien meuble, délai de 72 h.
 // Construit, et dit comme tel à l'écran : Mme Benali et sa commande, les prénoms des salariés (prénoms seuls), les articles, leurs poids et leurs prix, le
 // prestataire de livraison (jamais nommé) et son tarif, les camions, les créneaux. Aucun document IKEA réel reproduit : tout est reconstitué, avec mention.
-// Charte : le bleu d'IKEA reste au bandeau et au menu (repère « client » des vues de transport : jamais dans la zone de travail). Logo : texte seul.
+// Charte : le bleu d'IKEA reste au bandeau et au menu (repère « client » des vues de transport : jamais dans la zone de travail). Logo : `contenus/trames/logos/ikea.svg` (Wikimedia Commons, domaine public mais marque déposée ; accord de Tristan, 26/10/2026), ovale jaune sur fond bleu.
+
+export const LOGO = './contenus/trames/logos/ikea.svg';
 
 export const ENTREPRISE = {
   id: 'ikea',
+  logo: LOGO,
   nom: 'IKEA',
   sousTitre: 'Centre de distribution clients de Gennevilliers (92)',
   exercice: 'Livrer les clients d’Île-de-France',
