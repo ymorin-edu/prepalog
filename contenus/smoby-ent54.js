@@ -107,10 +107,10 @@ export const LIGNE_RESERVES = `Réserves : ${nb(Object.keys(P3.avarie).length, '
 export const PHRASES = {
   id: 'compte-rendu-bruno',
   lignes: [
-    { id: 'salutation', choix: ['Bonjour Bruno,', 'Salut !', 'Coucou Bruno'], juste: 0 },
+    { id: 'salutation', choix: ['Bonjour Bruno,', 'Salut !', 'Coucou Bruno', 'Bruno,'], juste: 0 },
     { id: 'recu', texte: `J’ai reçu les ${PALETTES_ENT54.length} palettes d’Arinthod.` },
     { id: 'reserves', choix: [LIGNE_RESERVES, 'Tout est conforme.', 'Réserves : 2 cartons écrasés.'], juste: 0 },
-    { id: 'fin', choix: ['Bonne fin de journée, Yanis', 'Bisous', 'À plus'], juste: 0 },
+    { id: 'fin', choix: ['Bonne fin de journée, Yanis', 'Bisous', 'À plus', 'Réponds-moi vite, Yanis'], juste: 0 },
   ],
   melanger: true,
 };

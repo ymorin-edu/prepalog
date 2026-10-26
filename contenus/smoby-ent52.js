@@ -206,13 +206,13 @@ export const SOLUTION = {
 export const PHRASES = {
   id: 'point-sophie',
   lignes: [
-    { id: 'salut', choix: ['Bonjour Sophie,', 'Salut !', 'Coucou Sophie'], juste: 0 },
+    { id: 'salut', choix: ['Bonjour Sophie,', 'Salut !', 'Coucou Sophie', 'Sophie,'], juste: 0 },
     { id: 'reprise', texte: 'J’ai repris le planning après l’arrêt d’Inès.' },
     { id: 'constat', choix: [
       'Chaque jour a assez de monde et au moins un cariste CACES.',
       'Il manque du monde mardi 15.',
       'J’ai annulé tous les congés.'], juste: 0 },
-    { id: 'fin', choix: ['Peux-tu valider ? Merci, bonne journée.', 'Tu valides vite stp', 'Bisous'], juste: 0 },
+    { id: 'fin', choix: ['Peux-tu valider ? Merci, bonne journée.', 'Tu valides vite stp', 'Bisous', 'Réponds-moi vite, merci.'], juste: 0 },
   ],
   melanger: true,
 };

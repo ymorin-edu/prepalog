@@ -267,7 +267,7 @@ const HEURES = [ARRIVEE_PREVUE, ARRIVEE, LIMITE + 30];
 export const PHRASES_CLIENT = {
   id: 'message-client',
   lignes: [
-    { id: 'salut', choix: ['Bonjour,', 'Salut !', 'Coucou'], juste: 0 },
+    { id: 'salut', choix: ['Bonjour,', 'Salut !', 'Coucou', 'Hello,'], juste: 0 },
     { id: 'cause', choix: [
       'Notre camion a 1 h de retard à cause d’un accident sur l’A40.',
       'Notre camion a 30 min de retard à cause des bouchons.',
@@ -276,7 +276,7 @@ export const PHRASES_CLIENT = {
     { id: 'quai', choix: [
       `Pouvez-vous nous confirmer que le ${CLIENT.quai} sera libre ?`,
       'Pouvez-vous nous confirmer que le quai 1 sera libre ?'], juste: 0 },
-    { id: 'fin', choix: ['Cordialement, l’exploitation Kuehne+Nagel Besançon', 'À plus !', 'Bisous'], juste: 0 },
+    { id: 'fin', choix: ['Cordialement, l’exploitation Kuehne+Nagel Besançon', 'À plus !', 'Bisous', 'Cordialement, Julie'], juste: 0 },
   ],
   melanger: true,
 };
@@ -284,13 +284,13 @@ export const PHRASES_CLIENT = {
 export const PHRASES_SMOBY = {
   id: 'message-smoby',
   lignes: [
-    { id: 'salut', choix: [`Bonjour ${BRUNO.nom},`, 'Salut !', `Coucou ${BRUNO.nom}`], juste: 0 },
+    { id: 'salut', choix: [`Bonjour ${BRUNO.nom},`, 'Salut !', `Coucou ${BRUNO.nom}`, `${BRUNO.nom},`], juste: 0 },
     { id: 'retard', choix: [
       `La livraison ${E1.id} pour Jouets du Rhône aura 1 h de retard (accident).`,
       `La livraison ${E1.id} pour Jouets du Rhône est annulée.`,
       'La livraison E2 pour Maxi Jouets aura 1 h de retard (accident).'], juste: 0 },
     { id: 'client', choix: ['Le client est prévenu.', 'Pouvez-vous prévenir le client ?'], juste: 0 },
-    { id: 'fin', choix: ['Cordialement,', 'Bisous', 'À plus !'], juste: 0 },
+    { id: 'fin', choix: ['Cordialement,', 'Bisous', 'À plus !', 'Merci de répondre vite.'], juste: 0 },
   ],
   melanger: true,
 };
