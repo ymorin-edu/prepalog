@@ -1,6 +1,6 @@
 # Brief de séance — ENT-13.4 Stellantis Sochaux, ranger et compter selon ABC (Tle, rentrée)
 
-**Statut** : à construire — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
+**Statut** : livré (27/10/2026, `pret: true, ouverture: 'prof'`) — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10 (`stellantis/CADRAGE-stellantis-tle.md`)
 **Modèle** : Sonnet (vues existantes)
 
@@ -126,11 +126,12 @@ sorties, C en valeur » fait comprendre les deux usages.
   les bases sont cloisonnées par séance (oui).
 - [ ] L'inventaire tournant et la règle comptable : question notée seulement après relecture du texte (oui).
 
-## Compte rendu *(à remplir à la livraison)*
+## Compte rendu
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/stellantis-ranger-compter-abc.js` ; `contenus/stellantis-ent134.js` (documents, messages, jalons), `stellantis-ent134-donnees.js` (plan du magasin, tirage, export, contrôles, inventaire), `stellantis-abc.js` (classement sur la valeur : `jeuSemaine38`, `ecarts38`) ; `contenus/questions/ENT-13.4.js` ; `contenus/corriges/ENT-13.4.js` ; `contenus/stellantis-ent133.js` (`DOC_METHODE` exportée, réutilisée) ; `activites/index.js` et `catalogue.js` ; `outils/test.mjs` (ligne dans `BLOCS` et `GROUPES`, **touché, à dire à Tristan**) et `outils/test/stellantis-13.4.mjs`.
+- **Réponses aux vérifications du §7** : (1) **non** : le moteur ne porte qu'UNE vue Plan d'entrepôt par séance (`U.entrepot` unique), donc rangement + terminal de comptage dans la même séance est impossible sans chantier moteur. Choix : le plan sert au rangement ; le comptage passe par la vue Inventaire avec le **relevé de l'équipe** dans la messagerie (`source: 'releve'`, `perimetre`). (2) oui : le périmètre est celui du bon classement (4 lignes fixes), la question « quoi compter » est notée seule.
+- **Écarts par rapport au brief** : (a) pas de terminal de comptage (voir ci-dessus) ; le relevé refuse un recopiage faux (comportement du moteur), donc le jalon « comptage » juge surtout les écarts calculés ; (b) prix unitaires et quantités comptées FIXES (seules les sorties de la semaine 38 sont tirées, avec garantie : vis A en sorties / C en valeur, rétroviseur droit A en valeur seulement, mêmes quatre A en valeur) ; (c) pas de variante « confirmé » (5e palette fragile, 3e écart) : reste ouvert ; (d) la question ★ éco-droit (inventaire tournant, L123-12) est une **réflexion non notée** : la règle comptable de l'inventaire tournant n'a pas été relue mot à mot (brief §11) ; son texte ne cite que l'alinéa 2 de L123-12 déjà relu pour France Boissons ; les 5 points de questions sont répartis sur quoi compter 2, clips 1, vis 1, écart 1 ; (e) la question « quoi compter » arrive dès le premier dépôt (juste ou non), pour ne pas bloquer un élève au fichier faux ; (f) rien rangé : 15/20 (la question des clips ne se pose qu'une fois P1 rangée).
+- **Décisions prises en route** : plan du magasin construit (4 allées-côtés, 4 travées, stock figé sans hasard, 17 emplacements libres, 3 hors service) ; critères du rangement : état, rotation, produit lourd au sol, charge ; 4 jalons de palette à 1 point (3 de rotation + 1 de lourde) ; classement (total, part, cumul, classe) en un seul jalon de 4 points ; dépôt en `entrainement` (le site dit seulement combien de résultats sont justes).
+- **Tests** : bloc `stellantis-13.4`, 19 cas verts (équité sur 500 graines, plan et places libres par classe, export, contrôles dans les deux sens, parcours à l'écran 20/20, inaction, sabotages du rangement, du fichier et de l'inventaire, relevé refusé, corrigé, aucune requête externe).
+- **Commits** : voir l'historique du 27/10/2026.
+- **Reste ouvert** : variante confirmé ; relecture mot à mot de la règle comptable (puis rendre la question notée) ; essai à l'écran par Tristan : dire si les trois gestes tiennent en une heure.

@@ -95,3 +95,43 @@ export function jeuSorties(h, n, { bruit, echelle } = {}) {
 // Le brief proposait un autre exemple, dont le premier C pesait plus que le dernier B (une fois trié, le B n'aurait pas eu cinq références). Valeurs écrites à la main :
 // ne jamais les recalculer. Sert aux tests (valeurs attendues) et à la fiche méthode.
 export const EXEMPLE_18 = [3100, 2300, 1400, 800, 520, 400, 320, 300, 240, 225, 120, 90, 60, 45, 35, 20, 15, 10];
+
+// ─────────────────────────────────────────────────────────────── ENT-13.4 : le classement sur la VALEUR (sorties × prix unitaire)
+// Les prix sont ceux de `REFS` (fixes) ; ce qui change d'un élève à l'autre, ce sont les sorties de la semaine 38. On tire d'abord la VALEUR de chaque référence
+// (même équité qu'en 13.3 : 4 A / 5 B / 9 C, aucun cas litigieux), rangée par groupe de références (les pièces chères en A, les pièces à quelques centimes en C), puis on en déduit
+// les sorties (valeur ÷ prix, arrondi) : une vis à 4 centimes sort des milliers de fois, un rétroviseur à 82 € quelques dizaines de fois.
+export const VALEUR_A = ['RET-DRO', 'RET-GAU', 'FAS-HAB', 'POI-EXT'];
+export const VALEUR_B = ['FAS-PLA', 'POI-INT', 'JNT-POR', 'CAC-BAT', 'AMP-H7'];
+export const valeurDe = (r, sorties) => Math.round(sorties * r.prix * 100) / 100;
+export function jeuSemaine38(h) {
+  const refs = REFS.slice(0, 18);
+  const V = sortiesDecroissantes(h, 18, [24000, 36000]);
+  const C = refs.map((r) => r.ref).filter((r) => !VALEUR_A.includes(r) && !VALEUR_B.includes(r));
+  const ordre = [...h.melanger(VALEUR_A), ...h.melanger(VALEUR_B), ...h.melanger(C)];
+  const val = {};
+  ordre.forEach((ref, i) => { val[ref] = V[i]; });
+  return refs.map((r) => ({ ref: r.ref, v: Math.max(1, Math.round(val[r.ref] / r.prix)) }));
+}
+// Le classement d'un jeu de sorties, sur les sorties et sur la valeur.
+export function classements38(jeu) {
+  const sorties = classer(jeu.map((x) => ({ ref: x.ref, v: x.v })));
+  const parRef = Object.fromEntries(REFS.map((r) => [r.ref, r]));
+  const valeur = classer(jeu.map((x) => ({ ref: x.ref, v: valeurDe(parRef[x.ref], x.v) })));
+  return { sorties, valeur };
+}
+// Les écarts d'équité d'un jeu de la semaine 38 (liste vide = conforme) : équité sur la valeur, et des références qui changent de classe (la vis, le rétroviseur).
+export function ecarts38(jeu) {
+  const { sorties, valeur } = classements38(jeu);
+  const parRef = Object.fromEntries(REFS.map((r) => [r.ref, r]));
+  const E = ecartsEquite(jeu.map((x) => ({ ref: x.ref, v: valeurDe(parRef[x.ref], x.v) })), REPARTITION[18]);
+  // Les A en valeur sont toujours les mêmes quatre références (les lignes à compter de la séance).
+  if (valeur.ordre.slice(0, 4).slice().sort().join() !== VALEUR_A.slice().sort().join()) E.push('les A en valeur ne sont pas les quatre références attendues');
+  const vis = 'VIS-M6', ret = 'RET-DRO';
+  if (sorties.classe[vis] !== 'A') E.push(`${vis} n'est pas A en sorties`);
+  if (valeur.classe[vis] !== 'C') E.push(`${vis} n'est pas C en valeur`);
+  if (sorties.classe[ret] === 'A') E.push(`${ret} est A en sorties`);
+  if (valeur.classe[ret] !== 'A') E.push(`${ret} n'est pas A en valeur`);
+  const change = jeu.filter((x) => sorties.classe[x.ref] !== valeur.classe[x.ref]).length;
+  if (change < 2) E.push('moins de deux références changent de classe');
+  return E;
+}

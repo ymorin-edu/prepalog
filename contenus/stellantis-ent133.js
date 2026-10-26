@@ -46,7 +46,7 @@ const DOC_POSTE = { id: 'poste-133', titre: 'Ton poste', court: 'Ton poste',
 // Un exemple à six références, ENTIÈREMENT calculé à la main (total 1 000) : valeurs écrites, jamais recalculées.
 const EXEMPLE = [['Référence 1', 600, '60 %', '60 %', 'A'], ['Référence 2', 250, '25 %', '85 %', 'B'], ['Référence 3', 80, '8 %', '93 %', 'B'],
   ['Référence 4', 40, '4 %', '97 %', 'C'], ['Référence 5', 20, '2 %', '99 %', 'C'], ['Référence 6', 10, '1 %', '100 %', 'C']];
-const DOC_METHODE = { id: 'methode-133', titre: 'Fiche méthode : la méthode ABC', court: 'Méthode ABC',
+export const DOC_METHODE = { id: 'methode-133', titre: 'Fiche méthode : la méthode ABC', court: 'Méthode ABC',
   html: `<article class="st-doc" aria-label="Fiche méthode ABC">
     <p class="st-t">La méthode ABC</p>
     <p class="st-st">Classer les références d’un magasin d’après ce qu’elles pèsent dans les sorties</p>

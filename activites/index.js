@@ -135,6 +135,7 @@ export const ACTIVITES = [
   () => import('./ikea-evaluation-gestion.js'),
   // Stellantis (usine de Sochaux) — ENT-13.x. Terminale, temps 1 : la rentrée (13.1 à 13.5).
   () => import('./stellantis-methode-abc.js'),
+  () => import('./stellantis-ranger-compter-abc.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
