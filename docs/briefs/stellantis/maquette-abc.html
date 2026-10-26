@@ -1,0 +1,368 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Maquette — méthode ABC (Stellantis, Sochaux)</title>
+<style>
+:root{--fond:#f4f1ea;--panneau:#fdfbf7;--survol:#f9f6ef;--encre:#1a1915;--doux:#555047;--filet:#e3ded3;--ardoise:#107c41;--vert:#0b7a41;--rouge:#9d2727;--terre:#9c620a;--bleu:#2f5f9e;--jauge:#8b857a;--barre:#d8cfbf}
+*{box-sizing:border-box}
+body{margin:0;background:var(--fond);color:var(--encre);font:15px/1.4 Inter,system-ui,"Segoe UI",sans-serif}
+button{font:inherit}
+.note{margin:6px 12px 0;font-size:12.5px;color:var(--doux);border:1px dashed var(--filet);border-radius:6px;padding:6px 10px;background:var(--panneau);display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.note .modes{margin-left:auto;display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+.note .modes button{border:1px solid var(--filet);background:var(--fond);border-radius:6px;padding:3px 9px;cursor:pointer}
+.note .modes button[aria-pressed="true"]{border:2px solid var(--ardoise);color:var(--ardoise);font-weight:600}
+.bandeau{display:flex;align-items:center;gap:12px;margin:6px 12px 0;padding:5px 12px;border-radius:8px;background:#1c2541;color:#eef1f8;flex-wrap:wrap}
+.bandeau b{font-size:16px}.bandeau span{font-size:13px;opacity:.9}
+.etapes{margin-left:auto;display:flex;gap:6px}
+.etapes span{font:600 12.5px Inter,system-ui,sans-serif;border:1px solid rgba(255,255,255,.35);border-radius:12px;padding:2px 10px;opacity:.65}
+.etapes span.ici{opacity:1;border:2px solid #eef1f8}
+.consigne{margin:6px 12px 0;background:var(--panneau);border:1px solid var(--filet);border-left:4px solid var(--terre);border-radius:6px;padding:6px 10px;font-size:14px}
+.consigne b.t{font-size:12.5px;color:var(--doux);margin-right:6px}
+.grille{display:grid;grid-template-columns:minmax(0,1fr) 290px;gap:10px;margin:6px 12px 8px}
+@media (max-width:900px){.grille{grid-template-columns:minmax(0,1fr)}}
+.zone{background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:8px 10px;min-width:0}
+.zone h2{font-size:13.5px;margin:0 0 6px;display:flex;gap:8px;align-items:baseline}
+.zone h2 small{font-weight:400;color:var(--doux)}
+svg{display:block;width:100%;height:auto}
+#graphe,#rack{background:var(--fond);border:1px solid var(--filet);border-radius:8px}
+#graphe text,#rack text{font-family:Inter,system-ui,"Segoe UI",sans-serif}
+.refs{display:flex;flex-direction:column;gap:4px;max-height:560px;overflow:auto}
+.ref{display:flex;align-items:center;gap:8px;text-align:left;border:1.5px solid var(--encre);background:#fbf8f1;border-radius:5px;padding:4px 8px;cursor:pointer;color:var(--encre)}
+.ref:hover{background:var(--survol)}
+.ref:focus-visible{outline:3px solid var(--bleu);outline-offset:2px}
+.ref[aria-pressed="true"]{border:3px solid var(--bleu);padding:2.5px 6.5px}
+.ref:disabled{opacity:.35;cursor:default}
+.ref svg{width:28px;height:22px;flex:none}
+.ref .n{flex:1;font-size:13.5px;line-height:1.2}
+.ref .n small{display:block;color:var(--doux);font-size:11.5px}
+.ref .s{font:700 13px ui-monospace,Consolas,monospace}
+.ref .cl{font:800 15px Inter,system-ui,sans-serif;border:1.5px solid var(--encre);border-radius:4px;width:24px;text-align:center}
+.retour{font-size:13.5px;min-height:20px;margin-top:6px}
+.retour.ok{color:var(--vert)}.retour.ko{color:var(--rouge)}
+.btn{border:2px solid var(--encre);background:var(--panneau);border-radius:6px;padding:5px 12px;cursor:pointer;font-weight:600;color:var(--encre)}
+.btn:hover{background:var(--survol)}
+.btn:disabled{opacity:.45;cursor:default}
+.actions{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:8px}
+.coach{border:1px solid var(--filet);border-left:4px solid var(--ardoise);border-radius:6px;background:var(--panneau);padding:6px 10px;margin-top:8px;font-size:13.5px}
+.coach:empty{display:none}
+.voile{position:fixed;inset:0;background:rgba(26,25,21,.35);display:none;align-items:center;justify-content:center;padding:16px;z-index:5}
+.voile.ouv{display:flex}
+.fenetre{background:var(--panneau);border:1px solid var(--filet);border-radius:10px;max-width:580px;width:100%;padding:12px 14px;box-shadow:0 8px 30px rgba(0,0,0,.18)}
+.fenetre .de{font-size:12.5px;color:var(--doux)}
+.fenetre h3{margin:2px 0 8px;font-size:16px}
+.choix{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.choix button{text-align:left;border:1.5px solid var(--encre);background:var(--fond);border-radius:6px;padding:6px 10px;cursor:pointer;color:var(--encre)}
+.choix button:disabled{cursor:default;opacity:.8}
+.choix button.juste{border:2px solid var(--vert);color:var(--vert);font-weight:600}
+.choix button.faux{color:var(--rouge);border-color:var(--rouge)}
+.bilan td{padding:4px 6px;border-bottom:1px solid var(--filet)}
+.bilan td.v{text-align:right;font-weight:600}
+.ok{color:var(--vert)}.ko{color:var(--rouge)}
+.pied{margin:4px 12px 12px;font-size:11.5px;color:var(--doux)}
+.cache{display:none}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="ic-roue" viewBox="-10 -10 20 20"><circle r="9" fill="#1a1915"/><circle r="5" fill="#fdfbf7"/><circle r="1.6" fill="#1a1915"/></symbol>
+  <symbol id="ic-siege" viewBox="-10 -10 20 20"><path d="M-5,-9 Q-2,-10 0,-8 L1,2 L-4,2 Z" fill="#fdfbf7" stroke="#1a1915" stroke-width="1.3"/><path d="M-6,2 L8,2 Q9,6 6,7 L-6,7 Z" fill="#fdfbf7" stroke="#1a1915" stroke-width="1.3"/></symbol>
+  <symbol id="ic-pdb" viewBox="-14 -8 28 16"><path d="M-13,-2 Q-13,-6 -8,-6 L9,-6 Q13,-6 13,-1 L13,4 L-13,4 Z" fill="#fdfbf7" stroke="#1a1915" stroke-width="1.3"/><rect x="-3" y="-4.5" width="8" height="5" fill="#1a1915"/></symbol>
+  <symbol id="ic-batt" viewBox="-10 -10 20 20"><rect x="-8" y="-5" width="16" height="11" rx="1" fill="#fdfbf7" stroke="#1a1915" stroke-width="1.3"/><rect x="-6" y="-8" width="3" height="3" fill="#1a1915"/><rect x="3" y="-8" width="3" height="3" fill="#1a1915"/></symbol>
+  <symbol id="ic-vitre" viewBox="-12 -8 24 16"><path d="M-10,5 L-7,-6 L7,-6 L10,5 Z" fill="#c9d3df" stroke="#1a1915" stroke-width="1.3"/></symbol>
+  <symbol id="ic-retro" viewBox="-10 -10 20 20"><path d="M-8,-5 Q-8,-8 -4,-8 L6,-7 Q9,-6 9,-1 L8,4 Q7,7 3,7 L-5,6 Q-8,5 -8,2 Z" fill="#fdfbf7" stroke="#1a1915" stroke-width="1.3"/><path d="M-6,-4 L5,-4 L5,3 L-5,3 Z" fill="#c9d3df"/></symbol>
+  <symbol id="ic-fil" viewBox="-10 -10 20 20"><path d="M-8,6 C-6,-8 0,8 2,-4 S8,4 8,-6" fill="none" stroke="#1a1915" stroke-width="2"/></symbol>
+  <symbol id="ic-bac" viewBox="-10 -10 20 20"><path d="M-8,-4 L8,-4 L6,7 L-6,7 Z" fill="#fdfbf7" stroke="#1a1915" stroke-width="1.3"/><circle cx="-2" cy="1" r="1.3" fill="#1a1915"/><circle cx="2" cy="2" r="1.3" fill="#1a1915"/><circle cx="0" cy="-1" r="1.3" fill="#1a1915"/></symbol>
+</svg>
+
+<div class="note">
+  <span><b>Page d'essai</b> — la méthode ABC (Stellantis, Sochaux). Rien n'est branché au site, rien n'est noté.</span>
+  <span class="modes" role="group" aria-label="Réglages de l'essai">
+    <button type="button" id="mGuidage" aria-pressed="true">Guidage</button>
+    <button type="button" id="mEntr" aria-pressed="false">Entraînement</button>
+    <button type="button" id="bRecom">Recommencer</button>
+  </span>
+</div>
+
+<div class="bandeau">
+  <b>Stellantis — Sochaux</b><span>Magasin du montage · semaine 37</span>
+  <span class="etapes"><span id="e1" class="ici">1 · Classer</span><span id="e2">2 · Couper</span><span id="e3">3 · Ranger</span></span>
+</div>
+
+<div class="consigne" id="consigne"></div>
+
+<div class="grille">
+  <div class="zone">
+    <h2 id="titreZone">Les sorties de la semaine <small>en contenants sortis du transstockeur</small></h2>
+    <svg id="graphe" viewBox="0 0 860 380" role="img" aria-label="Diagramme des sorties et courbe des pourcentages cumulés"></svg>
+    <svg id="rack" class="cache" viewBox="0 0 860 380" role="img" aria-label="Une allée du transstockeur vue de face"></svg>
+    <div class="coach" id="coach" role="status"></div>
+  </div>
+  <div class="zone">
+    <h2 id="titreRefs">Les références <small>clique dans l'ordre</small></h2>
+    <div class="refs" id="refs"></div>
+    <div class="retour" id="retour" aria-live="polite"></div>
+    <div class="actions"><button type="button" class="btn" id="bSuite" disabled>Étape suivante</button></div>
+  </div>
+</div>
+
+<p class="pied">Document pédagogique — reconstitution, non contractuel. Vérifié (presse 2022) : le transstockeur de Sochaux (25 m, 4 allées, 17 niveaux, 4 500 palettes) ; les références n'y sont pas
+regroupées mais réparties sur les quatre allées. Construit : les références, les sorties de la semaine, les zones de l'allée dessinée. Seuils ABC usuels : environ 20 % des références pour 80 % des sorties (A), 30 % pour 15 % (B), 50 % pour 5 % (C).</p>
+
+<div class="voile" id="voile"><div class="fenetre" id="fenetre" role="dialog" aria-modal="true"></div></div>
+
+<script>
+'use strict';
+// ---------- Données (construites) : 16 références, 2 000 sorties ; coupures nettes à 80,5 % et 95,5 % ----------
+const REFS = [
+  { id: 'R01', nom: 'Roues complètes',        ic: 'roue',  s: 620, c: 'palette de 28' },
+  { id: 'R02', nom: 'Sièges avant',           ic: 'siege', s: 530, c: 'rack de 8' },
+  { id: 'R03', nom: 'Planches de bord',       ic: 'pdb',   s: 460, c: 'rack de 10' },
+  { id: 'R04', nom: 'Batteries 12 V',         ic: 'batt',  s: 90,  c: 'palette de 40' },
+  { id: 'R05', nom: 'Pare-brise',             ic: 'vitre', s: 70,  c: 'chevalet de 20' },
+  { id: 'R06', nom: 'Rétroviseurs',           ic: 'retro', s: 60,  c: 'bac de 30' },
+  { id: 'R07', nom: 'Sièges du 3e rang',      ic: 'siege', s: 45,  c: 'rack de 6' },
+  { id: 'R08', nom: 'Faisceaux électriques',  ic: 'fil',   s: 35,  c: 'bac de 12' },
+  { id: 'R09', nom: 'Joints de porte',        ic: 'fil',   s: 20,  c: 'bac de 50' },
+  { id: 'R10', nom: 'Agrafes de garniture',   ic: 'bac',   s: 16,  c: 'bac de 2 000' },
+  { id: 'R11', nom: 'Vis M6',                 ic: 'bac',   s: 14,  c: 'bac de 5 000' },
+  { id: 'R12', nom: 'Colliers de serrage',    ic: 'bac',   s: 12,  c: 'bac de 1 000' },
+  { id: 'R13', nom: 'Monogrammes de hayon',   ic: 'bac',   s: 10,  c: 'bac de 200' },
+  { id: 'R14', nom: 'Tapis de coffre',        ic: 'bac',   s: 8,   c: 'palette de 60' },
+  { id: 'R15', nom: 'Kits anti-crevaison',    ic: 'bac',   s: 6,   c: 'carton de 24' },
+  { id: 'R16', nom: 'Antennes de toit',       ic: 'bac',   s: 4,   c: 'bac de 100' },
+];
+const TOTAL = REFS.reduce((a, r) => a + r.s, 0);
+const JUSTE = [...REFS].sort((a, b) => b.s - a.s);
+const COUPE_A = 3, COUPE_B = 8; // A = 3 premières (80,5 %), B = 5 suivantes (95,5 %), C = 8 dernières
+const COLS = 8, NIV = 5; // l'allée dessinée : 8 colonnes depuis la sortie, 5 niveaux
+const ZONE = (col, niv) => (col <= 2 && niv <= 2) ? 'A' : (col <= 4 && niv <= 3) ? 'B' : 'C';
+
+let mode = 'guidage', S;
+const $ = id => document.getElementById(id);
+const pct = v => (Math.round(v * 1000) / 10).toLocaleString('fr-FR', { minimumFractionDigits: 1 }) + ' %';
+function neuf() {
+  // ordre d'affichage mélangé, le même à chaque essai (pas de tirage dans une page d'essai)
+  const melange = [9, 2, 13, 5, 0, 11, 7, 3, 15, 1, 10, 6, 14, 4, 12, 8].map(i => REFS[i]);
+  S = { etape: 1, liste: melange, ordre: [], erreursOrdre: 0, coupes: [], erreursCoupe: 0, sel: null, places: {}, erreursRang: 0, question: null };
+}
+const classeJuste = id => { const k = JUSTE.findIndex(r => r.id === id); return k < COUPE_A ? 'A' : k < COUPE_B ? 'B' : 'C'; };
+const classeEleve = id => { const k = S.ordre.indexOf(id); if (S.coupes.length < 2 || k < 0) return null; return k < S.coupes[0] ? 'A' : k < S.coupes[1] ? 'B' : 'C'; };
+const ref = id => REFS.find(r => r.id === id);
+
+// ---------- Étape 1 : classer (chaque clic pose la barre suivante) ----------
+function choisirRef(id) {
+  const retour = $('retour');
+  if (S.etape === 1) {
+    const r = ref(id), attendu = JUSTE[S.ordre.length];
+    if (mode === 'guidage' && r.s < attendu.s) {
+      S.erreursOrdre++;
+      retour.className = 'retour ko';
+      retour.textContent = `✗ Pas encore : une autre référence sort plus que ${r.nom.toLowerCase()} (${r.s}).`;
+      return;
+    }
+    if (r.s < attendu.s) S.erreursOrdre++;
+    S.ordre.push(id);
+    retour.className = 'retour'; retour.textContent = '';
+    if (S.ordre.length === REFS.length) passer(2);
+  } else if (S.etape === 3) {
+    S.sel = S.sel === id ? null : id;
+  }
+  dessiner();
+}
+
+// ---------- Étape 2 : couper (cliquer entre deux barres) ----------
+function couper(k) {
+  if (S.etape !== 2 || S.coupes.length >= 2) return;
+  if (S.coupes.length && k <= S.coupes[0]) return;
+  const retour = $('retour'), cible = S.coupes.length ? COUPE_B : COUPE_A;
+  if (k !== cible) {
+    S.erreursCoupe++;
+    if (mode === 'guidage') {
+      const cum = cumul(k - 1);
+      retour.className = 'retour ko';
+      retour.textContent = S.coupes.length
+        ? `✗ Ici, le cumul est de ${pct(cum)}. La classe B s'arrête vers 95 % des sorties.`
+        : `✗ Ici, le cumul est de ${pct(cum)}. La classe A s'arrête vers 80 % des sorties.`;
+      dessiner(); return;
+    }
+  }
+  S.coupes.push(k);
+  retour.className = 'retour'; retour.textContent = '';
+  dessiner();
+  $('bSuite').disabled = S.coupes.length < 2;
+}
+const cumul = k => S.ordre.slice(0, k + 1).reduce((a, id) => a + ref(id).s, 0) / TOTAL;
+
+// ---------- Étape 3 : ranger (une palette de chaque référence) ----------
+function poser(col, niv) {
+  if (S.etape !== 3 || !S.sel) return;
+  const cle = col + '-' + niv;
+  if (Object.values(S.places).includes(cle)) { $('retour').className = 'retour ko'; $('retour').textContent = '✗ Emplacement déjà occupé. La palette reste en main.'; return; }
+  const cl = classeEleve(S.sel) || classeJuste(S.sel), z = ZONE(col, niv);
+  if (z !== cl) {
+    S.erreursRang++;
+    if (mode === 'guidage') {
+      $('retour').className = 'retour ko';
+      $('retour').textContent = `✗ ${ref(S.sel).nom} est en classe ${cl} : ${cl === 'A' ? 'tout près de la sortie et en bas' : cl === 'B' ? 'juste après la zone A' : 'au fond ou en haut'}.`;
+      return;
+    }
+  }
+  S.places[S.sel] = cle; S.sel = null;
+  $('retour').className = 'retour'; $('retour').textContent = '';
+  if (Object.keys(S.places).length === REFS.length) $('bSuite').disabled = false;
+  dessiner();
+}
+
+// ---------- Dessin ----------
+function dessiner() {
+  for (const k of [1, 2, 3]) $('e' + k).classList.toggle('ici', S.etape === k);
+  const consignes = {
+    1: `<b class="t">Étape 1</b>Range les références de celle qui sort <b>le plus</b> à celle qui sort <b>le moins</b> : clique-les dans l'ordre. Chaque clic pose une barre ; la courbe montre le pourcentage cumulé des sorties.`,
+    2: `<b class="t">Étape 2</b>Place les deux coupures : clique <b>entre deux barres</b>. La première ferme la classe A (environ 80 % des sorties), la seconde ferme la classe B (environ 95 %). Le reste est en C.`,
+    3: `<b class="t">Étape 3</b>Range une palette de chaque référence dans l'allée du transstockeur : choisis la référence à droite, puis l'emplacement. Les A tout près de la sortie et en bas, les C au fond ou en haut.`,
+  };
+  $('consigne').innerHTML = consignes[S.etape];
+  $('graphe').classList.toggle('cache', S.etape === 3);
+  $('rack').classList.toggle('cache', S.etape !== 3);
+  $('titreZone').innerHTML = S.etape === 3 ? 'Une allée du transstockeur <small>vue de face, la sortie à gauche</small>' : 'Les sorties de la semaine <small>en contenants sortis du transstockeur</small>';
+  $('titreRefs').innerHTML = S.etape === 1 ? 'Les références <small>clique dans l\'ordre</small>' : S.etape === 2 ? 'Les références <small>dans ton ordre</small>' : 'Les palettes à ranger <small>une par référence</small>';
+  dessinerRefs();
+  if (S.etape === 3) dessinerRack(); else dessinerGraphe();
+  coachTexte();
+}
+function dessinerRefs() {
+  let liste = S.etape === 1 ? S.liste : S.ordre.map(ref);
+  $('refs').innerHTML = liste.map(r => {
+    const pris = S.etape === 1 && S.ordre.includes(r.id), place = S.etape === 3 && S.places[r.id];
+    const cl = S.etape >= 2 ? classeEleve(r.id) : null;
+    return `<button type="button" class="ref" data-id="${r.id}" ${pris || place ? 'disabled' : ''} aria-pressed="${S.sel === r.id}">
+      <svg aria-hidden="true"><use href="#ic-${r.ic}" width="28" height="22"/></svg>
+      <span class="n">${r.nom}<small>${r.c}</small></span><span class="s">${r.s}</span>${cl ? `<span class="cl">${cl}</span>` : ''}</button>`;
+  }).join('');
+}
+function dessinerGraphe() {
+  const X0 = 60, Y0 = 320, W = 740, H = 270, n = REFS.length, bw = W / n, max = 650;
+  let h = '';
+  // axes et repères
+  h += `<line x1="${X0}" y1="${Y0}" x2="${X0 + W}" y2="${Y0}" stroke="#1a1915"/><line x1="${X0}" y1="${Y0}" x2="${X0}" y2="${Y0 - H}" stroke="#1a1915"/><line x1="${X0 + W}" y1="${Y0}" x2="${X0 + W}" y2="${Y0 - H}" stroke="#1a1915"/>`;
+  for (const v of [0, 200, 400, 600]) h += `<text x="${X0 - 6}" y="${Y0 - v / max * H + 4}" text-anchor="end" font-size="11" fill="#555047">${v}</text>`;
+  for (const v of [0, 20, 40, 60, 80, 100]) h += `<text x="${X0 + W + 6}" y="${Y0 - v / 100 * H + 4}" font-size="11" fill="#555047">${v} %</text>`;
+  h += `<text x="${X0 - 40}" y="${Y0 - H - 10}" font-size="11.5" fill="#555047">sorties</text><text x="${X0 + W - 20}" y="${Y0 - H - 10}" font-size="11.5" fill="#555047">cumul</text>`;
+  if (mode === 'guidage') for (const v of [80, 95]) h += `<line x1="${X0}" y1="${Y0 - v / 100 * H}" x2="${X0 + W}" y2="${Y0 - v / 100 * H}" stroke="#9c620a" stroke-dasharray="5 5"/><text x="${X0 + W - 6}" y="${Y0 - v / 100 * H + 14}" text-anchor="end" font-size="11" fill="#9c620a">repère ${v} %</text>`;
+  // barres posées
+  const pts = [];
+  S.ordre.forEach((id, k) => {
+    const r = ref(id), x = X0 + k * bw, bh = r.s / max * H, cum = cumul(k);
+    h += `<rect x="${x + 6}" y="${Y0 - bh}" width="${bw - 12}" height="${bh}" fill="#d8cfbf" stroke="#1a1915" stroke-width="1.3"/>`;
+    h += `<use href="#ic-${r.ic}" x="${x + bw / 2 - 11}" y="${Y0 + 6}" width="22" height="18"/>`;
+    h += `<text x="${x + bw / 2}" y="${Y0 - bh - 5}" text-anchor="middle" font-size="11" font-weight="700" fill="#1a1915">${r.s}</text>`;
+    pts.push([x + bw / 2, Y0 - cum * H, cum]);
+    const cl = classeEleve(id);
+    if (cl) h += `<text x="${x + bw / 2}" y="${Y0 + 44}" text-anchor="middle" font-size="15" font-weight="800" fill="#1a1915">${cl}</text>`;
+  });
+  // places à venir
+  for (let k = S.ordre.length; k < n; k++) h += `<rect x="${X0 + k * bw + 6}" y="${Y0 - 30}" width="${bw - 12}" height="30" fill="none" stroke="#8b857a" stroke-dasharray="4 3"/>`;
+  // courbe des cumuls
+  if (pts.length) {
+    h += `<polyline points="${[[X0, Y0], ...pts].map(p => p[0] + ',' + p[1]).join(' ')}" fill="none" stroke="#1a1915" stroke-width="2"/>`;
+    pts.forEach(p => { h += `<circle cx="${p[0]}" cy="${p[1]}" r="3.5" fill="#fdfbf7" stroke="#1a1915" stroke-width="1.5"/>`; });
+    if (S.etape === 2 || mode === 'guidage') pts.forEach((p, k) => { if (k >= 2 && k < 9) h += `<text x="${p[0] + 5}" y="${p[1] - 7}" font-size="10" fill="#555047">${pct(p[2])}</text>`; });
+  }
+  // coupures posées et zones cliquables entre les barres
+  S.coupes.forEach((k, i) => {
+    const x = X0 + k * bw;
+    h += `<line x1="${x}" y1="${Y0 + 30}" x2="${x}" y2="${Y0 - H - 4}" stroke="#1a1915" stroke-width="2.5"/><text x="${x}" y="${Y0 - H - 8}" text-anchor="middle" font-size="12" font-weight="700" fill="#1a1915">${i ? 'B | C' : 'A | B'}</text>`;
+  });
+  if (S.etape === 2 && S.coupes.length < 2) for (let k = 1; k < n; k++) {
+    if (S.coupes.length && k <= S.coupes[0]) continue;
+    h += `<rect class="fente" data-k="${k}" x="${X0 + k * bw - 7}" y="${Y0 - H}" width="14" height="${H + 30}" fill="transparent" style="cursor:pointer"><title>Couper ici</title></rect>`;
+  }
+  $('graphe').innerHTML = h;
+}
+function dessinerRack() {
+  const X0 = 120, Y0 = 340, cw = 86, nh = 58;
+  let h = `<rect x="20" y="${Y0 - NIV * nh - 10}" width="80" height="${NIV * nh + 10}" fill="none" stroke="#1a1915" stroke-width="1.5"/>
+    <text x="60" y="${Y0 - NIV * nh / 2}" text-anchor="middle" font-size="13" font-weight="700" fill="#1a1915">SORTIE</text><text x="60" y="${Y0 - NIV * nh / 2 + 16}" text-anchor="middle" font-size="11" fill="#555047">vers la ligne</text>`;
+  for (let c = 1; c <= COLS; c++) for (let n = 1; n <= NIV; n++) {
+    const x = X0 + (c - 1) * cw, y = Y0 - n * nh, cle = c + '-' + n;
+    const id = Object.keys(S.places).find(k => S.places[k] === cle);
+    h += `<g class="case" data-c="${c}" data-n="${n}" style="cursor:${S.sel && !id ? 'pointer' : 'default'}"><rect x="${x + 3}" y="${y + 3}" width="${cw - 6}" height="${nh - 6}" fill="${id ? '#fdfbf7' : 'transparent'}" stroke="${id ? '#1a1915' : '#8b857a'}" stroke-width="${id ? 1.5 : 1}" ${id ? '' : 'stroke-dasharray="3 3"'}/>`;
+    if (id) {
+      const r = ref(id), cl = classeEleve(id);
+      h += `<use href="#ic-${r.ic}" x="${x + 8}" y="${y + 10}" width="26" height="22"/><text x="${x + 40}" y="${y + 24}" font-size="10" fill="#1a1915">${r.nom.split(' ')[0].slice(0, 8)}</text><text x="${x + cw - 10}" y="${y + nh - 10}" text-anchor="end" font-size="13" font-weight="800" fill="#1a1915">${cl}</text>`;
+    }
+    h += `</g>`;
+  }
+  // poutres et niveaux
+  for (let n = 0; n <= NIV; n++) h += `<line x1="${X0}" y1="${Y0 - n * nh}" x2="${X0 + COLS * cw}" y2="${Y0 - n * nh}" stroke="#1a1915" stroke-width="${n ? 1.5 : 2.5}"/>`;
+  for (let n = 1; n <= NIV; n++) h += `<text x="${X0 + COLS * cw + 8}" y="${Y0 - n * nh + nh / 2 + 4}" font-size="11" fill="#555047">N${n}</text>`;
+  for (let c = 1; c <= COLS; c++) h += `<text x="${X0 + (c - 0.5) * cw}" y="${Y0 + 16}" text-anchor="middle" font-size="11" fill="#555047">colonne ${c}</text>`;
+  h += `<text x="${X0 + COLS * cw / 2}" y="${Y0 + 34}" text-anchor="middle" font-size="11.5" fill="#555047">← plus près de la sortie · plus loin →</text>`;
+  if (mode === 'guidage') {
+    h += `<rect x="${X0}" y="${Y0 - 2 * nh}" width="${2 * cw}" height="${2 * nh}" fill="none" stroke="#9c620a" stroke-width="2" stroke-dasharray="6 4"/><rect x="${X0 + 2 * cw - 54}" y="${Y0 - 2 * nh + 4}" width="50" height="16" rx="3" fill="#fdfbf7" stroke="#9c620a"/><text x="${X0 + 2 * cw - 29}" y="${Y0 - 2 * nh + 16}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#9c620a">zone A</text>`;
+    h += `<path d="M${X0 + 2 * cw},${Y0} L${X0 + 4 * cw},${Y0} L${X0 + 4 * cw},${Y0 - 3 * nh} L${X0},${Y0 - 3 * nh} L${X0},${Y0 - 2 * nh} L${X0 + 2 * cw},${Y0 - 2 * nh} Z" fill="none" stroke="#9c620a" stroke-width="1.5" stroke-dasharray="3 4"/><rect x="${X0 + 4 * cw - 54}" y="${Y0 - 3 * nh + 4}" width="50" height="16" rx="3" fill="#fdfbf7" stroke="#9c620a"/><text x="${X0 + 4 * cw - 29}" y="${Y0 - 3 * nh + 16}" text-anchor="middle" font-size="11.5" font-weight="700" fill="#9c620a">zone B</text>`;
+  }
+  $('rack').innerHTML = h;
+}
+function coachTexte() {
+  const c = $('coach');
+  if (mode !== 'guidage') { c.innerHTML = ''; return; }
+  c.innerHTML = {
+    1: S.ordre.length ? `Les premières barres font monter la courbe très vite : quelques références font presque toutes les sorties.` :
+      `<b>Karim</b> : « Avant de ranger quoi que ce soit, on regarde ce qui sort le plus. Commence par la référence qui sort le plus cette semaine. »`,
+    2: `<b>Karim</b> : « Lis la courbe : après combien de références atteint-on environ 80 % des sorties ? C'est la fin des A. »`,
+    3: `<b>Karim</b> : « Les A, on va les chercher sans arrêt : chaque mètre compte. Les C, une fois par semaine : ils peuvent attendre au fond. »`,
+  }[S.etape];
+}
+
+// ---------- Passage d'une étape à l'autre, question finale, bilan ----------
+function passer(e) { S.etape = e; S.sel = null; $('bSuite').disabled = true; $('retour').textContent = ''; dessiner(); }
+$('bSuite').addEventListener('click', () => { if (S.etape === 2) passer(3); else if (S.etape === 3) questionFinale(); });
+function questionFinale() {
+  ouvrir(`<div class="de">Message de Karim</div><h3>Et à Sochaux, en vrai ?</h3>
+    <p>Dans le vrai transstockeur de l'usine (4 allées, 17 niveaux), chaque référence n'est <b>pas</b> regroupée près de la sortie : elle est <b>répartie sur les quatre allées</b>. Pourquoi ?</p>
+    <div class="choix" id="qf">
+      <button type="button" data-v="panne">Si une allée tombe en panne, toutes les pièces restent disponibles : la ligne ne s'arrête pas.</button>
+      <button type="button" data-v="abc">Parce que la méthode ABC ne marche pas dans une usine.</button>
+      <button type="button" data-v="place">Parce qu'il n'y a plus de place près de la sortie.</button>
+    </div><div id="qfr" class="retour"></div>`);
+  $('qf').addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b) return;
+    S.question = b.dataset.v;
+    for (const x of $('qf').querySelectorAll('button')) { x.disabled = true; if (x.dataset.v === 'panne' && mode === 'guidage') x.classList.add('juste'); }
+    if (mode === 'guidage' && S.question !== 'panne') b.classList.add('faux');
+    $('qfr').textContent = mode === 'guidage' ? 'Karim : « ABC dit où ranger pour aller vite. Mais ici, une ligne arrêtée coûte plus cher que quelques mètres de plus. »' : 'Réponse notée.';
+    setTimeout(bilan, mode === 'guidage' ? 2600 : 900);
+  });
+}
+function bilan() {
+  const ordreOk = S.ordre.every((id, k) => ref(id).s === JUSTE[k].s);
+  const coupesOk = S.coupes[0] === COUPE_A && S.coupes[1] === COUPE_B;
+  const rangOk = REFS.filter(r => { const [c, n] = S.places[r.id].split('-').map(Number); return ZONE(c, n) === classeJuste(r.id); }).length;
+  ouvrir(`<div class="bilan"><div class="de">Fin de l'essai</div><h3>Le bilan</h3><table style="width:100%;border-collapse:collapse">
+    <tr><td>Références classées dans l'ordre</td><td class="v ${ordreOk ? 'ok' : 'ko'}">${ordreOk ? '✓' : '✗ ' + S.erreursOrdre + ' erreur(s)'}</td></tr>
+    <tr><td>Coupures A | B et B | C</td><td class="v ${coupesOk ? 'ok' : 'ko'}">${coupesOk ? '✓' : '✗'} ${S.erreursCoupe ? '(' + S.erreursCoupe + ' essai(s) faux)' : ''}</td></tr>
+    <tr><td>Palettes rangées dans la bonne zone</td><td class="v ${rangOk === REFS.length ? 'ok' : 'ko'}">${rangOk} / ${REFS.length}</td></tr>
+    <tr><td>Pourquoi Sochaux répartit ses références</td><td class="v ${S.question === 'panne' ? 'ok' : 'ko'}">${S.question === 'panne' ? '✓' : '✗'}</td></tr>
+    </table><p style="font-size:13px;color:var(--doux)">Dans le site, chaque ligne deviendrait un jalon pondéré (poids à valider), chaque référence jugée séparément.</p>
+    <div class="actions"><button type="button" class="btn" id="bRejouer">Recommencer</button></div></div>`);
+  $('bRejouer').addEventListener('click', () => { fermer(); recommencer(); });
+}
+function ouvrir(html) { $('fenetre').innerHTML = html; $('voile').classList.add('ouv'); const b = $('fenetre').querySelector('button'); if (b) b.focus(); }
+function fermer() { $('voile').classList.remove('ouv'); }
+function recommencer() { neuf(); $('retour').textContent = ''; $('bSuite').disabled = true; dessiner(); }
+
+// ---------- Écouteurs ----------
+$('refs').addEventListener('click', e => { const b = e.target.closest('.ref'); if (b && !b.disabled) choisirRef(b.dataset.id); });
+$('graphe').addEventListener('click', e => { const f = e.target.closest('.fente'); if (f) couper(+f.dataset.k); });
+$('rack').addEventListener('click', e => { const g = e.target.closest('.case'); if (g) poser(+g.dataset.c, +g.dataset.n); });
+function choisirMode(m) { mode = m; $('mGuidage').setAttribute('aria-pressed', m === 'guidage'); $('mEntr').setAttribute('aria-pressed', m === 'entrainement'); fermer(); recommencer(); }
+$('mGuidage').addEventListener('click', () => choisirMode('guidage'));
+$('mEntr').addEventListener('click', () => choisirMode('entrainement'));
+$('bRecom').addEventListener('click', () => { fermer(); recommencer(); });
+neuf(); dessiner();
+</script>
+</body>
+</html>
