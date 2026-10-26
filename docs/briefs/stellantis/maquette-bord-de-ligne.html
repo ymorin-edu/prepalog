@@ -25,10 +25,27 @@ button{font:inherit}
 .zone h2{font-size:13.5px;margin:0 0 6px;display:flex;align-items:center;gap:8px}
 .zone h2 small{font-weight:400;color:var(--doux)}
 svg{display:block;width:100%;height:auto}
+#scene{background:var(--fond);border:1px solid var(--filet);border-radius:8px}
+#scene text{font-family:Inter,system-ui,"Segoe UI",sans-serif}
+#scene .lbl{font-size:12px;fill:var(--doux)}
+#scene .lblf{font-size:13px;font-weight:700;fill:var(--encre)}
+#scene .num{font:700 13px ui-monospace,Consolas,monospace;fill:var(--encre)}
+#scene .trait{fill:none;stroke:var(--encre);stroke-width:1.5}
+#scene .doux{fill:none;stroke:var(--jauge);stroke-width:1.2}
+#scene .piece{fill:var(--panneau);stroke:var(--encre);stroke-width:1.3}
+#scene .piece-f{fill:var(--encre)}
+#scene .case{fill:var(--panneau);stroke:var(--jauge);stroke-width:1}
+#scene .case.pleine{fill:#d8cfbf;stroke:var(--encre)}
+#scene .voiture{fill:var(--panneau);stroke:var(--encre);stroke-width:1.6}
+#scene .vitre{fill:#c9d3df;stroke:var(--encre);stroke-width:1}
+#scene .pneu{fill:var(--encre)}
+#scene .jante{fill:var(--panneau)}
+#scene .robot{fill:var(--panneau);stroke:var(--encre);stroke-width:1.6}
+#scene .alerte{fill:var(--rouge);font-weight:700}
+#scene .bas{fill:var(--terre);font-weight:600}
+#scene .carte-vol{fill:#fbf8f1;stroke:var(--encre);stroke-width:1.2}
 .arret{display:none;margin:6px 0 0;border:2px solid var(--rouge);color:var(--rouge);border-radius:6px;padding:5px 10px;font-weight:600;font-size:14px}
 .arret.ouv{display:block}
-.postes{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
-@media (max-width:640px){.postes{grid-template-columns:repeat(2,minmax(0,1fr))}}
 .poste{border:1px solid var(--filet);border-radius:8px;padding:6px 8px;background:var(--fond);display:flex;flex-direction:column;gap:5px}
 .poste.rupture{border:2px solid var(--rouge)}
 .poste .t{font-size:12px;color:var(--doux)}
@@ -52,6 +69,7 @@ svg{display:block;width:100%;height:auto}
 .carte:hover{background:var(--survol)}
 .carte:focus-visible{outline:3px solid var(--bleu);outline-offset:2px}
 .carte[aria-pressed="true"]{border:3px solid var(--bleu);padding:3.5px 6.5px}
+.carte svg{width:30px;height:22px;flex:none}
 .carte .k{font:700 11px ui-monospace,Consolas,monospace;border:1px solid var(--encre);border-radius:3px;padding:0 4px}
 .carte .d{flex:1;font-size:13px;line-height:1.2}
 .carte .d small{display:block;color:var(--doux);font-size:11.5px}
@@ -125,10 +143,17 @@ Un robot porte <strong>2 contenants et 1 000 kg</strong> au plus.</div>
 
 <div class="grille">
   <div class="zone">
-    <h2>La ligne <small id="vitesseTxt">une voiture par minute (ici accélérée)</small></h2>
-    <svg id="ligne" viewBox="0 0 800 92" role="img" aria-label="Ligne de montage"></svg>
+    <h2>L'atelier <small id="vitesseTxt">une voiture par minute (ici accélérée)</small></h2>
+    <svg id="scene" viewBox="0 0 1000 420" role="img" aria-label="L'atelier : le transstockeur, les robots, la ligne et ses quatre postes">
+      <defs>
+        <symbol id="ic-ROUE" viewBox="-10 -10 20 20"><circle r="9" class="piece-f"/><circle r="5" class="jante" style="fill:#fdfbf7"/><circle r="1.6" class="piece-f"/></symbol>
+        <symbol id="ic-RETRO" viewBox="-10 -10 20 20"><path d="M-8,-5 Q-8,-8 -4,-8 L6,-7 Q9,-6 9,-1 L8,4 Q7,7 3,7 L-5,6 Q-8,5 -8,2 Z" class="piece"/><path d="M-6,-4 L5,-4 L5,3 L-5,3 Z" fill="#c9d3df" stroke="#1a1915" stroke-width=".8"/></symbol>
+        <symbol id="ic-PDB" viewBox="-14 -8 28 16"><path d="M-13,-2 Q-13,-6 -8,-6 L9,-6 Q13,-6 13,-1 L13,4 L-13,4 Z" class="piece"/><rect x="-3" y="-4.5" width="8" height="5" fill="#1a1915"/><circle cx="-8" cy="-1" r="2.2" fill="none" stroke="#1a1915" stroke-width="1"/></symbol>
+        <symbol id="ic-RANG3" viewBox="-10 -10 20 20"><path d="M-5,-9 Q-2,-10 0,-8 L1,2 L-4,2 Z" class="piece"/><path d="M-6,2 L8,2 Q9,6 6,7 L-6,7 Z" class="piece"/></symbol>
+      </defs>
+      <g id="gFond"></g><g id="gEtat"></g><g id="gVoitures"></g><g id="gRobots"></g><g id="gVols"></g>
+    </svg>
     <div class="arret" id="arret" role="alert"></div>
-    <div class="postes" id="postes"></div>
     <div class="sequence" id="sequence"></div>
     <div class="coach" id="coach" role="status"></div>
   </div>
@@ -187,9 +212,11 @@ function neuf() {
     S.pos[r.id] = r.depart.map(q => ({ reste: q }));
     S.mag[r.id] = r.mag;
   }
-  for (let i = 0; i < NB_ROBOTS; i++) S.robots.push({ id: 'R' + (i + 1), libreA: DEBUT, livraison: null });
+  for (let i = 0; i < NB_ROBOTS; i++) S.robots.push({ id: 'R' + (i + 1), libreA: DEBUT, livraison: null, depart: DEBUT, cible: 0, retourDe: null });
+  vols = [];
 }
-let mode = 'guidage', vite = false, minuteur = null, numCarte = 0;
+let mode = 'guidage', vite = false, minuteur = null, numCarte = 0, vols = [], dernierTic = performance.now(), pFige = 0;
+const POSTE_X = [390, 540, 690, 840], LIGNE_Y = 118, ALLEE_Y = 352, SORTIE_X = 222, PAS = 150;
 const $ = id => document.getElementById(id);
 const hh = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
 const modele = i => MOTIF[i % MOTIF.length];
@@ -207,6 +234,7 @@ function couverture(id) {
 // ---------- Une minute de ligne ----------
 function minute() {
   if (S.fin) return;
+  dernierTic = performance.now();
   // arrivées : camion, robots
   if (!S.camion.livre && S.t >= S.camion.arrivee) {
     S.camion.livre = true; S.mag[CAMION.ref] += CAMION.racks; S.camion.statut = 'livré';
@@ -236,12 +264,14 @@ function consommer(r, q) {
     if (c.reste === 0) {
       pile.shift();
       S.cartes.push({ num: ++numCarte, ref: r.id, depuis: S.t });
+      vols.push({ ref: r.id, x: POSTE_X[REFS.indexOf(r)], t0: performance.now() });
       if (mode === 'guidage' && !S.coachVu.carte) coach('carte');
     }
   }
 }
 
 function livrer(rb) {
+  rb.retourDe = { t: rb.livraison.a, x: rb.cible };
   for (const id of rb.livraison.refs) {
     const pile = S.pos[id];
     if (pile.length < PLACES) pile.push({ reste: ref(id).par });
@@ -261,7 +291,8 @@ function envoyer() {
   for (const c of cartes) if (S.mag[c.ref] < 1) { retour.className = 'retour ko'; retour.textContent = '✗ Plus aucun contenant de ' + ref(c.ref).nom.toLowerCase() + ' au transstockeur.'; return; }
   const urg = $('urgent').checked, d = urg ? TRAJET_URGENT : TRAJET;
   for (const c of cartes) { S.mag[c.ref]--; S.retards.push(S.t - c.depuis); }
-  rb.livraison = { a: S.t + d, refs: cartes.map(c => c.ref) };
+  rb.livraison = { a: S.t + d, refs: cartes.map(c => c.ref), depart: S.t };
+  rb.cible = Math.max(...cartes.map(c => POSTE_X[REFS.findIndex(r => r.id === c.ref)]));
   rb.libreA = S.t + d + RETOUR;
   S.cartes = S.cartes.filter(c => !S.sel.includes(c.num));
   S.sel = []; S.envois++; if (cartes.length === 1) S.envoisSimples++; if (urg) S.urgents++;
@@ -359,35 +390,10 @@ function terminer() {
 function dessiner() {
   $('horloge').textContent = hh(S.t);
   $('cpt').textContent = S.n + ' / ' + OBJECTIF + ' voitures';
-  // la ligne : des voitures qui avancent
-  const svg = $('ligne'); let h = '';
-  h += '<rect x="10" y="40" width="780" height="14" rx="3" fill="none" stroke="#8b857a" stroke-width="1.5"/>';
-  REFS.forEach((r, i) => { const x = 110 + i * 180; h += `<line x1="${x}" y1="58" x2="${x}" y2="86" stroke="#8b857a" stroke-dasharray="3 3"/><text x="${x}" y="90" font-size="11" text-anchor="middle" fill="#555047">${r.poste.split(' · ')[0]}</text>`; });
-  for (let k = 0; k < 9; k++) {
-    const x = 20 + k * 92 + (S.arretCause ? 0 : 0), m = modele(Math.max(0, S.n - k) + 0);
-    if (S.n - k < 0) continue;
-    const big = m === 5008;
-    h += `<g transform="translate(${760 - k * 92 - 60},${big ? 14 : 18})"><rect width="${big ? 70 : 62}" height="${big ? 26 : 22}" rx="7" fill="#fdfbf7" stroke="#1a1915" stroke-width="${big ? 2 : 1.2}"/>
-      <text x="${(big ? 70 : 62) / 2}" y="${big ? 18 : 15}" font-size="11" text-anchor="middle" font-family="ui-monospace,Consolas,monospace" fill="#1a1915">${m}</text></g>`;
-  }
-  svg.innerHTML = h;
+  dessinerEtat();
   const ar = $('arret');
   if (S.arretCause) { ar.classList.add('ouv'); ar.textContent = '✗ Ligne arrêtée depuis ' + S.arretMin + ' min : plus de ' + S.arretCause.toLowerCase() + ' au bord de ligne. ' + PERSONNES + ' personnes attendent.'; }
   else ar.classList.remove('ouv');
-  // postes
-  $('postes').innerHTML = REFS.map(r => {
-    const pile = S.pos[r.id], cv = couverture(r.id), m = modele(S.n);
-    const emplts = [0, 1].map(i => {
-      const c = pile[i];
-      if (!c) return `<div class="emplt vide" title="emplacement vide"><em>${i ? 'd\'avance' : 'en cours'}</em></div>`;
-      return `<div class="emplt"><i style="height:${Math.round(c.reste / r.par * 100)}%"></i><em>${i ? 'd\'avance' : 'en cours'}</em><b>${c.reste}</b></div>`;
-    }).join('');
-    const rupt = S.arretCause && surLigne(r.id) < r.besoin[m];
-    return `<div class="poste${rupt ? ' rupture' : ''}"><div class="t">${r.poste}</div><div class="ref">${r.nom}</div>
-      <div class="conso">${r.besoin[3008] === r.besoin[5008] ? r.besoin[3008] + ' par voiture' : '1 par 5008, 0 par 3008'} · ${r.contenant} de ${r.par}</div>
-      <div class="emplts">${emplts}</div>
-      <div class="couv${cv <= TRAJET + 1 ? ' bas' : ''}${mode === 'entrainement' ? ' cache' : ''}">tient encore ${cv} voiture${cv > 1 ? 's' : ''}</div></div>`;
-  }).join('');
   // séquence
   const seq = []; for (let k = 0; k < 12; k++) { const m = modele(S.n + k); seq.push(`<span class="s${m}">${m}</span>`); }
   $('sequence').innerHTML = 'Séquence à venir : ' + seq.join('');
@@ -396,7 +402,7 @@ function dessiner() {
   cartes.innerHTML = S.cartes.length ? S.cartes.map(c => {
     const r = ref(c.ref), age = S.t - c.depuis;
     return `<button type="button" class="carte" data-n="${c.num}" aria-pressed="${S.sel.includes(c.num)}">
-      <span class="k">${r.id}</span><span class="d">${r.nom}<small>${r.poste} · 1 ${r.contenant} de ${r.par} · ${r.poids} kg</small></span>
+      <svg width="30" height="22" aria-hidden="true"><use href="#ic-${r.id}" width="30" height="22"/></svg><span class="d">${r.nom}<small>${r.poste} · 1 ${r.contenant} de ${r.par} · ${r.poids} kg</small></span>
       <span class="age${age >= 3 ? ' vieux' : ''}">${age} min</span></button>`;
   }).join('') : '<div class="vide">Aucune carte : tous les postes ont leurs deux contenants.</div>';
   const p = poidsSel(), ch = $('charge');
@@ -415,6 +421,152 @@ function dessiner() {
   cm.className = 'camion' + (S.camion.statut === 'en retard' ? ' retard' : '');
   cm.textContent = S.camion.livre ? `Camion de planches de bord livré (${CAMION.racks} racks).` :
     `Camion de planches de bord (${CAMION.racks} racks) : ${S.camion.statut}, arrivée ${hh(S.camion.arrivee)}.`;
+}
+
+// ---------- La scène dessinée ----------
+const NS = 'http://www.w3.org/2000/svg';
+function fond() {
+  let h = '';
+  // sol et allée des robots
+  h += `<line x1="10" y1="378" x2="990" y2="378" class="doux"/>`;
+  h += `<line x1="${SORTIE_X}" y1="${ALLEE_Y + 22}" x2="980" y2="${ALLEE_Y + 22}" stroke="#8b857a" stroke-dasharray="8 6" stroke-width="1.5"/>`;
+  h += `<text x="600" y="402" class="lbl" text-anchor="middle">allée des robots (150 m du transstockeur à la ligne)</text>`;
+  // transstockeur
+  h += `<rect x="14" y="20" width="196" height="300" rx="4" class="trait"/>`;
+  h += `<text x="112" y="40" class="lblf" text-anchor="middle">Transstockeur</text><text x="112" y="55" class="lbl" text-anchor="middle">25 m · 4 500 palettes</text>`;
+  h += `<rect x="198" y="296" width="24" height="24" class="trait"/><text x="210" y="336" class="lbl" text-anchor="middle">sortie</text>`;
+  // quai
+  h += `<text x="20" y="400" class="lbl">quai des camions</text>`;
+  // ligne de montage
+  h += `<text x="260" y="22" class="lblf">Ligne de montage</text><text x="400" y="22" class="lbl">une voiture par minute →</text>`;
+  h += `<rect x="250" y="${LIGNE_Y}" width="740" height="10" rx="3" fill="#e3ded3" stroke="#8b857a"/>`;
+  for (let x = 262; x < 990; x += 24) h += `<circle cx="${x}" cy="${LIGNE_Y + 5}" r="2" fill="#8b857a"/>`;
+  REFS.forEach((r, i) => {
+    const x = POSTE_X[i];
+    // l'opérateur du poste
+    h += `<g transform="translate(${x - 52},${LIGNE_Y + 20})"><circle cx="0" cy="6" r="5" class="trait" style="fill:var(--panneau)"/><path d="M0,11 L0,26 M-7,16 L7,16 M0,26 L-5,36 M0,26 L5,36" class="trait"/></g>`;
+    h += `<text x="${x}" y="${LIGNE_Y + 34}" class="lblf" text-anchor="middle">${r.poste.split(' · ')[0]}</text>`;
+    h += `<text x="${x}" y="${LIGNE_Y + 48}" class="lbl" text-anchor="middle">${r.poste.split(' · ')[1]}</text>`;
+  });
+  // boîte kanban
+  h += `<g transform="translate(232,175)"><rect width="66" height="46" rx="4" class="trait" style="fill:var(--panneau)"/><rect x="10" y="6" width="46" height="5" fill="#1a1915"/>
+        <text x="33" y="62" class="lbl" text-anchor="middle">boîte kanban</text></g>`;
+  $('gFond').innerHTML = h;
+}
+function iconesContenant(id, reste, x, y, w, hgt) {
+  // dessine les pièces qui restent, rangées dans le contenant
+  const r = ref(id), cap = { ROUE: 14, RETRO: 15, PDB: 10, RANG3: 6 }[id], par = r.par / cap;
+  const n = Math.ceil(reste / par), cols = id === 'PDB' ? 2 : 3, taille = id === 'PDB' ? 26 : 17, haut = id === 'PDB' ? 14 : 17;
+  let h = '';
+  for (let k = 0; k < n; k++) {
+    const c = k % cols, l = Math.floor(k / cols);
+    const ix = x + 4 + c * (w - 8) / cols + ((w - 8) / cols - taille) / 2, iy = y + hgt - 4 - (l + 1) * (haut - 1);
+    if (iy < y + 12) break;
+    h += `<use href="#ic-${id}" x="${ix}" y="${iy}" width="${taille}" height="${haut}"/>`;
+  }
+  return h;
+}
+function dessinerEtat() {
+  let h = '';
+  // stock du transstockeur : une case par contenant plein
+  REFS.forEach((r, i) => {
+    const y = 70 + i * 56;
+    h += `<use href="#ic-${r.id}" x="20" y="${y + 4}" width="${r.id === 'PDB' ? 28 : 22}" height="20"/>`;
+    h += `<text x="20" y="${y + 40}" class="lbl" style="font-size:10px">${{ ROUE: 'Roues', RETRO: 'Rétros', PDB: 'Planches', RANG3: 'Sièges' }[r.id]}</text>`;
+    h += `<text x="66" y="${y + 20}" class="num" text-anchor="end" style="font-size:12px">${S.mag[r.id]}</text>`;
+    for (let k = 0; k < 20; k++) {
+      const c = k % 10, l = Math.floor(k / 10);
+      h += `<rect x="${72 + c * 12.8}" y="${y + 4 + l * 20}" width="11" height="18" rx="1.5" class="case${k < S.mag[r.id] ? ' pleine' : ''}"/>`;
+    }
+  });
+  // le camion au quai
+  const cm = S.camion;
+  if (cm.livre && S.t - cm.arrivee < 6) {
+    h += `<g transform="translate(110,382)"><rect x="-88" y="-34" width="70" height="30" rx="2" class="trait" style="fill:var(--panneau)"/><path d="M-18,-26 L0,-26 L8,-14 L8,-4 L-18,-4 Z" class="trait" style="fill:var(--panneau)"/>
+      <circle cx="-72" cy="-3" r="5" class="pneu"/><circle cx="-2" cy="-3" r="5" class="pneu"/><text x="-53" y="-15" class="lbl" text-anchor="middle" style="font-size:10px">${CAMION.racks} racks</text></g>`;
+    h += `<text x="20" y="414" class="lbl" style="font-size:11px">planches de bord livrées à ${hh(cm.arrivee)}</text>`;
+  } else if (!cm.livre) {
+    h += `<text x="20" y="414" class="${cm.statut === 'en retard' ? 'bas' : 'lbl'}" style="font-size:11px">camion de planches de bord : ${cm.statut}, ${hh(cm.arrivee)}</text>`;
+  }
+  // bord de ligne : deux emplacements par poste, avec les pièces dessinées
+  REFS.forEach((r, i) => {
+    const x0 = POSTE_X[i] - 62, y0 = 182, pile = S.pos[r.id], cv = couverture(r.id), m = modele(S.n);
+    const rupt = S.arretCause && surLigne(r.id) < r.besoin[m];
+    [0, 1].forEach(k => {
+      const x = x0 + k * 64, c = pile[k];
+      h += `<rect x="${x}" y="${y0}" width="58" height="96" rx="3" fill="${c ? '#fdfbf7' : 'none'}" stroke="${c ? '#1a1915' : '#8b857a'}" stroke-width="${c ? 1.5 : 1.2}" ${c ? '' : 'stroke-dasharray="4 3"'}/>`;
+      h += `<text x="${x + 29}" y="${y0 + 10}" class="lbl" text-anchor="middle" style="font-size:9.5px">${k ? 'd\'avance' : 'en cours'}</text>`;
+      if (c) { h += iconesContenant(r.id, c.reste, x, y0, 58, 96); h += `<text x="${x + 29}" y="${y0 + 110}" class="num" text-anchor="middle">${c.reste}</text>`; }
+    });
+    // voyant du poste
+    const bas = cv <= TRAJET + 1;
+    h += `<circle cx="${POSTE_X[i] + 52}" cy="${LIGNE_Y + 30}" r="7" fill="${rupt ? 'none' : bas ? '#9c620a' : 'none'}" stroke="${rupt ? '#9d2727' : '#1a1915'}" stroke-width="${rupt ? 3 : 1.4}"/>`;
+    if (rupt) h += `<text x="${POSTE_X[i]}" y="${y0 + 128}" class="alerte" text-anchor="middle" style="font-size:13px">✗ RUPTURE</text>`;
+    else if (mode !== 'entrainement') h += `<text x="${POSTE_X[i]}" y="${y0 + 128}" class="${bas ? 'bas' : 'lbl'}" text-anchor="middle">tient ${cv} voiture${cv > 1 ? 's' : ''}</text>`;
+  });
+  // cartes en attente dans la boîte
+  S.cartes.slice(0, 6).forEach((c, k) => {
+    h += `<g transform="translate(${238 + (k % 3) * 18},${183 + Math.floor(k / 3) * 14})"><rect width="16" height="12" rx="1.5" class="carte-vol"/><use href="#ic-${c.ref}" x="2" y="1" width="12" height="10"/></g>`;
+  });
+  if (S.cartes.length) h += `<circle cx="296" cy="177" r="10" fill="#9c620a"/><text x="296" y="181" text-anchor="middle" style="font:700 12px Inter,system-ui,sans-serif;fill:#fdfbf7">${S.cartes.length}</text>`;
+  if (S.arretCause) h += `<text x="620" y="${LIGNE_Y - 62}" class="alerte" text-anchor="middle" style="font-size:15px">✗ LIGNE ARRÊTÉE — ${PERSONNES} personnes attendent</text>`;
+  $('gEtat').innerHTML = h;
+}
+function voitureSVG(m) {
+  const L = m === 5008 ? 112 : 98, k = L / 100;
+  const X = v => (v * k).toFixed(1);
+  let h = `<path class="voiture" d="M0,-10 L0,-22 Q1,-27 8,-28 L${X(26)},-30 L${X(40)},-44 Q${X(43)},-47 ${X(48)},-47 L${X(80)},-47 Q${X(86)},-47 ${X(90)},-41 L${X(97)},-30 Q${X(100)},-28 ${X(100)},-22 L${X(100)},-10 Z"/>`;
+  h += `<path class="vitre" d="M${X(42)},-31 L${X(49)},-42 L${X(64)},-42 L${X(64)},-31 Z"/><path class="vitre" d="M${X(67)},-31 L${X(67)},-42 L${X(80)},-42 L${X(86)},-31 Z"/>`;
+  if (m === 5008) h += `<path class="vitre" d="M${X(88)},-31 L${X(84)},-40 L${X(89)},-40 L${X(94)},-31 Z"/>`;
+  for (const w of [20, 80]) h += `<circle cx="${X(w)}" cy="-8" r="9" class="pneu"/><circle cx="${X(w)}" cy="-8" r="4" class="jante"/>`;
+  h += `<text x="${X(50)}" y="-16" text-anchor="middle" style="font:700 11px ui-monospace,Consolas,monospace;fill:#1a1915">${m}</text>`;
+  return h;
+}
+function robotSVG(rb, charge) {
+  let h = '';
+  charge.forEach((id, k) => { h += `<rect x="${-20 + k * 21}" y="-34" width="19" height="20" rx="2" class="carte-vol"/><use href="#ic-${id}" x="${-18 + k * 21}" y="-31" width="15" height="15"/>`; });
+  h += `<rect x="-24" y="-14" width="48" height="14" rx="5" class="robot"/><circle cx="-14" cy="2" r="4" class="pneu"/><circle cx="14" cy="2" r="4" class="pneu"/>`;
+  h += `<text x="0" y="-4" text-anchor="middle" style="font:700 9px ui-monospace,Consolas,monospace;fill:#1a1915">${rb.id}</text>`;
+  return h;
+}
+function animer() {
+  const iv = (mode === 'guidage' ? 1800 : 1100) / (vite ? 2 : 1);
+  let p = S.pause || S.fin ? pFige : Math.min(1, (performance.now() - dernierTic) / iv);
+  if (!S.pause && !S.fin) pFige = p;
+  const tf = S.t + p, marche = !S.arretCause && !S.fin;
+  // voitures : la voiture j est à x = 250 + (n + p - j) * PAS
+  let h = '';
+  for (let j = S.n + 1; j >= S.n - 6; j--) {
+    if (j < 0) continue;
+    const x = 255 + (S.n + (marche ? p : 0) - j) * PAS;
+    if (x > 1000 || x < 250) continue;
+    h += `<g transform="translate(${x.toFixed(1)},${LIGNE_Y})" >${voitureSVG(modele(j))}</g>`;
+  }
+  $('gVoitures').innerHTML = h;
+  // robots : garés à la sortie, en route, ou au retour
+  h = '';
+  S.robots.forEach((rb, i) => {
+    const garage = SORTIE_X + 14 + i * 52;
+    let x = garage, charge = [];
+    if (rb.livraison) {
+      const f = Math.min(1, Math.max(0, (tf - rb.livraison.depart) / (rb.livraison.a - rb.livraison.depart)));
+      x = garage + (rb.cible - garage) * f; charge = rb.livraison.refs;
+    } else if (rb.retourDe && tf < rb.libreA) {
+      const f = Math.min(1, Math.max(0, (tf - rb.retourDe.t) / (rb.libreA - rb.retourDe.t)));
+      x = rb.retourDe.x + (garage - rb.retourDe.x) * f;
+    }
+    h += `<g transform="translate(${x.toFixed(1)},${ALLEE_Y + 18})">${robotSVG(rb, charge)}</g>`;
+  });
+  $('gRobots').innerHTML = h;
+  // cartes kanban qui volent du poste vers la boîte
+  const now = performance.now(); h = '';
+  vols = vols.filter(v => now - v.t0 < 800);
+  for (const v of vols) {
+    const f = (now - v.t0) / 800, x = v.x + (255 - v.x) * f, y = 190 - Math.sin(f * Math.PI) * 60;
+    h += `<g transform="translate(${x.toFixed(1)},${y.toFixed(1)})"><rect x="-9" y="-7" width="18" height="14" rx="1.5" class="carte-vol"/><use href="#ic-${v.ref}" x="-7" y="-6" width="14" height="12"/></g>`;
+  }
+  $('gVols').innerHTML = h;
+  requestAnimationFrame(animer);
 }
 
 // ---------- Fenêtre ----------
@@ -450,7 +602,7 @@ function choisirMode(m) {
 $('mGuidage').addEventListener('click', () => choisirMode('guidage'));
 $('mEntr').addEventListener('click', () => choisirMode('entrainement'));
 
-neuf(); dessiner(); demarrer();
+fond(); neuf(); dessiner(); demarrer(); requestAnimationFrame(animer);
 </script>
 </body>
 </html>
