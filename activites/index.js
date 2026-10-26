@@ -127,6 +127,7 @@ export const ACTIVITES = [
   // IKEA (centre de distribution clients de Gennevilliers) — ENT-12.x. 2de, poste B transport / poste A gestion / poste C logistique.
   () => import('./ikea-demande-cliente.js'),
   () => import('./ikea-facture-transporteur.js'),
+  () => import('./ikea-evaluation-gestion.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
