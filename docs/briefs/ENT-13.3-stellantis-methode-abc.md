@@ -1,6 +1,6 @@
 # Brief de séance — ENT-13.3 Stellantis Sochaux, la méthode ABC au tableur (Tle, rentrée)
 
-**Statut** : à construire — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
+**Statut** : livré (27/10/2026, `pret: true, ouverture: 'prof'`) — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10 (`stellantis/CADRAGE-stellantis-tle.md`)
 **Modèle** : Sonnet (geste tableur existant)
 
@@ -134,11 +134,11 @@ et lire ce que dit le dépôt : les messages doivent dire quoi corriger sans don
 - [ ] Le graphique (histogramme et courbe des cumuls) : facultatif, non contrôlé (oui ; question au fil possible plus tard).
 - [ ] Le magasin des petites pièces est construit et dit comme tel (oui).
 
-## Compte rendu *(à remplir à la livraison)*
+## Compte rendu
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/stellantis-methode-abc.js` ; `contenus/stellantis.js` (univers, 24 références du magasin), `stellantis-abc.js` (calcul + tirage équitable), `stellantis-ent133-donnees.js` (export, contrôles), `stellantis-ent133.js` (documents, mail, jalons) ; `contenus/questions/ENT-13.3.js` ; `contenus/corriges/ENT-13.3.js` ; logo texte `contenus/trames/logos/stellantis-texte.svg` ; `activites/index.js` (entreprise n° 13) et `catalogue.js` ; `outils/test.mjs` (ligne dans `BLOCS` et `GROUPES`, **touché, à dire à Tristan**), `outils/test/stellantis-13.3.mjs`, `outils/test/stellantis/commun.mjs`.
+- **Écarts par rapport au brief** : (1) les sept étapes tiennent dans un seul mail de Karim ; (2) le jeu d'exemple du brief était incohérent (le premier C pesait plus que le dernier B) : refait à la main, total 10 000 ; (3) 24 références = 5 A / 6 B / 13 C ; (4) pas de bandeau « Corriger » (impossible pour un dépôt de tableur) : `suiteAuBilan: true` ; (5) logo : vrai logo non récupérable depuis le cloud (403), logo texte en attendant ; (6) Légifrance injoignable : articles relus par sources secondaires.
+- **Décisions prises en route** : comparaison de cumul arrondie à 12 décimales (0,8 + 0,15 ne doit pas donner C) ; la ligne « Total » s'écrit dans la colonne Désignation (contrôle `table` + SOMME) ; le moteur pose les questions non atteintes dès que tous les jalons sont jugés, même avec un fichier faux (comportement existant, les réponses ne dépendent pas du fichier).
+- **Tests** : bloc `stellantis-13.3`, 20 cas, tous verts (équité sur 500 graines, exemple à la main, contrôles dans les deux sens, écran, sabotages, confirmé, aucune requête externe).
+- **Commits** : voir l'historique du 27/10/2026.
+- **Reste ouvert** : logo officiel ; vérification Légifrance directe ; essai à l'écran par Tristan avant ouverture au groupe.

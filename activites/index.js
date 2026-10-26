@@ -133,6 +133,8 @@ export const ACTIVITES = [
   () => import('./ikea-facture-transporteur.js'),
   () => import('./ikea-evaluation-transport.js'),
   () => import('./ikea-evaluation-gestion.js'),
+  // Stellantis (usine de Sochaux) — ENT-13.x. Terminale, temps 1 : la rentrée (13.1 à 13.5).
+  () => import('./stellantis-methode-abc.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -224,6 +226,8 @@ export const ENTREPRISES = [
   { n: 11, nom: 'Mondial Relay', metier: 'Colis et Points Relais — hub et agence de Buchères (Aube)', logo: './contenus/trames/logos/mondial-relay-texte.svg' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu construit de la charte ; charte : `contenus/ikea.js`.
   { n: 12, nom: 'IKEA', metier: 'Livraison de meubles — centre de distribution clients de Gennevilliers (Hauts-de-Seine)', logo: './contenus/trames/logos/ikea-texte.svg' },
+  // Pas le logo officiel (le réseau du cloud ne peut pas le récupérer ; à faire depuis le PC de Tristan, alerte 10) : le nom en texte, dans le bleu nuit construit de la charte ; charte : `contenus/stellantis.js`.
+  { n: 13, nom: 'Stellantis', metier: 'Usine de Sochaux (Doubs) — logistique, magasin des petites pièces', logo: './contenus/trames/logos/stellantis-texte.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre

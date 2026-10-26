@@ -96,6 +96,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'ikea-12.6',
   'ikea-12.7',
   'ikea-12.8',
+  'stellantis-13.3',
   'palettier',
   'ramasse'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
@@ -136,7 +137,7 @@ const GROUPES = {
     'tri', 'mr-11.2', 'mr-11.3', 'mr-11.4', 'mr-11.6'],
   7: ['carte', 'fb-6.2', 'fb-6.8', 'courriel', 'pelleau-101', 'pelleau-108', 'pelleau-110', 'palettier', 'action-816', 'mr-11.1', 'mr-11.5'],
   8: ['planning', 'amenagements', 'dialogue', 'inspection', 'action-810', 'action-814', 'chep-92',
-    'pelleau-104', 'pelleau-106', 'action-815', 'mr-11.7'],
+    'pelleau-104', 'pelleau-106', 'action-815', 'mr-11.7', 'stellantis-13.3'],
 };
 // Même garde que pour les blocs oubliés : un bloc rangé dans aucun groupe (ou dans deux) ne
 // tournerait pas sur GitHub (ou deux fois), sans que rien ne le dise.
