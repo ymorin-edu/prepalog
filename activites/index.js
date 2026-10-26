@@ -124,6 +124,9 @@ export const ACTIVITES = [
   () => import('./mondial-relay-evaluation-renforts.js'),
   () => import('./mondial-relay-evaluation-tournee.js'),
   () => import('./mondial-relay-evaluation-client.js'),
+  // IKEA (centre de distribution clients de Gennevilliers) — ENT-12.x. 2de, poste B transport / poste A gestion / poste C logistique.
+  () => import('./ikea-demande-cliente.js'),
+  () => import('./ikea-facture-transporteur.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -213,6 +216,8 @@ export const ENTREPRISES = [
   { n: 10, nom: 'Transports Pelleau', metier: 'Transporteur devenu entreposeur — entrepôt neuf de Gouesnou', logo: './contenus/trames/logos/pelleau.png' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bordeaux construit de la charte ; charte : `contenus/mondial-relay.js`.
   { n: 11, nom: 'Mondial Relay', metier: 'Colis et Points Relais — hub et agence de Buchères (Aube)', logo: './contenus/trames/logos/mondial-relay-texte.svg' },
+  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu construit de la charte ; charte : `contenus/ikea.js`.
+  { n: 12, nom: 'IKEA', metier: 'Livraison de meubles — centre de distribution clients de Gennevilliers (Hauts-de-Seine)', logo: './contenus/trames/logos/ikea-texte.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre

@@ -548,6 +548,8 @@ const BANQUES_FIGEES = {
   },
   // ENT-11.7 Mondial Relay (26/10/2026) : les quatre cas de la réclamation d'Inès.
   'contenus/mondial-relay-ent117-donnees.js': { cas: ['cas-a', 'cas-b', 'cas-c', 'cas-d'] },
+  // ENT-12.2 IKEA (26/10/2026) : une pièce fixe, la commande de Mme Benali ; les poids et les prix sont des valeurs tirées.
+  'contenus/ikea-ent122-donnees.js': { commande: ['commande-benali'] },
   // ENT-7.1 Decathlon (13/10/2026).
   // ENT-9.1 CHEP (18/10/2026) : le document partiel (Europe ou LPR mêlées), le document sans mouvement (Europe seules, ou commande), les bonus du confirmé.
   'contenus/chep-ent91-donnees.js': {

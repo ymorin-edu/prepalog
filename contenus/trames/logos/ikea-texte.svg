@@ -1,0 +1,4 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 60" width="300" height="60" role="img" aria-label="IKEA">
+  <!-- Le nom seul, en texte (ENT-12.2, 26/10/2026) : PAS le logo officiel d'IKEA, qui demande l'accord de Tristan. Bleu CONSTRUIT de la charte (#0058a3, contenus/ikea.js). -->
+  <text x="150" y="44" text-anchor="middle" font-family="system-ui, 'Segoe UI', Arial, sans-serif" font-size="36" font-weight="800" letter-spacing="3" fill="#0058a3">IKEA</text>
+</svg>
