@@ -21,7 +21,19 @@ const DID = 'ik-appel-benali';
 const FICHE = 'mode-livraison-122';
 const ACT = '/activites/ikea-demande-cliente.js';
 const P = await ouvrirIkea({ nav, BASE, vrai, activite: ACT, id: ID });
-const { pg, Z, pause, base, present, texte, entrants, clic, allerV, sansToast, confirmer, noter, phrases, appel, monter, qFil } = P;
+const { pg, Z, pause, base, present, texte, entrants, clic, allerV, sansToast, confirmer, noter, phrases, appel, monter } = P;
+// Plusieurs questions peuvent se suivre sans « Reprendre » entre elles : on répond tant qu'un panneau est ouvert, on reprend s'il y a le bouton.
+const qFil = async (R) => {
+  for (let i = 0; i < 8; i++) {
+    await pg.waitForSelector(`${Z} [data-q-panneau]`, { timeout: 700 }).catch(() => null);
+    const q = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null);
+    if (!q) return;
+    vrai(R[q], `question au fil « ${q} » sans réponse prévue`);
+    await pg.evaluate(() => document.querySelectorAll('[aria-label="Fermer la notification"]').forEach((b) => b.click())); await pause(80);
+    if (await pg.$(`${Z} [data-q-repondre="${q}"]`)) { await clic(`[data-q-choix="${R[q]}"][data-q="${q}"]`); await clic(`[data-q-repondre="${q}"]`); await pause(); }
+    if (await pg.$(`${Z} [data-q-reprendre]`)) { await clic('[data-q-reprendre]'); await pause(); }
+  }
+};
 const JUGE = /\b(juste|justes|faux|fausse|fausses|correct|correcte|erreur|erreurs|bravo|bonne réponse|mauvaise réponse)\b/i;
 
 // « Avant de commencer » : non noté, trois questions tirées parmi six ; on les répond d'avance.
@@ -76,7 +88,7 @@ async function sabotage(uid, o, tombes, score, quoi) {
 }
 
 // ─────────────────────────────────────────────────────────── la déclaration
-await v('ENT-12.2 : la séance se charge (2de, OTM-C1.1 et OTM-C1.2, guidage, sans parcours) ; poids 17 + part 3 = 20 comme le brief §5 ; la forme pèse 1 point ; 4 questions notées + 1 réflexion au fil ; au registre sous l’entreprise n° 12', async () => {
+await v('ENT-12.2 : la séance se charge (2de, OTM-C1.1 et OTM-C1.2, guidage, parcours) ; poids 17 + part 3 = 20 comme le brief §5 ; la forme pèse 1 point ; 4 questions notées + 1 réflexion au fil ; au registre sous l’entreprise n° 12', async () => {
   const r = await pg.evaluate(async (ID) => {
     const A = await import('/activites/ikea-demande-cliente.js');
     const S = await import('/contenus/ikea-ent122.js');
@@ -90,7 +102,7 @@ await v('ENT-12.2 : la séance se charge (2de, OTM-C1.1 et OTM-C1.2, guidage, sa
   }, ID);
   const m = r.meta;
   egal([m.code, m.niveaux, m.competences, m.temps, m.bareme, m.copie, m.parcours, m.questions, m.pret, m.ouverture],
-    ['ENT-12.2', ['2de'], ['OTM-C1.1', 'OTM-C1.2'], 'guidage', 20, undefined, undefined, 'ENT-12.2', true, 'prof'], 'meta');
+    ['ENT-12.2', ['2de'], ['OTM-C1.1', 'OTM-C1.2'], 'guidage', 20, undefined, true, 'ENT-12.2', true, 'prof'], 'meta');
   egal(r.poids, [['ecoute-acces', 3], ['ecoute-creneau', 2], ['ecoute-promesse', 2], ['mode-lampe', 2], ['mode-armoire', 2], ['mode-canape', 2], ['prix', 2], ['message', 1], ['ton', 1]], 'jalons et poids (brief §5)');
   proche(r.total + r.part, 20, 'jalons + part des questions');
   egal(r.groupes, { 'L’appel : écouter la cliente': 7, 'Le mode de livraison': 8, 'Le message': 1, 'Le ton': 1 }, 'poids par bloc');
@@ -209,8 +221,8 @@ await v('ENT-12.2 : questions au fil — les quatre notées valent 3 points : un
   const joue = async (RR) => {
     await mont({ uid: 'ik122-b' });
     const vus = [];
-    const qf = async () => { for (let i = 0; i < 4; i++) { const q = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null); if (!q) return;
-      vus.push(q); await clic(`[data-q-choix="${RR[q]}"][data-q="${q}"]`); await clic(`[data-q-repondre="${q}"]`); await pause(); await clic('[data-q-reprendre]'); await pause(); } };
+    const qf = async () => { for (let i = 0; i < 4; i++) { const q = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null); if (!q || vus.includes(q)) return;
+      vus.push(q); await clic(`[data-q-choix="${RR[q]}"][data-q="${q}"]`); await clic(`[data-q-repondre="${q}"]`); await pause(); if (await pg.$(`${Z} [data-q-reprendre]`)) { await clic('[data-q-reprendre]'); await pause(); } } };
     await appel(DID, APPEL); await qf();
     await allerV('fiche');
     for (const [c, x] of [['mode_lampe', 'relais'], ['raison_lampe', 'leger'], ['mode_armoire', 'piece']]) { await pg.selectOption(`${Z} [data-fiche-champ="${c}"]`, x); await pause(20); }

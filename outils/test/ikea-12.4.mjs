@@ -17,7 +17,19 @@ const FICHE = 'controle-facture-124';
 const OBJET = 'Facture F-2027-0231 — livraisons de février 2027';
 const ACT = '/activites/ikea-facture-transporteur.js';
 const P = await ouvrirIkea({ nav, BASE, vrai, activite: ACT, id: ID });
-const { pg, Z, pause, base, present, texte, entrants, clic, allerV, sansToast, confirmer, noter, phrases, monter, qFil } = P;
+const { pg, Z, pause, base, present, texte, entrants, clic, allerV, sansToast, confirmer, noter, phrases, monter } = P;
+// Plusieurs questions peuvent se suivre sans « Reprendre » entre elles : on répond tant qu'un panneau est ouvert, on reprend s'il y a le bouton.
+const qFil = async (R) => {
+  for (let i = 0; i < 8; i++) {
+    await pg.waitForSelector(`${Z} [data-q-panneau]`, { timeout: 700 }).catch(() => null);
+    const q = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null);
+    if (!q) return;
+    vrai(R[q], `question au fil « ${q} » sans réponse prévue`);
+    await pg.evaluate(() => document.querySelectorAll('[aria-label="Fermer la notification"]').forEach((b) => b.click())); await pause(80);
+    if (await pg.$(`${Z} [data-q-repondre="${q}"]`)) { await clic(`[data-q-choix="${R[q]}"][data-q="${q}"]`); await clic(`[data-q-repondre="${q}"]`); await pause(); }
+    if (await pg.$(`${Z} [data-q-reprendre]`)) { await clic('[data-q-reprendre]'); await pause(); }
+  }
+};
 
 const OUV = { facture: 'doc', preuve: 'bon', 'ht-ttc': '240', doublon: 'doublon', 'avoir-quoi': 'avoir', du: 'rendre' };
 const R = { 'quelle-piece': 'bon', 'pourquoi-pas-entiere': 'manquee', 'ecart-ttc': 'juste', avoir: 'annuler', 'payer-d-abord': 'non' };
@@ -121,7 +133,7 @@ await v('ENT-12.4 : parcours juste — lignes 4 (tarif), 6 (non faite), 12 (doub
   egal(E.map((m) => m.from), ['Hugo', 'Service facturation — prestataire de livraison', 'Hugo'], 'messages');
   const n = await noter(ACT);
   egal([n.score, n.max], [20, 20], 'note : ' + JSON.stringify(n.detail));
-  vrai(!(await texte()).match(/\b(bravo|bonne réponse|mauvaise réponse)\b/i), 'un message juge');
+  vrai(!(await entrants()).some((m) => /\b(bravo|bonne réponse|mauvaise réponse)\b/i.test(m.text)), 'un message juge');
 });
 
 await v('ENT-12.4 : le doublon se coche sur l’une OU l’autre des deux lignes identiques (8 ou 12) → 20/20', async () => {
@@ -174,7 +186,7 @@ await v('ENT-12.4 : questions au fil — les quatre notées valent 4 points : un
     await mont();
     const vus = [];
     const qf = async () => { for (let i = 0; i < 5; i++) { const q = await pg.$eval(`${Z} [data-q-panneau]`, (e) => e.dataset.qPanneau).catch(() => null); if (!q) return;
-      vus.push(q); await clic(`[data-q-choix="${RR[q]}"][data-q="${q}"]`); await clic(`[data-q-repondre="${q}"]`); await pause(); await clic('[data-q-reprendre]'); await pause(); } };
+      vus.push(q); await clic(`[data-q-choix="${RR[q]}"][data-q="${q}"]`); await clic(`[data-q-repondre="${q}"]`); await pause(); if (await pg.$(`${Z} [data-q-reprendre]`)) { await clic('[data-q-reprendre]'); await pause(); } } };
     const rr = R; Object.assign(R, RR);
     try { await jouer(); } finally { Object.assign(R, rr); }
     await qf();
