@@ -1,6 +1,6 @@
 # Brief de séance — ENT-13.2 Stellantis Sochaux, les camions du matin (Tle, rentrée)
 
-**Statut** : à construire
+**Statut** : à construire — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10 (`stellantis/CADRAGE-stellantis-tle.md`)
 **Modèle** : Sonnet (vues existantes)
 

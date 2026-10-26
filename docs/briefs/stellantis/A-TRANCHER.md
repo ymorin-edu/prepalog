@@ -1,4 +1,4 @@
-# Stellantis (Tle, temps 1) — choix soumis à Tristan avant de construire
+# Stellantis (Tle, temps 1) — choix soumis à Tristan avant de construire (tranchés le 26/10/2026 : « tout ok », tout accepté tel que proposé, logo compris)
 
 Les briefs complets sont dans le dépôt (`docs/briefs/ENT-13.1` à `13.5`). Ici, seulement les choix. Réponds comme tu veux,
 par exemple « tout OK sauf 13.4 : pas de question sur l'inventaire tournant ».

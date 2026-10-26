@@ -1,6 +1,6 @@
 # Feuille de route — Stellantis Sochaux (entreprise n° 13, Terminale, temps 1 : la rentrée)
 
-**Statut** : briefs du temps 1 écrits (26/10/2026), en attente des choix de Tristan (`docs/briefs/stellantis/A-TRANCHER.md`).
+**Statut** : briefs du temps 1 écrits et choix tranchés par Tristan le 26/10/2026 (« tout ok » sur `docs/briefs/stellantis/A-TRANCHER.md`, logo compris) : prêt à construire.
 **Date** : 26/10/2026. Entreprise choisie et découpage validé par Tristan le 26/10 (« deux temps dans l'usine » ; ABC « en
 version tableur calcul » ; options 1, 3, 4 et 5 du cadrage : « tout ok ») : `docs/briefs/stellantis/CADRAGE-stellantis-tle.md`.
 **Pour quand** : rien ne presse (Terminale en 2027-2028). Construction **après** IKEA et Mondial Relay ; aucun chantier moteur
@@ -8,7 +8,7 @@ au temps 1.
 
 | ☐ | Étape | Qui | Modèle | Durée | Ce que Tristan fait |
 |---|---|---|---|---|---|
-| ☐ | 0. Trancher `stellantis/A-TRANCHER.md` (questions au fil, poids, petits points) et donner l'accord pour le logo (alerte 10) | Tristan | — | 15 min | répondre dans le fil |
+| ☑ | 0. Trancher `stellantis/A-TRANCHER.md` (fait le 26/10 : « tout ok ») (questions au fil, poids, petits points) et donner l'accord pour le logo (alerte 10) | Tristan | — | 15 min | répondre dans le fil |
 | ☐ | 1. Vérifications des §7 (geste tableur : fonction exigée dans la feuille, part en % ; quai sans froid avec palette manquante ; plan d'entrepôt rangement + terminal dans une séance ; classe calculée par l'élève en 13.5) ; si une manque : la soumettre à Tristan | Claude | Sonnet | ≈ 1 h | trancher s'il le faut |
 | ☐ | 2. Relire sur Légifrance les textes cités (L133-3 et L123-12 du Code de commerce ; règle comptable de l'inventaire tournant) et une source récente sur ABC | Claude | Sonnet | ≈ 30 min | — |
 | ☐ | 3. **ENT-13.3** (la méthode ABC au tableur : le cœur nouveau) | Claude | Sonnet | ≈ 4 h | l'essayer dans Excel **et** LibreOffice |
