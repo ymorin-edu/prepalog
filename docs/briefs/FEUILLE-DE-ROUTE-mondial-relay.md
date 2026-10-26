@@ -26,6 +26,5 @@ Tri des colis : `docs/briefs/mondial-relay/maquette-tri-colis.html` (en ligne su
 
 ## À ne pas oublier
 
-- Une ligne dans `docs/decisions.md` pour la validation du cadrage (26/10/2026) : **pas encore écrite**, une autre session
-  était inscrite sur ce fichier le 26/10.
+- Ligne de `docs/decisions.md` du 26/10/2026 : écrite.
 - Nouveau bloc de tests `outils/test/mondial-relay.mjs` (ligne dans `BLOCS` et `GROUPES`) à la première séance construite.

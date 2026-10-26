@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Mondial Relay 2de (S3) : cadrage, briefs ENT-11.1 à 11.7, brief et maquette de la vue Tri (aucun code) | `docs/briefs/mondial-relay/`, `docs/briefs/ENT-11.*`, `docs/briefs/MOTEUR-vue-tri.md`, `docs/briefs/FEUILLE-DE-ROUTE-mondial-relay.md` | 26/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
