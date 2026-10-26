@@ -489,8 +489,11 @@ await v('Spartoo réception : retrouver REC-04127 par son BL, saisir en paires, 
   // `suiteAuBilan` (08/10/2026) : la suite s'ouvre au premier bilan, juste ou faux. Le bandeau le dit, et la
   // photo de fin de séance est rangée (c'est elle qui lève le verrou d'ENT-1.2, voir core/parcours.js).
   if (!/ENT-1\.2/.test(tf) || !/est ouverte/.test(tf)) throw new Error('bandeau : la séance suivante n’est pas annoncée ouverte : ' + tf);
-  const photo = await page.evaluate(() => Object.keys(localStorage).filter((k) => /prive\/[^/]+\/spartoo$/.test(k))
+  const photoRangee = () => page.evaluate(() => Object.keys(localStorage).filter((k) => /prive\/[^/]+\/spartoo$/.test(k))
     .some((k) => { try { const d = JSON.parse(localStorage.getItem(k)); const b = typeof d.data === 'string' ? JSON.parse(d.data) : (d.data || d); return !!(b.points && b.points['spartoo-reception']); } catch (e) { return false; } }));
+  // L'écriture de la base est différée de 500 ms (core/store.js) : on attend la photo au lieu de la lire du premier coup.
+  let photo = await photoRangee();
+  for (let i = 0; !photo && i < 20; i++) { await page.waitForTimeout(250); photo = await photoRangee(); }
   if (!photo) throw new Error('photo de fin de séance absente : ENT-1.2 resterait fermée');
 });
 
