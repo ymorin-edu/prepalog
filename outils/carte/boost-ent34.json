@@ -1,0 +1,131 @@
+{
+ "sortie": "contenus/boost-ent34-carte.js",
+ "description": "les huit clients d'ENT-3.4, journée de l'évaluation (commerces inventés, adresses réelles géocodées à la BAN le 26/10/2026) : quatre nouveaux à situer, quatre habituels déjà sur la carte.",
+ "clients": [
+  {
+   "id": "c1",
+   "nom": "Fromagerie Vidal",
+   "adresse": "14 rue du Grand Couvent",
+   "rue": "Rue du Grand Couvent",
+   "lonlat": [
+    4.356975,
+    43.838932
+   ],
+   "quartier": "ecusson",
+   "kg": 22,
+   "colis": 3,
+   "nouveau": true
+  },
+  {
+   "id": "c2",
+   "nom": "Droguerie Soulier",
+   "adresse": "3 rue des Greffes",
+   "rue": "Rue des Greffes",
+   "lonlat": [
+    4.361144,
+    43.836787
+   ],
+   "quartier": "ecusson",
+   "kg": 14,
+   "colis": 2,
+   "nouveau": true,
+   "creneau": {
+    "avant": 910,
+    "libelle": "livraison avant 15 h 10"
+   }
+  },
+  {
+   "id": "c3",
+   "nom": "Atelier Chabert",
+   "adresse": "7 chemin des Carrières",
+   "rue": "Chemin des Carrières",
+   "lonlat": [
+    4.343357,
+    43.839038
+   ],
+   "quartier": "fontaine",
+   "kg": 30,
+   "colis": 4,
+   "nouveau": true
+  },
+  {
+   "id": "c4",
+   "nom": "Boutique Fabre",
+   "adresse": "3 rue de la Tour Magne",
+   "rue": "Rue de la Tour Magne",
+   "lonlat": [
+    4.352136,
+    43.840404
+   ],
+   "quartier": "fontaine",
+   "kg": 19,
+   "colis": 3,
+   "nouveau": true
+  },
+  {
+   "id": "c5",
+   "nom": "Cave Teissier",
+   "adresse": "15 rue de la République",
+   "rue": "Rue de la République",
+   "lonlat": [
+    4.358614,
+    43.832618
+   ],
+   "quartier": null,
+   "kg": 34,
+   "colis": 6,
+   "nouveau": false,
+   "cp": "30900"
+  },
+  {
+   "id": "c6",
+   "nom": "Pâtisserie Arnaud",
+   "adresse": "30 avenue Carnot",
+   "rue": "Avenue Carnot",
+   "lonlat": [
+    4.366602,
+    43.834529
+   ],
+   "quartier": null,
+   "kg": 27,
+   "colis": 4,
+   "nouveau": false
+  },
+  {
+   "id": "c7",
+   "nom": "Papeterie Bonnet",
+   "adresse": "20 rue de Beaucaire",
+   "rue": "Rue de Beaucaire",
+   "lonlat": [
+    4.368133,
+    43.838923
+   ],
+   "quartier": null,
+   "kg": 33,
+   "colis": 5,
+   "nouveau": false
+  },
+  {
+   "id": "c8",
+   "nom": "Épicerie Roussel",
+   "adresse": "22 rue Pasteur",
+   "rue": "Rue Pasteur",
+   "lonlat": [
+    4.353209,
+    43.840124
+   ],
+   "quartier": null,
+   "kg": 49,
+   "colis": 7,
+   "nouveau": false
+  }
+ ],
+ "calibrage": {
+  "note": "Vérifié par outils/carte/calibrer.mjs (énumération complète, pas d'estimation). Paramètres de la journée : départ 14 h 35, train 16 h 07, 190 kg, 14 km/h (vélo à assistance électrique), 5 min par arrêt ; créneau chez la Droguerie Soulier (avant 15 h 10).",
+  "depart": 875,
+  "train": 967,
+  "chargeUtile": 190,
+  "vitesse": 14,
+  "service": 5
+ }
+}
