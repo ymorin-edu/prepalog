@@ -1,6 +1,6 @@
 # Brief de séance — ENT-11.4 Mondial Relay, évaluation : chauffeurs et camions du samedi (2de, poste B — transport, évaluation)
 
-**Statut** : à valider par Tristan (construite le 26/10/2026, `pret: true, ouverture: 'prof'`, non poussée)
+**Statut** : livré (26/10/2026, `pret: true, ouverture: 'prof'`, en ligne, cachée aux élèves) ; à essayer à l'écran par Tristan avant de l'ouvrir
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé
 **Modèle** : Sonnet
 

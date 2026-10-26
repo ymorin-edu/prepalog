@@ -1,6 +1,6 @@
 # Brief de séance — ENT-11.5 Mondial Relay, évaluation : la tournée Sud et le colis bloqué (2de, poste B — transport, évaluation)
 
-**Statut** : à valider par Tristan (livré en code le 26/10/2026, `pret: true, ouverture: 'prof'`, rien poussé)
+**Statut** : livré (26/10/2026, `pret: true, ouverture: 'prof'`, en ligne, cachée aux élèves) ; à essayer à l'écran par Tristan avant de l'ouvrir
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé
 **Modèle** : Sonnet
 

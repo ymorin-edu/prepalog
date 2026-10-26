@@ -1,6 +1,6 @@
 # Brief de séance — ENT-11.6 Mondial Relay, évaluation : les renforts de décembre (2de, poste A — gestion, évaluation)
 
-**Statut** : à valider par Tristan (construit le 26/10/2026, voir « Compte rendu » en fin de fiche)
+**Statut** : livré (26/10/2026, `pret: true, ouverture: 'prof'`, en ligne, cachée aux élèves) ; à essayer à l'écran par Tristan avant de l'ouvrir
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé
 **Modèle** : Sonnet
 
