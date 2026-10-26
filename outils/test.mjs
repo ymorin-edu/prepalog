@@ -80,6 +80,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'pelleau-110',
   'pelleau-111',
   'pelleau-112',
+  'mr-11.7',
   'palettier',
   'ramasse'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
@@ -116,7 +117,7 @@ const GROUPES = {
     'pelleau-112', 'action-817'],
   5: ['visibilite', 'fb-6.4', 'fb-6.5', 'fb-6.6', 'decathlon-74', 'action-85', 'chep-91', 'pelleau-105',
     'pelleau-109', 'action-818'],
-  6: ['quiz', 'inventaire', 'tirage-niveaux', 'decathlon', 'localiser', 'action-89', 'action-811', 'chep-94', 'preparation-vocale'],
+  6: ['quiz', 'inventaire', 'tirage-niveaux', 'decathlon', 'localiser', 'action-89', 'action-811', 'chep-94', 'preparation-vocale', 'mr-11.7'],
   7: ['carte', 'fb-6.2', 'fb-6.8', 'courriel', 'pelleau-101', 'pelleau-108', 'pelleau-110', 'palettier', 'action-816'],
   8: ['planning', 'amenagements', 'dialogue', 'inspection', 'action-810', 'action-814', 'chep-92',
     'pelleau-104', 'pelleau-106', 'action-815'],
