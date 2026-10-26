@@ -1,6 +1,6 @@
 # Brief de séance — ENT-11.4 Mondial Relay, évaluation : chauffeurs et camions du samedi (2de, poste B — transport, évaluation)
 
-**Statut** : à implémenter (aucune vue nouvelle : peut se construire avant la vue Tri, version courte du cadrage §7)
+**Statut** : à valider par Tristan (construite le 26/10/2026, `pret: true, ouverture: 'prof'`, non poussée)
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé
 **Modèle** : Sonnet
 
@@ -70,10 +70,36 @@ test, comme le calage de 6.3).
 
 ## 7. Demandes au moteur
 
-Aucune a priori : le cas 3 de la vue Planning (5.7, 6.8) fait déjà permis, conduite, repos et aléa. Vérifier qu'il tire
-ses données par élève (sinon, demande au moteur : `planning` + `tirage`).
+**Demande au moteur (vérifiée, écrite le 26/10/2026)** : l'option `planning` de `seanceEntreprise` est un objet statique, compilé une fois
+(WeakMap dans `core/types/planning.js`) : le moteur ne sait pas tirer un planning (lignes, cartes, aléa) par élève. Demande : accepter
+`planning: (graine) => objet`, évalué à l'ouverture avec la graine posée par `tirage: true`. En attendant, contournement sans toucher à `core/` :
+un moteur par graine (cache dans `activites/mondial-relay-evaluation-planning.js`), les jalons relisant le jeu dans la base de l'élève.
 
 ## 11. Questions ouvertes
 
 - [ ] Tournées en propre ou sous-traitées (§2) : à vérifier avant d'écrire le contenu.
 - [ ] Samia (responsable d'exploitation) et Kevin : prénoms construits.
+
+## Compte rendu (26/10/2026, Claude Sonnet)
+
+**Livré** : `activites/mondial-relay-evaluation-planning.js` (ENT-11.4, 2de, OTM-C2.2 + C3.2, évaluation, copie rendue, `pret: true, ouverture: 'prof'`),
+`contenus/mondial-relay-ent114.js` + `-donnees.js` (données pures et solveur), `contenus/questions/ENT-11.4.js`, `contenus/corriges/ENT-11.4.js`,
+logo texte `contenus/trames/logos/mondial-relay-texte.svg`, ligne n° 11 dans `ENTREPRISES` (`activites/index.js`), bloc `outils/test/mr-11.4.mjs`
+(+ aides `outils/test/mondial-relay/commun.mjs`), inscrit dans `BLOCS` et dans `GROUPES[6]` de `outils/test.mjs`.
+
+**Poids codés** (total 20) : Avant de commencer 4 (`ouverture.part`) · tous les tournées posées 3 · permis/camions 3 · repos 11 h 3 · conduite et pause 3 ·
+après l'imprévu 3 · message à Samia 1.
+
+**Écarts au brief** : (1) trois questions au fil sont `reflexion` (non notées) : les poids ne laissent aucune place à des points de plus ; (2) le texte de
+l'arrêt maladie n'a pas été relu à une source : il n'est pas cité, la question est signalée ; (3) T5 dépasse 4 h 30 de conduite avec une seule carte : la
+pause de 45 min est dite « en route », la conduite jugée est plafonnée à 270 min ; (4) `contenus/mondial-relay.js` n'a pas six clés requises par
+`composerSeance` (VOCAB, CATALOGUE, SUPPLIERS, SUP_BY_ID, CUSTOMERS, CM, baseDeDepart, THEME) : fournies par le fichier de la séance ; (5) tournées « en propre »
+vs sous-traitées (§11) : construit, non vérifié.
+
+**Tirage** : un chauffeur au repos (aucune tournée possible), un tardif, un permis B, trois libres ; T5 de 4 h 10 à 4 h 50 ; imprévu parmi panne / malade / T2 doublée,
+choisi pour toujours toucher le planning. 300 graines contrôlées : zéro jeu de secours, une solution juste avant et après l'imprévu, jugée par le vrai moteur.
+
+**Vérifié** (bloc `mr-11.4`, 18 cas verts) : 3 parcours juste = 20/20 égal à `noter(db)` ; chaque piège fait tomber son jalon ; sabotages des règles (repos, fenêtre,
+type de camion) ; inaction 0, ouverture seule 4, copie vide 0 ; copie rendue et verrou ; deux élèves, deux jeux ; aucun message « de combien » ; aucune requête externe.
+Suite `socle fb-6.8 smoby dependances questions` verte, sauf le cas `docs/EN-COURS.md` (chemins d'autres agents absents de ce worktree, étranger à cette séance).
+**Non vérifié** : le rendu à l'écran par Tristan (lisibilité des lignes, bulle des camions, libellés de Samia).

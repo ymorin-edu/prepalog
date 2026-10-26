@@ -116,6 +116,8 @@ export const ACTIVITES = [
   () => import('./pelleau-controle-seul.js'),
   () => import('./pelleau-palette-froide.js'),
   () => import('./pelleau-evaluation-controle.js'),
+  // Mondial Relay (hub et agence de Buchères) — ENT-11.x. 2de, scénario S3 (évaluations).
+  () => import('./mondial-relay-evaluation-planning.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -203,6 +205,8 @@ export const ENTREPRISES = [
   { n: 9, nom: 'CHEP', metier: 'Location-gestion de palettes — Templemars', logo: './contenus/trames/logos/chep-texte.svg' },
   // Logo officiel du site (PNG, le site n'offre pas de SVG ; accord de Tristan du 18/10/2026, lot A) ; charte : `contenus/pelleau.js`.
   { n: 10, nom: 'Transports Pelleau', metier: 'Transporteur devenu entreposeur — entrepôt neuf de Gouesnou', logo: './contenus/trames/logos/pelleau.png' },
+  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bordeaux construit de la charte ; charte : `contenus/mondial-relay.js`.
+  { n: 11, nom: 'Mondial Relay', metier: 'Colis et Points Relais — hub et agence de Buchères (Aube)', logo: './contenus/trames/logos/mondial-relay-texte.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
