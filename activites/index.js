@@ -45,10 +45,11 @@ export const ACTIVITES = [
   () => import('./cdiscount-compte-a-rebours.js'),
   () => import('./cdiscount-priorites.js'),
   // Boost (Nîmes) — ENT-3.x. C2.4 « Organiser une tournée de livraison » prend quatre
-  // séances : guidage, entraînement, erreur induite, évaluation. ENT-3.4 : pas encore écrite.
+  // séances : guidage, entraînement, erreur induite, évaluation (ENT-3.4, copie rendue).
   () => import('./boost-tournee.js'),
   () => import('./boost-ent32.js'),
   () => import('./boost-ent33.js'),
+  () => import('./boost-ent34.js'),
   // Picard (Sainghin-en-Mélantois) — ENT-4.x. C1.4 « réception » en quatre séances, sur la vue quai.
   () => import('./picard-ent41.js'),
   () => import('./picard-ent42.js'),
@@ -133,6 +134,11 @@ export const ACTIVITES = [
   () => import('./ikea-facture-transporteur.js'),
   () => import('./ikea-evaluation-transport.js'),
   () => import('./ikea-evaluation-gestion.js'),
+  // Lactalis, le rappel des laits infantiles (1re, C3.2, ENT-14.1 à 14.4) : cadrage `docs/briefs/lactalis/CADRAGE-lactalis-1re.md`.
+  () => import('./lactalis-douze-lots.js'),
+  () => import('./lactalis-regle-15-fevrier.js'),
+  () => import('./lactalis-lot-oublie.js'),
+  () => import('./lactalis-evaluation.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -224,6 +230,8 @@ export const ENTREPRISES = [
   { n: 11, nom: 'Mondial Relay', metier: 'Colis et Points Relais — hub et agence de Buchères (Aube)', logo: './contenus/trames/logos/mondial-relay.png' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu construit de la charte ; charte : `contenus/ikea.js`.
   { n: 12, nom: 'IKEA', metier: 'Livraison de meubles — centre de distribution clients de Gennevilliers (Hauts-de-Seine)', logo: './contenus/trames/logos/ikea.svg' },
+  // L'élève travaille chez un distributeur CONSTRUIT (plateforme régionale d'une enseigne) : le nom du cas en texte, pas le logo de Lactalis ; charte : `contenus/lactalis.js`.
+  { n: 14, nom: 'Rappel Lactalis', metier: 'Traçabilité — plateforme régionale d’une enseigne de supermarchés (Mayenne), décembre 2017', logo: './contenus/trames/logos/lactalis-texte.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
