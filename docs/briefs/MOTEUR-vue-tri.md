@@ -109,5 +109,9 @@ coder la vue.
   (ou « Mettre le colis à l'écart ») ; clavier : 1 à 5 et 0 choisissent, Entrée valide. Conséquences : le temps par colis
   de l'entraînement passe de 14 à 20 s (proposition) ; le motif « étiquette illisible » a désormais un colis (Les Riceys,
   étiquette floue dans la fiche).
+- **26/10/2026 (v2 → v3)** : (4) **tout tient dans un seul bloc, sans défiler** : le tapis et la balance à gauche, « Le
+  colis de près » à droite dans le même bloc (place réservée même fermée), sorties dessous, motif + choix + bouton d'envoi
+  sur une seule ligne ; vérifié sans barre de défilement en 1366 × 768 et 1280 × 720 ; (5) en entraînement, **le premier
+  colis n'a pas de minuteur** (le temps de lire) ; le minuteur part au deuxième colis.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*

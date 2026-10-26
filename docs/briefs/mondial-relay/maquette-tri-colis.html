@@ -8,40 +8,43 @@
 :root{--fond:#f4f1ea;--panneau:#fdfbf7;--survol:#f9f6ef;--encre:#1a1915;--doux:#555047;--filet:#e3ded3;--ardoise:#107c41;--vert:#0b7a41;--rouge:#9d2727;--terre:#9c620a;--bleu:#2f5f9e;--carton:#c9a26b;--carton-fonce:#a9824f}
 *{box-sizing:border-box}
 body{margin:0;background:var(--fond);color:var(--encre);font:15px/1.4 Inter,system-ui,"Segoe UI",sans-serif}
-.note{margin:10px 14px 0;font-size:12.5px;color:var(--doux);border:1px dashed var(--filet);border-radius:6px;padding:6px 10px;background:var(--panneau);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.note{margin:6px 12px 0;font-size:12.5px;color:var(--doux);border:1px dashed var(--filet);border-radius:6px;padding:6px 10px;background:var(--panneau);display:flex;gap:12px;align-items:center;flex-wrap:wrap}
 .note .modes{margin-left:auto;display:flex;gap:6px;align-items:center}
 .note .modes button{border:1px solid var(--filet);background:var(--fond);border-radius:6px;padding:3px 9px;font:inherit;cursor:pointer}
 .note .modes button[aria-pressed="true"]{border:2px solid var(--ardoise);color:var(--ardoise);font-weight:600}
-.bandeau{display:flex;align-items:center;gap:12px;margin:10px 14px 0;padding:8px 12px;border-radius:8px;background:#5b1a2e;color:#fbeff2}
+.bandeau{display:flex;align-items:center;gap:12px;margin:6px 12px 0;padding:5px 12px;border-radius:8px;background:#5b1a2e;color:#fbeff2}
 .bandeau b{font-size:16px}.bandeau span{font-size:13px;opacity:.9}
 .bandeau .compteur{margin-left:auto;font:600 13px ui-monospace,Consolas,monospace;background:rgba(255,255,255,.12);border-radius:6px;padding:3px 9px}
-.consigne{margin:8px 14px 0;background:var(--panneau);border:1px solid var(--filet);border-left:4px solid var(--terre);border-radius:6px;padding:7px 10px;font-size:14px}
-.consigne b{display:block;font-size:12px;color:var(--doux)}
-.grille{display:grid;grid-template-columns:minmax(0,1fr) 330px;gap:10px;margin:10px 14px 16px}
+.consigne{margin:6px 12px 0;background:var(--panneau);border:1px solid var(--filet);border-left:4px solid var(--terre);border-radius:6px;padding:5px 10px;font-size:13.5px}
+.consigne b{font-size:12.5px;color:var(--doux);margin-right:6px}
+.grille{display:grid;grid-template-columns:minmax(0,1fr) 300px;gap:10px;margin:6px 12px 8px}
 .zone{background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:8px 10px;min-width:0}
-.zone h2{font-size:14px;margin:0 0 6px}
+.zone h2{font-size:13.5px;margin:0 0 4px}
+.haut{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:10px;align-items:stretch}
+#scene{max-height:250px}
 svg{display:block;width:100%;height:auto}
 #scene .colis{cursor:pointer}
 #scene .colis .contour{fill:none;stroke:transparent;stroke-width:3}
 #scene .colis:hover .contour,#scene .colis:focus-visible .contour{stroke:var(--bleu)}
 #scene .colis:focus{outline:none}
-.aide-clic{font-size:13px;color:var(--doux);text-align:center;margin-top:-4px}
+
 .minuteur{height:6px;border-radius:3px;background:var(--filet);overflow:hidden;margin:6px 0 2px;display:none}
 .minuteur i{display:block;height:100%;width:100%;background:var(--terre);transition:width .2s linear}
 /* fiche du colis (ouverte au clic sur le carton) */
-.fiche{display:none;margin-top:8px;border:1px solid var(--filet);border-radius:8px;background:var(--fond);padding:8px 10px;gap:12px;grid-template-columns:minmax(0,1fr) 250px;align-items:center}
-.fiche.ouv{display:grid}
-.fiche .tete{grid-column:1/-1;display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:600}
+.fiche{border:1px solid var(--filet);border-radius:8px;background:var(--fond);padding:6px 8px;display:flex;flex-direction:column;gap:6px;min-height:250px}
+.fiche .vide{margin:auto;color:var(--doux);font-size:14px;text-align:center;padding:0 10px}
+.fiche svg{max-height:120px}
+.fiche .tete{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:600}
 .fiche .tete button{border:1px solid var(--filet);background:var(--panneau);border-radius:6px;padding:2px 9px;font:inherit;font-weight:400;cursor:pointer}
-.etiq{background:#fbf8f1;border:1px solid #9a948a;border-radius:3px;padding:8px 10px;font-size:13.5px;line-height:1.35;color:#1a1915}
+.etiq{background:#fbf8f1;border:1px solid #9a948a;border-radius:3px;padding:5px 9px;font-size:13px;line-height:1.3;color:#1a1915}
 .etiq .num{font:700 14px ui-monospace,Consolas,monospace}
-.etiq .dest{font-size:17px;font-weight:800;margin-top:4px}
-.etiq .cab{height:30px;margin-top:6px;background:repeating-linear-gradient(90deg,#1a1915 0 2px,transparent 2px 4px,#1a1915 4px 7px,transparent 7px 9px)}
+.etiq .dest{font-size:16px;font-weight:800;margin-top:2px}
+.etiq .cab{height:18px;margin-top:4px;background:repeating-linear-gradient(90deg,#1a1915 0 2px,transparent 2px 4px,#1a1915 4px 7px,transparent 7px 9px)}
 .etiq .mini{font-size:10px;color:#7a746a;text-align:right;margin-top:3px}
 .etiq.floue .flou{filter:blur(3.2px);user-select:none}
 /* sorties, choix, validation */
-.sorties{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:7px;margin-top:8px}
-.sortie{border:2px solid var(--encre);background:var(--panneau);border-radius:8px;padding:6px 4px 4px;cursor:pointer;font:600 13.5px Inter,system-ui,sans-serif;color:var(--encre);display:flex;flex-direction:column;align-items:center;gap:3px;min-height:92px}
+.sorties{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;margin-top:6px}
+.sortie{border:2px solid var(--encre);background:var(--panneau);border-radius:8px;padding:6px 4px 4px;cursor:pointer;font:600 13.5px Inter,system-ui,sans-serif;color:var(--encre);display:flex;flex-direction:column;align-items:center;gap:1px;min-height:66px}
 .sortie:hover{background:var(--survol)}
 .sortie:focus-visible{outline:3px solid var(--bleu);outline-offset:2px}
 .sortie[aria-pressed="true"]{border:4px solid var(--bleu);padding:4px 2px 2px}
@@ -52,37 +55,38 @@ svg{display:block;width:100%;height:auto}
 .sortie .bac i{width:12px;height:9px;background:var(--carton);border:1px solid var(--carton-fonce);border-radius:1px}
 .sortie:disabled{opacity:.45;cursor:default}
 .kbd{font:11px ui-monospace,monospace;border:1px solid var(--filet);border-radius:3px;padding:0 4px;color:var(--doux)}
-.motifs{display:none;margin-top:6px;gap:6px;flex-wrap:wrap;align-items:center}
+.motifs{display:none;gap:5px;flex-wrap:wrap;align-items:center}
 .motifs.ouv{display:flex}
 .motifs button{border:1px solid var(--terre);color:var(--terre);background:transparent;border-radius:6px;padding:5px 9px;font:600 13px Inter,system-ui,sans-serif;cursor:pointer}
 .motifs button[aria-pressed="true"]{border:3px solid var(--bleu);color:var(--encre);padding:3px 7px}
-.valider{display:flex;align-items:center;gap:10px;margin-top:8px;flex-wrap:wrap}
+.valider{display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;min-height:38px}
+.valider .btn{margin-left:auto}
 .valider .choix{font-size:14px;color:var(--doux)}
 .valider .choix b{color:var(--encre)}
 .btn{border:2px solid var(--ardoise);background:transparent;color:var(--ardoise);border-radius:7px;padding:7px 14px;font:600 14px Inter,system-ui,sans-serif;cursor:pointer}
 .btn.plein{background:var(--ardoise);color:#fff}
 .btn:disabled{opacity:.4;cursor:default}
-.retour{min-height:44px;margin-top:8px;font-size:14px;border-radius:6px;padding:6px 10px;background:var(--fond)}
+.retour{min-height:30px;margin-top:6px;font-size:13.5px;border-radius:6px;padding:4px 10px;background:var(--fond)}
 .retour .ok{color:var(--vert);font-weight:600}.retour .ko{color:var(--rouge);font-weight:600}
-table{border-collapse:collapse;width:100%;font-size:13px}
-th,td{border-bottom:1px solid var(--filet);padding:3px 4px;text-align:left;vertical-align:top}
+table{border-collapse:collapse;width:100%;font-size:12.5px}
+th,td{border-bottom:1px solid var(--filet);padding:2px 4px;text-align:left;vertical-align:top}
 th{font-size:12px;color:var(--doux);font-weight:600}
 td.t{font-weight:700;white-space:nowrap}
-.regles{font-size:13px;margin-top:10px;border-top:1px solid var(--filet);padding-top:6px}
+.regles{font-size:12.5px;margin-top:6px;border-top:1px solid var(--filet);padding-top:6px}
 .regles ul{margin:4px 0 0;padding-left:18px}
 .bilan{display:none;margin:0 14px 16px;background:var(--panneau);border:1px solid var(--filet);border-radius:8px;padding:10px 12px}
 .bilan.ouv{display:block}
 .bilan h2{font-size:16px;margin:0 0 6px}
 .bilan td.ok{color:var(--vert);font-weight:700}.bilan td.ko{color:var(--rouge);font-weight:700}
-.pied{margin:0 14px 14px;font-size:11.5px;color:var(--doux)}
-@media (max-width:860px){.grille{grid-template-columns:1fr}.sorties{grid-template-columns:repeat(3,minmax(0,1fr))}.fiche.ouv{grid-template-columns:1fr}}
+.pied{margin:0 12px 4px;font-size:11.5px;color:var(--doux)}
+@media (max-width:860px){.grille{grid-template-columns:1fr}.sorties{grid-template-columns:repeat(3,minmax(0,1fr))}.haut{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 </style>
 </head>
 <body>
 
 <div class="note">
-  <span><b>Page d'essai v2</b> (maquette jetable, rien n'est branché au site). Joue une série de 12 colis.</span>
+  <span><b>Page d'essai v3</b> (maquette jetable, rien n'est branché au site). Joue une série de 12 colis.</span>
   <span class="modes">Temps :
     <button type="button" data-mode="guidage" aria-pressed="true">Guidage</button>
     <button type="button" data-mode="entrainement" aria-pressed="false">Entraînement</button>
@@ -100,13 +104,14 @@ td.t{font-weight:700;white-space:nowrap}
 <div class="grille">
   <div class="zone">
     <h2>Poste de lecture</h2>
-    <svg id="scene" viewBox="0 0 760 330" role="img" aria-label="Le tapis, la balance et le colis au poste de lecture"></svg>
-    <div class="aide-clic" id="aideClic">Clique le carton pour le voir de près.</div>
-    <div class="minuteur" id="minuteur"><i id="jauge"></i></div>
-    <div class="fiche" id="fiche" aria-live="polite"></div>
+    <div class="haut">
+      <div><svg id="scene" viewBox="0 0 420 300" role="img" aria-label="Le tapis, la balance et le colis au poste de lecture"></svg>
+        <div class="minuteur" id="minuteur"><i id="jauge"></i></div></div>
+      <div class="fiche" id="fiche" aria-live="polite"></div>
+    </div>
     <div class="sorties" id="sorties"></div>
-    <div class="motifs" id="motifs" role="group" aria-label="Pourquoi le mets-tu à l'écart ?"></div>
     <div class="valider">
+      <div class="motifs" id="motifs" role="group" aria-label="Pourquoi le mets-tu à l'écart ?"></div>
       <span class="choix" id="choix">Choisis une sortie.</span>
       <button type="button" class="btn plein" id="envoyer" disabled>Envoyer le colis</button>
     </div>
@@ -169,7 +174,7 @@ function demarrer() {
   $('consigne').innerHTML = mode === 'evaluation'
     ? '<b>Évaluation</b>Trie la série seul. Aucune aide ne s\'affiche ; ton bilan arrive quand tu rends ta copie.'
     : mode === 'entrainement'
-      ? '<b>Romain, chef d\'équipe</b>Ce soir, ça va vite : chaque colis reste ' + DUREE + ' secondes au poste. Un colis que tu laisses passer fait le tour de la boucle et revient à la fin.'
+      ? '<b>Romain, chef d\'équipe</b>Ce soir, ça va vite : à partir du deuxième colis, chacun reste ' + DUREE + ' secondes au poste. Un colis que tu laisses passer fait le tour de la boucle et revient à la fin.'
       : '<b>Romain, chef d\'équipe</b>Un colis arrive sur la balance. Clique-le pour lire son étiquette et voir ses dimensions, cherche la commune dans le plan de tri, choisis la sortie de sa tournée, puis envoie-le. S\'il ne peut pas partir, mets-le à l\'écart.';
   $('plan').tBodies[0].innerHTML = TOURNEES.map(t =>
     `<tr><td class="t">${t.id}</td><td>${t.communes.map(([c, cp]) => `${c} (${cp})`).join(', ')}</td></tr>`).join('');
@@ -188,15 +193,16 @@ function dessinerSorties() {
 const colisCourant = () => file[i];
 
 function suivant() {
-  clearInterval(minuterie); verrou = false; choix = { s: null, motif: null }; fermerFiche(); majChoix();
+  clearInterval(minuterie); verrou = false; choix = { s: null, motif: null }; majChoix();
   if (i >= file.length) return finir();
   const c = colisCourant();
   $('compteur').textContent = `Colis ${Math.min(res.length + 1, SERIE.length)} / ${SERIE.length}` + (repasse.size ? ` · ${repasse.size} sur la boucle` : '');
-  dessinerScene(c); $('aideClic').style.visibility = 'visible';
+  dessinerScene(c); fermerFiche();
   if (!passe) $('retour').innerHTML = mode === 'evaluation' || res.length ? '' : 'Commence par cliquer le carton.';
   passe = false;
   setSorties(true);
-  if (mode === 'entrainement') {
+  // premier colis sans minuteur : le temps de lire (Tristan, 26/10/2026)
+  if (mode === 'entrainement' && res.length > 0) {
     $('minuteur').style.display = 'block'; reste = DUREE; $('jauge').style.width = '100%';
     minuterie = setInterval(() => {
       reste -= 0.2; $('jauge').style.width = Math.max(0, reste / DUREE * 100) + '%';
@@ -231,15 +237,14 @@ function ouvrirFiche() {
       <div class="cab"></div>
       <div class="mini">étiquette reconstituée</div>
     </div>`;
-  $('fiche').classList.add('ouv'); $('aideClic').style.visibility = 'hidden';
   $('fermer').onclick = fermerFiche;
 }
-function fermerFiche() { $('fiche').classList.remove('ouv'); $('fiche').innerHTML = ''; }
+function fermerFiche() { $('fiche').innerHTML = `<div class="vide">${i < file.length ? 'Clique le carton pour lire son étiquette et voir ses dimensions.' : ''}</div>`; }
 
 function dessinCarton(c) {
   // carton en perspective cavalière avec ses trois cotes ; l'échelle s'adapte au plus grand côté
-  const [L, l, H] = c.dim, k = Math.min(2.4, 240 / (L + l * 0.5)), w = L * k, d = l * k * 0.5, h = H * k;
-  const x0 = 90, y0 = 30 + d, W = Math.max(380, x0 + w + d + 60), Hs = y0 + h + 50;
+  const [L, l, H] = c.dim, k = Math.min(2.2, 220 / (L + l * 0.5)), w = L * k, d = l * k * 0.5, h = H * k;
+  const x0 = 80, y0 = 14 + d, W = Math.max(340, x0 + w + d + 70), Hs = y0 + h + 42;
   let s = `<svg viewBox="0 0 ${W} ${Hs}" role="img" aria-label="Le carton et ses dimensions">`;
   s += `<polygon points="${x0},${y0} ${x0 + d},${y0 - d} ${x0 + w + d},${y0 - d} ${x0 + w},${y0}" fill="#d8b47e" stroke="#a9824f" stroke-width="2"/>`;
   s += `<polygon points="${x0 + w},${y0} ${x0 + w + d},${y0 - d} ${x0 + w + d},${y0 - d + h} ${x0 + w},${y0 + h}" fill="#b8915b" stroke="#a9824f" stroke-width="2"/>`;
@@ -297,7 +302,7 @@ function enregistrer(c, s, motif) {
 
 function finir() {
   clearInterval(minuterie); setSorties(false); $('minuteur').style.display = 'none'; fermerFiche();
-  $('compteur').textContent = 'Série terminée'; $('aideClic').style.visibility = 'hidden';
+  $('compteur').textContent = 'Série terminée';
   dessinerScene(null); $('retour').innerHTML = ''; $('choix').textContent = '';
   if (mode === 'evaluation') {
     $('bilan').innerHTML = '<h2>Copie rendue</h2><p>Ta série est enregistrée. Le bilan s\'affiche quand l\'enseignant lève le verrou (règle des évaluations).</p><button class="btn" type="button" id="voir">Voir le bilan (enseignant)</button>';
@@ -325,19 +330,19 @@ function afficherBilan() {
 function dessinerScene(c) {
   let h = '';
   // pied de la balance sous le tapis, au milieu
-  h += `<rect x="300" y="236" width="160" height="16" fill="#6c7279"/>`;
-  h += `<rect x="290" y="252" width="180" height="62" rx="8" fill="#2c3035" stroke="#555b62" stroke-width="2"/>`;
-  h += `<rect x="304" y="262" width="152" height="38" rx="4" fill="#0f1214" stroke="#3d4349"/>`;
-  h += `<text x="380" y="291" text-anchor="middle" font-family="ui-monospace,Consolas,monospace" font-size="28" font-weight="700" fill="#ffd36a">${c ? kgTexte(c.kg) : '0,0'}</text>`;
-  h += `<text x="447" y="296" text-anchor="end" font-size="11" fill="#c9b37a">kg</text>`;
-  h += `<text x="380" y="326" text-anchor="middle" font-size="11.5" fill="#555047">balance du poste de lecture</text>`;
+  h += `<rect x="140" y="214" width="140" height="14" fill="#6c7279"/>`;
+  h += `<rect x="125" y="228" width="170" height="56" rx="8" fill="#2c3035" stroke="#555b62" stroke-width="2"/>`;
+  h += `<rect x="138" y="237" width="144" height="36" rx="4" fill="#0f1214" stroke="#3d4349"/>`;
+  h += `<text x="205" y="265" text-anchor="middle" font-family="ui-monospace,Consolas,monospace" font-size="27" font-weight="700" fill="#ffd36a">${c ? kgTexte(c.kg) : '0,0'}</text>`;
+  h += `<text x="275" y="269" text-anchor="end" font-size="11" fill="#c9b37a">kg</text>`;
+  h += `<text x="210" y="297" text-anchor="middle" font-size="11.5" fill="#555047">balance du poste de lecture</text>`;
   // tapis (la partie sur la balance est plus claire)
-  h += `<rect x="0" y="206" width="760" height="30" rx="6" fill="#3b3f44"/>`;
-  for (let x = 10; x < 760; x += 38) h += `<rect x="${x}" y="211" width="22" height="20" rx="3" fill="#4a4f55"/>`;
-  h += `<rect x="296" y="203" width="168" height="5" rx="2" fill="#9aa1a8"/>`;
+  h += `<rect x="0" y="186" width="420" height="28" rx="6" fill="#3b3f44"/>`;
+  for (let x = 8; x < 420; x += 34) h += `<rect x="${x}" y="191" width="20" height="18" rx="3" fill="#4a4f55"/>`;
+  h += `<rect x="130" y="183" width="160" height="5" rx="2" fill="#9aa1a8"/>`;
   if (c) {
-    const l = Math.max(...c.dim), w = Math.min(230, 70 + l * 1.3), hh = Math.min(140, 46 + Math.min(...c.dim.slice(1)) * 2 + 30);
-    const x = 380 - w / 2, y = 203 - hh;
+    const l = Math.max(...c.dim), w = Math.min(200, 70 + l * 1.1), hh = Math.min(130, 46 + Math.min(...c.dim.slice(1)) * 1.8 + 26);
+    const x = 210 - w / 2, y = 183 - hh;
     h += `<g class="colis" id="colis" tabindex="0" role="button" aria-label="Voir le colis de près">`;
     h += `<rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="3" fill="#c9a26b" stroke="#a9824f" stroke-width="2"/>`;
     h += `<rect x="${x + w / 2 - 9}" y="${y}" width="18" height="${hh}" fill="rgba(240,226,190,.55)"/>`;
@@ -346,11 +351,11 @@ function dessinerScene(c) {
       h += `<path d="M${x + w / 2 - 9},${y + 4} l10,14 l-8,10 l12,16" stroke="#6b4b22" stroke-width="2" fill="none"/>`;
     }
     // étiquette vue de loin : illisible tant qu'on ne clique pas
-    const ew = Math.min(90, w - 20), eh = Math.min(hh - 20, 56), ex = x + w - ew - 8, ey = y + 10;
+    const ew = Math.min(80, w - 20), eh = Math.min(hh - 20, 50), ex = x + w - ew - 8, ey = y + 10;
     h += `<rect x="${ex}" y="${ey}" width="${ew}" height="${eh}" rx="2" fill="#fbf8f1" stroke="#9a948a"/>`;
     for (let k = 0; k < 4; k++) h += `<rect x="${ex + 6}" y="${ey + 7 + k * 9}" width="${ew * (k === 3 ? .45 : .75)}" height="4" rx="1" fill="#b3ada2"/>`;
     h += `<rect x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${hh + 8}" rx="6" class="contour"/></g>`;
-  } else h += `<text x="380" y="130" text-anchor="middle" font-size="15" fill="#555047">Plus aucun colis sur le tapis.</text>`;
+  } else h += `<text x="210" y="110" text-anchor="middle" font-size="15" fill="#555047">Plus aucun colis sur le tapis.</text>`;
   $('scene').innerHTML = h;
   const g = $('colis');
   if (g) { g.addEventListener('click', ouvrirFiche); g.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); ouvrirFiche(); } }); }
