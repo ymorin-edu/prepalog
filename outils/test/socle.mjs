@@ -688,11 +688,12 @@ await v('compétences : la moyenne par spécialité, pour un groupe de 2de seule
     // de 2de y sont (ENT-5.8 OTM-C2.1, ENT-5.1 AGO-3.1), jamais une compétence logistique.
     const avis = await page.$eval('#avisEval2de', (p) => p.textContent.replace(/\s+/g, ' ')).catch(() => null);
     if (!avis) throw new Error('pas d\'avis « à prévoir en 2de »');
-    if (!/À prévoir en 2de/.test(avis) || !/OTM-C2\.1/.test(avis) || !/AGO-3\.1/.test(avis)) throw new Error('avis 2de : ' + avis);
+    // (26/10/2026 : OTM-C2.1 a quitté l'avis, ENT-11.5 Mondial Relay l'évalue en 2de ; OTM-C2.2 prend sa place dans ce cas.)
+    if (!/À prévoir en 2de/.test(avis) || !/OTM-C2\.2/.test(avis) || !/AGO-3\.1/.test(avis)) throw new Error('avis 2de : ' + avis);
     // Un code logistique = « C1.4 » sans préfixe (« OTM-C1.3 » n'en est pas un).
     if (/(?<![A-Z-])C\d\.\d/.test(avis)) throw new Error('une compétence logistique dans l\'avis 2de : ' + avis);
-    const titre21 = await page.$$eval('#avisEval2de strong[title]', (l) => l.find((s) => s.textContent.trim() === 'OTM-C2.1')?.getAttribute('title'));
-    if (titre21 !== 'Constituer le dossier transport') throw new Error('libellé en infobulle : ' + titre21);
+    const titre21 = await page.$$eval('#avisEval2de strong[title]', (l) => l.find((s) => s.textContent.trim() === 'OTM-C2.2')?.getAttribute('title'));
+    if (titre21 !== "Exécuter la demande du client/donneur d'ordre") throw new Error('libellé en infobulle : ' + titre21);
     const lu = await page.$$eval('#tabSpe', ([t]) => {
       const th = [...t.querySelectorAll('thead th')].map((x) => x.textContent.replace(/\s+/g, ' ').trim());
       const l = [...t.querySelectorAll('tbody tr')].find((x) => /SPECIALITE/.test(x.textContent));
