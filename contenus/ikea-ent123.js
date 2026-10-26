@@ -66,7 +66,7 @@ const DOC_COMMANDES = { id: 'commandes-123', titre: 'Les dix commandes du jour',
     </table>
     ${pied('Commandes CONSTRUITES pour l’exercice (clients fictifs, noms de famille seuls). Document pédagogique — reconstitution, non contractuel.')}
   </article>` };
-const DOC_CAMIONS = { id: 'camions-123', titre: 'Les trois camions', court: 'Les camions',
+export const DOC_CAMIONS = { id: 'camions-123', titre: 'Les trois camions', court: 'Les camions',
   html: `<article class="ik-doc" aria-label="Les trois camions">
     <p class="ik-t">Les trois camions de Gennevilliers</p>
     <p class="ik-st">Disponibles toute la journée, de 8 h à 20 h</p>
@@ -90,7 +90,7 @@ const DOC_SEINE = { id: 'seine-123', titre: 'La Seine et la péniche', court: 'L
     <p><b>Ce matin, la Seine est à ${ech(COTE.jour)}</b> : la péniche ne part pas.</p>
     ${pied('Réel : la chaîne Gennevilliers → péniche → Bercy → utilitaires électriques (IKEA, HAROPA, décembre 2022) et la règle des 4,30 m (document HAROPA « Navigation : règles incontournables », non daté, règles en révision). Construit : la cote de ce matin (4,45 m).')}
   </article>` };
-const DOC_DROIT = { id: 'droit-123', titre: 'Le droit : tenir sa date de livraison', court: 'Le droit',
+export const DOC_DROIT = { id: 'droit-123', titre: 'Le droit : tenir sa date de livraison', court: 'Le droit',
   html: `<article class="ik-doc" aria-label="Le droit : la date de livraison">
     <p class="ik-t">Le droit : tenir sa date de livraison</p>
     <p class="ik-st">Conditions générales de vente d’IKEA (10/08/2026) et Code de la consommation</p>

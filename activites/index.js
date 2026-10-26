@@ -128,6 +128,7 @@ export const ACTIVITES = [
   () => import('./ikea-demande-cliente.js'),
   () => import('./ikea-seine-en-crue.js'),
   () => import('./ikea-facture-transporteur.js'),
+  () => import('./ikea-evaluation-transport.js'),
   () => import('./ikea-evaluation-gestion.js'),
 ];
 

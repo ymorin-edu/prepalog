@@ -91,6 +91,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'ikea-12.2',
   'ikea-12.3',
   'ikea-12.4',
+  'ikea-12.7',
   'ikea-12.8',
   'palettier',
   'ramasse'];
@@ -121,7 +122,7 @@ const GROUPES = {
   1: ['socle', 'spartoo', 'groupes', 'smoby', 'temps', 'questions', 'fb-6.1', 'fb-6.10', 'action', 'action-84',
     'action-88', 'ramasse'],
   2: ['copie', 'demi-groupes', 'fb-6.7', 'fb-6.9', 'quai-iso', 'action-812', 'action-813', 'pelleau-102',
-    'pelleau-111', 'ikea-12.2', 'ikea-12.3', 'ikea-12.4', 'ikea-12.8'],
+    'pelleau-111', 'ikea-12.2', 'ikea-12.3', 'ikea-12.4', 'ikea-12.7', 'ikea-12.8'],
   3: ['dependances', 'carte-region', 'picard', 'entrepot', 'animation', 'fb-6.3', 'action-86', 'action-87',
     'pelleau-103', 'action-819'],
   4: ['transport', 'boost', 'cdiscount', 'tableur-export', 'action-81', 'action-83', 'chep-93', 'pelleau-107',
