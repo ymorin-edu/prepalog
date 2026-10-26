@@ -1,6 +1,6 @@
 # Brief de séance — ENT-13.1 Stellantis Sochaux, une voiture par minute (Tle, rentrée)
 
-**Statut** : à construire — questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
+**Statut** : livré (27/10/2026, `pret: true, ouverture: 'prof'`) —  questions au fil, poids (« à valider » ci-dessous) et réponses par défaut du §11 **acceptés par Tristan le 26/10/2026** (« tout ok »)
 **Date du brief** : 26/10/2026 — Claude, d'après le cadrage validé par Tristan le 26/10 (`stellantis/CADRAGE-stellantis-tle.md`)
 **Modèle** : Sonnet (vues existantes)
 
@@ -122,11 +122,11 @@ envie d'entrer dans l'usine pour la rentrée.
 - [ ] Une photo de l'usine : aucune de libre de droits repérée ; dessin maison du trajet de la pièce (oui, dessin maison).
 - [ ] Le logo Stellantis : à récupérer par script **avec ton accord** (alerte 10) (en attente).
 
-## Compte rendu *(à remplir à la livraison)*
+## Compte rendu
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** :
-- **Commits** :
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/stellantis-une-voiture-par-minute.js` ; `contenus/stellantis-ent131.js` (carte, documents, fiches, jalons, messages) et `stellantis-ent131-donnees.js` (voyage, chiffres, phrases, tirage par élève) ; `contenus/questions/ENT-13.1.js` ; `contenus/corriges/ENT-13.1.js` (corrigé par élève) ; `activites/index.js` et `catalogue.js` ; `outils/test.mjs` (ligne dans `BLOCS` et `GROUPES`, **touché, à dire à Tristan**) et `outils/test/stellantis-13.1.mjs`.
+- **Écarts par rapport au brief** : (a) la carte se joue sur **deux lieux** (l'usine de Sochaux, l'équipementier voisin de Rougegoutte), la ville est sans note, comme ENT-12.1 ; lieu BONUS du confirmé : l'ancien aérodrome de Lure-Malbouhans (aucun point) ; (b) les positions sont **approchées** (centre de la commune, relevées de mémoire, contrôlées par la vue : chaque point tombe dans son département) : à vérifier à l'écran ; (c) « usine ou entrepôt » est une fiche à six listes (la vue d'association n'est pas déclarable dans l'environnement d'entreprise) ; (d) la question d'éco-droit sur l'externalisation est posée à l'envoi des chiffres, corrigée AU BILAN ; (e) la réflexion sur l'aval (voitures garées en 2022) est posée à **tous**, en fin de séance, texte autonome : le moteur pose en fin de séance toute question au fil restée en attente, une réflexion « confirmé seul » aurait donc été posée aussi au niveau standard ; (f) aucune photo ni dessin de l'usine ; (g) le logo Stellantis n'est pas récupéré (réseau du cloud) : nom en texte provisoire.
+- **Décisions prises en route** : poids = carte 4 (région et département de chaque lieu) · voyage 5 (ordre exact) · chiffres 5 (voitures par heure 1, 5008 du jour 2, stock 1, manque 1) · usine ou entrepôt 3 (6 × 0,5) · questions notées 3 (4 × 0,75) = 20 ; la part de 5008 et les voitures du jour sont tirées par élève (calcul accepté à 3 % près, au moins 3 voitures) ; le départ du voyage est toujours à au moins 2 inversions de l'ordre juste.
+- **Tests** : bloc `stellantis-13.1`, 20 cas verts (déclaration, tirage sur 300 graines, calcul des 5008, ouverture, Avant de commencer, inaction, parcours 20/20, pire cas 0/20, carte, lieu bonus, voyage, fiches fermées, chiffres, 5008 recalculé sur deux élèves, usine ou entrepôt, questions au fil, corrigé, aucune requête externe). Durée du bloc : ≈ 4 min.
+- **Commits** : voir l'historique du 27/10/2026.
+- **Reste ouvert** : essai à l'écran par Tristan (surtout la position des points sur la carte) ; logo officiel depuis son PC.
