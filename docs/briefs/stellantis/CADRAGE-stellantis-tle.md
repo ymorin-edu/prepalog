@@ -8,7 +8,8 @@ plus ; le bord de ligne (C2.3) et l'équipe (C3.4) reviennent **plus tard dans l
 Tristan sur la première version : « pas assez visuel et c'est trop tôt pour des terminales, c'est une séance pour le début
 d'année, il faut que ça soit des révisions ; il faut aussi penser à ajouter la méthode ABC pour les terminales ».
 **ABC choisi par Tristan le 26/10/2026 : « en version tableur calcul »** (la page d'essai ABC visuelle est écartée et
-retirée du dépôt). Rien n'est construit. Page d'essai du temps 2 : `docs/briefs/stellantis/maquette-bord-de-ligne.html`.
+retirée du dépôt). **Options 1, 3, 4 et 5 du §9 acceptées par Tristan le 26/10/2026 (« tout ok »)** ; briefs du temps 1 écrits
+(`ENT-13.1` à `13.5`, choix restants : `stellantis/A-TRANCHER.md`). Rien n'est construit. Page d'essai du temps 2 : `docs/briefs/stellantis/maquette-bord-de-ligne.html`.
 
 ## 1. Pourquoi Stellantis, et pourquoi en deux temps
 
