@@ -8,7 +8,7 @@ après Mondial Relay).
 
 | ☐ | Étape | Qui | Modèle | Durée | Ce que Tristan fait |
 |---|---|---|---|---|---|
-| ☐ | 0. Trancher `docs/briefs/ikea/A-TRANCHER.md` (questions au fil, poids, §11) | Tristan | — | 15 min | répondre dans le fil |
+| ☑ | 0. Trancher `docs/briefs/ikea/A-TRANCHER.md` (fait le 26/10 : « tout ok ») (questions au fil, poids, §11) | Tristan | — | 15 min | répondre dans le fil |
 | ☐ | 1. Vérifications au moteur des §7 (fiche à 12 lignes de 12.4, règle de fenêtre du planning de 12.3, appel de collègue et m³ en 12.6) ; si une manque : la soumettre à Tristan | Claude | Sonnet | ≈ 1 h | trancher s'il le faut |
 | ☐ | 2. **ENT-12.2** (la demande de Mme Benali) | Claude | Sonnet | ≈ 4 h | l'essayer à l'écran |
 | ☐ | 3. **ENT-12.4** (la facture du transporteur) | Claude | Sonnet | ≈ 4 h | l'essayer |

@@ -1,4 +1,4 @@
-# IKEA (2de) — choix soumis à Tristan avant de construire
+# IKEA (2de) — choix soumis à Tristan avant de construire (tranchés le 26/10/2026 : « tout ok », tout accepté tel que proposé)
 
 Les briefs complets sont dans le dépôt (`docs/briefs/ENT-12.1` à `12.8`). Ici, seulement les choix. Réponds comme tu veux,
 par exemple « tout OK sauf 12.6 : pas de règle des 25 kg ».
