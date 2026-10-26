@@ -113,5 +113,11 @@ coder la vue.
   colis de près » à droite dans le même bloc (place réservée même fermée), sorties dessous, motif + choix + bouton d'envoi
   sur une seule ligne ; vérifié sans barre de défilement en 1366 × 768 et 1280 × 720 ; (5) en entraînement, **le premier
   colis n'a pas de minuteur** (le temps de lire) ; le minuteur part au deuxième colis.
+- **26/10/2026 (v3 → v4, « applique-toi sur le carton ouvert »)** : (6) tous les cartons sont dessinés **en volume**
+  (perspective cavalière), sur le tapis comme dans la vue de près, **à l'échelle de leurs dimensions** (un carton de
+  130 cm paraît long, un de 20 cm petit ; tailles minimales pour rester cliquable) ; un carton fermé a son scotch sur le
+  dessus et la face avant ; (7) le **carton ouvert** a ses quatre rabats ouverts (arrière levé, côtés rabattus vers
+  l'extérieur, avant retombé avec un coin plié), l'intérieur sombre avec du papier froissé qui dépasse, et le scotch
+  arraché qui pend, bord déchiré ; il se reconnaît sans cliquer.
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*

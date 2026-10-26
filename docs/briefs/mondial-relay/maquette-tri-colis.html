@@ -33,7 +33,7 @@ svg{display:block;width:100%;height:auto}
 /* fiche du colis (ouverte au clic sur le carton) */
 .fiche{border:1px solid var(--filet);border-radius:8px;background:var(--fond);padding:6px 8px;display:flex;flex-direction:column;gap:6px;min-height:250px}
 .fiche .vide{margin:auto;color:var(--doux);font-size:14px;text-align:center;padding:0 10px}
-.fiche svg{max-height:120px}
+.fiche svg{max-height:150px}
 .fiche .tete{display:flex;justify-content:space-between;align-items:center;font-size:13.5px;font-weight:600}
 .fiche .tete button{border:1px solid var(--filet);background:var(--panneau);border-radius:6px;padding:2px 9px;font:inherit;font-weight:400;cursor:pointer}
 .etiq{background:#fbf8f1;border:1px solid #9a948a;border-radius:3px;padding:5px 9px;font-size:13px;line-height:1.3;color:#1a1915}
@@ -86,7 +86,7 @@ td.t{font-weight:700;white-space:nowrap}
 <body>
 
 <div class="note">
-  <span><b>Page d'essai v3</b> (maquette jetable, rien n'est branché au site). Joue une série de 12 colis.</span>
+  <span><b>Page d'essai v4</b> (maquette jetable, rien n'est branché au site). Joue une série de 12 colis.</span>
   <span class="modes">Temps :
     <button type="button" data-mode="guidage" aria-pressed="true">Guidage</button>
     <button type="button" data-mode="entrainement" aria-pressed="false">Entraînement</button>
@@ -241,18 +241,42 @@ function ouvrirFiche() {
 }
 function fermerFiche() { $('fiche').innerHTML = `<div class="vide">${i < file.length ? 'Clique le carton pour lire son étiquette et voir ses dimensions.' : ''}</div>`; }
 
-function dessinCarton(c) {
-  // carton en perspective cavalière avec ses trois cotes ; l'échelle s'adapte au plus grand côté
-  const [L, l, H] = c.dim, k = Math.min(2.2, 220 / (L + l * 0.5)), w = L * k, d = l * k * 0.5, h = H * k;
-  const x0 = 80, y0 = 14 + d, W = Math.max(340, x0 + w + d + 70), Hs = y0 + h + 42;
-  let s = `<svg viewBox="0 0 ${W} ${Hs}" role="img" aria-label="Le carton et ses dimensions">`;
-  s += `<polygon points="${x0},${y0} ${x0 + d},${y0 - d} ${x0 + w + d},${y0 - d} ${x0 + w},${y0}" fill="#d8b47e" stroke="#a9824f" stroke-width="2"/>`;
-  s += `<polygon points="${x0 + w},${y0} ${x0 + w + d},${y0 - d} ${x0 + w + d},${y0 - d + h} ${x0 + w},${y0 + h}" fill="#b8915b" stroke="#a9824f" stroke-width="2"/>`;
-  s += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#c9a26b" stroke="#a9824f" stroke-width="2"/>`;
-  if (c.anomalie === 'carton') {
-    s += `<polygon points="${x0 + d * .3},${y0 - d * .3} ${x0 + w * .5},${y0 - d * .3} ${x0 + w * .4},${y0 - d - 30} ${x0 - 10},${y0 - d - 18}" fill="#b98f58" stroke="#a9824f" stroke-width="2"/>`;
-    s += `<path d="M${x0 + w * .5},${y0 + 4} l10,14 l-8,10 l12,16" stroke="#6b4b22" stroke-width="2.5" fill="none"/>`;
+const P = pts => pts.map(([a, b]) => `${a.toFixed(1)},${b.toFixed(1)}`).join(' ');
+
+// Un carton en perspective cavalière ; (x0, y0) = coin avant gauche du dessus. Fermé : scotch sur le dessus et la face
+// avant. Ouvert (anomalie « carton ») : quatre rabats ouverts, l'intérieur sombre, du papier froissé, le scotch arraché.
+function boite(c, x0, y0, w, d, h) {
+  const ouvert = c.anomalie === 'carton', f = Math.max(d, 14) * 1.15;
+  const T = (a, b) => [x0 + a, y0 + b];
+  let s = '';
+  if (ouvert) {
+    s += `<polygon points="${P([T(d, -d), T(w + d, -d), T(w + d - 4, -d - f), T(d + 6, -d - f * .9)])}" fill="#dcc08f" stroke="#a9824f" stroke-width="1.6"/>`;
+    s += `<polygon points="${P([T(0, 0), T(d, -d), T(d - f, -d - f * .25), T(-f, -f * .05)])}" fill="#d2b380" stroke="#a9824f" stroke-width="1.6"/>`;
   }
+  s += `<polygon points="${P([T(w, 0), T(w + d, -d), T(w + d, h - d), T(w, h)])}" fill="#b8915b" stroke="#a9824f" stroke-width="2"/>`;
+  s += `<rect x="${x0}" y="${y0}" width="${w}" height="${h}" fill="#c9a26b" stroke="#a9824f" stroke-width="2"/>`;
+  if (!ouvert) {
+    s += `<polygon points="${P([T(0, 0), T(d, -d), T(w + d, -d), T(w, 0)])}" fill="#d8b47e" stroke="#a9824f" stroke-width="2"/>`;
+    s += `<polygon points="${P([T(w / 2 - 8, 0), T(w / 2 - 8 + d, -d), T(w / 2 + 8 + d, -d), T(w / 2 + 8, 0)])}" fill="rgba(240,226,190,.6)"/>`;
+    s += `<rect x="${x0 + w / 2 - 8}" y="${y0}" width="16" height="${Math.min(h * .35, 26)}" fill="rgba(240,226,190,.6)"/>`;
+  } else {
+    s += `<polygon points="${P([T(0, 0), T(d, -d), T(w + d, -d), T(w, 0)])}" fill="#4a3620" stroke="#a9824f" stroke-width="2"/>`;
+    s += `<polygon points="${P([T(d, -d), T(w + d, -d), T(w + d * .55, -d * .45), T(d * .55, -d * .45)])}" fill="#7a5c34"/>`;
+    s += `<path d="M${P([T(w * .3, -d * .3)])} q8,-14 18,-4 q6,-12 16,-2 q10,-8 12,6 z" fill="#ece6da" stroke="#b9b1a3" stroke-width="1"/>`;
+    s += `<polygon points="${P([T(w, 0), T(w + d, -d), T(w + d + f, -d - f * .2), T(w + f, -f * .02)])}" fill="#d2b380" stroke="#a9824f" stroke-width="1.6"/>`;
+    s += `<polygon points="${P([T(0, 0), T(w, 0), T(w - 6, f * .85), T(w * .55, f * .95), T(w * .45, f * .7), T(6, f * .8)])}" fill="#b98f58" stroke="#a9824f" stroke-width="1.6"/>`;
+    s += `<polygon points="${P([T(w / 2 - 8, 0), T(w / 2 + 8, 0), T(w / 2 + 8, f * .95 + 10), T(w / 2 + 4, f * .95 + 6), T(w / 2, f * .95 + 12), T(w / 2 - 4, f * .95 + 5), T(w / 2 - 8, f * .95 + 11)])}" fill="rgba(240,226,190,.75)" stroke="#bfae86" stroke-width="1"/>`;
+  }
+  return s;
+}
+const rabats = c => c.anomalie === 'carton';
+
+function dessinCarton(c) {
+  // la vue de près : le carton et ses trois cotes ; l'échelle s'adapte au plus grand côté
+  const [L, l, H] = c.dim, k = Math.min(2.2, 220 / (L + l * 0.5)), w = L * k, d = l * k * 0.5, h = H * k;
+  const f = rabats(c) ? Math.max(d, 14) * 1.15 : 0;
+  const x0 = 80 + f * .6, y0 = 14 + d + f, W = Math.max(300, x0 + w + d + f + 60), Hs = y0 + h + 42;
+  let s = `<svg viewBox="0 0 ${W} ${Hs}" role="img" aria-label="Le carton et ses dimensions">` + boite(c, x0, y0, w, d, h);
   const cote = (x1, y1, x2, y2, t, tx, ty) => `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#2f5f9e" stroke-width="1.6" marker-start="url(#fl)" marker-end="url(#fl)"/><text x="${tx}" y="${ty}" font-size="14" font-weight="700" fill="#2f5f9e" text-anchor="middle">${t}</text>`;
   s += `<defs><marker id="fl" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2f5f9e"/></marker></defs>`;
   s += cote(x0, y0 + h + 16, x0 + w, y0 + h + 16, `${L} cm`, x0 + w / 2, y0 + h + 36);
@@ -341,20 +365,24 @@ function dessinerScene(c) {
   for (let x = 8; x < 420; x += 34) h += `<rect x="${x}" y="191" width="20" height="18" rx="3" fill="#4a4f55"/>`;
   h += `<rect x="130" y="183" width="160" height="5" rx="2" fill="#9aa1a8"/>`;
   if (c) {
-    const l = Math.max(...c.dim), w = Math.min(200, 70 + l * 1.1), hh = Math.min(130, 46 + Math.min(...c.dim.slice(1)) * 1.8 + 26);
-    const x = 210 - w / 2, y = 183 - hh;
-    h += `<g class="colis" id="colis" tabindex="0" role="button" aria-label="Voir le colis de près">`;
-    h += `<rect x="${x}" y="${y}" width="${w}" height="${hh}" rx="3" fill="#c9a26b" stroke="#a9824f" stroke-width="2"/>`;
-    h += `<rect x="${x + w / 2 - 9}" y="${y}" width="18" height="${hh}" fill="rgba(240,226,190,.55)"/>`;
-    if (c.anomalie === 'carton') {
-      h += `<polygon points="${x},${y} ${x + w / 2 - 9},${y} ${x + w / 2 - 30},${y - 30} ${x - 16},${y - 22}" fill="#b98f58" stroke="#a9824f" stroke-width="2"/>`;
-      h += `<path d="M${x + w / 2 - 9},${y + 4} l10,14 l-8,10 l12,16" stroke="#6b4b22" stroke-width="2" fill="none"/>`;
-    }
+    // même dessin que la vue de près, à une échelle fixe : un grand carton paraît grand sur le tapis
+    const [L, l, H] = c.dim, k = Math.min(2.3, 280 / (L + l * .5)), w = Math.max(72, L * k), d = Math.max(14, l * k * .45), hh = Math.max(40, H * k);
+    const f = rabats(c) ? Math.max(d, 14) * 1.15 : 0;
+    const x = 210 - (w + d) / 2, y = 183 - hh;
+    h += `<g class="colis" id="colis" tabindex="0" role="button" aria-label="Voir le colis de près">` + boite(c, x, y, w, d, hh);
     // étiquette vue de loin : illisible tant qu'on ne clique pas
-    const ew = Math.min(80, w - 20), eh = Math.min(hh - 20, 50), ex = x + w - ew - 8, ey = y + 10;
-    h += `<rect x="${ex}" y="${ey}" width="${ew}" height="${eh}" rx="2" fill="#fbf8f1" stroke="#9a948a"/>`;
-    for (let k = 0; k < 4; k++) h += `<rect x="${ex + 6}" y="${ey + 7 + k * 9}" width="${ew * (k === 3 ? .45 : .75)}" height="4" rx="1" fill="#b3ada2"/>`;
-    h += `<rect x="${x - 4}" y="${y - 4}" width="${w + 8}" height="${hh + 8}" rx="6" class="contour"/></g>`;
+    if (!rabats(c)) {
+      const ew = Math.min(64, w - 12), eh = Math.min(hh - 10, 40), ex = x + w - ew - 5, ey = y + Math.min(30, hh * .3) + 2;
+      h += `<rect x="${ex}" y="${Math.min(ey, y + hh - eh - 4)}" width="${ew}" height="${eh}" rx="2" fill="#fbf8f1" stroke="#9a948a"/>`;
+      for (let n = 0; n < 4 && 7 + n * 8 < eh; n++) h += `<rect x="${ex + 5}" y="${Math.min(ey, y + hh - eh - 4) + 6 + n * 8}" width="${ew * (n === 3 ? .45 : .75)}" height="3.5" rx="1" fill="#b3ada2"/>`;
+    } else {
+      const ew = Math.min(64, w * .38), ex = x + 6, ey = y + f * .95 + 6, eh = Math.min(36, hh - f - 12);
+      if (eh > 14) {
+        h += `<rect x="${ex}" y="${ey}" width="${ew}" height="${eh}" rx="2" fill="#fbf8f1" stroke="#9a948a"/>`;
+        for (let n = 0; n < 3 && 7 + n * 8 < eh; n++) h += `<rect x="${ex + 5}" y="${ey + 6 + n * 8}" width="${ew * .7}" height="3.5" rx="1" fill="#b3ada2"/>`;
+      }
+    }
+    h += `<rect x="${x - f - 4}" y="${y - d - f - 4}" width="${w + d + 2 * f + 8}" height="${hh + d + f + 8}" rx="6" class="contour"/></g>`;
   } else h += `<text x="210" y="110" text-anchor="middle" font-size="15" fill="#555047">Plus aucun colis sur le tapis.</text>`;
   $('scene').innerHTML = h;
   const g = $('colis');
