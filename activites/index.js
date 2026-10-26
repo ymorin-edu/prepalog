@@ -117,6 +117,7 @@ export const ACTIVITES = [
   () => import('./pelleau-palette-froide.js'),
   () => import('./pelleau-evaluation-controle.js'),
   // Mondial Relay (hub et agence de Buchères) — ENT-11.x. 2de, scénario S3 « Le pic de fin d'année ».
+  () => import('./mondial-relay-voyage-colis.js'),
   () => import('./mondial-relay-au-tri.js'),
   () => import('./mondial-relay-evaluation-tri.js'),
   () => import('./mondial-relay-evaluation-planning.js'),

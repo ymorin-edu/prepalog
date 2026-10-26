@@ -141,10 +141,10 @@ await v('Niveaux : l’onglet montre élèves × entreprises (Cdiscount, plus ce
   // Le fichier de la séance n'est plus téléchargé par l'onglet (il lit le catalogue) : la déclaration d'essai vit au catalogue.
   vrai(picardAuCatalogue, 'activites/catalogue.js n’a plus d’entrée picard-ent42 : la déclaration d’essai est à revoir');
   const cols = await pg.$$eval('[data-col-scenario]', (L) => L.map((x) => x.dataset.colScenario));
-  // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026), Action (8) depuis ENT-8.1 (15/10/2026), CHEP (9) depuis ENT-9.1 (18/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
-  egal(cols, ['2', '4', '6', '7', '8', '9', '10'], 'colonnes');
+  // France Boissons (6) depuis ENT-6.1 (09/10/2026), Decathlon (7) depuis ENT-7.1 (13/10/2026), Action (8) depuis ENT-8.1 (15/10/2026), CHEP (9) depuis ENT-9.1 (18/10/2026), Mondial Relay (11) depuis ENT-11.1 (26/10/2026) : elles déclarent `niveauxPrevus: ['confirme']`.
+  egal(cols, ['2', '4', '6', '7', '8', '9', '10', '11'], 'colonnes');
   const noms = await pg.$$eval('[data-col-scenario] strong', (L) => L.map((x) => x.textContent.trim()));
-  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon', 'Action', 'CHEP', 'Transports Pelleau'], 'en-têtes');
+  egal(noms, ['Cdiscount', 'Picard', 'France Boissons', 'Decathlon', 'Action', 'CHEP', 'Transports Pelleau', 'Mondial Relay'], 'en-têtes');
   const valeurs = await pg.$$eval('[data-niveau-eleve]', (L) => [...new Set(L.map((s) => s.value))]);
   egal(valeurs, ['standard'], 'valeurs');
   egal(await pg.$$eval('[data-niveau-eleve]', (L) => L.length), cols.length * Object.keys(EL).length, 'cases');   // une case par élève et par colonne
@@ -540,6 +540,11 @@ const BANQUES_FIGEES = {
     courrier: ['msg-malo', 'msg-amandine-planning', 'msg-attestation', 'msg-brasserie-quai', 'msg-medecine', 'msg-rack',
       'msg-facture-consignes', 'msg-garage', 'msg-chauffeur-quai', 'msg-candidature', 'msg-echange-conges', 'msg-partir-tot',
       'msg-journaliste'],
+  },
+  // ENT-11.1 Mondial Relay (26/10/2026) : la pièce fixe (le colis d'Inès) et la banque de colis du classement « Peut-il voyager ? ».
+  'contenus/mondial-relay-ent111-donnees.js': {
+    colis: ['c-ines', 'c-livres', 'c-pull', 'c-gaz', 'c-fauteuil', 'c-tapis', 'c-miroir', 'c-outils', 'c-skis', 'c-ecran', 'c-meuble', 'c-croquettes',
+      'c-surgeles'],
   },
   // ENT-7.1 Decathlon (13/10/2026).
   // ENT-9.1 CHEP (18/10/2026) : le document partiel (Europe ou LPR mêlées), le document sans mouvement (Europe seules, ou commande), les bonus du confirmé.

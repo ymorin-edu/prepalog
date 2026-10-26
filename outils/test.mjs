@@ -66,6 +66,7 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'action-817',
   'action-818',
   'action-819',
+  'mr-11.1',
   'preparation-vocale',
   'chep-91',
   'chep-92',
@@ -123,7 +124,7 @@ const GROUPES = {
     'pelleau-109', 'action-818'],
   6: ['quiz', 'inventaire', 'tirage-niveaux', 'decathlon', 'localiser', 'action-89', 'action-811', 'chep-94', 'preparation-vocale',
     'tri', 'mr-11.2', 'mr-11.3', 'mr-11.4', 'mr-11.6'],
-  7: ['carte', 'fb-6.2', 'fb-6.8', 'courriel', 'pelleau-101', 'pelleau-108', 'pelleau-110', 'palettier', 'action-816'],
+  7: ['carte', 'fb-6.2', 'fb-6.8', 'courriel', 'pelleau-101', 'pelleau-108', 'pelleau-110', 'palettier', 'action-816', 'mr-11.1'],
   8: ['planning', 'amenagements', 'dialogue', 'inspection', 'action-810', 'action-814', 'chep-92',
     'pelleau-104', 'pelleau-106', 'action-815'],
 };
