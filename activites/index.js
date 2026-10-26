@@ -126,6 +126,7 @@ export const ACTIVITES = [
   () => import('./mondial-relay-evaluation-client.js'),
   // IKEA (centre de distribution clients de Gennevilliers) — ENT-12.x. 2de, poste B transport / poste A gestion / poste C logistique.
   () => import('./ikea-demande-cliente.js'),
+  () => import('./ikea-seine-en-crue.js'),
   () => import('./ikea-facture-transporteur.js'),
   () => import('./ikea-evaluation-gestion.js'),
 ];
