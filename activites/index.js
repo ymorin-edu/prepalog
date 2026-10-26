@@ -45,10 +45,11 @@ export const ACTIVITES = [
   () => import('./cdiscount-compte-a-rebours.js'),
   () => import('./cdiscount-priorites.js'),
   // Boost (Nîmes) — ENT-3.x. C2.4 « Organiser une tournée de livraison » prend quatre
-  // séances : guidage, entraînement, erreur induite, évaluation. ENT-3.4 : pas encore écrite.
+  // séances : guidage, entraînement, erreur induite, évaluation (ENT-3.4, copie rendue).
   () => import('./boost-tournee.js'),
   () => import('./boost-ent32.js'),
   () => import('./boost-ent33.js'),
+  () => import('./boost-ent34.js'),
   // Picard (Sainghin-en-Mélantois) — ENT-4.x. C1.4 « réception » en quatre séances, sur la vue quai.
   () => import('./picard-ent41.js'),
   () => import('./picard-ent42.js'),
@@ -139,6 +140,11 @@ export const ACTIVITES = [
   () => import('./stellantis-methode-abc.js'),
   () => import('./stellantis-ranger-compter-abc.js'),
   () => import('./stellantis-evaluation-rentree.js'),
+  // Lactalis, le rappel des laits infantiles (1re, C3.2, ENT-14.1 à 14.4) : cadrage `docs/briefs/lactalis/CADRAGE-lactalis-1re.md`.
+  () => import('./lactalis-douze-lots.js'),
+  () => import('./lactalis-regle-15-fevrier.js'),
+  () => import('./lactalis-lot-oublie.js'),
+  () => import('./lactalis-evaluation.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -227,11 +233,13 @@ export const ENTREPRISES = [
   // Logo officiel du site (PNG, le site n'offre pas de SVG ; accord de Tristan du 18/10/2026, lot A) ; charte : `contenus/pelleau.js`.
   { n: 10, nom: 'Transports Pelleau', metier: 'Transporteur devenu entreposeur — entrepôt neuf de Gouesnou', logo: './contenus/trames/logos/pelleau.png' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bordeaux construit de la charte ; charte : `contenus/mondial-relay.js`.
-  { n: 11, nom: 'Mondial Relay', metier: 'Colis et Points Relais — hub et agence de Buchères (Aube)', logo: './contenus/trames/logos/mondial-relay-texte.svg' },
+  { n: 11, nom: 'Mondial Relay', metier: 'Colis et Points Relais — hub et agence de Buchères (Aube)', logo: './contenus/trames/logos/mondial-relay.png' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu construit de la charte ; charte : `contenus/ikea.js`.
-  { n: 12, nom: 'IKEA', metier: 'Livraison de meubles — centre de distribution clients de Gennevilliers (Hauts-de-Seine)', logo: './contenus/trames/logos/ikea-texte.svg' },
+  { n: 12, nom: 'IKEA', metier: 'Livraison de meubles — centre de distribution clients de Gennevilliers (Hauts-de-Seine)', logo: './contenus/trames/logos/ikea.svg' },
   // Pas le logo officiel (le réseau du cloud ne peut pas le récupérer ; à faire depuis le PC de Tristan, alerte 10) : le nom en texte, dans le bleu nuit construit de la charte ; charte : `contenus/stellantis.js`.
   { n: 13, nom: 'Stellantis', metier: 'Usine de Sochaux (Doubs) — logistique, magasin des petites pièces', logo: './contenus/trames/logos/stellantis-texte.svg' },
+  // L'élève travaille chez un distributeur CONSTRUIT (plateforme régionale d'une enseigne) : le nom du cas en texte, pas le logo de Lactalis ; charte : `contenus/lactalis.js`.
+  { n: 14, nom: 'Rappel Lactalis', metier: 'Traçabilité — plateforme régionale d’une enseigne de supermarchés (Mayenne), décembre 2017', logo: './contenus/trames/logos/lactalis-texte.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre

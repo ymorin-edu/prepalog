@@ -86,15 +86,15 @@ function lignesDetail(etapes, st, g, libelle) {
       <span class="ent-fin-m" aria-hidden="true">${ok ? '✓' : ko ? '✗' : '?'}</span><span>${ech(t)}</span>${fin}</li>`;
   }).join('')}</ul>`;
 }
-export function bandeauFin(st, { etapes, correction, premierEssai, suiteAuBilan, suivante, reinitialisable, avecQuestions,
+export function bandeauFin(st, { etapes, correction, premierEssai, listeSeule, suiteAuBilan, suivante, reinitialisable, avecQuestions,
   finFige, retours, peutCorriger, detail = null }) {
-        if (!correction && !premierEssai) return bandeauAncien(st, { etapes, suiteAuBilan, suivante, reinitialisable, retours });
+        if (!correction && !premierEssai && !listeSeule) return bandeauAncien(st, { etapes, suiteAuBilan, suivante, reinitialisable, retours });
         const G = groupesDuBilan(etapes, st);
         const tout = G.every((g) => g.ok);
         // Rien de faux, mais une ligne que le site n'a pas pu juger ('erreur') : ni « tout juste » ni « à corriger ».
         const incertain = !tout && G.every((g) => g.etat !== 'ko');
         const S = suivante;
-        const [motOk, motKo] = correction ? ['juste', 'à corriger'] : ['du premier coup', 'après une erreur'];
+        const [motOk, motKo] = correction ? ['juste', 'à corriger'] : listeSeule ? ['juste', 'pas juste'] : ['du premier coup', 'après une erreur'];
         const liste = `<ul class="ent-fin-liste" aria-label="Résultat par étape">${G.map((g) => `<li class="${g.etat === 'ok' ? 'ent-fin-juste' : g.etat === 'ko' ? 'ent-fin-faux' : ''}" data-fin-jalon="${ech(g.ids[0])}"
           data-fin-etat="${g.etat}"><span class="ent-fin-m" aria-hidden="true">${g.etat === 'ok' ? '✓' : g.etat === 'ko' ? '✗' : '?'}</span><span>${ech(g.nom)}</span>
           <span class="ent-fin-a">${g.etat === 'ok' ? motOk : g.etat === 'ko' ? motKo : 'à vérifier'}</span></li>${
@@ -108,8 +108,8 @@ export function bandeauFin(st, { etapes, correction, premierEssai, suiteAuBilan,
         // Sans « Corriger » : rien ne se rouvre, la note est celle du premier essai.
         if (!correction) {
           return `<div class="ent-fin ent-fin-v2 ${tout ? 'ent-fin-ok' : 'ent-fin-ko'}" role="status" data-fin="${tout ? 'ok' : 'ko'}"><div class="ent-fin-corps">
-            <h2 class="ent-fin-t">${tout ? 'Tout est juste du premier coup ✓' : 'Tu as fini : voici ce que tu as réussi du premier coup.'}</h2>
-            <p>${tout ? 'Bravo.' : 'Ta note compte ton premier essai à chaque étape.'}${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », ${estOuverte(S)}.` : ''}</p>
+            <h2 class="ent-fin-t">${listeSeule ? (tout ? 'Tout est juste ✓' : 'Tu as fini : voici ce qui est juste et ce qui ne l’est pas.') : tout ? 'Tout est juste du premier coup ✓' : 'Tu as fini : voici ce que tu as réussi du premier coup.'}</h2>
+            <p>${tout ? 'Bravo.' : listeSeule ? 'Cette séance ne se corrige pas : tu peux passer à la suivante.' : 'Ta note compte ton premier essai à chaque étape.'}${S ? ` La séance suivante, ${ech(S.code)} « ${ech(S.titre)} », ${estOuverte(S)}.` : ''}</p>
             ${liste}${aVerifierHtml(etapes, st)}${retours()}<div class="ent-fin-btns"><button class="btn" data-fin-quitter>Retour aux séances</button></div></div></div>`;
         }
         if (tout) {

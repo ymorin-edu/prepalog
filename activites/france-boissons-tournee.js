@@ -27,6 +27,7 @@ const s = seanceEntreprise(FB, SEANCE, {
   bareme: 20,           // jalons pondérés (16) + questions notées (4), somme = 20
   // Parcours strict : ne s'ouvre qu'à l'élève dont ENT-6.8 a son premier bilan (même règle que les séances précédentes).
   parcours: true,
+  bilanListe: true,       // bandeau de fin ✓/✗ par blocs, sans « Corriger » (26/10/2026, choix de Tristan)
   precedente: 'france-boissons-planning',
   questions: 'ENT-6.9',
   pret: true,

@@ -25,6 +25,7 @@ const s = seanceEntreprise(DECATHLON, SEANCE, {
   temps: 'erreur',
   bareme: 20,           // jalons pondérés (17) + questions notées (3), somme = 20
   parcours: true,
+  bilanListe: true,       // bandeau de fin ✓/✗ par blocs, sans « Corriger » (26/10/2026, choix de Tristan)
   precedente: 'decathlon-ordre-transport',
   suiteAuBilan: true,
   niveauxPrevus: ['confirme'],   // bonus du confirmé : une cinquième offre au comparateur n° 2

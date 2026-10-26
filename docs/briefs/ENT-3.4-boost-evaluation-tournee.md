@@ -1,6 +1,6 @@
 # Brief de séance — ENT-3.4 Boost « Évaluation de la tournée »
 
-**Statut** : à implémenter *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
+**Statut** : livré le 26/10/2026, à valider par Tristan *(à implémenter → en cours → à valider par Tristan → livré | abandonné)*
 **Date du brief** : 02/10/2026
 **Ordre de travail conseillé** : **2/3** — après ENT-3.3, avant ENT-2.4. Tout en `pret: false`, commits fréquents.
 **Conversation d'origine** : « Prepalog — chantier A » (cadrage : `prepalog-boost-cadrage-ent32-34`, section « Chantier A — reprise du 02/10 » de `prepalog-chantiers-en-cours`)
@@ -119,9 +119,8 @@ tient pas) ; (2) **aucun jalon, aucun verdict** pendant le travail ; (3) « Rend
 
 ## Compte rendu *(rempli par Claude Code à la livraison)*
 
-- **Fichiers créés / modifiés** :
-- **Écarts par rapport au brief** (et pourquoi) :
-- **Décisions prises en route** :
-- **Tests** : bloc / suite entière, nombre de cas, sabotages éprouvés
-- **Commits** : *(hash + message)*
-- **Reste ouvert** :
+- **Fichiers créés / modifiés** : `activites/boost-ent34.js` (id `boost-evaluation`), `contenus/boost-ent34.js`, `outils/carte/boost-ent34.json` et `contenus/boost-ent34-carte.js` (générés sur le PC de Tristan, BAN du 26/10/2026), une ligne dans `activites/index.js`, `activites/catalogue.js`, 10 cas « ENT-3.4 » dans `outils/test/boost.mjs`.
+- **Écarts par rapport au brief** : `pret: true, ouverture: 'prof'` (règle du 03/10, postérieure au brief) au lieu de `pret: false` ; un jalon « données » (comme ENT-3.2 depuis le chantier D) en plus des huit ; textes au tutoiement (règle du 06/10). Le test du suivi enseignant « tant qu'aucune évaluation n'est inscrite » n'est pas écrit (le bloc `copie` garde ramasser / rouvrir).
+- **Décisions prises en route** : questions du §11 tranchées par Claude sur délégation de Tristan (voir `docs/decisions.md`, 26/10/2026) : même quartier, seuil 3 clics, neuf jalons pondérés, pas de report. Train à 16 h 07 (profil le plus proche d'ENT-3.2 : 29,5 % des ordres attrapent le train, 7,6 % tiennent tout).
+- **Tests** : bloc `boost` 132/132 ; cas : copie vide = 0, copie juste = 20, 4 clics ratés = repérage faux, plus court = créneau et trajet faux, surcharge, valeur tapée au lieu d'une formule, aucun verdict ni « Vérifier » à l'écran, une remise notée 20/20.
+- **Reste ouvert** : à jouer à l'écran par Tristan (compte élève) avant de l'ouvrir ; deux nouveaux clients (Fromagerie Vidal, Boutique Fabre) tombent dans la même case D2 que l'Épicerie Roussel.

@@ -3180,4 +3180,176 @@ await v('Feuille D : aucune erreur de console sur la page d’essai', async () =
 });
 await ctxF.close();
 
+
+/* ===================================================================================== */
+/* ENT-3.4 — Boost, évaluation de la tournée (copie rendue, 26/10/2026)                    */
+/*                                                                                        */
+/* Par l'activité réelle. Les chiffres de la journée sont écrits ICI à la main, d'après   */
+/* la sortie de `outils/carte/calibrer.mjs` (26/10/2026) : Épicerie Roussel (c8) seule à   */
+/* quai, meilleure tournée c2 c6 c7 c1 c4 c3 c5 (11,38 km), plus court c3 c4 c1 c7 c6 c2   */
+/* c5 (10,38 km) qui rate le créneau de la Droguerie Soulier (15 h 10), train 16 h 07.     */
+/* ===================================================================================== */
+
+const ctx34 = await nav.newContext({ viewport: { width: 1440, height: 900 } });
+const page34 = await ctx34.newPage();
+page34.setDefaultTimeout(8000);
+const erreurs34 = [];
+page34.on('pageerror', (e) => erreurs34.push('PAGEERROR: ' + e.message));
+page34.on('console', (m) => { if (m.type() === 'error' && !/\b404\b/.test(m.text())) erreurs34.push('CONSOLE: ' + m.text()); });
+await page34.goto(BASE);
+await page34.waitForSelector('#btnProf', { timeout: 8000 });
+const monter34 = () => page34.evaluate(async () => {
+  const act = await import('/activites/boost-ent34.js');
+  document.getElementById('boost34')?.remove();
+  const hote = document.createElement('div');
+  hote.id = 'boost34';
+  document.body.appendChild(hote);
+  const db = {};
+  const S = { suivi: [], rendre: [] };
+  act.rendre(hote, {
+    meta: act.meta,
+    profil: { prenom: 'Lea', nom: 'Dupont', role: 'eleve' },
+    jeu: { etat: () => db, sauver: () => {} },
+    enregistrer: (r) => S.suivi.push(r),
+    lireScore: async () => null,
+    rendreCopie: async (r) => { S.rendre.push(r); return { ...r, rendu: Date.now() }; },
+    quitter: () => {}, codeStock: 'ABC',
+  });
+  window.__b34 = { act, db, S, hote };
+});
+await monter34();
+const z34 = '#boost34 .ent-main';
+const jalons34 = () => page34.evaluate(async () => {
+  const C = await import('/contenus/boost-ent34.js');
+  const o = {};
+  C.ETAPES.forEach((e) => { o[e.id] = e.verifier(window.__b34.db).status; });
+  return o;
+});
+const noter34 = () => page34.evaluate(() => window.__b34.act.noter(window.__b34.db));
+// Pose directement l'état de l'élève (la carte et les gestes sont gardés par les blocs `carte` et `copie`).
+const poser34 = (o) => page34.evaluate((o) => {
+  const d = window.__b34.db;
+  d.transport = d.transport || {};
+  const t = d.transport['boost-ent34'] = d.transport['boost-ent34'] || {};
+  if (o.plan) t.plan = o.plan;
+  if (o.tournee) t.tournee = Object.assign({ report: {}, juge: {}, valide: null }, o.tournee);
+}, o);
+const TOUS34 = ['c1', 'c2', 'c3', 'c4', 'c5', 'c6', 'c7', 'c8'];
+const MEILLEUR34 = ['c2', 'c6', 'c7', 'c1', 'c4', 'c3', 'c5'];
+const COURT34 = ['c3', 'c4', 'c1', 'c7', 'c6', 'c2', 'c5'];
+// La feuille juste (adresses de la feuille d'ENT-3.2 : B2 à B9 les poids, B10 total, B11 à écarter, B13 à quai, B14 chargé ;
+// F2 à F7 les données, F14 à F16 les heures, F19 l'arrivée chez le client à créneau). Poids écrits à la main (mail).
+const FEUILLE34 = { F2: '14:35', F3: '14', F4: '5', F5: '190', F6: '16:07', F7: '15:10',
+  B2: '22', B3: '14', B4: '30', B5: '19', B6: '34', B7: '27', B8: '33', B9: '49',
+  B10: '=SOMME(B2:B9)', B11: '=B10-F5', B13: '=B9', B14: '=B10-B13', F14: '=F13/F3*60', F15: '=7*F4',
+  F16: '=F2+F14+F15', F19: '=F2+F17/F3*60+F18*F4' };
+const PARFAIT34 = { plan: { places: { c1: 1, c2: 1, c3: 1, c4: 1 }, essais: { c1: 1, c3: 2 }, valide: 1 },
+  tournee: { ordre: MEILLEUR34, quai: ['c8'], depart: 1, arrivee: 1, grille: { cases: FEUILLE34 } } };
+
+await v('ENT-3.4 : une évaluation de C2.4 en copie rendue, 1re, fermée aux élèves, notée sur 20', async () => {
+  const m = await page34.evaluate(() => window.__b34.act.meta);
+  if (m.code !== 'ENT-3.4' || m.temps !== 'evaluation' || m.copie !== true || m.bareme !== 20) throw new Error(JSON.stringify(m));
+  if (m.competences.join() !== 'C2.4' || m.niveaux.join() !== '1re' || m.ouverture !== 'prof' || m.pret !== true) throw new Error(JSON.stringify(m));
+  if (typeof (await page34.evaluate(() => typeof window.__b34.act.noter)) !== 'string') throw new Error('noter');
+});
+
+await v('ENT-3.4 : la journée — le calibrage du JSON, Roussel seule à quai, l’optimum recalculé (c2 c6 c7 c1 c4 c3 c5, 11,4 km)', async () => {
+  const r = await page34.evaluate(async () => {
+    const C = await import('/contenus/boost-ent34.js');
+    const J = await (await fetch('/outils/carte/boost-ent34.json')).json();
+    return { J: J.calibrage, j: C.JOURNEE, quai: C.A_QUAI, opt: C.optimum(), cr: C.CRENEAU && [C.CRENEAU.id, C.CRENEAU.creneau.avant],
+      nouveaux: C.NOUVEAUX.map((c) => c.id), kg: C.CLIENTS.map((c) => c.kg) };
+  });
+  if (r.J.depart !== r.j.depart || r.J.train !== r.j.limite || r.J.chargeUtile !== r.j.chargeUtile || r.J.vitesse !== r.j.vitesse || r.J.service !== r.j.service) {
+    throw new Error('JOURNEE ≠ calibrage : ' + JSON.stringify(r));
+  }
+  if (r.j.limite !== 967 || r.quai !== 'c8' || r.cr.join() !== 'c2,910') throw new Error(JSON.stringify(r));
+  if (r.opt.ordre.join() !== MEILLEUR34.join() || Math.abs(r.opt.km - 11.38) > 0.01) throw new Error('optimum : ' + JSON.stringify(r.opt));
+  if (r.nouveaux.join() !== 'c1,c2,c3,c4' || r.kg.join() !== '22,14,30,19,34,27,33,49') throw new Error(JSON.stringify(r));
+});
+
+await v('ENT-3.4 : une copie vide vaut 0 — aucun jalon vrai par inaction', async () => {
+  const j = await jalons34();
+  const vrais = Object.entries(j).filter(([, s]) => s === 'ok');
+  if (vrais.length) throw new Error('vrais sans rien faire : ' + vrais.map(([k]) => k).join());
+  const n = await noter34();
+  if (n.score !== 0 || n.max !== 20) throw new Error(JSON.stringify(n));
+});
+
+await v('ENT-3.4 : une copie juste vaut 20/20 (feuille jugée à la remise, sans « Vérifier »)', async () => {
+  await poser34(PARFAIT34);
+  const j = await jalons34();
+  const faux = Object.entries(j).filter(([, s]) => s !== 'ok');
+  if (faux.length) throw new Error('pas ok : ' + JSON.stringify(j));
+  const n = await noter34();
+  if (n.score !== 20) throw new Error(JSON.stringify(n));
+});
+
+await v('ENT-3.4 : les clics sur une autre rue coûtent le repérage au-delà de 3 ; un client non situé aussi', async () => {
+  await poser34({ plan: { places: { c1: 1, c2: 1, c3: 1, c4: 1 }, essais: { c1: 2, c2: 2 }, valide: 1 } });
+  if ((await jalons34()).reperage !== 'ko') throw new Error('4 clics ratés acceptés');
+  await poser34({ plan: { places: { c1: 1, c2: 1, c3: 1 }, essais: {}, valide: 1 } });
+  if ((await jalons34()).reperage !== 'ko') throw new Error('un client non situé accepté');
+  await poser34({ plan: PARFAIT34.plan });
+  if ((await jalons34()).reperage !== 'ok') throw new Error('3 clics ratés refusés');
+});
+
+await v('ENT-3.4 : le plus court rate le créneau — ni créneau ni trajet, le reste tient', async () => {
+  await poser34({ tournee: { ...PARFAIT34.tournee, ordre: COURT34 } });
+  const j = await jalons34();
+  if (j.creneau !== 'ko' || j.trajet10 !== 'ko' || j.trajet5 !== 'ko') throw new Error(JSON.stringify(j));
+  if (j.charge !== 'ok' || j.horaire !== 'ok' || j.choix !== 'ok') throw new Error(JSON.stringify(j));
+});
+
+await v('ENT-3.4 : tout charger — surcharge, et une mauvaise commande à quai fait tomber « choix »', async () => {
+  await poser34({ tournee: { ...PARFAIT34.tournee, ordre: [...MEILLEUR34, 'c8'], quai: [] } });
+  let j = await jalons34();
+  if (j.charge !== 'ko' || j.choix !== 'ko' || j.horaire !== 'ko' || j.trajet10 !== 'ko') throw new Error(JSON.stringify(j));
+  await poser34({ tournee: { ...PARFAIT34.tournee, ordre: ['c2', 'c6', 'c7', 'c1', 'c4', 'c3', 'c8'], quai: ['c5'] } });
+  j = await jalons34();
+  if (j.choix !== 'ko' || j.trajet10 !== 'ko') throw new Error(JSON.stringify(j));
+});
+
+await v('ENT-3.4 : une formule tapée en valeur ne compte pas ; une donnée fausse ne fait tomber que « données »', async () => {
+  await poser34({ tournee: { ...PARFAIT34.tournee, grille: { cases: { ...FEUILLE34, B10: '228' } } } });
+  let j = await jalons34();
+  if (j.formules !== 'ko' || j.choix !== 'ko') throw new Error('valeur tapée acceptée : ' + JSON.stringify(j));
+  await poser34({ tournee: { ...PARFAIT34.tournee, grille: { cases: { ...FEUILLE34, F7: '15:15' } } } });
+  j = await jalons34();
+  if (j.donnees !== 'ko' || j.formules !== 'ok') throw new Error(JSON.stringify(j));
+});
+
+await v('ENT-3.4 : à l’écran, ni verdict ni « Vérifier » ; « Rendre ma copie » rend la note des jalons, une fois', async () => {
+  await page34.evaluate(() => { const d = window.__b34.db; Object.keys(d).forEach((k) => delete d[k]); });
+  await monter34();
+  await poser34(PARFAIT34);
+  await page34.click('#boost34 .ent-nav[data-vue="tournee"]');
+  await page34.waitForTimeout(300);
+  for (const id of ['donnees', 'tournee', 'heures']) {
+    const b = await page34.$(`${z34} .tour-onglets [data-tour-onglet="${id}"]`);
+    if (b) { await b.click(); await page34.waitForTimeout(120); }
+    const t = (await page34.textContent(z34)).replace(/\s+/g, ' ');
+    if (/dépassée|raté|respectée|manqué/i.test(t)) throw new Error(`verdict dans l’onglet ${id} : ` + t.slice(0, 200));
+    if (await page34.$(`${z34} [data-gr-verifier]`)) throw new Error('bouton « Vérifier » présent');
+  }
+  if ((await page34.evaluate(() => window.__b34.S.suivi.length))) throw new Error('le suivi a reçu une note pendant l’épreuve');
+  await page34.waitForSelector('#boost34 [data-copie-rendre]');
+  await page34.$eval('#boost34 [data-copie-rendre]', (b) => b.click());
+  await page34.$eval('#boost34 [data-copie-rendre]', (b) => b.click());
+  await page34.waitForSelector('#boost34 [data-copie-etat="rendue"]');
+  const r = await page34.evaluate(() => window.__b34.S.rendre);
+  if (r.length !== 1 || r[0].score !== 20 || r[0].max !== 20) throw new Error(JSON.stringify(r));
+});
+
+await v('ENT-3.4 : le volet sème le mail de M. Morin (tutoiement, train 16 h 07, créneau de la Droguerie Soulier)', async () => {
+  const m = await page34.evaluate(() => window.__b34.db.mails.find((x) => /Tournée vélo-cargo/.test(x.subject)));
+  if (!m || !/Bonjour Lea/.test(m.text) || !/16 h 07/.test(m.text) || !/Droguerie Soulier ne reçoit ses livraisons qu’avant 15 h 10/.test(m.text)) throw new Error(m && m.text);
+  if (/\bvous\b/i.test(m.text)) throw new Error('vouvoiement dans le mail');
+});
+
+await v('ENT-3.4 : aucune erreur de console', async () => {
+  if (erreurs34.length) throw new Error([...new Set(erreurs34)].slice(0, 3).join(' | '));
+});
+await ctx34.close();
+
 }

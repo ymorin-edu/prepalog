@@ -20,11 +20,14 @@
 // Construit, et annoncé comme tel à l'écran : les tournées et le plan de tri, les commerces Points Relais, leurs horaires,
 // tous les prénoms, tous les messages, le colis du fil rouge et sa cliente. Aucun salarié réel, aucun visage.
 // Charte : la couleur réelle de la marque n'est pas relevée ; accent bordeaux CONSTRUIT (teinte rouge : le moteur le garde
-// au bandeau et au menu, jamais dans la zone de travail, décision du 05/10/2026). Logo : texte seul (pas d'image sans
-// l'accord de Tristan).
+// au bandeau et au menu, jamais dans la zone de travail, décision du 05/10/2026). Logo : `contenus/trames/logos/mondial-relay.png`
+// (image fournie par Tristan le 26/10/2026 ; fond blanc extérieur rendu transparent, recadré, SHA-256 de l'original 2737a5ad…576ff).
+
+export const LOGO = './contenus/trames/logos/mondial-relay.png';
 
 export const ENTREPRISE = {
   id: 'mondial-relay',
+  logo: LOGO,
   nom: 'Mondial Relay',
   sousTitre: 'Hub et agence de Buchères (10)',
   exercice: 'Le pic de fin d’année',
