@@ -109,7 +109,7 @@ await v('ENT-18.x : les cinq séances se chargent (Tle : guidage, entraînement,
   egal(r.out.map((x) => x.total + x.part + x.ouvPart), [20, 20, 20, 20, 20], 'jalons + questions');
   egal(r.out.map((x) => x.noter), ['undefined', 'undefined', 'undefined', 'undefined', 'function'], 'noter seulement en évaluation');
   egal(r.out.map((x) => x.reg), [true, true, true, true, true], 'au registre');
-  egal([r.e.nom, r.e.logo], ['Airbus Helicopters', './contenus/trames/logos/airbus-texte.svg'], 'entreprise n° 18');
+  egal([r.e.nom, r.e.logo], ['Airbus Helicopters', './contenus/trames/logos/airbus.svg'], 'entreprise n° 18');
 });
 
 await v('ENT-18.x : les données — poids volumétrique et taxable, minimums, supplément, prestataires possibles, AOG au plus rapide, sinon au moins cher ; les réservations de Sofiane (valeurs écrites à la main)', async () => {

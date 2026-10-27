@@ -264,18 +264,18 @@ export const ENTREPRISES = [
   { n: 11, nom: 'Mondial Relay', metier: 'Colis et Points Relais — hub et agence de Buchères (Aube)', logo: './contenus/trames/logos/mondial-relay.png' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu construit de la charte ; charte : `contenus/ikea.js`.
   { n: 12, nom: 'IKEA', metier: 'Livraison de meubles — centre de distribution clients de Gennevilliers (Hauts-de-Seine)', logo: './contenus/trames/logos/ikea.svg' },
-  // Pas le logo officiel (le réseau du cloud ne peut pas le récupérer ; à faire depuis le PC de Tristan, alerte 10) : le nom en texte, dans le bleu nuit construit de la charte ; charte : `contenus/stellantis.js`.
-  { n: 13, nom: 'Stellantis', metier: 'Usine de Sochaux (Doubs) — logistique, magasin des petites pièces', logo: './contenus/trames/logos/stellantis-texte.svg' },
-  // L'élève travaille chez un distributeur CONSTRUIT (plateforme régionale d'une enseigne) : le nom du cas en texte, pas le logo de Lactalis ; charte : `contenus/lactalis.js`.
-  { n: 14, nom: 'Rappel Lactalis', metier: 'Traçabilité — plateforme régionale d’une enseigne de supermarchés (Mayenne), décembre 2017', logo: './contenus/trames/logos/lactalis-texte.svg' },
-  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu ardoise construit de la charte ; charte : `contenus/syngenta.js`.
-  { n: 15, nom: 'Syngenta', metier: 'Produits phytosanitaires — magasin des produits finis de l’usine d’Aigues-Vives (Gard), site Seveso', logo: './contenus/trames/logos/syngenta-texte.svg' },
-  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le violet ardoise construit de la charte ; charte : `contenus/royal-canin.js`.
-  { n: 16, nom: 'Royal Canin', metier: 'Aliments pour animaux — entrepôt de produits finis de l’usine d’Aimargues (Gard)', logo: './contenus/trames/logos/royal-canin-texte.svg' },
-  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu nuit construit de la charte ; charte : `contenus/la-redoute.js`.
-  { n: 17, nom: 'La Redoute', metier: 'E-commerce mode et maison — Quai 30, l’entrepôt de Wattrelos (Nord) : emballage et retours', logo: './contenus/trames/logos/la-redoute-texte.svg' },
-  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu ardoise construit de la charte ; charte : `contenus/airbus.js`.
-  { n: 18, nom: 'Airbus Helicopters', metier: 'Hélicoptères — expédition des pièces de rechange depuis Marignane (Bouches-du-Rhône)', logo: './contenus/trames/logos/airbus-texte.svg' },
+  // Logo officiel (SVG de Wikimedia Commons, 27/10/2026, règle de Tristan : toujours les vrais logos) ; charte : `contenus/stellantis.js`.
+  { n: 13, nom: 'Stellantis', metier: 'Usine de Sochaux (Doubs) — logistique, magasin des petites pièces', logo: './contenus/trames/logos/stellantis.svg' },
+  // Logo officiel de Lactalis (SVG de Wikimedia Commons, 27/10/2026, demande de Tristan) ; l'élève travaille chez un distributeur construit, le logo est celui du cas du rappel ; charte : `contenus/lactalis.js`.
+  { n: 14, nom: 'Rappel Lactalis', metier: 'Traçabilité — plateforme régionale d’une enseigne de supermarchés (Mayenne), décembre 2017', logo: './contenus/trames/logos/lactalis.svg' },
+  // Logo officiel (SVG de Wikimedia Commons, 27/10/2026, règle de Tristan : toujours les vrais logos) ; charte : `contenus/syngenta.js`.
+  { n: 15, nom: 'Syngenta', metier: 'Produits phytosanitaires — magasin des produits finis de l’usine d’Aigues-Vives (Gard), site Seveso', logo: './contenus/trames/logos/syngenta.svg' },
+  // Logo officiel (SVG de Wikimedia Commons, 27/10/2026, règle de Tristan : toujours les vrais logos) ; charte : `contenus/royal-canin.js`.
+  { n: 16, nom: 'Royal Canin', metier: 'Aliments pour animaux — entrepôt de produits finis de l’usine d’Aimargues (Gard)', logo: './contenus/trames/logos/royal-canin.svg' },
+  // Logo officiel (SVG de Wikimedia Commons, 27/10/2026, règle de Tristan : toujours les vrais logos) ; charte : `contenus/la-redoute.js`.
+  { n: 17, nom: 'La Redoute', metier: 'E-commerce mode et maison — Quai 30, l’entrepôt de Wattrelos (Nord) : emballage et retours', logo: './contenus/trames/logos/la-redoute.svg' },
+  // Logo officiel (SVG de Wikimedia Commons, 27/10/2026, règle de Tristan : toujours les vrais logos) ; charte : `contenus/airbus.js`.
+  { n: 18, nom: 'Airbus Helicopters', metier: 'Hélicoptères — expédition des pièces de rechange depuis Marignane (Bouches-du-Rhône)', logo: './contenus/trames/logos/airbus.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre

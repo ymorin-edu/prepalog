@@ -18,7 +18,7 @@
 // « type »), ses références (des FAMILLES de pièces, jamais une référence constructeur), leurs emplacements, leurs prix, leurs sorties, les camions, les
 // prénoms de l'équipe (prénoms seuls). Aucun document Stellantis reproduit : tout est reconstitué, avec mention en pied.
 // Charte : le bleu nuit reste au bandeau et au menu (jamais dans la zone de travail : sur les vues de transport, le bleu est le repère « client »).
-// Logo : le nom en texte (le logo officiel n'a pas pu être récupéré depuis le cloud : réseau fermé ; à faire depuis le PC de Tristan, alerte 10).
+// Logo : le logotype officiel (SVG de Wikimedia Commons, 27/10/2026) ; voir `activites/index.js`.
 
 export const ENTREPRISE = {
   id: 'stellantis',

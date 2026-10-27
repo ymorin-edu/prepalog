@@ -108,7 +108,7 @@ await v('ENT-16.x : les cinq séances se chargent (Tle : guidage, entraînement,
   egal(r.out.map((x) => x.total + x.part + x.ouvPart), [20, 20, 20, 20, 20], 'jalons + questions');
   egal(r.out.map((x) => x.noter), ['undefined', 'undefined', 'undefined', 'undefined', 'function'], 'noter seulement en évaluation');
   egal(r.out.map((x) => x.reg), [true, true, true, true, true], 'au registre');
-  egal([r.e.nom, r.e.logo], ['Royal Canin', './contenus/trames/logos/royal-canin-texte.svg'], 'entreprise n° 16');
+  egal([r.e.nom, r.e.logo], ['Royal Canin', './contenus/trames/logos/royal-canin.svg'], 'entreprise n° 16');
 });
 
 await v('ENT-16.x : les données — rotation, couverture, ruptures, surstocks, service ; l’implantation et ses réappros ; la limite de DDM, le FIFO de Mehdi et le FEFO (valeurs écrites à la main)', async () => {

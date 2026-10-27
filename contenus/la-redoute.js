@@ -19,7 +19,7 @@ export const ENTREPRISE = {
   nom: 'La Redoute',
   sousTitre: 'Quai 30, Wattrelos (Nord) — emballage et retours',
   exercice: 'Emballer juste, trier les retours',
-  logo: './contenus/trames/logos/la-redoute-texte.svg',
+  logo: './contenus/trames/logos/la-redoute.svg',
 };
 export const VOCAB = { unit: 'article', unitPl: 'articles', sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton', mailDomain: 'quai30.example' };
 // Un bleu nuit CONSTRUIT (pas la charte de la marque) : ni rouge ni vert dans la zone de travail.

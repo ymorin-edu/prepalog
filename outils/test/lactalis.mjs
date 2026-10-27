@@ -121,7 +121,7 @@ await v('ENT-14.x : les quatre séances se chargent (1re, C3.2 : guidage, entra�
   egal(r.out.map((x) => x.total + x.part + x.ouvPart), [20, 20, 20, 20], 'jalons + questions');
   egal(r.out.map((x) => x.noter), ['undefined', 'undefined', 'undefined', 'function'], 'noter seulement en évaluation');
   egal(r.out.map((x) => x.reg), [true, true, true, true], 'au registre');
-  egal([r.e.nom, r.e.logo], ['Rappel Lactalis', './contenus/trames/logos/lactalis-texte.svg'], 'entreprise n° 14');
+  egal([r.e.nom, r.e.logo], ['Rappel Lactalis', './contenus/trames/logos/lactalis.svg'], 'entreprise n° 14');
 });
 
 await v('ENT-14.x : les données — lots visés, boîtes parties et restantes, magasins (valeurs écrites à la main) ; la date d’un lot se lit année-mois-jour ; le 15 février est compris', async () => {

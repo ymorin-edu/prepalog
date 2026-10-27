@@ -98,7 +98,7 @@ await v('ENT-15.x : les quatre séances se chargent (1re, C3.1 et C1.5 : guidage
   egal(r.out.map((x) => x.total + x.part + x.ouvPart), [20, 20, 20, 20], 'jalons + questions');
   egal(r.out.map((x) => x.noter), ['undefined', 'undefined', 'undefined', 'function'], 'noter seulement en évaluation');
   egal(r.out.map((x) => x.reg), [true, true, true, true], 'au registre');
-  egal([r.e.nom, r.e.logo], ['Syngenta', './contenus/trames/logos/syngenta-texte.svg'], 'entreprise n° 15');
+  egal([r.e.nom, r.e.logo], ['Syngenta', './contenus/trames/logos/syngenta.svg'], 'entreprise n° 15');
 });
 
 await v('ENT-15.x : les données — la cellule du danger le plus fort, la zone d’attente, les rétentions (50 % / 20 %, 800 L au moins), le plan de Lucas (valeurs écrites à la main)', async () => {

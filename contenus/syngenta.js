@@ -18,14 +18,14 @@ export const ENTREPRISE = {
   nom: 'Syngenta',
   sousTitre: 'Usine d’Aigues-Vives (Gard) — magasin des produits finis',
   exercice: 'Ranger des produits dangereux',
-  logo: './contenus/trames/logos/syngenta-texte.svg',
+  logo: './contenus/trames/logos/syngenta.svg',
 };
 export const VOCAB = {
   unit: 'bidon', unitPl: 'bidons',
   sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton',
   mailDomain: 'syngenta.example',
 };
-// Un bleu ardoise CONSTRUIT : la charte de Syngenta n'est pas reprise (le nom en texte, pas le logo) ; ni rouge (« faux ») ni vert (« juste »).
+// Un bleu ardoise CONSTRUIT : la charte de Syngenta n'est pas reprise (seul le logo l'est) ; ni rouge (« faux ») ni vert (« juste »).
 export const THEME = { accent: '#46586b', papier: true };
 export const CATALOGUE = catalogueSimple(PRODUITS.map((p) => ({ ref: p.ref, designation: p.nom, marque: 'Syngenta (produit construit)', categorie: 'Phytosanitaire', fournisseur: 'F-SYN', stock: 0 })));
 export const SUPPLIERS = [{ id: 'F-SYN', brand: 'Syngenta', name: 'Lignes de conditionnement de l’usine', adr: '', cp: '', ville: 'Aigues-Vives', contact: '', tel: '',
@@ -61,7 +61,7 @@ export function lireNombre(s) {
 const memes = (a, b) => a.length === b.length && a.every((x) => b.includes(x));
 const nomCellule = (c) => (c === ATTENTE ? 'zone d’attente du quai' : CELLULE[c].nom.replace(' — ', ' (') + ')');
 const court = (c) => (c === ATTENTE ? 'zone d’attente' : `cellule ${c.slice(1)}`);
-const pictoHtml = (p) => `<span class="sy-picto" title="${ech(PICTOS[p].nom)}">◇ ${p}</span>`;
+const pictoHtml = (p) => `<span class="sy-picto" title="${ech(PICTOS[p].nom)}"><img src="./contenus/images/syngenta/${p.toLowerCase()}.png" alt="" width="30" height="30"> ${p}</span>`;
 
 export const STYLE = `
 --douce:#555047;
@@ -77,7 +77,8 @@ export const STYLE = `
 .sy-table th{color:var(--douce); font-weight:600}
 .sy-table .sy-d{text-align:right; white-space:nowrap}
 .sy-mono{font-family:ui-monospace, Consolas, monospace; white-space:nowrap}
-.sy-picto{display:inline-block; margin:0 6px 2px 0; padding:0 5px; border:1.5px solid #b3261e; border-radius:3px; font-size:.8rem; white-space:nowrap}
+.sy-picto{display:inline-flex; align-items:center; gap:4px; margin:0 8px 2px 0; font-size:.8rem; white-space:nowrap}
+.sy-picto img{display:block}
 .sy-pied{margin:12px -18px 0; font-size:.72rem; color:var(--douce); border-top:1px solid #e3ded3; padding:6px 18px; text-align:right}
 `;
 

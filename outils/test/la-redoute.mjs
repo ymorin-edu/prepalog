@@ -109,7 +109,7 @@ await v('ENT-17.x : les cinq séances se chargent (Tle : guidage, entraînement,
   egal(r.out.map((x) => x.total + x.part + x.ouvPart), [20, 20, 20, 20, 20], 'jalons + questions');
   egal(r.out.map((x) => x.noter), ['undefined', 'undefined', 'undefined', 'undefined', 'function'], 'noter seulement en évaluation');
   egal(r.out.map((x) => x.reg), [true, true, true, true, true], 'au registre');
-  egal([r.e.nom, r.e.logo], ['La Redoute', './contenus/trames/logos/la-redoute-texte.svg'], 'entreprise n° 17');
+  egal([r.e.nom, r.e.logo], ['La Redoute', './contenus/trames/logos/la-redoute.svg'], 'entreprise n° 17');
 });
 
 await v('ENT-17.x : les données — le plus petit format (calage des fragiles, pochette pour le souple seulement), le vide, le carton économisé ; les filières des retours, le taux, le tri de Julien (valeurs écrites à la main)', async () => {

@@ -19,7 +19,7 @@ export const ENTREPRISE = {
   nom: 'Airbus Helicopters',
   sousTitre: 'Marignane (Bouches-du-Rhône) — expédition des pièces de rechange',
   exercice: 'Confier les expéditions',
-  logo: './contenus/trames/logos/airbus-texte.svg',
+  logo: './contenus/trames/logos/airbus.svg',
 };
 export const VOCAB = { unit: 'colis', unitPl: 'colis', sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton', mailDomain: 'airbus.example' };
 // Un bleu ardoise CONSTRUIT (pas la charte de la marque).

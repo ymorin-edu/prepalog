@@ -19,7 +19,7 @@ export const ENTREPRISE = {
   nom: 'Royal Canin',
   sousTitre: 'Aimargues (Gard) — entrepôt de produits finis',
   exercice: 'Piloter l’entrepôt de produits finis',
-  logo: './contenus/trames/logos/royal-canin-texte.svg',
+  logo: './contenus/trames/logos/royal-canin.svg',
 };
 export const VOCAB = { unit: 'sac', unitPl: 'sacs', sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton', mailDomain: 'royalcanin.example' };
 // Un violet ardoise CONSTRUIT : la charte rouge de la marque n'est pas reprise (le rouge dirait « faux » dans la zone de travail).
