@@ -17,7 +17,7 @@
 // Construit, et dit comme tel à l'écran : le magasin des petites pièces (Sochaux ne dit pas comment il range ses petites pièces : c'est un magasin d'usine
 // « type »), ses références (des FAMILLES de pièces, jamais une référence constructeur), leurs emplacements, leurs prix, leurs sorties, les camions, les
 // prénoms de l'équipe (prénoms seuls). Aucun document Stellantis reproduit : tout est reconstitué, avec mention en pied.
-// Charte : le bleu nuit reste au bandeau et au menu (jamais dans la zone de travail : sur les vues de transport, le bleu est le repère « client »).
+// Charte : le bleu Stellantis #243882 (titres et liens de stellantis.com, relevé le 27/10/2026 ; police du site : Encode Sans, non embarquée), fond papier.
 // Logo : le logotype officiel (SVG de Wikimedia Commons, 27/10/2026) ; voir `activites/index.js`.
 
 export const ENTREPRISE = {
@@ -25,6 +25,7 @@ export const ENTREPRISE = {
   nom: 'Stellantis',
   sousTitre: 'Usine de Sochaux (Doubs) — équipe logistique',
   exercice: 'Approvisionner et gérer le magasin de l’usine',
+  logo: './contenus/trames/logos/stellantis.svg',
 };
 
 export const VOCAB = {
@@ -33,7 +34,7 @@ export const VOCAB = {
   mailDomain: 'usine-sochaux.example',
 };
 
-export const THEME = { accent: '#14284b', papier: true };
+export const THEME = { accent: '#243882', papier: true };
 
 export const MENTION = 'Réels : l’usine Stellantis de Sochaux (Doubs), sa ligne unique 3008 et 5008, ses chiffres de logistique (Le Trois, avril et juillet 2026 ; communiqué Stellantis du 05/09/2022). '
   + 'Construits : le magasin des petites pièces, ses références, ses emplacements et ses prix, les camions, tous les prénoms, les messages.';
@@ -112,7 +113,7 @@ export const euros = (n) => `${String(Math.round(n * 100) / 100).replace('.', ',
 export const PIED = 'Document pédagogique — reconstitution, non contractuel.';
 export const pied = (texte = PIED) => `<p class="st-pied">${ech(texte)}</p>`;
 
-// La mise en page des documents joints (papier, encre ; le bleu nuit de la charte n'y entre pas).
+// La mise en page des documents joints (papier, encre ; le bleu de la charte n'y entre pas).
 export const STYLE_DOCUMENTS = `
 --douce:#555047;
 .st-doc{padding:14px 18px 0}

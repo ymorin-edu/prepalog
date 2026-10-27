@@ -22,8 +22,8 @@ export const ENTREPRISE = {
   logo: './contenus/trames/logos/airbus.svg',
 };
 export const VOCAB = { unit: 'colis', unitPl: 'colis', sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton', mailDomain: 'airbus.example' };
-// Un bleu ardoise CONSTRUIT (pas la charte de la marque).
-export const THEME = { accent: '#3a4f63', papier: true };
+// Charte d'airbus.com, rubrique Helicopters (relevé du 27/10/2026) : le bleu Airbus #00205b (--awx-color-accent, titres, liens) ; police Inter, non embarquée.
+export const THEME = { accent: '#00205b', papier: true };
 export const CATALOGUE = catalogueSimple([{ ref: 'PR-GEN', designation: 'Pièce de rechange', marque: 'Pièce construite', categorie: 'Pièces de rechange', fournisseur: 'F-AH', stock: 0 }]);
 export const SUPPLIERS = [{ id: 'F-AH', brand: 'Airbus Helicopters', name: 'Magasin des pièces de rechange', adr: '', cp: '', ville: 'Marignane', contact: '', tel: '', email: 'magasin@airbus.example', delai: 1, franco: 0, pay: '', moq: 1 }];
 export const SUP_BY_ID = Object.fromEntries(SUPPLIERS.map((s) => [s.id, s]));

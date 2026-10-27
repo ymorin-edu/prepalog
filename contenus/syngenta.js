@@ -25,8 +25,9 @@ export const VOCAB = {
   sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton',
   mailDomain: 'syngenta.example',
 };
-// Un bleu ardoise CONSTRUIT : la charte de Syngenta n'est pas reprise (seul le logo l'est) ; ni rouge (« faux ») ni vert (« juste »).
-export const THEME = { accent: '#46586b', papier: true };
+// Charte de syngenta.fr (relevé du 27/10/2026) : le vert foncé #264600 de sa palette (sa couleur principale #5f7800, teinte 72°, n'est pas reconnue verte par le moteur
+// et aurait mis des aplats verts dans la zone de travail). Charte VERTE : le moteur la garde au bandeau et au menu, l'encre la remplace dans la zone de travail. Police Noto Sans, non embarquée.
+export const THEME = { accent: '#264600', papier: true };
 export const CATALOGUE = catalogueSimple(PRODUITS.map((p) => ({ ref: p.ref, designation: p.nom, marque: 'Syngenta (produit construit)', categorie: 'Phytosanitaire', fournisseur: 'F-SYN', stock: 0 })));
 export const SUPPLIERS = [{ id: 'F-SYN', brand: 'Syngenta', name: 'Lignes de conditionnement de l’usine', adr: '', cp: '', ville: 'Aigues-Vives', contact: '', tel: '',
   email: 'conditionnement@syngenta.example', delai: 0, franco: 0, pay: '', moq: 1 }];

@@ -25,8 +25,8 @@ export const ENTREPRISE = {
   logo: './contenus/trames/logos/royal-canin.svg',
 };
 export const VOCAB = { unit: 'sac', unitPl: 'sacs', sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton', mailDomain: 'royalcanin.example' };
-// Un violet ardoise CONSTRUIT : la charte rouge de la marque n'est pas reprise (le rouge dirait « faux » dans la zone de travail).
-export const THEME = { accent: '#4f4a6b', papier: true };
+// Charte de royalcanin.com/fr (relevé du 27/10/2026) : le rouge Royal Canin #e2001a (titres, liens, --color-brand-rc-500). Charte ROUGE : le moteur la garde au bandeau et au menu, l'encre la remplace dans la zone de travail (comme Smoby). 4,9 avec le blanc du bandeau.
+export const THEME = { accent: '#e2001a', papier: true };
 export const CATALOGUE = catalogueSimple(REFS.map((r) => ({ ref: r.ref, designation: `${r.nom}, sac ${r.kg} kg`, marque: 'Royal Canin (référence construite)', categorie: 'Aliment pour animaux', fournisseur: 'F-RC', stock: 0 })));
 export const SUPPLIERS = [{ id: 'F-RC', brand: 'Royal Canin', name: 'Usine d’Aimargues (production)', adr: '', cp: '', ville: 'Aimargues', contact: '', tel: '', email: 'production@royalcanin.example', delai: 4, franco: 0, pay: '', moq: 1 }];
 export const SUP_BY_ID = Object.fromEntries(SUPPLIERS.map((s) => [s.id, s]));

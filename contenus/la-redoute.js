@@ -22,8 +22,8 @@ export const ENTREPRISE = {
   logo: './contenus/trames/logos/la-redoute.svg',
 };
 export const VOCAB = { unit: 'article', unitPl: 'articles', sizeLabel: '', sizeShort: '', configWord: '', icone: 'carton', mailDomain: 'quai30.example' };
-// Un bleu nuit CONSTRUIT (pas la charte de la marque) : ni rouge ni vert dans la zone de travail.
-export const THEME = { accent: '#2f4a6b', papier: true };
+// Charte de laredoute.fr (relevé du 27/10/2026) : noir #12151b sur blanc (menu, titres, liens, bouton principal) ; le rose du logo n'apparaît sur aucun élément du site. Police Poppins, non embarquée.
+export const THEME = { accent: '#12151b', papier: true };
 export const CATALOGUE = catalogueSimple(Object.entries(ARTICLES).map(([ref, a]) => ({ ref, designation: a.nom, marque: 'Article construit', categorie: a.souple ? 'Textile' : 'Rigide', fournisseur: 'F-LR', stock: 0 })));
 export const SUPPLIERS = [{ id: 'F-LR', brand: 'La Redoute', name: 'Quai 30', adr: '', cp: '', ville: 'Wattrelos', contact: '', tel: '', email: 'quai30@quai30.example', delai: 1, franco: 0, pay: '', moq: 1 }];
 export const SUP_BY_ID = Object.fromEntries(SUPPLIERS.map((s) => [s.id, s]));
