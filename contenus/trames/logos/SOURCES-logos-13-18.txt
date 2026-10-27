@@ -1,0 +1,23 @@
+Logos téléchargés le 27/10/2026 depuis Wikimedia Commons (les sites officiels n'ont pas été nécessaires).
+Licence Commons de tous ces fichiers : « Public domain » (logo textuel / formes simples, PD-textlogo) avec la mention
+« trademarked » : ce sont des marques déposées, l'usage reste soumis au droit des marques.
+Tous les SVG sont en tracés purs : aucune police externe, aucune image externe, aucun élément <text>, aucun fond (<rect>).
+Vérifiés à l'écran (rendu Chromium) le 27/10/2026.
+
+fichier             octets  dimensions Commons  SHA-256
+stellantis.svg       9966   512x108   fc02d818f8ae416ee06bf123b198d86891178a9121acb1a03a6311a84357623e
+  https://upload.wikimedia.org/wikipedia/commons/d/dd/Stellantis.svg  (File:Stellantis.svg) — logotype Stellantis, fond transparent
+lactalis.svg         1799   500x181   74ca5872177f05e7b31c15aa61869b819d3340d443fe16c5b7837f65bfb8f5b0
+  https://upload.wikimedia.org/wikipedia/commons/e/e1/Lactalis_2023_logo.svg  (File:Lactalis 2023 logo.svg) — logo actuel (2023)
+syngenta.svg         8214   815x269   f4c6b592e9a5080b46ed9780f6924fb22d68be2f2203e7b96ad7d1c7722c7e5a
+  https://upload.wikimedia.org/wikipedia/commons/e/ea/Syngenta_Logo.svg  (File:Syngenta Logo.svg) — logo « syngenta » à la feuille verte
+syngenta-group.svg   7476   1024x332  e4f475cd0fba0c6c06d5241cdf15c2f2211c8dca95d82843f8bcee1f89d65a6d
+  https://upload.wikimedia.org/wikipedia/commons/5/5f/Syngenta_logo.svg  (File:Syngenta logo.svg) — variante : « Syngenta Group » (quatre pétales)
+royal-canin.svg     14970   512x192   bb8d80f2ffc5515c9586c566d7c838fa8ba180eceb7c9136d8104400c2f80ffc
+  https://upload.wikimedia.org/wikipedia/commons/a/af/Royal-Canin-Logo.svg  (File:Royal-Canin-Logo.svg) — couronne + ROYAL CANIN, rouge
+la-redoute.svg       6668   700x700   12f1c8fc6b39cccd426df322990f89f49a638d0ea6ee0757743bc1c340aa2102
+  https://upload.wikimedia.org/wikipedia/commons/1/12/Logo_La_Redoute_-_2022.svg  (File:Logo La Redoute - 2022.svg) — logo carré actuel (2022)
+airbus.svg          11233   800x223   8a36c0232df32711ecdf23ed703c4fb7b096753f1bd0aecefb80dc22faa835cf
+  https://upload.wikimedia.org/wikipedia/commons/7/74/Airbus_Helicopters_logo_2014.svg  (File:Airbus Helicopters logo 2014.svg) — AIRBUS HELICOPTERS, version 2014
+airbus-2017.svg      1705   399x74    ac4fb782721d1461ffeb4b2d914b478b077c048e8039824564f708d8cf73bbea
+  https://upload.wikimedia.org/wikipedia/commons/5/5d/Airbus_Logo_2017.svg  (File:Airbus Logo 2017.svg) — variante : logotype AIRBUS actuel (2017), seul
