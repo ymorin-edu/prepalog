@@ -11,15 +11,19 @@
 //     pas: [{ id, libelle, titre, sousTitre, objet, message, pieces?: [ids], documents?: [ids], blocs: [...] | (db) => [...],
 //             jalons: [{ id, titre, groupe, poids, juste: (valeurs, db) => bool, titreBilan? }], largeurDocs? }],
 //     localiser?: { apres: k (la carte s'ouvre après la fiche k ; -1 = d'abord), vue, poids, groupe, objet, message, ... (option `localiser`) },
+//     planning?: { apres: k (le Planning s'ouvre après la fiche k ; -1 = d'abord), decl (la déclaration de la vue `core/types/planning.js`, sans `quand`),
+//                  poids: { 'v1-<jalon>' | 'v2-<jalon>': poids } (seuls ces jalons comptent), groupe, libelle, objet, message, pieces?,
+//                  alea?: { objet, message, pieces? } (le message qui ouvre la reprise : `phasePlanning: 2`), solution?: texte du corrigé },
 //     compteRendu?: { objet, message, lignes: (prenom, db) => [...], poids, groupe, titre },   // juste si toutes les lignes (hors salutation/fin) sont justes
 //     fin: 'texte du dernier message', questions, accueil?: [[titre, texte]…], finFige?, tirage? (jeu tiré par élève) }
 //
 // Règles tenues ici (CLAUDE.md, règles de Tristan) : rien n'est jugé avant l'envoi (un jalon rend « attente ») ; l'inaction vaut 0 ; aucun
 // message ne juge (un envoi corrigé reçoit un accusé neutre) ; tutoiement.
 
-import { apresFiche, localiserFini } from '../core/declencheurs.js';
+import { apresFiche, apresPlanning, localiserFini } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
 import { etapesLocaliser } from '../core/types/localiser.js';
+import { etapesPlanning } from '../core/types/planning.js';
 
 const fiche = (db, id) => (db && db.fiches && db.fiches[id]) || null;
 export const envoyee = (db, id) => !!(fiche(db, id) && fiche(db, id).envoye);
@@ -41,12 +45,16 @@ export function seanceFiches(U, S) {
   const fait = (p) => (db) => envoyee(db, fid(p)) || gesteFait(db, ID, `fiche:${fid(p)}:envoyer`);
   const L = S.localiser || null;
   const carteFaite = L ? (db) => localiserFini(L.vue)(db, ID) : null;
+  // Le Planning (Kuehne+Nagel ENT-24.x, 27/10/2026) : fait quand sa dernière version est envoyée (la reprise s'il y a un aléa).
+  const PL = S.planning || null;
+  const planFait = PL ? (db) => apresPlanning(PL.decl.id, PL.alea ? 2 : 1)(db) : null;
 
   // L'ordre des écrans : fiches, avec la carte glissée après la fiche `L.apres`.
   const ordre = [];
   if (L && L.apres === -1) ordre.push({ carte: true });
-  S.pas.forEach((p, k) => { ordre.push({ p }); if (L && L.apres === k) ordre.push({ carte: true }); });
-  const faitDe = (x) => (x.carte ? carteFaite : fait(x.p));
+  if (PL && PL.apres === -1) ordre.push({ plan: true });
+  S.pas.forEach((p, k) => { ordre.push({ p }); if (L && L.apres === k) ordre.push({ carte: true }); if (PL && PL.apres === k) ordre.push({ plan: true }); });
+  const faitDe = (x) => (x.carte ? carteFaite : x.plan ? planFait : fait(x.p));
   const avant = (i) => (i > 0 ? faitDe(ordre[i - 1]) : null);
 
   const FICHES = ordre.filter((x) => x.p).map((x) => {
@@ -60,12 +68,17 @@ export function seanceFiches(U, S) {
   const mail = (prenom, subject, text, o = {}) => ({ folder: 'in', ts: Date.now() + (o.decale || 0), from: T.nom, fromMail: T.mail, to: prenom,
     subject, kind: 'text', text, ...(o.extra || {}) });
   const signe = (t) => `${t}\n\n${T.appel}`;
-  const ouvre = (x, prenom, decale) => (x.carte
+  const ouvre = (x, prenom, decale) => (x.plan
+    ? mail(prenom, PL.objet, signe(PL.message.replace(/\{prenom\}/g, prenom)), { decale, extra: PL.pieces ? { pieces: PL.pieces } : {} })
+    : x.carte
     ? mail(prenom, L.objet, signe(L.message), { decale })
     : mail(prenom, x.p.objet, signe(x.p.message.replace(/\{prenom\}/g, prenom)), { decale, extra: { ...(x.p.pieces ? { pieces: x.p.pieces } : {}), ouvreFiche: fid(x.p) } }));
   const CR = S.compteRendu || null;
   const declencheurs = [];
   ordre.forEach((x, i) => { if (i > 0) declencheurs.push({ id: `ouvre-${i}`, quand: faitDe(ordre[i - 1]), semer: (prenom) => ({ mails: [ouvre(x, prenom, 1000)] }) }); });
+  // L'aléa du Planning : la 1re version envoyée (juste ou fausse), le message ouvre la reprise.
+  if (PL && PL.alea) declencheurs.push({ id: 'alea', quand: apresPlanning(PL.decl.id), phasePlanning: 2, semer: (prenom) => ({ mails: [mail(prenom, PL.alea.objet,
+    signe(PL.alea.message.replace(/\{prenom\}/g, prenom)), { decale: 1000, extra: PL.alea.pieces ? { pieces: PL.alea.pieces } : {} })] }) });
   const dernier = faitDe(ordre[ordre.length - 1]);
   if (CR) {
     declencheurs.push({ id: 'compte', quand: dernier, semer: (prenom, db) => ({ mails: [mail(prenom, CR.objet, signe(CR.message.replace(/\{prenom\}/g, prenom)), {
@@ -90,6 +103,13 @@ export function seanceFiches(U, S) {
       ETAPES.push(...etapesLocaliser(L, ID).map((j) => (j.bonus ? j : Object.assign(j, { poids: L.poids, groupe: L.groupe }))));
       continue;
     }
+    if (x.plan) {
+      const E = etapesPlanning(PL.decl).filter((e) => PL.poids[e.id] != null);
+      const inconnus = Object.keys(PL.poids).filter((k) => !E.some((e) => e.id === k));
+      if (inconnus.length) throw new Error(`${ID} : jalon du Planning inconnu (${inconnus.join(', ')})`);
+      ETAPES.push(...E.map((e) => Object.assign(e, { poids: PL.poids[e.id], groupe: PL.groupe || PL.libelle, ecran: `planning:${PL.decl.id}` })));
+      continue;
+    }
     const p = x.p; const F = fid(p);
     for (const j of p.jalons) {
       ETAPES.push({ id: j.id, titre: j.titre, groupe: j.groupe || p.libelle, poids: j.poids, ecran: `fiche:${F}`, ...(j.titreBilan ? { titreBilan: j.titreBilan } : {}),
@@ -107,7 +127,7 @@ export function seanceFiches(U, S) {
   const ids = ETAPES.map((e) => e.id);
   if (new Set(ids).size !== ids.length) throw new Error(`${ID} : deux jalons ont le même id`);
 
-  const SUITE = ordre.map((x) => (x.carte ? { vue: 'localiser', libelle: L.libelle, fait: carteFaite }
+  const SUITE = ordre.map((x) => (x.plan ? { vue: 'planning', libelle: PL.libelle, fait: planFait } : x.carte ? { vue: 'localiser', libelle: L.libelle, fait: carteFaite }
     : { vue: x === ordre.find((y) => y.p) ? 'fiche' : `fiche:${fid(x.p)}`, libelle: x.p.libelle, fait: fait(x.p) }));
   if (CR) SUITE.push({ vue: 'mail', mail: PHRASES_ID, libelle: `Le compte rendu à ${T.appel}`, fait: (db) => phrasesJustes(db, PHRASES_ID).envoye });
   const num = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'];
@@ -125,6 +145,7 @@ export function seanceFiches(U, S) {
     documents: S.documents, documentsStyle: U.STYLE, fiches: FICHES,
     ...(L ? { localiser: L, finFige: S.finFige || 'La carte se joue au premier essai : elle ne se rejoue pas.' } : {}),
     ...(S.tirage ? { tirage: true } : {}),   // jeu tiré par élève : le moteur pose la graine (l'identifiant de l'élève) à la première ouverture
+    ...(PL ? { planning: PL.apres >= 0 ? { ...PL.decl, quand: (db) => fait(S.pas[PL.apres])(db) } : PL.decl } : {}),
     ...(L && L.apres >= 0 ? { fermetures: { localiser: { ouvertSi: (db) => fait(S.pas[L.apres])(db), message: `Après la fiche « ${S.pas[L.apres].libelle} »` } } } : {}),
   };
   // Le corrigé (onglet « Corrigés » de l'enseignant), recalculé depuis les jalons : `attendu` (texte ou fonction de la base) de chaque
@@ -136,6 +157,12 @@ export function seanceFiches(U, S) {
     let k = 0;
     if (L) items.push({ etape: ++k, etapeTitre: `${L.libelle || 'La carte'} (${pts(L.poids)} par réponse)`, genre: 'question', texte: 'La région et le département de chaque lieu',
       rep: L.lieux.map((x) => `${x.ville} : département ${x.dep}`).join(' · ') });
+    if (PL) {
+      const E = etapesPlanning(PL.decl).filter((e) => PL.poids[e.id] != null);
+      const tot = E.reduce((t, e) => t + PL.poids[e.id], 0);
+      items.push({ etape: ++k, etapeTitre: `${PL.libelle} (${pts(Math.round(tot * 100) / 100)})`, genre: 'question', texte: PL.decl.titre || PL.libelle,
+        rep: E.map((e) => `${e.titre} (${pts(PL.poids[e.id])})`).join(' · '), note: PL.solution || '' });
+    }
     for (const p of S.pas) {
       const tot = p.jalons.reduce((t, j) => t + j.poids, 0);
       items.push({ etape: ++k, etapeTitre: `${p.libelle} (${pts(Math.round(tot * 100) / 100)})`, genre: 'question', texte: p.titre,
