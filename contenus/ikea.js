@@ -115,6 +115,8 @@ export const STYLE_DOCUMENTS = `
 .ik-table th, .ik-table td{border-bottom:1px solid #d6d0c3; padding:5px 6px; text-align:left}
 .ik-table th{color:var(--douce); font-weight:600}
 .ik-table .ik-d{text-align:right; white-space:nowrap}
+.ik-table th.ik-d{white-space:normal}
+.ik-doc{overflow-x:auto}
 .ik-pied{margin:12px -18px 0; font-size:.72rem; color:var(--douce); border-top:1px solid #e3ded3; padding:6px 18px; text-align:right}
 `;
 

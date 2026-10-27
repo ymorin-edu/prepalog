@@ -85,6 +85,8 @@ export const STYLE = `
 .lx-table th, .lx-table td{border-bottom:1px solid #d6d0c3; padding:4px 6px; text-align:left}
 .lx-table th{color:var(--douce); font-weight:600}
 .lx-table .lx-d{text-align:right; white-space:nowrap}
+.lx-table th.lx-d{white-space:normal}
+.lx-doc{overflow-x:auto}
 .lx-mono{font-family:ui-monospace, Consolas, monospace; white-space:nowrap}
 .lx-lot{font-family:ui-monospace, Consolas, monospace; font-size:1.3rem; letter-spacing:.06em; margin:6px 0}
 .lx-pied{margin:12px -18px 0; font-size:.72rem; color:var(--douce); border-top:1px solid #e3ded3; padding:6px 18px; text-align:right}

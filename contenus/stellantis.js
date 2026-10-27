@@ -126,6 +126,8 @@ export const STYLE_DOCUMENTS = `
 .st-table th, .st-table td{border-bottom:1px solid #d6d0c3; padding:5px 6px; text-align:left}
 .st-table th{color:var(--douce); font-weight:600}
 .st-table .st-d{text-align:right; white-space:nowrap}
+.st-table th.st-d{white-space:normal}
+.st-doc{overflow-x:auto}
 .st-ex{margin:6px 0 10px}
 .st-pied{margin:12px -18px 0; font-size:.72rem; color:var(--douce); border-top:1px solid #e3ded3; padding:6px 18px; text-align:right}
 `;
