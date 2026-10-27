@@ -74,6 +74,8 @@ export const STYLE = `
 .ah-table th{color:var(--douce); font-weight:600}
 .ah-table .ah-d{text-align:right; white-space:nowrap}
 .ah-table th.ah-d{white-space:normal}
+.ah-table th{letter-spacing:0}
+.ah-table td.ah-md{white-space:normal}
 .ah-doc{overflow-x:auto}
 .ah-mono{font-family:ui-monospace, Consolas, monospace; white-space:nowrap}
 .ah-pied{margin:12px -18px 0; font-size:.72rem; color:var(--douce); border-top:1px solid #e3ded3; padding:6px 18px; text-align:right}
@@ -116,7 +118,7 @@ const docTarifs = () => ({ id: 'tarifs', titre: 'La grille des prestataires', co
         <td>${p.parKg ? `${n(p.parKg)} € par kg taxable, ${p.minimum} € au moins` : `${n(p.parKm)} € par km${p.minimum ? `, ${p.minimum} € au moins` : ''}`}</td>
         <td>${p.diviseur ? `L × l × h ÷ ${n(p.diviseur)}` : 'sans objet (prix au km)'}</td>
         <td>colis de ${n(p.longMax / 100)} m au plus${p.kmMax ? ` ; ${p.kmMax} km au plus` : ''}</td>
-        <td class="ah-d">${p.md ? `+ ${p.md} €` : 'sans supplément'}</td></tr>`).join('')}
+        <td class="ah-d ah-md">${p.md ? `+ ${p.md} €` : 'sans supplément'}</td></tr>`).join('')}
     </tbody></table>
     ${pied('Prestataires et tarifs CONSTRUITS pour l’exercice. Document pédagogique — reconstitution, non contractuel.')}
   </article>` });
