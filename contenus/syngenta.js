@@ -76,6 +76,8 @@ export const STYLE = `
 .sy-table th, .sy-table td{border-bottom:1px solid #d6d0c3; padding:4px 6px; text-align:left; vertical-align:top}
 .sy-table th{color:var(--douce); font-weight:600}
 .sy-table .sy-d{text-align:right; white-space:nowrap}
+.sy-table th.sy-d{white-space:normal}
+.sy-doc{overflow-x:auto}
 .sy-mono{font-family:ui-monospace, Consolas, monospace; white-space:nowrap}
 .sy-picto{display:inline-block; margin:0 6px 2px 0; padding:0 5px; border:1.5px solid #b3261e; border-radius:3px; font-size:.8rem; white-space:nowrap}
 .sy-pied{margin:12px -18px 0; font-size:.72rem; color:var(--douce); border-top:1px solid #e3ded3; padding:6px 18px; text-align:right}

@@ -73,6 +73,8 @@ export const STYLE = `
 .ah-table th, .ah-table td{border-bottom:1px solid #d6d0c3; padding:4px 6px; text-align:left; vertical-align:top}
 .ah-table th{color:var(--douce); font-weight:600}
 .ah-table .ah-d{text-align:right; white-space:nowrap}
+.ah-table th.ah-d{white-space:normal}
+.ah-doc{overflow-x:auto}
 .ah-mono{font-family:ui-monospace, Consolas, monospace; white-space:nowrap}
 .ah-pied{margin:12px -18px 0; font-size:.72rem; color:var(--douce); border-top:1px solid #e3ded3; padding:6px 18px; text-align:right}
 `;
