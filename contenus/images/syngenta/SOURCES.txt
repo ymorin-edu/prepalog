@@ -1,0 +1,23 @@
+Pictogrammes de danger SGH (règlement CLP), téléchargés le 27/10/2026 depuis Wikimedia Commons.
+Licence Commons : domaine public (pictogrammes officiels du SGH de l'ONU, formes simples).
+Tous en tracés purs : aucune police, aucune image externe ; losange à bordure rouge, fond blanc ou transparent.
+Vérifiés à l'écran (rendu Chromium) le 27/10/2026.
+
+sgh01.svg  SGH01 explosif  17787 octets  SHA-256 7daedecc22828389b734a0735a0e207f483184b1e4e3446e8b009df9ebff1c43
+  https://upload.wikimedia.org/wikipedia/commons/4/4a/GHS-pictogram-explos.svg
+sgh02.svg  SGH02 flamme  792 octets  SHA-256 e812ae23f6139af28167cab0a6ad131c116677121b785098a57213c281e03752
+  https://upload.wikimedia.org/wikipedia/commons/6/6d/GHS-pictogram-flamme.svg
+sgh03.svg  SGH03 comburant  3202 octets  SHA-256 aab8cd9f2f842a499768ef1ac58a7ae2947e0a0b9ce9835167d4da1b45320904
+  https://upload.wikimedia.org/wikipedia/commons/e/e5/GHS-pictogram-rondflam.svg
+sgh04.svg  SGH04 bouteille à gaz  2412 octets  SHA-256 5792f474c746302f73d075a91cf5eb5872fa4de1e2068b02f44537177746aeae
+  https://upload.wikimedia.org/wikipedia/commons/6/6a/GHS-pictogram-bottle.svg
+sgh05.svg  SGH05 corrosion  7812 octets  SHA-256 e70b57e57cb7a53ef97b8b0f9d7d143674293b6bb1338991dfebdfd5848097c0
+  https://upload.wikimedia.org/wikipedia/commons/a/a1/GHS-pictogram-acid.svg
+sgh06.svg  SGH06 tête de mort  5927 octets  SHA-256 8f84bcbb0e09d83011afda408e001cb9fc15603dba4a47a673b55db867ba4394
+  https://upload.wikimedia.org/wikipedia/commons/5/58/GHS-pictogram-skull.svg
+sgh07.svg  SGH07 point d'exclamation  721 octets  SHA-256 0774fa5f0b69944b5732df42195310513745f1835222b7c6fe51dfb8cffa7372
+  https://upload.wikimedia.org/wikipedia/commons/c/c3/GHS-pictogram-exclam.svg
+sgh08.svg  SGH08 danger pour la santé  9554 octets  SHA-256 a9d7063bf811a5a8462b6aef95b9e1cfff7cf4799242104a9ecae365c0483029
+  https://upload.wikimedia.org/wikipedia/commons/2/21/GHS-pictogram-silhouette.svg
+sgh09.svg  SGH09 environnement  1526 octets  SHA-256 ac03bb8aa044e841ffb84c1d1e7a2453c2553475750a2b97bd2bdac891071d19
+  https://upload.wikimedia.org/wikipedia/commons/b/b9/GHS-pictogram-pollu.svg
