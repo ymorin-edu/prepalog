@@ -105,6 +105,15 @@ rang : 13.1 à 13.5 viennent avant 13.6 à 13.12 à l'accueil, dans l'ordre de l
 Évaluations : copie rendue, un jeu tiré par élève, questions clés reprises sans aide, « Je ne sais pas » permis, jalons
 pondérés sur 20 (poids soumis à Tristan avant de coder).
 
+> **27/10/2026 — ENT-13.10 à 13.12 construites, en fiches (écart à ce tableau).** Choix de Tristan « Les quatre, dans l'ordre »
+> (option sans vue nouvelle) et délégation du 26/10 pour les poids et les questions. Pas de `planning` ni de `dialogue` : l'affectation
+> se choisit poste par poste dans une liste (quatre personnes, quatre postes : bord de ligne, quai, racks, kits ; les robots du
+> transstockeur roulent seuls), l'oral devient un compte rendu par phrases. 13.10 : affecter, accueillir Théo (ordre), la consigne du jour,
+> ses droits d'intérimaire. 13.11 : réaffecter sans Julien, la charge des kits (45 % de 5008 : 385,2 min, 2 personnes) et le renfort,
+> l'aménagement du poste d'Amel (avis du médecin du travail) et le secret médical. 13.12 : trois équipes et trois imprévus tirés par élève.
+> Poids en tête de `contenus/stellantis-ent1310.js` à `1312.js` ; données : `contenus/stellantis-equipe.js`. ENT-13.6 à 13.9 (C2.3, vue
+> « Bord de ligne ») restent à faire : 13.10 n'a donc pas de séance précédente.
+
 ### La méthode ABC dans la séance (ce que l'élève fait, et ce qui est vérifié)
 
 - **Sur quoi classer** : sur le **nombre de sorties** (rotation) pour décider **où ranger** ; c'est le critère déjà déclaré
