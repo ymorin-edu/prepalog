@@ -7,7 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Schneider Electric CAP (ENT-22.x), puis Kuehne+Nagel 1re, Yves Rocher 2de, Bord de ligne Tle (fil cloud « blocs suivants ») | `contenus/schneider*`, `activites/schneider-*`, `contenus/questions/ENT-22.*`, `outils/test/schneider.mjs`, `docs/briefs/schneider/`, `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS, GROUPES) | 27/10/2026 |
+| Schneider Electric CAP (ENT-22.x), puis Kuehne+Nagel 1re, Yves Rocher 2de, Bord de ligne Tle (fil cloud « blocs suivants ») | `contenus/schneider*`, `activites/schneider-*`, `contenus/questions/ENT-22.*`, `outils/test/schneider.mjs`, `docs/briefs/schneider/`, `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs` (BLOCS, GROUPES), ensuite `contenus/yves-rocher*`, `activites/yves-rocher-*`, `core/types/` (vue Bord de ligne, chantier moteur), `contenus/stellantis*` | 27/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).

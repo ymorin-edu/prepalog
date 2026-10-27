@@ -204,6 +204,23 @@ export const ACTIVITES = [
   () => import('./lidl-facture.js'),
   () => import('./lidl-evaluation-transport.js'),
   () => import('./lidl-evaluation-facture.js'),
+  // Schneider Electric, le centre de distribution d’Évreux (CAP OL, CAP-C1.1, C1.3 à C1.5, C3.6 et C3.7, ENT-22.1 à 22.10) : cadrage `docs/briefs/schneider/CADRAGE-schneider-cap.md`.
+  () => import('./schneider-bienvenue.js'),
+  () => import('./schneider-accueil.js'),
+  () => import('./schneider-mardi.js'),
+  () => import('./schneider-controle.js'),
+  () => import('./schneider-mehdi.js'),
+  () => import('./schneider-evaluation-reception.js'),
+  () => import('./schneider-ranger.js'),
+  () => import('./schneider-drone.js'),
+  () => import('./schneider-circulaire.js'),
+  () => import('./schneider-evaluation-stock.js'),
+  // Kuehne+Nagel, le hub aérien de Roissy-Charles-de-Gaulle (1re Bac Pro, C1.3, ENT-24.1 à 24.5) : cadrage `docs/briefs/kuehne-nagel/CADRAGE-kuehne-nagel-1re.md`.
+  () => import('./kuehne-nagel-prealertes.js'),
+  () => import('./kuehne-nagel-planning.js'),
+  () => import('./kuehne-nagel-lundi.js'),
+  () => import('./kuehne-nagel-lucas.js'),
+  () => import('./kuehne-nagel-evaluation.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -313,6 +330,10 @@ export const ENTREPRISES = [
   { n: 20, nom: 'Leroy Merlin', metier: 'Bricolage — la plateforme logistique nationale de Réau (Seine-et-Marne) : la sécurité au quai et dans les allées, le service clients', logo: './contenus/trames/logos/leroy-merlin.svg' },
   // Logo officiel (SVG de Wikimedia Commons, 27/10/2026) ; charte : `contenus/lidl.js` (bleu du logo).
   { n: 21, nom: 'Lidl', metier: 'Distribution alimentaire — la plateforme et direction régionale de Meaux (Seine-et-Marne) : la réception, le transport, la facture du fournisseur', logo: './contenus/trames/logos/lidl.svg' },
+  // Logo officiel (SVG de l’en-tête de se.com, 27/10/2026) ; charte : `contenus/schneider.js` (vert de la marque, gardé au bandeau).
+  { n: 22, nom: 'Schneider Electric', metier: 'Matériel électrique — le centre de distribution d’Évreux (Eure) : recevoir, contrôler, ranger', logo: './contenus/trames/logos/schneider-electric.svg' },
+  // Logo officiel (SVG de Wikimedia Commons, 27/10/2026) ; charte : `contenus/kuehne-nagel.js` (bleu marine du logo).
+  { n: 24, nom: 'Kuehne+Nagel', metier: 'Commissionnaire de transport — le hub aérien de Roissy-Charles-de-Gaulle : préparer la réception des envois (médicaments au froid, pièces d’avion urgentes)', logo: './contenus/trames/logos/kuehne-nagel.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre

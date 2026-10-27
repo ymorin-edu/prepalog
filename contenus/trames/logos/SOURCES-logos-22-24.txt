@@ -1,0 +1,18 @@
+Logos des entreprises 22 (Schneider Electric), 23 et 24 (à venir), pour les séances du 27/10/2026.
+Wikimedia Commons et se.com ne répondent pas depuis le cloud : téléchargés le 27/10/2026 sur le PC de Tristan (session à distance),
+transmis en base64, décodés par script, SHA-256 vérifié après écriture dans le dépôt.
+Les SVG sont en tracés purs : aucune image externe, aucune police externe, aucun @import ni url(http…), aucun élément <text>.
+
+fichier                  octets  viewBox     SHA-256
+schneider-electric.svg    3955   0 0 218 64  12A6389655ED64205651E63A6C75D33C4662FE95C1BBE8E64346E7670B5D12E0
+  Source  : le logo de l'en-tête du site officiel www.se.com (France), relevé le 27/10/2026.
+  Licence : commentaire du fichier « SPDX-FileCopyrightText: © 2024 Schneider Electric ; SPDX-License-Identifier: LicenseRef-Proprietary ».
+            Marque déposée : usage pédagogique, non commercial, logo reproduit tel quel (droit des marques).
+  Contenu : logotype « Schneider Electric » vert (#009530) ; fond transparent. Charte du site : vert de marque #3DCD58 (gardé au bandeau,
+            jamais dans la zone de travail : décision de Tristan du 05/10/2026).
+
+kuehne-nagel.svg          9682   -1.75 -1.75 294.64 61.96   B696FAB944A95B6F970EE07913BBB9C286706B492065626306269B92D0005184
+  Source  : Wikimedia Commons, « Kuehne + Nagel logo » (SVG, logotype actuel « KUEHNE+NAGEL »), téléchargé le 27/10/2026 sur le PC de Tristan.
+  Licence : domaine public sur Commons (logotype en lettres et formes simples). Marque déposée : usage pédagogique, logo reproduit tel quel.
+  Contenu : un seul tracé bleu marine (#003369), fond transparent. Fichier d'Inkscape gardé tel quel : il contient une déclaration DOCTYPE vers le
+            DTD SVG 1.1 du W3C et un commentaire « Created with Inkscape », inoffensifs (rien n'est chargé à l'affichage).
