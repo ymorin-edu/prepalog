@@ -215,6 +215,13 @@ export const ACTIVITES = [
   () => import('./schneider-drone.js'),
   () => import('./schneider-circulaire.js'),
   () => import('./schneider-evaluation-stock.js'),
+  // Yves Rocher, la plateforme logistique de La Villouët à La Gacilly (2de Bac Pro, C2.2 et C2.1, ENT-23.1 à 23.6) : cadrage `docs/briefs/yves-rocher/CADRAGE-yves-rocher-2de.md`.
+  () => import('./yves-rocher-bienvenue.js'),
+  () => import('./yves-rocher-chariot.js'),
+  () => import('./yves-rocher-controle.js'),
+  () => import('./yves-rocher-reclamation.js'),
+  () => import('./yves-rocher-black-friday.js'),
+  () => import('./yves-rocher-evaluation.js'),
   // Kuehne+Nagel, le hub aérien de Roissy-Charles-de-Gaulle (1re Bac Pro, C1.3, ENT-24.1 à 24.5) : cadrage `docs/briefs/kuehne-nagel/CADRAGE-kuehne-nagel-1re.md`.
   () => import('./kuehne-nagel-prealertes.js'),
   () => import('./kuehne-nagel-planning.js'),
@@ -332,6 +339,8 @@ export const ENTREPRISES = [
   { n: 21, nom: 'Lidl', metier: 'Distribution alimentaire — la plateforme et direction régionale de Meaux (Seine-et-Marne) : la réception, le transport, la facture du fournisseur', logo: './contenus/trames/logos/lidl.svg' },
   // Logo officiel (SVG de l’en-tête de se.com, 27/10/2026) ; charte : `contenus/schneider.js` (vert de la marque, gardé au bandeau).
   { n: 22, nom: 'Schneider Electric', metier: 'Matériel électrique — le centre de distribution d’Évreux (Eure) : recevoir, contrôler, ranger', logo: './contenus/trames/logos/schneider-electric.svg' },
+  // Logo officiel (SVG de l’en-tête d’yves-rocher.fr, 27/10/2026) ; charte : `contenus/yves-rocher.js` (vert foncé du logo, gardé au bandeau).
+  { n: 23, nom: 'Yves Rocher', metier: 'Cosmétique — la plateforme logistique de La Villouët à La Gacilly (Morbihan) : préparer les commandes des boutiques, leur répondre', logo: './contenus/trames/logos/yves-rocher.svg' },
   // Logo officiel (SVG de Wikimedia Commons, 27/10/2026) ; charte : `contenus/kuehne-nagel.js` (bleu marine du logo).
   { n: 24, nom: 'Kuehne+Nagel', metier: 'Commissionnaire de transport — le hub aérien de Roissy-Charles-de-Gaulle : préparer la réception des envois (médicaments au froid, pièces d’avion urgentes)', logo: './contenus/trames/logos/kuehne-nagel.svg' },
 ];

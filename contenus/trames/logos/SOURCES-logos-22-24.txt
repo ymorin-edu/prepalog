@@ -16,3 +16,9 @@ kuehne-nagel.svg          9682   -1.75 -1.75 294.64 61.96   B696FAB944A95B6F970E
   Licence : domaine public sur Commons (logotype en lettres et formes simples). Marque déposée : usage pédagogique, logo reproduit tel quel.
   Contenu : un seul tracé bleu marine (#003369), fond transparent. Fichier d'Inkscape gardé tel quel : il contient une déclaration DOCTYPE vers le
             DTD SVG 1.1 du W3C et un commentaire « Created with Inkscape », inoffensifs (rien n'est chargé à l'affichage).
+
+yves-rocher.svg           6860   0 0 920 200 BCB60C1DD6229B214A4CC0C887FEA1039F917851A34B1562CB61D7FB42962463
+  Source  : le logo de l'en-tête du site officiel www.yves-rocher.fr, relevé le 27/10/2026 sur le PC de Tristan (session à distance).
+  Licence : marque déposée : usage pédagogique, non commercial, logo reproduit tel quel (droit des marques).
+  Contenu : logotype « YVES ROCHER FRANCE » en tracés, un seul vert foncé (#014E2E), fond transparent. Seule retouche : l'attribut
+            viewBox="0 0 920 200" ajouté (le fichier d'origine n'avait que width et height), le dessin est inchangé.
