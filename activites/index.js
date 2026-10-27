@@ -167,6 +167,12 @@ export const ACTIVITES = [
   () => import('./la-redoute-retours.js'),
   () => import('./la-redoute-tri-julien.js'),
   () => import('./la-redoute-evaluation.js'),
+  // Airbus Helicopters, confier les expéditions des pièces de rechange (Tle, C2.6 et C3.1, ENT-18.1 à 18.5) : cadrage `docs/briefs/airbus/CADRAGE-airbus-tle.md`.
+  () => import('./airbus-expeditions.js'),
+  () => import('./airbus-expeditions-mardi.js'),
+  () => import('./airbus-flux-particuliers.js'),
+  () => import('./airbus-reservations-sofiane.js'),
+  () => import('./airbus-evaluation.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -268,6 +274,8 @@ export const ENTREPRISES = [
   { n: 16, nom: 'Royal Canin', metier: 'Aliments pour animaux — entrepôt de produits finis de l’usine d’Aimargues (Gard)', logo: './contenus/trames/logos/royal-canin-texte.svg' },
   // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu nuit construit de la charte ; charte : `contenus/la-redoute.js`.
   { n: 17, nom: 'La Redoute', metier: 'E-commerce mode et maison — Quai 30, l’entrepôt de Wattrelos (Nord) : emballage et retours', logo: './contenus/trames/logos/la-redoute-texte.svg' },
+  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu ardoise construit de la charte ; charte : `contenus/airbus.js`.
+  { n: 18, nom: 'Airbus Helicopters', metier: 'Hélicoptères — expédition des pièces de rechange depuis Marignane (Bouches-du-Rhône)', logo: './contenus/trames/logos/airbus-texte.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
