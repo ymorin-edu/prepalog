@@ -27,6 +27,10 @@ Les 7 briefs ENT-13.6 à 13.12 (C2.3 bord de ligne, C3.4 équipe) et le brief mo
 `docs/briefs/stellantis/maquette-bord-de-ligne.html`) : environ 2 h 30 d'écriture, quand Tristan le voudra ; la vue se construit
 seule, un seul chantier moteur à la fois.
 
+**État au 27/10/2026** : ENT-13.10 à 13.12 (équipe, C3.4) livrées en fiches ; la vue « Bord de ligne » (`core/types/ligne.js`) et
+ENT-13.6 à 13.9 (C2.3) livrées le même jour, `pret: true, ouverture: 'prof'` (données communes : `contenus/stellantis-ligne.js` ;
+blocs de tests `ligne` et `stellantis-ligne`). Le temps 2 est complet ; reste l'essai à l'écran par Tristan.
+
 ## À ne pas oublier
 
 - Un bloc de tests par séance (`outils/test/stellantis-13.x.mjs`, aides communes dans `outils/test/stellantis/commun.mjs`),

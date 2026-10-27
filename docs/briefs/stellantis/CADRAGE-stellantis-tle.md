@@ -112,7 +112,9 @@ pondérés sur 20 (poids soumis à Tristan avant de coder).
 > ses droits d'intérimaire. 13.11 : réaffecter sans Julien, la charge des kits (45 % de 5008 : 385,2 min, 2 personnes) et le renfort,
 > l'aménagement du poste d'Amel (avis du médecin du travail) et le secret médical. 13.12 : trois équipes et trois imprévus tirés par élève.
 > Poids en tête de `contenus/stellantis-ent1310.js` à `1312.js` ; données : `contenus/stellantis-equipe.js`. ENT-13.6 à 13.9 (C2.3, vue
-> « Bord de ligne ») restent à faire : 13.10 n'a donc pas de séance précédente.
+> « Bord de ligne ») livrées le 27/10/2026 après 13.10 à 13.12 : 13.10 reste sans séance précédente (l'équipe est une suite à part).
+> Données : `contenus/stellantis-ligne.js` ; poids en tête de `contenus/stellantis-ent136.js` à `139.js`. Écarts au cadrage : la note de Julien
+> se coche en cases (pas de `grille`) et le compte rendu de 13.8 va à Karim (« ce que je dis à Sandrine »).
 
 ### La méthode ABC dans la séance (ce que l'élève fait, et ce qui est vérifié)
 
