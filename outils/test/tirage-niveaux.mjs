@@ -648,6 +648,10 @@ const BANQUES_FIGEES = {
   // ENT-8.10 Action (17/10/2026, évaluation) : les situations de la fiche « Le protocole du quai 3 » (banque d’ENT-8.7, recopiée).
   'contenus/action-ent810-donnees.js': {
     situations: ['s-pieton', 's-aider', 's-vitesse', 's-partir', 's-blesse', 's-gilet', 's-responsable', 's-aerosols'],
+  },  // ENT-16.2, 16.3 et 16.6 Royal Canin (27/10/2026, indicateurs au tableur) : les 24 références d'Aimargues (toutes fixes ; les valeurs sont tirées).
+  'contenus/royal-canin-tableur.js': {
+    refs: ['CH-ADU-15', 'CT-INT-02', 'CH-CHI-03', 'CT-STE-04', 'VET-REN-02', 'CH-MIN-08', 'VET-DIG-10', 'CT-KIT-04', 'CH-MED-10', 'CH-SEN-12', 'CH-CHI-15', 'CH-STE-08',
+      'CH-LIG-12', 'CT-SEN-04', 'CT-POI-02', 'CT-DIG-04', 'CT-URI-02', 'CT-STE-10', 'VET-URI-04', 'VET-POI-12', 'CH-MIN-02', 'CT-INT-10', 'VET-PEA-02', 'VET-REN-07'],
   },
 };
 await v('Tirage : banques stables — aucun id d’une banque déclarée ne disparaît (liste figée), toute banque déclarée est inscrite', async () => {

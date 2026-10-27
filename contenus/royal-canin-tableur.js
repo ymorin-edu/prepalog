@@ -166,3 +166,5 @@ export const T161 = stockAuTableur({ id: 'royal-canin-indicateurs', mois: 'octob
 export const T162 = stockAuTableur({ id: 'royal-canin-indicateurs-novembre', mois: 'novembre', fichier: 'royal-canin-stock-novembre.xlsx', autres: true, indications: 3 });
 export const T163 = stockAuTableur({ id: 'royal-canin-reunion', mois: 'décembre', fichier: 'royal-canin-stock-decembre.xlsx', indications: 1, retour: 'guidage' });
 export const T166 = stockAuTableur({ id: 'royal-canin-evaluation', mois: 'mars', fichier: 'royal-canin-stock-mars.xlsx', autres: true, indications: 4 });
+// Les tirages eux-mêmes, exportés pour le relevé des banques figées (`outils/test/tirage-niveaux.mjs`).
+export const TIRAGE_162 = T162.TIRAGE, TIRAGE_163 = T163.TIRAGE, TIRAGE_166 = T166.TIRAGE;
