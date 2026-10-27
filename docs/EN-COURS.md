@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| Royal Canin : calculs au tableur (16.1, 16.2, évaluation) et séance « présenter à la réunion » (fil cloud) | `activites/royal-canin-*`, `contenus/royal-canin*`, `contenus/questions/ENT-16.*`, `contenus/corriges/ENT-16.*`, `outils/test/royal-canin.mjs`, `activites/index.js`, `activites/catalogue.js`, `docs/briefs/royal-canin/` | 27/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
