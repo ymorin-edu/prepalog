@@ -1,0 +1,33 @@
+Logos des entreprises 19 (Amazon), 20 (Leroy Merlin) et 21 (Lidl), pour les séances à venir.
+Logos téléchargés le 27/10/2026 depuis Wikimedia Commons (API commons.wikimedia.org/w/api.php : list=search srnamespace=6,
+puis prop=imageinfo iiprop=url|size|sha1|extmetadata), avec un User-Agent explicite (curl).
+Le SHA-1 de chaque fichier téléchargé est identique à celui annoncé par Commons.
+Licence Commons des trois fichiers : « Public domain » (logo textuel / formes simples). Ce sont des marques déposées :
+l'usage reste soumis au droit des marques.
+Les trois SVG s'ouvrent (XML valide, rendu vérifié dans Edge headless le 27/10/2026) et sont en tracés purs :
+aucune image externe, aucune police externe, aucun @import ni url(http…), aucun élément <text>, aucun <rect> de fond.
+
+fichier            octets  dimensions  SHA-256
+amazon.svg          5530   603x182     60A60CFD55864E76A5FEC5C851CA9898363BAC5027E081B9CE6C4A4325FD197A
+  Page File : https://commons.wikimedia.org/wiki/File:Amazon_logo.svg
+  Upload    : https://upload.wikimedia.org/wikipedia/commons/a/a9/Amazon_logo.svg
+  Licence   : Public domain (auteur indiqué : Amazon.com, Inc.)
+  Contenu   : logotype « amazon » noir (#221f1f) + flèche sourire orange ; fond transparent.
+              Un <use xlink:href="#path30"> interne au fichier (pas de ressource externe).
+
+leroy-merlin.svg    2988   176x106     3919520DD60FD28E68F20662B79BC08EE902C4148F982C84B60D82FFB58C019D
+  Page File : https://commons.wikimedia.org/wiki/File:Leroy_Merlin_-_logo_(France,_1995-).svg
+  Upload    : https://upload.wikimedia.org/wikipedia/commons/a/a4/Leroy_Merlin_-_logo_%28France%2C_1995-%29.svg
+  Licence   : Public domain (auteur indiqué : Leroy Merlin ; import d'origine depuis ru.wikipedia)
+  Contenu   : logo actuel (depuis 1995) : maison/triangle vert, « LEROY MERLIN » en tracés le long des pentes ;
+              fond transparent ; viewBox 6.504 4.295 175.748 105.654. Export Illustrator : contient une
+              déclaration DOCTYPE vers le DTD SVG 1.1 du W3C (inoffensive, rien n'est chargé à l'affichage).
+              Seul SVG trouvé sur Commons pour le logo actuel.
+
+lidl.svg            1751   60x60       D49FF220DD6B17CA8660ED574B5664CC1CC7FEC1CA0751057659DC10F3F30D54
+  Page File : https://commons.wikimedia.org/wiki/File:Lidl-Logo.svg
+  Upload    : https://upload.wikimedia.org/wikipedia/commons/9/91/Lidl-Logo.svg
+  Licence   : Public domain (auteur indiqué : Lidl Stiftung & Co. KG)
+  Contenu   : logo actuel : carré bleu (#0050aa) à liseré blanc, rond jaune cerclé de rouge, « LiDL » en tracés.
+              Le carré bleu fait partie du logo (tracé <path>, pas un fond ajouté). Format vectoriel :
+              60x60 est la taille nominale, il s'agrandit sans perte.
