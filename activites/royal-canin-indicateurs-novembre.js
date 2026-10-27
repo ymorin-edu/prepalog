@@ -6,7 +6,7 @@ const s = seanceEntreprise(ROYAL_CANIN, SEANCE, {
   id: 'royal-canin-indicateurs-novembre',
   code: 'ENT-16.2',
   titre: 'Royal Canin — les indicateurs de novembre',
-  desc: 'Les indicateurs du stock de huit références avant le pic de fin d’année : rotation, couverture, ruptures, surstocks, taux de service, et les décisions qui en découlent.',
+  desc: 'Seul(e) au tableur, avant le pic de fin d’année : exporter le stock d’Aimargues (sans Cambrai), calculer rotation, couverture, alertes et taux de service, déposer son fichier et décider.',
   niveaux: ['tle'],
   competences: ['C1.6'],
   temps: 'entrainement',

@@ -1,17 +1,20 @@
-// Royal Canin — l'entrepôt de produits finis d'Aimargues : l'UNIVERS commun des séances ENT-16.1 à 16.5 (Terminale, C1.6 indicateurs de stock, C2.2
+// Royal Canin — l'entrepôt de produits finis d'Aimargues : l'UNIVERS commun des séances ENT-16.1 à 16.6 (Terminale, C1.6 indicateurs de stock, C2.2
 // préparation, C3.1 adaptation au produit et au flux) et la FABRIQUE de leurs écrans. Cadrage : `docs/briefs/royal-canin/CADRAGE-royal-canin-tle.md` ;
 // données : `contenus/royal-canin-donnees.js`.
 //
 // L'élève est adjoint(e) à la responsable de l'entrepôt de produits finis (rôle et prénoms CONSTRUITS ; l'entrepôt, son équipement et les volumes de
-// l'usine sont réels). Trois gestes, chacun dans ses séances : lire les indicateurs du mois (rotation, couverture, taux de service) et dire quoi faire
-// (16.1, 16.2) ; implanter la zone de picking selon le poids et la demande, et calculer les réappros des canaux (16.3) ; préparer une commande export
-// selon la durée de vie restante exigée par le client, en FEFO (16.4, erreur induite) ; les trois en évaluation (16.5). Aucune vue nouvelle :
-// documents joints, fiche, réponse par phrases, questions au fil. Sandrine tutoie l'élève.
+// l'usine sont réels). Trois gestes, chacun dans ses séances : calculer les indicateurs du mois AU TABLEUR (rotation, couverture, alerte, taux de
+// service ; export, formules, dépôt corrigé : `contenus/royal-canin-tableur.js`, décision de Tristan du 27/10/2026) et dire quoi faire (16.1, 16.2),
+// puis les présenter à la réunion de production (16.3, support préparé par l'élève, oral noté par l'enseignant : `contenus/royal-canin-ent163.js`) ;
+// implanter la zone de picking selon le poids et la demande, et calculer les réappros des canaux (16.4) ; préparer une commande export selon la durée
+// de vie restante exigée par le client, en FEFO (16.5, erreur induite) ; les trois en évaluation (16.6). Aucune vue nouvelle : documents joints,
+// geste tableur, fiche, réponse par phrases, questions au fil. Sandrine tutoie l'élève.
 
 import { catalogueSimple } from './entreprise-commun.js';
-import { apresFiche } from '../core/declencheurs.js';
+import { apresFiche, tous } from '../core/declencheurs.js';
 import { phrasesJustes } from '../core/phrases.js';
-import { REFS, REF, JOURS, OBJECTIF_COUVERTURE, CAPACITE_CANAL, ZONES, indicateurs, implantation, preparationExport, fdate, nombreFr } from './royal-canin-donnees.js';
+import { REFS, REF, JOURS, OBJECTIF_COUVERTURE, CAPACITE_CANAL, ZONES, SITE, indicateurs, implantation, preparationExport, fdate, nombreFr } from './royal-canin-donnees.js';
+import { AJOUTS, ALERTES, FEUILLE, FEUILLE_CMD, LIGNE_SERVICE } from './royal-canin-tableur.js';
 
 // ─────────────────────────────────────────── l'univers
 export const ENTREPRISE = {
@@ -92,7 +95,7 @@ function docPoste(D, texte) {
     ${pied(`Document pédagogique. ${MENTION}`)}
   </article>` };
 }
-const docMethodeInd = () => ({ id: 'methode-ind', titre: 'Méthode : les indicateurs du stock', court: 'Méthode indicateurs',
+const docMethodeInd = (tab = null) => ({ id: 'methode-ind', titre: 'Méthode : les indicateurs du stock', court: 'Méthode indicateurs',
   html: `<article class="rc-doc" aria-label="Méthode indicateurs">
     <p class="rc-t">Méthode : les indicateurs du stock</p>
     <p class="rc-st">La fiche méthode de l’entrepôt (un mois = ${JOURS} jours ouvrés)</p>
@@ -106,6 +109,7 @@ const docMethodeInd = () => ({ id: 'methode-ind', titre: 'Méthode : les indicat
       <li><b>Taux de service</b> = lignes livrées complètes ÷ lignes commandées × 100.</li>
     </ul>
     <p class="rc-st">Exemple : début 300, fin 500, sorties 1 600 → stock moyen 400, rotation 4, 80 par jour, couverture 500 ÷ 80 = 6,25 jours.</p>
+    ${tab ? methodeTableur(tab) : ''}
     ${pied('Fiche méthode CONSTRUITE pour l’exercice (les formules sont les formules usuelles ; l’objectif de 15 jours est construit). Document pédagogique.')}
   </article>` });
 const docTableau = (D) => ({ id: 'tableau', titre: `Le stock de ${D.mois}`, court: 'Le tableau du mois',
@@ -118,6 +122,20 @@ const docTableau = (D) => ({ id: 'tableau', titre: `Le stock de ${D.mois}`, cour
     <p style="margin-top:8px">Lignes de commande du mois : <b>${n(D.lignes.commandees)}</b> commandées, dont <b>${n(D.lignes.completes)}</b> livrées complètes.</p>
     ${pied('Chiffres CONSTRUITS pour l’exercice. Document pédagogique — reconstitution, non contractuel.')}
   </article>` });
+// Les étapes dans le tableur (séances au tableur). Les titres de colonnes sont ceux que le site cherche en ligne 1 : les écrire tels quels.
+function methodeTableur(tab) {
+  return `<p><b>Dans le tableur</b> (le fichier exporté du menu Extractions${tab.filtre ? ` : ne garde que le site d’<b>${SITE}</b>` : ''}) :</p>
+    <ol class="rc-ul">
+      <li>À droite des colonnes exportées, ajoute cinq colonnes, avec ces titres en ligne 1 : <b>${AJOUTS.moyen}</b>, <b>${AJOUTS.rotation}</b>, <b>${AJOUTS.conso}</b>,
+        <b>${AJOUTS.couverture}</b>, <b>${AJOUTS.alerte}</b>.</li>
+      <li>Sur la première ligne, écris les <b>formules</b> (elles commencent par =), puis recopie-les vers le bas. Pas de nombre tapé à la main.</li>
+      <li><b>${AJOUTS.alerte}</b> : avec la fonction <b>SI</b>, « ${ALERTES.rupture} » si la couverture est plus petite que le délai, sinon « ${ALERTES.surstock} » si elle
+        dépasse ${OBJECTIF_COUVERTURE} jours, sinon « ${ALERTES.ok} » : =SI(couverture&lt;délai;"${ALERTES.rupture}";SI(couverture&gt;${OBJECTIF_COUVERTURE};"${ALERTES.surstock}";"${ALERTES.ok}")).</li>
+      <li>Feuille <b>${FEUILLE_CMD}</b> : à côté de « ${LIGNE_SERVICE} », la formule lignes livrées complètes ÷ lignes commandées, au <b>format pourcentage</b>
+        (sans ×100).</li>
+      <li>Enregistre en <b>.xlsx</b> et dépose ton fichier dans le menu <b>Fichiers</b>.</li>
+    </ol>`;
+}
 const docMethodePicking = () => ({ id: 'methode-picking', titre: 'Méthode : la zone de picking', court: 'Méthode picking',
   html: `<article class="rc-doc" aria-label="Méthode picking">
     <p class="rc-t">Méthode : où prélever chaque référence ?</p>
@@ -198,6 +216,9 @@ const docDroit = () => ({ id: 'droit', titre: 'Le droit : livrer conforme', cour
     ${pied('Résumé pour l’exercice (pas une citation de texte de loi). Document pédagogique.')}
   </article>` });
 
+// Pour la séance de la réunion (ENT-16.3), écrite à part.
+export { docPoste, docMethodeInd, docDroit, ech, pied, SANDRINE };
+
 // ─────────────────────────────────────────── la fiche
 const nb = (id, lib, unite, manque, entier = false) => ({ type: 'nombre', id, lib, unite, min: 0, ...(entier ? { entier: true } : {}), manque });
 const choixRefs = (refs) => refs.map((r) => ({ v: r, lib: `${r} — ${REF[r].nom}` }));
@@ -236,21 +257,29 @@ export const envoyee = (db, id) => !!(fiche(db, id) && fiche(db, id).envoye);
 export const valeursDe = (db, id) => (fiche(db, id) || {}).valeurs || {};
 
 // ─────────────────────────────────────────── les phrases (de l'élève à Sandrine : tu poli)
-function phrases(D, K, prenom) {
+function phrases(D, K, prenom, TAB = null, db = null) {
   const id = `compte-rendu-${D.code.slice(4).replace('.', '')}`;
   const salut = { id: 'salutation', choix: ['Bonjour Sandrine,', 'Salut la cheffe,', 'Yo,'], juste: 0 };
   const fin = { id: 'fin', choix: [`Bonne journée, ${prenom}`, 'Bisous', 'À plus !'], juste: 0 };
   const lignes = [salut];
   if (K.ind) {
-    const I = indicateurs(D);
+    const I = TAB ? TAB.I(db) : indicateurs(D);
     const rup = (L) => `Risque de rupture : ${liste(L)} (couverture plus courte que le délai) : il faut avancer leur réapprovisionnement.`;
     const sur = (L) => `Surstock : ${liste(L)} (plus de ${OBJECTIF_COUVERTURE} jours de couverture) : on peut retarder leur prochaine production.`;
     // La troisième phrase en oublie une ou en ajoute une : jamais deux phrases identiques quand il n'y en a qu'une.
     const autre = (L, M) => (L.length > 1 ? L.slice(0, 1) : [...L, M[0]]);
     lignes.push({ id: 'rupture', choix: [rup(I.rupture), rup(I.surstock), rup(autre(I.rupture, I.surstock))], juste: 0 });
     lignes.push({ id: 'surstock', choix: [sur(I.surstock), sur(I.rupture), sur(autre(I.surstock, I.rupture))], juste: 0 });
+    const L = TAB ? TAB.jeu(db).lignes : D.lignes;
     lignes.push({ id: 'service', choix: [`Taux de service de ${D.mois} : ${n(I.service)} %.`, `Taux de service de ${D.mois} : ${n(Math.round((100 - I.service) * 10) / 10)} %.`,
-      `Taux de service de ${D.mois} : ${n(Math.round(D.lignes.commandees / D.lignes.completes * 1000) / 10)} %.`], juste: 0 });
+      `Taux de service de ${D.mois} : ${n(Math.round(L.commandees / L.completes * 1000) / 10)} %.`], juste: 0 });
+    // Au tableur : la plus urgente (il lui manque le plus de jours), parmi une autre rupture et le plus gros surstock.
+    if (TAB && I.urgente) {
+      const dit = (r) => `La plus urgente : ${r} (${n(I.par[r].couverture)} jours de stock pour ${I.par[r].delai} jours de délai).`;
+      const autreR = I.rupture.filter((r) => r !== I.urgente).slice(-1)[0];
+      const gros = I.surstock.slice().sort((a, b) => I.par[b].couverture - I.par[a].couverture)[0];
+      lignes.push({ id: 'priorite', choix: [dit(I.urgente), dit(autreR || I.surstock[1]), dit(gros)], juste: 0 });
+    }
   }
   if (K.impl) {
     const M = implantation(D);
@@ -284,42 +313,47 @@ function phrases(D, K, prenom) {
 }
 
 // ─────────────────────────────────────────── la fabrique d'une séance
-// D : le jeu ; O : { id, K ({ ind, impl, export }), poids, consigne, poste, objet, etape, questions }.
+// D : le jeu ; O : { id, K ({ ind, impl, export }), poids, consigne, poste, objet, etape, questions, tab, jalonsTab }.
+// `O.tab` (une séance au tableur, `stockAuTableur` de `contenus/royal-canin-tableur.js`) : les indicateurs se calculent dans le fichier de l'élève,
+// pas sur la fiche ; `O.jalonsTab` : [{ id, titre, controles: [ids des contrôles du dépôt], poids }] (et `poids.export` : le bon export, s'il y a un critère).
 export function seance(D, O) {
-  const K = O.K;
+  const K = O.K, TAB = O.tab || null;
   const suffixe = D.code.slice(4).replace('.', '');
   const FICHE_ID = `fiche-${suffixe}`, VOLET_ID = `rc-${suffixe}`;
-  const P = phrases(D, K, '{prenom}');
+  const P = phrases(D, K, '{prenom}', TAB, null);
   const PHRASES_ID = P.id;
-  const I = K.ind ? indicateurs(D) : null, M = K.impl ? implantation(D) : null, X = K.export ? preparationExport(D.export) : null;
+  const I = K.ind && !TAB ? indicateurs(D) : null, M = K.impl ? implantation(D) : null, X = K.export ? preparationExport(D.export) : null;
 
   const docs = [docPoste(D, O.poste)];
-  if (K.ind) docs.push(docTableau(D), docMethodeInd());
+  if (K.ind) docs.push(...(TAB ? [] : [docTableau(D)]), docMethodeInd(TAB));
   if (K.impl) docs.push(docFlux(D), docMethodePicking());
   if (K.export) docs.push(docCommandeExport(D), docLots(D), ...(D.collegue ? [docPrepMehdi(D)] : []), docMethodeExport());
   docs.push(docDroit());
   const DOCUMENTS = docs;
   let num = 1;
   const blocs = [];
-  if (K.ind) blocs.push(...blocsInd(D, num++));
+  if (K.ind && !TAB) blocs.push(...blocsInd(D, num++));
   if (K.impl) blocs.push(...blocsImpl(D, num++));
   if (K.export) blocs.push(...blocsExport(D, num++));
-  const surFicheDocs = DOCUMENTS.map((d) => d.id).filter((x) => x !== 'poste' && x !== 'droit');
-  const FICHE = {
+  const surFicheDocs = DOCUMENTS.map((d) => d.id).filter((x) => x !== 'poste' && x !== 'droit' && !(TAB && x === 'methode-ind'));
+  const FICHE = blocs.length ? {
     id: FICHE_ID, libelle: 'Fiche de travail', titre: O.titre, sousTitre: 'À gauche : les documents et les fiches méthode. Calcule au brouillon ou à la calculatrice.',
     documents: surFicheDocs, largeurDocs: 1.3, defile: true, bouton: 'Ouvrir la fiche de travail', blocs,
-    envoi: { bouton: 'Envoyer la fiche à Sandrine', a: 'Sandrine', suite: 'Écris-lui maintenant ton compte rendu, dans la Messagerie.' },
-  };
+    envoi: { bouton: 'Envoyer la fiche à Sandrine', a: 'Sandrine', suite: TAB ? 'Quand ton fichier est déposé, écris-lui ton compte rendu, dans la Messagerie.' : 'Écris-lui maintenant ton compte rendu, dans la Messagerie.' },
+  } : null;
   const mail = (prenom, subject, text, o = {}) => ({ folder: 'in', ts: Date.now() + (o.decale || 0), from: SANDRINE.nom, fromMail: SANDRINE.mail, to: prenom, subject, kind: 'text', text, ...(o.extra || {}) });
+  // Le compte rendu arrive quand le travail est fait : la fiche envoyée, le fichier déposé (les deux en évaluation).
+  const pret = tous(...[FICHE ? apresFiche(FICHE_ID) : null, TAB ? TAB.depose : null].filter(Boolean));
   const VOLET = {
     id: VOLET_ID,
-    semer: (prenom) => ({ mails: [mail(prenom, O.objet, `Bonjour ${prenom} !\n\n${O.consigne}\n\nSandrine`, { decale: -3600e3, extra: { pieces: DOCUMENTS.map((d) => d.id).filter((x) => x !== 'droit'), ouvreFiche: FICHE_ID } })] }),
+    semer: (prenom) => ({ mails: [mail(prenom, O.objet, `Bonjour ${prenom} !\n\n${O.consigne}\n\nSandrine`, { decale: -3600e3,
+      extra: { pieces: DOCUMENTS.map((d) => d.id).filter((x) => x !== 'droit'), ...(FICHE ? { ouvreFiche: FICHE_ID } : {}) } })] }),
     declencheurs: [
-      { id: 'compte', quand: apresFiche(FICHE_ID),
-        semer: (prenom) => ({ mails: [mail(prenom, 'Ton compte rendu', `Bonjour ${prenom},\n\nJ’ai ta fiche. Écris-moi en quelques lignes ce que tu proposes : `
-          + 'je le reprends pour la réunion de cet après-midi.\n\nSandrine', { extra: { phrases: phrases(D, K, prenom) } })] }) },
+      { id: 'compte', quand: pret,
+        semer: (prenom, db) => ({ mails: [mail(prenom, 'Ton compte rendu', `Bonjour ${prenom},\n\n${TAB && !FICHE ? 'J’ai ton fichier.' : FICHE && TAB ? 'J’ai ta fiche et ton fichier.' : 'J’ai ta fiche.'} Écris-moi en quelques lignes ce que tu proposes : `
+          + 'je le reprends pour la réunion de cet après-midi.\n\nSandrine', { extra: { phrases: phrases(D, K, prenom, TAB, db) } })] }) },
       { id: 'fin', quand: (db) => phrasesJustes(db, PHRASES_ID).envoye,
-        semer: (prenom) => ({ mails: [mail(prenom, 'Merci', `Merci ${prenom}. Je regarde ta fiche et ton compte rendu.\n\nSandrine`, { decale: 1000 })] }) },
+        semer: (prenom) => ({ mails: [mail(prenom, 'Merci', `Merci ${prenom}. Je regarde ${FICHE ? 'ta fiche' : 'ton fichier'} et ton compte rendu.\n\nSandrine`, { decale: 1000 })] }) },
     ],
   };
 
@@ -332,7 +366,14 @@ export function seance(D, O) {
   const proche = (k, attendu) => (v) => Math.abs(lireNombre(v[k]) - attendu) < 0.051;
   const cases = (k, attendu) => (v) => Array.isArray(v[k]) && v[k].length > 0 && memes(v[k], attendu);
   const ETAPES = [];
-  if (K.ind) {
+  if (K.ind && TAB) {
+    // Rien n'est vrai avant le dépôt : l'inaction vaut 0. Le bon export (critère « Site ») est un jalon à part : une erreur ne se paie qu'une fois.
+    if (TAB.filtre) ETAPES.push({ id: 'export', titre: `L’export : les références d’${SITE} seules`, groupe: G.ind, poids: W.export, verifier: (db) => TAB.statutExport(db) });
+    for (const j of O.jalonsTab) {
+      ETAPES.push({ id: j.id, titre: j.titre, groupe: G.ind, poids: j.poids,
+        verifier(db) { if (!TAB.depose(db)) return attente; return j.controles.every((c) => TAB.juste(db, c)) ? ok : ko; } });
+    }
+  } else if (K.ind) {
     for (const r of D.calcul) {
       ETAPES.push(surFiche(`rot-${r}`, `La rotation de ${r}`, G.ind, proche(`rot-${r}`, I.par[r].rotation), W.rotation));
       ETAPES.push(surFiche(`couv-${r}`, `La couverture de ${r}`, G.ind, proche(`couv-${r}`, I.par[r].couverture), W.couverture));
@@ -362,20 +403,28 @@ export function seance(D, O) {
 
   const ficheFaite = (db) => envoyee(db, FICHE_ID);
   const rendu = (db) => phrasesJustes(db, PHRASES_ID).envoye;
-  const PASTILLES = [{ libelle: 'La fiche', fait: ficheFaite }, { libelle: 'Le compte rendu', fait: rendu }];
-  const SUITE = [{ vue: 'fiche', libelle: 'La fiche de travail', fait: ficheFaite }, { vue: 'mail', mail: PHRASES_ID, libelle: 'Le compte rendu à Sandrine', fait: rendu }];
+  const PASTILLES = [
+    ...(TAB ? [{ libelle: 'Le fichier', fait: TAB.depose }] : []),
+    ...(FICHE ? [{ libelle: 'La fiche', fait: ficheFaite }] : []),
+    { libelle: 'Le compte rendu', fait: rendu }];
+  const SUITE = [
+    ...(TAB ? [{ vue: 'extractions', libelle: 'Exporter l’état du stock', fait: TAB.exporte }, { vue: 'fichiers', libelle: 'Déposer ton fichier', fait: TAB.depose }] : []),
+    ...(FICHE ? [{ vue: 'fiche', libelle: 'La fiche de travail', fait: ficheFaite }] : []),
+    { vue: 'mail', mail: PHRASES_ID, libelle: 'Le compte rendu à Sandrine', fait: rendu }];
+  const etapesAccueil = TAB ? [
+    ['① Exporter l’état du stock', `Menu Extractions, liste « État du stock — ${D.mois} » : Exporter.`],
+    ['② Calculer dans le tableur', 'Stock moyen, rotation, consommation par jour, couverture, alerte (SI), taux de service : avec des formules.'],
+    ['③ Déposer ton fichier', 'Menu Fichiers : le site le corrige.'],
+    ...(FICHE ? [['④ La fiche de travail', O.etape]] : []),
+    [FICHE ? '⑤ Le compte rendu' : '④ Le compte rendu', 'Réponds à Sandrine, une phrase par ligne.'],
+  ] : [['① La fiche de travail', O.etape], ['② Le compte rendu', 'Réponds à Sandrine, une phrase par ligne.']];
   const ACCUEIL = {
     titre: O.titre, kpis: ['mail'],
-    etapes: [
-      ['Lire le message de Sandrine', 'Menu Messagerie. Les documents sont joints, avec les fiches méthode.'],
-      ['① La fiche de travail', O.etape],
-      ['② Le compte rendu', 'Réponds à Sandrine, une phrase par ligne.'],
-      ['Bon à savoir', MENTION],
-    ],
+    etapes: [['Lire le message de Sandrine', 'Menu Messagerie. Les documents sont joints, avec les fiches méthode.'], ...etapesAccueil, ['Bon à savoir', MENTION]],
   };
-  const OPTIONS = { menu: [], exercice: O.titre, sansTrame: 'Tout se fait à l’écran', documents: DOCUMENTS, documentsStyle: STYLE, fiches: [FICHE],
-    pastilles: PASTILLES, suite: SUITE, equipe: EQUIPE, ...(O.questions ? { questions: O.questions } : {}) };
-  return { ID: O.id, FICHE_ID, PHRASES_ID, VOLET_ID, I, M, X, DOCUMENTS, FICHE, VOLET, ETAPES, PASTILLES, SUITE, ACCUEIL, OPTIONS };
+  const OPTIONS = { menu: [], exercice: O.titre, sansTrame: TAB ? 'Tout se fait à l’écran et dans ton tableur' : 'Tout se fait à l’écran', documents: DOCUMENTS, documentsStyle: STYLE,
+    fiches: FICHE ? [FICHE] : [], pastilles: PASTILLES, suite: SUITE, equipe: EQUIPE, ...(TAB ? { tableur: TAB.TABLEUR } : {}), ...(O.questions ? { questions: O.questions } : {}) };
+  return { ID: O.id, FICHE_ID, PHRASES_ID, VOLET_ID, I, M, X, DOCUMENTS, FICHE, VOLET, ETAPES, PASTILLES, SUITE, ACCUEIL, OPTIONS, TIRAGE: TAB ? TAB.TIRAGE : null, TAB };
 }
 
 // ─────────────────────────────────────────── la banque « Avant de commencer » (commune aux cinq séances)

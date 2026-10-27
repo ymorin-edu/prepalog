@@ -155,9 +155,10 @@ export const ACTIVITES = [
   () => import('./syngenta-cellule-pleine.js'),
   () => import('./syngenta-plan-lucas.js'),
   () => import('./syngenta-evaluation.js'),
-  // Royal Canin, piloter l'entrepôt de produits finis (Tle, C1.6, C2.2 et C3.1, ENT-16.1 à 16.5) : cadrage `docs/briefs/royal-canin/CADRAGE-royal-canin-tle.md`.
+  // Royal Canin, piloter l'entrepôt de produits finis (Tle, C1.6, C2.2, C3.1 et C3.4, ENT-16.1 à 16.6) : cadrage `docs/briefs/royal-canin/CADRAGE-royal-canin-tle.md`.
   () => import('./royal-canin-indicateurs.js'),
   () => import('./royal-canin-indicateurs-novembre.js'),
+  () => import('./royal-canin-reunion.js'),
   () => import('./royal-canin-picking.js'),
   () => import('./royal-canin-export.js'),
   () => import('./royal-canin-evaluation.js'),

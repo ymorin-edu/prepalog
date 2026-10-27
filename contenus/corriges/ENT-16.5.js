@@ -1,7 +1,7 @@
-// Corrigé d'ENT-16.5 (Royal Canin, « évaluation : piloter l’entrepôt »), onglet « Corrigés » de l'enseignant. Tout se recalcule depuis les données.
+// Corrigé d'ENT-16.5 (Royal Canin, « la commande export de Mehdi »), onglet « Corrigés » de l'enseignant. Tout se recalcule depuis les données.
 import { D165 } from '../royal-canin-donnees.js';
 import { corrigeRoyalCanin } from '../royal-canin-corrige.js';
-export const CORRIGE = corrigeRoyalCanin(D165, { titre: 'Royal Canin — évaluation : piloter l’entrepôt', K: { ind: true, impl: true, export: true },
-  poids: { rotation: 1, couverture: 1, rupture: 2, surstock: 2, service: 2, zone: 1.5, lots: 2, quantites: 2, 'compte-rendu': 2 },
-  questions: { texte: '« Avant de commencer » noté (3 points)', rep: 'Trois questions tirées dans la banque commune (rotation, couverture, FEFO, sac lourd ; DDM, conformité). Réflexion au fil non notée.', note: '' } });
+export const CORRIGE = corrigeRoyalCanin(D165, { titre: 'Royal Canin — la commande export de Mehdi', K: { export: true },
+  poids: { nonconformes: 4, cause: 2, lots: 4, quantites: 2, 'compte-rendu': 4 },
+  questions: { texte: 'Trois questions notées au fil (4 points)', rep: 'L7203 : limite au 01/12/2027, il manque quelques jours · FEFO : c’est la DDM qui compte · les lots écartés partent vers des clients moins exigeants. Réflexion non notée : le vendeur supporte la non-conformité.', note: '« Avant de commencer » n’est pas noté.' } });
 export function corrigeEleve() { return { texte: '', items: [] }; }
