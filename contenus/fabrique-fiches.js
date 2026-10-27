@@ -14,6 +14,9 @@
 //     planning?: { apres: k (le Planning s'ouvre après la fiche k ; -1 = d'abord), decl (la déclaration de la vue `core/types/planning.js`, sans `quand`),
 //                  poids: { 'v1-<jalon>' | 'v2-<jalon>': poids } (seuls ces jalons comptent), groupe, libelle, objet, message, pieces?,
 //                  alea?: { objet, message, pieces? } (le message qui ouvre la reprise : `phasePlanning: 2`), solution?: texte du corrigé },
+//     ligne?: { apres: k (le Bord de ligne s'ouvre après la fiche k ; -1 = d'abord), decl (la déclaration de la vue `core/types/ligne.js`, objet ou
+//               fonction de la graine), poids: { <mesure>: poids } (seules ces mesures comptent), titres?: { <mesure>: titre }, groupes?: { <mesure>: groupe },
+//               groupe, libelle, objet, message, pieces? } (Stellantis ENT-13.6 à 13.9, 27/10/2026) ; `copie: true` pour une évaluation,
 //     compteRendu?: { objet, message, lignes: (prenom, db) => [...], poids, groupe, titre },   // juste si toutes les lignes (hors salutation/fin) sont justes
 //     fin: 'texte du dernier message', questions, accueil?: [[titre, texte]…], finFige?, tirage? (jeu tiré par élève) }
 //
@@ -24,6 +27,7 @@ import { apresFiche, apresPlanning, localiserFini } from '../core/declencheurs.j
 import { phrasesJustes } from '../core/phrases.js';
 import { etapesLocaliser } from '../core/types/localiser.js';
 import { etapesPlanning } from '../core/types/planning.js';
+import { jalonLigne, etatLigne, declarationLigne, resultatLigne, hhmm, minutesDe } from '../core/types/ligne.js';
 
 const fiche = (db, id) => (db && db.fiches && db.fiches[id]) || null;
 export const envoyee = (db, id) => !!(fiche(db, id) && fiche(db, id).envoye);
@@ -48,13 +52,19 @@ export function seanceFiches(U, S) {
   // Le Planning (Kuehne+Nagel ENT-24.x, 27/10/2026) : fait quand sa dernière version est envoyée (la reprise s'il y a un aléa).
   const PL = S.planning || null;
   const planFait = PL ? (db) => apresPlanning(PL.decl.id, PL.alea ? 2 : 1)(db) : null;
+  // Le Bord de ligne (Stellantis ENT-13.6 à 13.9, 27/10/2026) : fait quand la première matinée est finie.
+  const LG = S.ligne || null;
+  const LG_ID = LG ? declarationLigne(LG.decl, {}, { copie: !!S.copie }).id : null;
+  const ligneFaite = LG ? (db) => { const st = etatLigne(db, ID, LG_ID); return !!(st && (st.premier || st.fait)); } : null;
 
   // L'ordre des écrans : fiches, avec la carte glissée après la fiche `L.apres`.
   const ordre = [];
   if (L && L.apres === -1) ordre.push({ carte: true });
   if (PL && PL.apres === -1) ordre.push({ plan: true });
-  S.pas.forEach((p, k) => { ordre.push({ p }); if (L && L.apres === k) ordre.push({ carte: true }); if (PL && PL.apres === k) ordre.push({ plan: true }); });
-  const faitDe = (x) => (x.carte ? carteFaite : x.plan ? planFait : fait(x.p));
+  if (LG && LG.apres === -1) ordre.push({ lig: true });
+  S.pas.forEach((p, k) => { ordre.push({ p }); if (L && L.apres === k) ordre.push({ carte: true }); if (PL && PL.apres === k) ordre.push({ plan: true });
+    if (LG && LG.apres === k) ordre.push({ lig: true }); });
+  const faitDe = (x) => (x.carte ? carteFaite : x.plan ? planFait : x.lig ? ligneFaite : fait(x.p));
   const avant = (i) => (i > 0 ? faitDe(ordre[i - 1]) : null);
 
   const FICHES = ordre.filter((x) => x.p).map((x) => {
@@ -68,7 +78,9 @@ export function seanceFiches(U, S) {
   const mail = (prenom, subject, text, o = {}) => ({ folder: 'in', ts: Date.now() + (o.decale || 0), from: T.nom, fromMail: T.mail, to: prenom,
     subject, kind: 'text', text, ...(o.extra || {}) });
   const signe = (t) => `${t}\n\n${T.appel}`;
-  const ouvre = (x, prenom, decale) => (x.plan
+  const ouvre = (x, prenom, decale) => (x.lig
+    ? mail(prenom, LG.objet, signe(LG.message.replace(/\{prenom\}/g, prenom)), { decale, extra: LG.pieces ? { pieces: LG.pieces } : {} })
+    : x.plan
     ? mail(prenom, PL.objet, signe(PL.message.replace(/\{prenom\}/g, prenom)), { decale, extra: PL.pieces ? { pieces: PL.pieces } : {} })
     : x.carte
     ? mail(prenom, L.objet, signe(L.message), { decale })
@@ -103,6 +115,13 @@ export function seanceFiches(U, S) {
       ETAPES.push(...etapesLocaliser(L, ID).map((j) => (j.bonus ? j : Object.assign(j, { poids: L.poids, groupe: L.groupe }))));
       continue;
     }
+    if (x.lig) {
+      const inconnues = Object.keys(LG.poids).filter((m) => !['voitures', 'arret', 'groupes', 'heure', 'perdues', 'decision', 'complet'].includes(m));
+      if (inconnues.length) throw new Error(`${ID} : mesure du Bord de ligne inconnue (${inconnues.join(', ')})`);
+      Object.entries(LG.poids).forEach(([m, poids]) => ETAPES.push({ ...jalonLigne(LG.decl, ID, { id: `ligne-${m}`, titre: (LG.titres && LG.titres[m]) || m, mesure: m, copie: !!S.copie }),
+        poids, groupe: (LG.groupes && LG.groupes[m]) || LG.groupe || LG.libelle }));
+      continue;
+    }
     if (x.plan) {
       const E = etapesPlanning(PL.decl).filter((e) => PL.poids[e.id] != null);
       const inconnus = Object.keys(PL.poids).filter((k) => !E.some((e) => e.id === k));
@@ -127,7 +146,7 @@ export function seanceFiches(U, S) {
   const ids = ETAPES.map((e) => e.id);
   if (new Set(ids).size !== ids.length) throw new Error(`${ID} : deux jalons ont le même id`);
 
-  const SUITE = ordre.map((x) => (x.plan ? { vue: 'planning', libelle: PL.libelle, fait: planFait } : x.carte ? { vue: 'localiser', libelle: L.libelle, fait: carteFaite }
+  const SUITE = ordre.map((x) => (x.lig ? { vue: 'ligne', libelle: LG.libelle, fait: ligneFaite } : x.plan ? { vue: 'planning', libelle: PL.libelle, fait: planFait } : x.carte ? { vue: 'localiser', libelle: L.libelle, fait: carteFaite }
     : { vue: x === ordre.find((y) => y.p) ? 'fiche' : `fiche:${fid(x.p)}`, libelle: x.p.libelle, fait: fait(x.p) }));
   if (CR) SUITE.push({ vue: 'mail', mail: PHRASES_ID, libelle: `Le compte rendu à ${T.appel}`, fait: (db) => phrasesJustes(db, PHRASES_ID).envoye });
   const num = ['①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧'];
@@ -146,6 +165,8 @@ export function seanceFiches(U, S) {
     ...(L ? { localiser: L, finFige: S.finFige || 'La carte se joue au premier essai : elle ne se rejoue pas.' } : {}),
     ...(S.tirage ? { tirage: true } : {}),   // jeu tiré par élève : le moteur pose la graine (l'identifiant de l'élève) à la première ouverture
     ...(PL ? { planning: PL.apres >= 0 ? { ...PL.decl, quand: (db) => fait(S.pas[PL.apres])(db) } : PL.decl } : {}),
+    ...(LG ? { ligne: LG.decl } : {}),
+    ...(LG && LG.apres >= 0 ? { fermetures: { ligne: { ouvertSi: (db) => fait(S.pas[LG.apres])(db), message: `Après la fiche « ${S.pas[LG.apres].libelle} »` } } } : {}),
     ...(L && L.apres >= 0 ? { fermetures: { localiser: { ouvertSi: (db) => fait(S.pas[L.apres])(db), message: `Après la fiche « ${S.pas[L.apres].libelle} »` } } } : {}),
   };
   // Le corrigé (onglet « Corrigés » de l'enseignant), recalculé depuis les jalons : `attendu` (texte ou fonction de la base) de chaque
@@ -162,6 +183,18 @@ export function seanceFiches(U, S) {
       const tot = E.reduce((t, e) => t + PL.poids[e.id], 0);
       items.push({ etape: ++k, etapeTitre: `${PL.libelle} (${pts(Math.round(tot * 100) / 100)})`, genre: 'question', texte: PL.decl.titre || PL.libelle,
         rep: E.map((e) => `${e.titre} (${pts(PL.poids[e.id])})`).join(' · '), note: PL.solution || '' });
+    }
+    if (LG) {
+      const tot = Object.values(LG.poids).reduce((t, x) => t + x, 0);
+      const D = declarationLigne(LG.decl, db, { copie: !!S.copie });
+      const R = resultatLigne(D, etatLigne(db, ID, D.id));
+      const dit = { voitures: 'les voitures montées au-delà de ce que la ligne monte sans aucun geste', arret: `aucune minute d’arrêt (au prorata jusqu’à 10 minutes)`,
+        groupes: 'les robots qui ne partent pas à moitié vides quand une autre carte attend', heure: 'l’heure d’arrêt, calculée sur le bord de ligne de l’élève au moment du message',
+        perdues: 'les voitures perdues si l’on attend le camion', decision: `la décision : ${D.camion ? (D.camion.decisions.find((c) => c.juste) || {}).lib : ''}`, complet: 'la matinée finie' };
+      items.push({ etape: ++k, etapeTitre: `${LG.libelle} (${pts(Math.round(tot * 100) / 100)})`, genre: 'question', texte: D.titre || LG.libelle,
+        rep: Object.entries(LG.poids).map(([m, x]) => `${(LG.titres && LG.titres[m]) || m} (${pts(x)}) : ${dit[m]}`).join(' · '),
+        note: R ? `Sa première matinée : ${R.n} voitures sur ${D.minutes}, ${R.arret} min d’arrêt, ${R.envois} robots dont ${R.demiVides} à moitié vides${D.camion && R.heureJuste != null ? `, heure d’arrêt juste ${hhmm(minutesDe(D.debut) + R.heureJuste)}, voitures perdues ${R.perduesJuste}` : ''}.`
+          : 'Tout se calcule sur la matinée de l’élève (rien n’est écrit dans le contenu).' });
     }
     for (const p of S.pas) {
       const tot = p.jalons.reduce((t, j) => t + j.poids, 0);

@@ -1530,6 +1530,36 @@ en tête de `core/types/tri.js` ; un exemple qui tourne : `outils/essai-tri-coli
   `[data-t-compteur]`, `[data-t-minuteur]`, `[data-t-bilan]`, `[data-t-ligne="<k>"]` ; `racine.__tri.avancer(s)` avance le minuteur.
   **Clavier** : 1 à 9 choisissent la sortie, 0 l'écart, Entrée valide. Feuille : `styles/tri.css`. Bloc de tests : `tri`.
 
+## Vue « Bord de ligne » : `ligne` — `core/types/ligne.js`
+
+Écrite le 27/10/2026 (brief `docs/briefs/MOTEUR-vue-bord-de-ligne.md`, page d'essai `docs/briefs/stellantis/maquette-bord-de-ligne.html`)
+pour Stellantis ENT-13.6 à 13.9 (C2.3), puis Royal Canin, Airbus, Haribo. Une **ligne qui consomme pendant que l'élève travaille** : une
+voiture par minute de ligne, chaque poste a deux contenants (en cours, d'avance) ; quand un contenant se vide, sa **carte kanban** tombe dans
+la boîte ; l'élève choisit une ou deux cartes et **envoie un robot** (places et kg limités, trajet, retour, appels urgents en nombre limité).
+Un poste vide **arrête la ligne** (texte rouge, jamais d'aplat). Facultatif : un **camion en retard** (message à l'heure dite, la ligne attend
+la réponse : heure d'arrêt, voitures perdues, décision ; le convoi de secours avance l'arrivée).
+
+- **Déclaration** : `ligne: { id, libelle, lieu, qui, temps, debut, minutes, secondes, modeles, sequence, postes: [{ id, poste, zone, nom,
+  piece, contenant, par, kg, besoin: { <modèle>: n }, depart: [en cours, avance], stock }], robots: { nombre, places, kgMax, trajet, retour,
+  urgent, urgents }, personnes, camion?, fin? }` (format complet en tête de `core/types/ligne.js` ; exemple qui tourne : `outils/essai-ligne.js`).
+  Objet, ou **fonction de la graine** `(graine, { niveau, copie }) => déclaration` (matinée tirée, contenu par niveau). Une déclaration
+  fautive empêche la séance de se charger ; `temps: 'evaluation'` exige une séance `copie`.
+- **Tout se calcule** : couverture des postes, heure d'arrêt et voitures perdues (au moment du message, sur le bord de ligne de l'élève).
+- **Temps** : `guidage` (couverture affichée, Karim arrête la ligne au premier geste de chaque sorte, réponses au camion corrigées tout de
+  suite) ; `entrainement` (couverture cachée, bilan à la fin, « Recommencer » permis) ; `evaluation` (aucun retour, aucun bilan pour l'élève,
+  pas de « Recommencer »). Le **premier** résultat compte toujours. Pause permise, mais rien ne s'envoie pendant la pause.
+- **Jalons** : `jalonLigne(decl, séance, { id, titre, mesure, copie })`, mesures `voitures` (au-delà de ce que la ligne monte sans aucun geste),
+  `arret` (10 minutes ou plus = 0), `groupes` (robots qui ne partent pas à moitié vides quand une autre carte tenait), `heure`, `perdues`,
+  `decision`, `complet`. Part juste par `fraction` ; **sans un robot envoyé, tout vaut 0**.
+- **Fabrique en fiches** : `seanceFiches(U, { …, ligne: { apres, decl, poids: { <mesure>: poids }, titres?, groupes?, groupe, libelle, objet,
+  message, pieces? }, copie? })` glisse la matinée après la fiche `apres` (−1 = d'abord) et la ferme avant (`fermetures.ligne`).
+  `matineeDe(decl, séance, db)` (Stellantis) rend la première matinée finie, pour un compte rendu qui reprend **ses** chiffres.
+- **État** : `db.lignes[<séance>][<id>]` ; **gestes** : `ligne:<id>:envoi`, `ligne:<id>:camion`, `ligne:<id>:fini`.
+- **DOM** (tests) : `[data-l-ligne]` (racine ; les lignes du bilan sont `[data-l-ligne="<mesure>"]`), `[data-l-scene]`, `[data-l-horloge]`,
+  `[data-l-compteur]`, `[data-l-couv="<poste>"]`, `[data-l-cartes]`, `[data-l-evt]`, `[data-l-bilan]`, boutons `[data-l="demarrer|carte|envoyer|
+  urgent|pause|rep|evt-suite|coach-ok|rejouer"]` ; `racine.__ligne.avancer(n)` fait passer `n` minutes de ligne, `__ligne.lire()`,
+  `__ligne.declaration`. Feuille : `styles/ligne.css`. Blocs de tests : `ligne` (la vue), `stellantis-ligne` (les séances).
+
 ## Vue « Dialogue à choix » (l'écran Téléphone) — `core/types/dialogue.js`
 
 Écrite le 14/10/2026 (brief `docs/briefs/MOTEUR-vue-dialogue.md`, lots 1 et 2) pour Decathlon ENT-7.2 à 7.4, puis la 2de et le CAP.
