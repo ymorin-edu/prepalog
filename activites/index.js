@@ -145,6 +145,9 @@ export const ACTIVITES = [
   () => import('./stellantis-methode-abc.js'),
   () => import('./stellantis-ranger-compter-abc.js'),
   () => import('./stellantis-evaluation-rentree.js'),
+  () => import('./stellantis-equipe-matin.js'),
+  () => import('./stellantis-equipe-pointe.js'),
+  () => import('./stellantis-evaluation-equipe.js'),
   // Lactalis, le rappel des laits infantiles (1re, C3.2, ENT-14.1 à 14.4) : cadrage `docs/briefs/lactalis/CADRAGE-lactalis-1re.md`.
   () => import('./lactalis-douze-lots.js'),
   () => import('./lactalis-regle-15-fevrier.js'),
@@ -174,6 +177,33 @@ export const ACTIVITES = [
   () => import('./airbus-flux-particuliers.js'),
   () => import('./airbus-reservations-sofiane.js'),
   () => import('./airbus-evaluation.js'),
+  // Amazon, le centre robotisé de Brétigny-sur-Orge (CAP OL, CAP-C1.1 à C1.5 et C3.1 à C3.7, ENT-19.1 à 19.10) : cadrage `docs/briefs/amazon/CADRAGE-amazon-cap.md`.
+  () => import('./amazon-bienvenue.js'),
+  () => import('./amazon-poste.js'),
+  () => import('./amazon-ranger.js'),
+  () => import('./amazon-bac-mardi.js'),
+  () => import('./amazon-evaluation-stock.js'),
+  () => import('./amazon-prelever.js'),
+  () => import('./amazon-emballer.js'),
+  () => import('./amazon-jeudi.js'),
+  () => import('./amazon-robots.js'),
+  () => import('./amazon-evaluation-commandes.js'),
+  // Leroy Merlin, la plateforme nationale de Réau (1re Bac Pro, C1.2 sécurité et C2.1 service clients, ENT-20.1 à 20.8) : cadrage `docs/briefs/leroy-merlin/CADRAGE-leroy-merlin-1re.md`.
+  () => import('./leroy-merlin-risques.js'),
+  () => import('./leroy-merlin-quai.js'),
+  () => import('./leroy-merlin-kevin.js'),
+  () => import('./leroy-merlin-evaluation-securite.js'),
+  () => import('./leroy-merlin-clients.js'),
+  () => import('./leroy-merlin-samedi.js'),
+  () => import('./leroy-merlin-jordan.js'),
+  () => import('./leroy-merlin-evaluation-clients.js'),
+  // Lidl, la plateforme et direction régionale de Meaux (2de GATL, C1.3, OTM-C1.4, AGO-2.2 et AGO-1.3, ENT-21.1 à 21.6) : cadrage `docs/briefs/lidl/CADRAGE-lidl-2de.md`.
+  () => import('./lidl-bienvenue.js'),
+  () => import('./lidl-planning.js'),
+  () => import('./lidl-transport.js'),
+  () => import('./lidl-facture.js'),
+  () => import('./lidl-evaluation-transport.js'),
+  () => import('./lidl-evaluation-facture.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -277,6 +307,12 @@ export const ENTREPRISES = [
   { n: 17, nom: 'La Redoute', metier: 'E-commerce mode et maison — Quai 30, l’entrepôt de Wattrelos (Nord) : emballage et retours', logo: './contenus/trames/logos/la-redoute.svg' },
   // Logo officiel (SVG de Wikimedia Commons, 27/10/2026, règle de Tristan : toujours les vrais logos) ; charte : `contenus/airbus.js`.
   { n: 18, nom: 'Airbus Helicopters', metier: 'Hélicoptères — expédition des pièces de rechange depuis Marignane (Bouches-du-Rhône)', logo: './contenus/trames/logos/airbus.svg' },
+  // Logo officiel (SVG de Wikimedia Commons, 27/10/2026, règle de Tristan : toujours les vrais logos) ; charte : `contenus/amazon.js`.
+  { n: 19, nom: 'Amazon', metier: 'E-commerce — le centre de distribution robotisé de Brétigny-sur-Orge (Essonne) : ranger, prélever, emballer', logo: './contenus/trames/logos/amazon.svg' },
+  // Logo officiel (SVG de Wikimedia Commons, 27/10/2026) ; charte : `contenus/leroy-merlin.js` (vert du logo, gardé au bandeau).
+  { n: 20, nom: 'Leroy Merlin', metier: 'Bricolage — la plateforme logistique nationale de Réau (Seine-et-Marne) : la sécurité au quai et dans les allées, le service clients', logo: './contenus/trames/logos/leroy-merlin.svg' },
+  // Logo officiel (SVG de Wikimedia Commons, 27/10/2026) ; charte : `contenus/lidl.js` (bleu du logo).
+  { n: 21, nom: 'Lidl', metier: 'Distribution alimentaire — la plateforme et direction régionale de Meaux (Seine-et-Marne) : la réception, le transport, la facture du fournisseur', logo: './contenus/trames/logos/lidl.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
