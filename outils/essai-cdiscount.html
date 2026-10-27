@@ -40,6 +40,10 @@
     <option value="cdiscount-regularise">ENT-2.4 — régularisé à l'aveugle</option>
     <option value="cdiscount-compte-a-rebours">ENT-2.5 — évaluation, le compte à rebours</option>
     <option value="cdiscount-priorites">ENT-2.6 — bonus, cinq recomptages</option>
+    <option value="cdiscount-bon-endroit" data-contenu="cdiscount-ent27">ENT-2.7 — pic de Noël, le bon endroit</option>
+    <option value="cdiscount-par-lots" data-contenu="cdiscount-ent28">ENT-2.8 — pic de Noël, par lots</option>
+    <option value="cdiscount-calcul-yanis" data-contenu="cdiscount-ent29">ENT-2.9 — pic de Noël, le calcul de Yanis</option>
+    <option value="cdiscount-evaluation-noel" data-contenu="cdiscount-ent210">ENT-2.10 — pic de Noël, évaluation</option>
   </select></label>
   <button type="button" id="recommencer">Recommencer</button>
   <div class="essai-jalons" id="jalons"></div>
@@ -53,7 +57,8 @@ const PICTO = { ok: '✅', ko: '❌', attente: '⏳', na: '·' };
 async function monter() {
   const id = new FormData(form).get('seance');
   const mod = await import(`./activites/${id}.js`);
-  const contenu = await import(`./contenus/${id}.js`);
+  // Le contenu porte le nom de l'activité, sauf quand l'option dit le sien (séances du pic de Noël : `contenus/cdiscount-ent27.js`…).
+  const contenu = await import(`./contenus/${form.querySelector('select[name="seance"]').selectedOptions[0].dataset.contenu || id}.js`);
   const db = {};
   const hote = document.getElementById('hote');
   hote.innerHTML = '';

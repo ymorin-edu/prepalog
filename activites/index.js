@@ -44,6 +44,11 @@ export const ACTIVITES = [
   () => import('./cdiscount-regularise.js'),
   () => import('./cdiscount-compte-a-rebours.js'),
   () => import('./cdiscount-priorites.js'),
+  // Cdiscount, le pic de Noël (1re, C2.2, ENT-2.7 à 2.10) : cadrage `docs/briefs/cdiscount-noel/CADRAGE-cdiscount-noel-1re.md`.
+  () => import('./cdiscount-bon-endroit.js'),
+  () => import('./cdiscount-par-lots.js'),
+  () => import('./cdiscount-calcul-yanis.js'),
+  () => import('./cdiscount-evaluation-noel.js'),
   // Boost (Nîmes) — ENT-3.x. C2.4 « Organiser une tournée de livraison » prend quatre
   // séances : guidage, entraînement, erreur induite, évaluation (ENT-3.4, copie rendue).
   () => import('./boost-tournee.js'),
@@ -145,6 +150,23 @@ export const ACTIVITES = [
   () => import('./lactalis-regle-15-fevrier.js'),
   () => import('./lactalis-lot-oublie.js'),
   () => import('./lactalis-evaluation.js'),
+  // Syngenta, ranger des produits dangereux (1re, C3.1 et C1.5, ENT-15.1 à 15.4) : cadrage `docs/briefs/syngenta/CADRAGE-syngenta-1re.md`.
+  () => import('./syngenta-ranger.js'),
+  () => import('./syngenta-cellule-pleine.js'),
+  () => import('./syngenta-plan-lucas.js'),
+  () => import('./syngenta-evaluation.js'),
+  // Royal Canin, piloter l'entrepôt de produits finis (Tle, C1.6, C2.2 et C3.1, ENT-16.1 à 16.5) : cadrage `docs/briefs/royal-canin/CADRAGE-royal-canin-tle.md`.
+  () => import('./royal-canin-indicateurs.js'),
+  () => import('./royal-canin-indicateurs-novembre.js'),
+  () => import('./royal-canin-picking.js'),
+  () => import('./royal-canin-export.js'),
+  () => import('./royal-canin-evaluation.js'),
+  // La Redoute, emballage et retours à Quai 30 (Tle, C2.2 et C3.3, ENT-17.1 à 17.5) : cadrage `docs/briefs/la-redoute/CADRAGE-la-redoute-tle.md`.
+  () => import('./la-redoute-emballage.js'),
+  () => import('./la-redoute-emballage-fragile.js'),
+  () => import('./la-redoute-retours.js'),
+  () => import('./la-redoute-tri-julien.js'),
+  () => import('./la-redoute-evaluation.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -240,6 +262,12 @@ export const ENTREPRISES = [
   { n: 13, nom: 'Stellantis', metier: 'Usine de Sochaux (Doubs) — logistique, magasin des petites pièces', logo: './contenus/trames/logos/stellantis-texte.svg' },
   // L'élève travaille chez un distributeur CONSTRUIT (plateforme régionale d'une enseigne) : le nom du cas en texte, pas le logo de Lactalis ; charte : `contenus/lactalis.js`.
   { n: 14, nom: 'Rappel Lactalis', metier: 'Traçabilité — plateforme régionale d’une enseigne de supermarchés (Mayenne), décembre 2017', logo: './contenus/trames/logos/lactalis-texte.svg' },
+  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu ardoise construit de la charte ; charte : `contenus/syngenta.js`.
+  { n: 15, nom: 'Syngenta', metier: 'Produits phytosanitaires — magasin des produits finis de l’usine d’Aigues-Vives (Gard), site Seveso', logo: './contenus/trames/logos/syngenta-texte.svg' },
+  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le violet ardoise construit de la charte ; charte : `contenus/royal-canin.js`.
+  { n: 16, nom: 'Royal Canin', metier: 'Aliments pour animaux — entrepôt de produits finis de l’usine d’Aimargues (Gard)', logo: './contenus/trames/logos/royal-canin-texte.svg' },
+  // Pas le logo officiel (accord de Tristan non demandé) : le nom en texte, dans le bleu nuit construit de la charte ; charte : `contenus/la-redoute.js`.
+  { n: 17, nom: 'La Redoute', metier: 'E-commerce mode et maison — Quai 30, l’entrepôt de Wattrelos (Nord) : emballage et retours', logo: './contenus/trames/logos/la-redoute-texte.svg' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
