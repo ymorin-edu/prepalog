@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Amazon CAP (ENT-19.x), puis Leroy Merlin 1re (ENT-20.x), Lidl 2de (ENT-21.x), Stellantis C3.4 (ENT-13.10 à 13.12) (fil cloud « prochains blocs ») | `activites/amazon-*`, `contenus/amazon*`, `outils/test/amazon*.mjs`, `docs/briefs/amazon/`, puis les mêmes pour `leroy-merlin`, `lidl`, `stellantis` ; `activites/index.js`, `activites/catalogue.js`, `outils/test.mjs`, `contenus/trames/logos/` | 27/10/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
