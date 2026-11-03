@@ -2,7 +2,7 @@
 // Tout y est générique : une activité ajoutée demain apparaît ici sans une ligne de code.
 
 import { B } from './backend.js';
-import { ech, toast, confirmer } from './ui.js';
+import { ech, toast, confirmer, confirmerDansLaPage } from './ui.js';
 import { responsable, gardeSuppressionEleve, lisible } from './collegues.js';
 import { NIVEAUX as NIVEAUX_ELEVE, amenagements, niveauScenario, niveauxApres, scenarioDe, proposition, PROPOSITION,
   libelleNiveauEleve } from './amenagements.js';
@@ -1415,6 +1415,7 @@ ${so.phrase}` : ''}`)}"
           <button class="btn btn-s" id="btnDebloquer"
             title="Ouvre la séance à cet élève sans qu'il ait validé la précédente">Débloquer cette séance</button>` : ''}
         </div>
+        <p class="note" id="debResultat" role="status" aria-live="polite"></p>
       </section>`}`;
 
     brancherChoixDemi(z);
@@ -1613,19 +1614,24 @@ ${so.phrase}` : ''}`)}"
       }
     });
 
-    z.querySelector('#btnDebloquer')?.addEventListener('click', async () => {
+    z.querySelector('#btnDebloquer')?.addEventListener('click', () => {
       const uid = z.querySelector('#razEleve').value;
       const m = verrouillables.find((x) => x.id === z.querySelector('#debSeance').value);
       const el = eleves.find((e) => e.uid === uid);
       if (!m || !el) return;
-      if (!confirmer(`Ouvrir ${m.code} à ${el.prenom} ${el.nom} sans qu'il ait validé la séance précédente ?\n\n`
-        + `Il repartira de la base de départ de cette séance.`)) return;
-      try {
-        await B.poserNote(g.id, uid, '_debloque-' + m.id, { score: 0, max: 0 });
-        toast(`${m.code} est ouverte à ${el.prenom}.`);
-      } catch (e) {
-        toast("Le déblocage n'a pas pu être enregistré.");
-      }
+      // Message de résultat resté affiché sous le bouton (le toast disparaît trop vite, surtout sur téléphone).
+      const dire = (t) => { const r = z.querySelector('#debResultat'); if (r) r.textContent = t; toast(t, 6000); };
+      // Confirmation dans la page (pas `window.confirm` : un téléphone peut la bloquer et le bouton semble alors muet).
+      confirmerDansLaPage(z.querySelector('#btnDebloquer'),
+        `Ouvrir ${m.code} à ${el.prenom} ${el.nom} sans qu'il ait validé la séance précédente ? Il repartira de la base de départ de cette séance.`,
+        async () => {
+          try {
+            await B.poserNote(g.id, uid, '_debloque-' + m.id, { score: 0, max: 0 });
+            dire(`${m.code} est ouverte à ${el.prenom} ${el.nom}.`);
+          } catch (e) {
+            dire("Le déblocage n'a pas pu être enregistré.");
+          }
+        }, { oui: 'Oui, débloquer' });
     });
 
     z.querySelector('#btnCsvSuivi')?.addEventListener('click', () => {

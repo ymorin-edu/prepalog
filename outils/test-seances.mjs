@@ -176,7 +176,7 @@ async function profDebloque(nom, aid, mat, code) {
   await chezLeProf(async () => {
     await choisirEleve(nom);
     await page.selectOption('#debSeance', aid);
-    await page.click('#btnDebloquer'); await page.waitForTimeout(300);
+    await page.click('#btnDebloquer'); await page.click('[data-confirme-oui]'); await page.waitForTimeout(300);
   });
   await connecterEleve(mat, code);
 }

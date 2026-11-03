@@ -820,6 +820,36 @@ await v('Spartoo : base d’avant la refonte → 1.2 fermée, 1.1 repart de zér
   await page.waitForSelector('#btnDeco', { timeout: 6000 });
 });
 
+// ---------- 41 ter. « Débloquer cette séance » (Suivi > Élève bloqué) : confirmation DANS LA PAGE, message qui reste (03/11/2026)
+// Sur téléphone, `window.confirm` pouvait être bloquée : le bouton semblait muet et Naomie restait enfermée. Rien n'est
+// écrit tant que l'enseignant n'a pas répondu « Oui » ; « Non » n'écrit rien ; après « Oui », la phrase reste sous le bouton.
+await v('Débloquer une séance : confirmation dans la page, rien d’écrit avant « Oui », message qui reste affiché', async () => {
+  if (await page.$('[data-quitter]')) await page.click('[data-quitter]');
+  await page.waitForSelector('#btnDeco'); await page.click('#btnDeco');
+  await page.waitForSelector('#btnProf'); await page.click('#btnProf');
+  await page.waitForSelector('#btnProfEspace'); await page.click('#btnProfEspace');
+  await page.waitForSelector('[data-ong="suivi"]'); await page.click('[data-ong="suivi"]');
+  await page.waitForSelector('#btnDebloquer');
+  const uid = await page.$eval('#razEleve', (s) => s.value);
+  const cle = (aid) => `prepalog:travaux/1-log-a/${uid}/_debloque-${aid}`;
+  await page.evaluate((k) => localStorage.removeItem(k), cle('spartoo-tracabilite'));
+  await page.selectOption('#debSeance', 'spartoo-tracabilite');
+  await page.click('#btnDebloquer');
+  await page.waitForSelector('[data-confirme]');
+  if (await page.evaluate((k) => localStorage.getItem(k), cle('spartoo-tracabilite'))) throw new Error('déblocage écrit avant la réponse');
+  await page.click('[data-confirme-non]');
+  if (await page.$('[data-confirme]')) throw new Error('la boîte reste après « Non »');
+  if (await page.evaluate((k) => localStorage.getItem(k), cle('spartoo-tracabilite'))) throw new Error('« Non » a écrit le déblocage');
+  await page.click('#btnDebloquer');
+  await page.click('[data-confirme-oui]');
+  await page.waitForFunction(() => /est ouverte à/.test(document.querySelector('#debResultat')?.textContent || ''), null, { timeout: 4000 });
+  if (!(await page.evaluate((k) => localStorage.getItem(k), cle('spartoo-tracabilite')))) throw new Error('« Oui » n’a pas écrit le déblocage');
+  await page.waitForTimeout(3200);   // plus longue que l'ancien toast de 2,6 s
+  const t = await page.$eval('#debResultat', (e) => e.textContent);
+  if (!/ENT-1\.3 est ouverte à/.test(t)) throw new Error('le message ne reste pas affiché : ' + t);
+  await page.click('#btnRetour'); await page.click('#btnDeco');
+});
+
 // ---------- 41 bis. ENT-1.1 : note pondérée sur 20 (lot 4 de la notation, poids validés par Tristan le 10/10/2026). Table écrite
 // à la main ; ENT-1.1 n'est plus en « avancement » ; ses lignes de bandeau restent une par jalon (aucun regroupement).
 await v('Spartoo réception : poids (10 jalons, total 20), plus d’avancement, une ligne de bandeau par jalon', async () => {
