@@ -1000,6 +1000,28 @@ await v('Spartoo préparation : 12 paires puis 20 paires de la même référence
   if (JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('mail à Puma : ' + JSON.stringify(r) + ' au lieu de ' + JSON.stringify(attendu));
 });
 
+// ---------- 41 quinquies bis bis. ENT-1.2 : le complément envoyé dans un SECOND mail s'ajoute au premier (élève Safir, 04/11/2026)
+await v('Spartoo préparation : 12 paires puis le complément seul (autre référence) donnent les 5 points', async () => {
+  const r = await page.evaluate(async () => {
+    const S = await import('/contenus/spartoo.js');
+    const stock = { ...S.baseDeDepart('Essai').stock, 'PM-SUE-NR-40': 0 };
+    const mail = (texte, ts) => ({ folder: 'out', toMail: S.SUP_BY_ID.F003.email, text: texte, ts });
+    const etats = (mails) => {
+      const db = { stock, orders: [], mails };
+      return ['reappro-refs', 'reappro-moq'].map((id) => S.ETAPES.find((e) => e.id === id).verifier(db, S).status).join(',');
+    };
+    const q36 = S.CATALOGUE.VM['PM-SUE-NR-36'].model.max - stock['PM-SUE-NR-36'];
+    return {
+      q36,
+      complement: etats([mail('PM-SUE-NR-40 : 12 paires', 1), mail(`PM-SUE-NR-36 : ${q36} paires`, 2)]),
+      complementFaux: etats([mail('PM-SUE-NR-40 : 12 paires', 1), mail(`PM-SUE-NR-36 : ${q36 + 1} paires`, 2)]),
+      premierSeul: etats([mail('PM-SUE-NR-40 : 12 paires', 1)]),
+    };
+  });
+  const attendu = { q36: r.q36, complement: 'ok,ok', complementFaux: 'ok,ko', premierSeul: 'ok,ko' };
+  if (r.q36 < 8 || JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('compléments à Puma : ' + JSON.stringify(r) + ' au lieu de ' + JSON.stringify(attendu));
+});
+
 // ---------- 41 quinquies ter. ENT-1.2 : la pointure rappelée après la référence n'est pas la quantité (bug du 15/10/2026)
 await v('Spartoo préparation : « PM-SUE-NR-40 pointure 40 : 12 paires » se lit 12, pas 40', async () => {
   const r = await page.evaluate(async () => {

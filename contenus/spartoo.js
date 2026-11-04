@@ -311,6 +311,29 @@ function reapproJuge(db, U) {
       ts: msg.ts,
     };
   });
+  // 04/11/2026 (élève Safir) : Puma répond « complétez votre commande » quand le total est sous le minimum ; l'élève envoie
+  // alors un second mail avec SEULEMENT le complément, et aucun des deux messages ne passait seul. On juge donc aussi
+  // l'ENSEMBLE des messages envoyés à Puma, une quantité par référence (la plus récente fait foi) : le cumul ne
+  // rapporte jamais plus que le meilleur message seul sauf quand il est juste, et « 12 puis 20 » de la même référence
+  // reste sans les 5 points (la dernière quantité, 20, n'est pas la bonne).
+  const derniere = {};
+  mails.forEach((msg) => refsQtes(msg.text || '', sup.id, VM).forEach((x) => { derniere[x.sku] = x; }));
+  const cumul = Object.values(derniere);
+  if (mails.length > 1 && cumul.length) {
+    const total = cumul.reduce((t, x) => t + x.qty, 0);
+    const lignes = cumul.map((x) => { const c = stockDe(db, x.sku), e = x.v.model.max - c;
+      return `${x.sku} : ${x.qty} demandée(s) (stock actuel ${c}, maximum ${x.v.model.max}, attendu ${e})` + (x.qty === e ? ' — correct' : ' — à corriger'); }).join('\n');
+    const aSue = cumul.some((x) => x.sku === 'PM-SUE-NR-40');
+    const dernier = mails[mails.length - 1];
+    evals.push({
+      refs: aSue && cumul.every((x) => x.qty === x.v.model.max - stockDe(db, x.sku)),
+      moq: total >= (sup.moq || 0),
+      detailRefs: `Ensemble des messages envoyés à ${sup.brand} (la dernière quantité de chaque référence fait foi).\n${lignes}`
+        + (!aSue ? "\nLa référence PM-SUE-NR-40 n'apparaît dans aucun message." : ''),
+      detailMoq: `Ensemble des messages envoyés à ${sup.brand} — total ${total} paire${total > 1 ? 's' : ''} (minimum requis ${sup.moq}).`,
+      ts: dernier.ts,
+    });
+  }
   return { evals };
 }
 // Bug du 15/10/2026 : chaque critère était jugé sur son meilleur message À PART, donc « 12 paires » (références
