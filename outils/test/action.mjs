@@ -736,5 +736,20 @@ await v('ENT-8.2 : corrigé enseignant — par élève : sa commande, ses tâche
   egal(r.n, 6, 'parties du corrigé commun');
 });
 
+await v('ENT-8.2 : « Le camion arrive » (mail de fin) ne part qu\u2019avec le compte rendu — un mot à Samia plus tôt ne le fait pas arriver (06/11/2026)', async () => {
+  await monter({ uid: 'ac82-fin', db: { tirages: { [ID]: tirage() } } });
+  await ouvrirMail('Ta prise de poste');
+  await pg.click(`${Z} [data-repondre]`);
+  await pg.fill(`${Z} #repT`, 'Bonjour Samia, bien reçu.');
+  await pg.click(`${Z} #formRep button[type="submit"]`); await pause();
+  vrai(!(await entrants()).some((x) => x.subject === 'Le camion arrive'), 'pas de message de fin après un simple mot à Samia');
+  await visite(); await qui(); await lire(); await planning('Q2', 12); await documents(); await avant();
+  vrai(!(await entrants()).some((x) => x.subject === 'Le camion arrive'), 'toujours pas avant le compte rendu');
+  await compteRendu();
+  const sujets = (await entrants()).map((x) => x.subject);
+  egal(sujets.filter((x) => x === 'Le camion arrive').length, 1, 'le message de fin arrive une fois, avec le compte rendu');
+  egal(sujets[sujets.length - 1], 'Le camion arrive', 'et en dernier');
+});
+
 await F.fermer();
 }

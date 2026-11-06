@@ -26,7 +26,7 @@
 //   de bureau (Pexels 7658310) ; la photo du quai intérieur (Pexels 1267327, `contenus/smoby/LISEZMOI.md`) sert à la question du niveleur.
 
 import { declarerTirage, hasard } from '../core/tirage.js';
-import { apresGeste, apresFiche, apresPlanning, apresMail } from '../core/declencheurs.js';
+import { apresGeste, apresFiche, apresPlanning } from '../core/declencheurs.js';
 import { etapesEntrepot } from '../core/types/entrepot.js';
 import { etapesPlanning } from '../core/types/planning.js';
 import { phrasesJustes } from '../core/phrases.js';
@@ -585,7 +585,9 @@ export const VOLET = {
           'Avant que le camion arrive, [[rendre compte|rends-moi compte]] : le quai, l’heure du camion, ce qui manque.\n\nClique sur « Répondre » et choisis une phrase par ligne.\n\nSamia',
           { db, heure: '06:51', extra: { phrases: phrasesCompteRendu(prenom) } }),
       ] }) },
-    { id: 'fin', quand: apresMail({ a: SAMIA.mail }),
+    // 06/11/2026 : « Le camion arrive » ne part qu'avec le compte rendu par phrases (avant, un simple mot à Samia, par exemple une réponse à sa
+    // première consigne, faisait arriver ce message de fin au milieu de la séance).
+    { id: 'fin', quand: (db) => phrasesJustes(db, PHRASES_ID).envoye,
       semer: (prenom, db) => ({ mails: [mail(prenom, SAMIA, 'Le camion arrive', `Merci ${prenom}. Le camion arrive : on décharge ensemble.\n\nSamia`, { db, heure: '06:57' })] }) },
   ],
 };
