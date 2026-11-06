@@ -7,7 +7,6 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
-| ENT-8.4 : plan de la réception plus lisible (fil « Clarifier le schéma d'entrepôt en 8.4 ») | `contenus/action-ent84-donnees.js`, `contenus/action-ent84.js`, `outils/test/action-84.mjs` | 06/11/2026 |
 | Suivi de classe : séances du niveau de la classe, entreprises repliées par défaut (fil « Filtrer le suivi de classe par niveau ») | `core/prof.js`, tests qui ouvrent le suivi (`outils/test/*.mjs`) | 06/11/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,

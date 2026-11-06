@@ -589,6 +589,13 @@ await v('ENT-8.4 : un écran par étape à 1366 × 768 — le plan grand à gauc
   vrai(plan.x < fiche, 'le plan est à gauche de la fiche');
   egal(await pg.$$eval(`${Z} svg.lb-plan .lb-num text`, (L) => L.map((t) => t.textContent).sort()), ['1', '2', '3', '4', '5', '6', '7', '8'], 'huit ronds numérotés');
   vrai(!!(await pg.$(`${Z} svg.lb-plan image[href$="point-rassemblement.svg"]`)), 'pictogramme du point de rassemblement');
+  // Retour de classe du 06/11/2026 : le plan ET sa légende des objets tiennent dans l'écran, sans défiler (écrans du lycée) ; la légende ne nomme
+  // aucun lieu à trouver.
+  // (Mesure depuis le haut du panneau, placé à 148 px du haut de l'écran sur la capture de l'élève : la page du test peut avoir défilé.)
+  const leg = await pg.$eval(`${Z} [data-fiche-panneau] .lb-legende`, (u) => ({ bas: u.getBoundingClientRect().bottom
+    - u.closest('[data-fiche-panneau]').getBoundingClientRect().top, texte: u.textContent }));
+  vrai(leg.bas <= 768 - 148, 'légende visible sans défiler : ' + leg.bas);
+  vrai(!/vestiaire|quai|rassemblement|contr[ôo]le|litige|charge|zone/i.test(leg.texte), 'la légende ne nomme aucun lieu : ' + leg.texte);
   vrai(await large() <= 0, 'repérer : défilement horizontal');
   await allerV('fiche:planigramme');
   const doc = await pg.textContent(`${Z} [data-fiche-panneau]`);

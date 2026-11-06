@@ -215,67 +215,108 @@ export const LIEUX_PLAN = [
 ];
 const ENCRE = '#2b2824';
 const GRIS = 'rgba(43,40,36,.12)';
-const rond = (n, x, y) => `<g class="lb-num"><circle cx="${x}" cy="${y}" r="20" fill="#f7f3ea" stroke="${ENCRE}" stroke-width="3"/>`
-  + `<text x="${x}" y="${y + 8}" text-anchor="middle" font-size="24" font-weight="800" fill="${ENCRE}">${n}</text></g>`;
-const palette = (x, y, w = 34) => `<rect x="${x}" y="${y}" width="${w}" height="${w}" fill="${GRIS}" stroke="${ENCRE}" stroke-width="1.6"/>`
-  + `<path d="M${x} ${y + w / 3} H${x + w} M${x} ${y + 2 * w / 3} H${x + w}" stroke="${ENCRE}" stroke-width=".8" fill="none"/>`;
+const PAPIER = '#f7f3ea';
+// Retour de classe du 06/11/2026 (« pas assez clair ») — dessins choisis par Tristan sur page d'essai : zone de contrôle « 1a » (emplacements au
+// sol, palettes filmées, palette ouverte et bon coché), bureau « 7a » (pièce vitrée côté quais, écran, clavier, chaise, armoire) ; STOCK écrit à
+// droite des rayonnages, loin des lieux. Puis : dessins agrandis, CHAQUE lieu dans son cadre (pointillé) ou sa pièce (murs pleins), son
+// rond posé dans le coin haut gauche du cadre (aucun doute sur le dessin qu'il désigne), et des repères écrits qui ne nomment aucun lieu à
+// trouver (cour des camions, stock, porte du personnel). Les numéros ne bougent pas (les jalons les lisent ; ENT-8.6 les permute).
+const rond = (n, x, y) => `<g class="lb-num"><circle cx="${x}" cy="${y}" r="22" fill="${PAPIER}" stroke="${ENCRE}" stroke-width="3.2"/>`
+  + `<text x="${x}" y="${y + 9}" text-anchor="middle" font-size="27" font-weight="800" fill="${ENCRE}">${n}</text></g>`;
+const cadre = (x, y, w, h) => `<rect x="${x}" y="${y}" width="${w}" height="${h}" rx="4" fill="rgba(43,40,36,.04)" stroke="${ENCRE}" stroke-width="2.2" stroke-dasharray="9 6"/>`;
+const palette = (x, y, w = 34) => `<rect x="${x}" y="${y}" width="${w}" height="${w}" fill="${GRIS}" stroke="${ENCRE}" stroke-width="1.8"/>`
+  + `<path d="M${x} ${y + w / 3} H${x + w} M${x} ${y + 2 * w / 3} H${x + w}" stroke="${ENCRE}" stroke-width="1" fill="none"/>`;
 const flecheRetour = (x, y) => `<path d="M${x + 13} ${y + 15} V${y + 8} A5.5 5.5 0 0 0 ${x + 2} ${y + 8} V${y + 12} M${x - 2} ${y + 8} L${x + 2} ${y + 13} L${x + 6} ${y + 8}" `
-  + `stroke="${ENCRE}" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
-const roll = (x, y) => `<rect x="${x}" y="${y}" width="28" height="36" fill="none" stroke="${ENCRE}" stroke-width="1.8"/>`
-  + `<path d="M${x + 9} ${y} V${y + 36} M${x + 19} ${y} V${y + 36}" stroke="${ENCRE}" stroke-width="1"/>`
-  + `<circle cx="${x + 3}" cy="${y + 39}" r="2.6" fill="${ENCRE}"/><circle cx="${x + 25}" cy="${y + 39}" r="2.6" fill="${ENCRE}"/>`;
-const cartonOuvert = (x, y) => `${palette(x, y, 38)}<rect x="${x + 9}" y="${y + 9}" width="20" height="20" fill="#f7f3ea" stroke="${ENCRE}" stroke-width="1.6"/>`
-  + `<path d="M${x + 9} ${y + 9} L${x + 3} ${y + 3} M${x + 29} ${y + 9} L${x + 35} ${y + 3} M${x + 9} ${y + 29} L${x + 3} ${y + 35} M${x + 29} ${y + 29} L${x + 35} ${y + 35}" stroke="${ENCRE}" stroke-width="1.6"/>`;
-const transpalette = (x, y) => `<rect x="${x}" y="${y}" width="5" height="44" fill="${ENCRE}"/><rect x="${x + 13}" y="${y}" width="5" height="44" fill="${ENCRE}"/>`
-  + `<rect x="${x - 2}" y="${y + 44}" width="22" height="16" rx="2" fill="${GRIS}" stroke="${ENCRE}" stroke-width="1.8"/>`
-  + `<path d="M${x + 9} ${y + 60} V${y + 70}" stroke="${ENCRE}" stroke-width="2.4"/>`;
+  + `stroke="${ENCRE}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>`;
+const roll = (x, y) => `<rect x="${x}" y="${y}" width="30" height="40" fill="${PAPIER}" stroke="${ENCRE}" stroke-width="2"/>`
+  + `<path d="M${x + 10} ${y} V${y + 40} M${x + 20} ${y} V${y + 40}" stroke="${ENCRE}" stroke-width="1.1"/>`
+  + `<circle cx="${x + 3}" cy="${y + 44}" r="3" fill="${ENCRE}"/><circle cx="${x + 27}" cy="${y + 44}" r="3" fill="${ENCRE}"/>`;
+// Une palette ouverte vue de dessus : ses quatre cartons visibles.
+const cartonsVus = (x, y, w = 56) => { const c = (w - 12) / 2; return `<rect x="${x}" y="${y}" width="${w}" height="${w}" fill="${GRIS}" stroke="${ENCRE}" stroke-width="2"/>`
+  + [0, 1].map((i) => [0, 1].map((j) => `<rect x="${x + 4 + i * (c + 4)}" y="${y + 4 + j * (c + 4)}" width="${c}" height="${c}" fill="${PAPIER}" stroke="${ENCRE}" stroke-width="1.6"/>`).join('')).join(''); };
+// Une palette encore filmée (hachures du film).
+const filmee = (x, y, w = 56) => `<rect x="${x}" y="${y}" width="${w}" height="${w}" fill="rgba(43,40,36,.22)" stroke="${ENCRE}" stroke-width="2"/>`
+  + `<path d="M${x} ${y + w / 2} L${x + w / 2} ${y} M${x} ${y + w} L${x + w} ${y} M${x + w / 2} ${y + w} L${x + w} ${y + w / 2}" stroke="${ENCRE}" stroke-width="1.3"/>`;
+// Un emplacement marqué au sol (quatre coins).
+const coins = (x, y, w, h, l = 12) => `<path d="M${x} ${y + l} V${y} H${x + l} M${x + w - l} ${y} H${x + w} V${y + l} M${x + w} ${y + h - l} V${y + h} H${x + w - l} M${x + l} ${y + h} H${x} V${y + h - l}" stroke="${ENCRE}" stroke-width="3.5" fill="none"/>`;
+// Le bon de livraison sur sa planchette, coché.
+const bonCoche = (x, y) => `<rect x="${x}" y="${y}" width="46" height="60" rx="3" fill="${PAPIER}" stroke="${ENCRE}" stroke-width="2"/><rect x="${x + 14}" y="${y - 5}" width="18" height="9" rx="2" fill="${ENCRE}"/>`
+  + [0, 1, 2].map((k) => `<path d="M${x + 7} ${y + 17 + k * 14} l4 4 l7 -8" stroke="${ENCRE}" stroke-width="2.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/><path d="M${x + 23} ${y + 18 + k * 14} H${x + 39}" stroke="${ENCRE}" stroke-width="1.6"/>`).join('');
+const transpalette = (x, y) => `<rect x="${x}" y="${y}" width="6" height="52" fill="${ENCRE}"/><rect x="${x + 16}" y="${y}" width="6" height="52" fill="${ENCRE}"/>`
+  + `<rect x="${x - 2}" y="${y + 52}" width="26" height="18" rx="2" fill="${GRIS}" stroke="${ENCRE}" stroke-width="2"/>`
+  + `<path d="M${x + 11} ${y + 70} V${y + 82}" stroke="${ENCRE}" stroke-width="2.8"/>`;
+const casier = (x, y) => `<rect x="${x}" y="${y}" width="26" height="50" fill="${GRIS}" stroke="${ENCRE}" stroke-width="1.8"/>`
+  + `<path d="M${x} ${y + 12} H${x + 26}" stroke="${ENCRE}" stroke-width="1"/><circle cx="${x + 20}" cy="${y + 30}" r="2.2" fill="${ENCRE}"/>`;
+const eclair = (x, y) => `<path d="M${x + 12} ${y} L${x} ${y + 22} L${x + 9} ${y + 22} L${x + 3} ${y + 42} L${x + 21} ${y + 15} L${x + 11} ${y + 15} L${x + 17} ${y} Z" fill="${ENCRE}"/>`;
+// Le bureau vu de dessus : l'écran, le clavier, la chaise à dossier ; et une armoire.
+const bureau = (x, y) => `<rect x="${x}" y="${y}" width="84" height="40" fill="rgba(43,40,36,.22)" stroke="${ENCRE}" stroke-width="2"/>`
+  + `<rect x="${x + 26}" y="${y + 4}" width="32" height="6" fill="${ENCRE}"/><path d="M${x + 42} ${y + 10} V${y + 16}" stroke="${ENCRE}" stroke-width="2.5"/>`
+  + `<rect x="${x + 26}" y="${y + 22}" width="32" height="9" rx="1.5" fill="${PAPIER}" stroke="${ENCRE}" stroke-width="1.5"/>`
+  + `<rect x="${x + 28}" y="${y + 50}" width="28" height="24" rx="5" fill="${PAPIER}" stroke="${ENCRE}" stroke-width="2"/><path d="M${x + 26} ${y + 72} Q${x + 42} ${y + 84} ${x + 58} ${y + 72}" stroke="${ENCRE}" stroke-width="5" fill="none" stroke-linecap="round"/>`;
+const armoire = (x, y) => `<rect x="${x}" y="${y}" width="24" height="58" fill="${GRIS}" stroke="${ENCRE}" stroke-width="2"/><path d="M${x} ${y + 29} H${x + 24}" stroke="${ENCRE}" stroke-width="1.2"/>`;
 const PORTES = [['Q1', 250], ['Q2', 390], ['Q3', 530], ['Q4', 670]];
-export const PLAN_LABASTIDE = `<svg class="lb-plan" viewBox="0 0 900 625" role="img" aria-label="Plan de la réception, vue de dessus : huit lieux numérotés de 1 à 8, les camions au nord, la sortie du personnel au sud">
+export const PLAN_LABASTIDE = `<svg class="lb-plan" viewBox="0 0 910 600" role="img" aria-label="Plan de la réception, vue de dessus : huit lieux numérotés de 1 à 8, chacun dans son cadre, la cour des camions au nord, la porte du personnel au sud">
+  <text x="36" y="44" font-size="21" font-weight="800" letter-spacing="1" fill="${ENCRE}">COUR DES CAMIONS</text>
   <g fill="none" stroke="${ENCRE}">
     ${PORTES.map(([, x]) => `<path d="M${x + 4} 18 V112 M${x + 76} 18 V112" stroke-width="1" stroke-dasharray="6 6"/>`).join('')}
-    <path d="M40 120 H860 V540 H130 M95 540 H40 Z" stroke-width="5" stroke-linejoin="miter"/>
-    <path d="M95 540 V506 M95 506 A34 34 0 0 1 129 540" stroke-width="1.6"/>
-    <path d="M112 548 V578 H150" stroke-width="2" stroke-dasharray="5 5"/>
+    <path d="M30 120 H880 V520 H195 M155 520 H30 Z" stroke-width="5" stroke-linejoin="miter"/>
+    <path d="M155 520 V486 M155 486 A34 34 0 0 1 189 520" stroke-width="1.8"/>
   </g>
   ${PORTES.map(([q, x]) => `<rect x="${x}" y="114" width="80" height="12" fill="rgba(43,40,36,.35)" stroke="${ENCRE}" stroke-width="1.5"/>`
-    + `<text x="${x + 40}" y="146" text-anchor="middle" font-size="15" font-weight="700" fill="${ENCRE}">${q}</text>`).join('')}
+    + `<text x="${x + 40}" y="150" text-anchor="middle" font-size="18" font-weight="700" fill="${ENCRE}">${q}</text>`).join('')}
   <g stroke="${ENCRE}" stroke-width="2">
     <rect x="398" y="22" width="64" height="90" rx="3" fill="${GRIS}"/>
     <rect x="407" y="2" width="46" height="18" rx="3" fill="rgba(43,40,36,.3)"/>
     <rect x="392" y="80" width="6" height="16" fill="${ENCRE}"/><rect x="462" y="80" width="6" height="16" fill="${ENCRE}"/>
   </g>
-  ${rond(3, 506, 64)}
-  <rect x="764" y="136" width="90" height="150" fill="none" stroke="${ENCRE}" stroke-width="2" stroke-dasharray="8 5"/>
-  ${roll(772, 146)}${flecheRetour(780, 192)}${roll(814, 146)}${flecheRetour(822, 192)}${palette(790, 228, 40)}${flecheRetour(802, 236)}
-  ${rond(8, 810, 312)}
-  ${cartonOuvert(372, 236)}${cartonOuvert(512, 236)}
-  <rect x="420" y="246" width="80" height="34" rx="2" fill="rgba(43,40,36,.2)" stroke="${ENCRE}" stroke-width="2"/>
-  <path d="M432 263 H488" stroke="${ENCRE}" stroke-width="1" stroke-dasharray="3 3"/>
-  ${rond(1, 460, 318)}
-  <path d="M630 228 H748 M630 228 V332 M636 234 H748 M636 234 V332" stroke="${ENCRE}" stroke-width="1.4" fill="none"/>
-  <path d="${[0, 1, 2, 3, 4, 5, 6, 7].map((k) => `M${644 + k * 14} 228 V234`).join(' ')} ${[0, 1, 2, 3, 4, 5, 6].map((k) => `M630 ${242 + k * 14} H636`).join(' ')}" stroke="${ENCRE}" stroke-width="1.4" fill="none"/>
-  <path d="M748 228 H762 V332 H690 M664 332 H630" stroke="${ENCRE}" stroke-width="3.5" fill="none"/>
-  <rect x="690" y="262" width="54" height="26" fill="rgba(43,40,36,.2)" stroke="${ENCRE}" stroke-width="2"/>
-  <rect x="706" y="266" width="22" height="6" fill="${ENCRE}"/>
-  <circle cx="717" cy="303" r="9" fill="none" stroke="${ENCRE}" stroke-width="2"/>
-  ${rond(7, 662, 268)}
-  <rect x="58" y="228" width="122" height="116" fill="none" stroke="${ENCRE}" stroke-width="2" stroke-dasharray="8 5"/>
-  ${[[68, 238], [110, 238], [68, 290]].map(([x, y]) => `${palette(x, y, 34)}<text x="${x + 17}" y="${y + 27}" text-anchor="middle" font-size="26" font-weight="900" fill="${ENCRE}">!</text>`).join('')}
-  ${rond(6, 140, 312)}
-  ${[405, 450, 495].map((y) => `<rect x="350" y="${y}" width="490" height="20" fill="${GRIS}" stroke="${ENCRE}" stroke-width="1.6"/>`
-    + `<path d="${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((k) => `M${350 + k * 49} ${y} V${y + 20}`).join(' ')}" stroke="${ENCRE}" stroke-width="1"/>`).join('')}
-  <path d="M190 540 V398 H252 M286 398 H316 V540 M40 398 H120 M152 398 H190" stroke="${ENCRE}" stroke-width="3.5" fill="none"/>
-  ${transpalette(220, 456)}${transpalette(252, 456)}${transpalette(284, 456)}
-  <rect x="196" y="410" width="12" height="18" fill="none" stroke="${ENCRE}" stroke-width="1.6"/>
-  <path d="M210 404 L198 424 L206 424 L200 444 L216 418 L208 418 L214 404 Z" fill="${ENCRE}"/>
-  ${rond(4, 286, 426)}
-  ${[0, 1, 2, 3, 4].map((k) => `<rect x="${46 + k * 26}" y="404" width="22" height="34" fill="${GRIS}" stroke="${ENCRE}" stroke-width="1.6"/>`
-    + `<path d="M${46 + k * 26} 414 H${68 + k * 26}" stroke="${ENCRE}" stroke-width=".8"/><circle cx="${63 + k * 26}" cy="426" r="1.8" fill="${ENCRE}"/>`).join('')}
-  <rect x="60" y="460" width="96" height="12" fill="${GRIS}" stroke="${ENCRE}" stroke-width="1.6"/>
-  ${rond(2, 152, 506)}
-  <image href="./contenus/images/action/point-rassemblement.svg" x="150" y="549" width="74" height="74"/>
-  ${rond(5, 254, 586)}
+  ${cadre(50, 170, 200, 170)}
+  ${[[112, 186], [182, 186], [147, 266]].map(([x, y]) => `${palette(x, y, 54)}<text x="${x + 27}" y="${y + 40}" text-anchor="middle" font-size="36" font-weight="900" fill="${ENCRE}">!</text>`).join('')}
+  ${cadre(280, 170, 280, 170)}
+  ${coins(344, 196, 64, 64)}${filmee(348, 200)}${coins(420, 196, 64, 64)}${filmee(424, 200)}${coins(344, 268, 64, 64)}${cartonsVus(348, 272)}${bonCoche(440, 272)}
+  <path d="M640 340 H590 V170 M740 170 V340 H684" stroke="${ENCRE}" stroke-width="3.5" fill="none"/>
+  <path d="M588 170 H742" stroke="${ENCRE}" stroke-width="3.5"/><rect x="604" y="164" width="124" height="12" fill="${PAPIER}" stroke="${ENCRE}" stroke-width="1.6"/>
+  <path d="M645 164 V176 M687 164 V176" stroke="${ENCRE}" stroke-width="1.6"/>
+  <path d="M640 340 V306 A34 34 0 0 1 674 340" stroke="${ENCRE}" stroke-width="1.8" fill="none"/>
+  ${bureau(632, 216)}${armoire(706, 270)}
+  ${cadre(770, 170, 100, 170)}
+  ${roll(784, 228)}${flecheRetour(792, 238)}${roll(828, 228)}${flecheRetour(836, 238)}${palette(796, 284, 48)}${flecheRetour(812, 296)}
+  <text x="814" y="432" text-anchor="middle" font-size="20" font-weight="800" letter-spacing="1" fill="${ENCRE}">STOCK</text>
+  ${[368, 418, 468].map((y) => `<rect x="370" y="${y}" width="392" height="24" fill="${GRIS}" stroke="${ENCRE}" stroke-width="1.6"/>`
+    + `<path d="${[1, 2, 3, 4, 5, 6, 7].map((k) => `M${370 + k * 49} ${y} V${y + 24}`).join(' ')}" stroke="${ENCRE}" stroke-width="1"/>`).join('')}
+  <path d="M30 350 H150 M190 350 H200 V520 M200 350 H286 M326 350 H340 V520" stroke="${ENCRE}" stroke-width="3.5" fill="none"/>
+  ${[0, 1, 2, 3].map((k) => casier(50 + k * 30, 404)).join('')}
+  <rect x="50" y="476" width="96" height="14" fill="${GRIS}" stroke="${ENCRE}" stroke-width="1.8"/>
+  <rect x="256" y="360" width="14" height="22" fill="none" stroke="${ENCRE}" stroke-width="1.8"/>${eclair(274, 358)}
+  ${transpalette(214, 412)}${transpalette(254, 412)}${transpalette(296, 412)}
+  <path d="M175 526 V564 H214" stroke="${ENCRE}" stroke-width="2.2" stroke-dasharray="5 5" fill="none"/>
+  <text x="30" y="556" font-size="17" fill="${ENCRE}">porte du</text><text x="30" y="576" font-size="17" fill="${ENCRE}">personnel</text>
+  <image href="./contenus/images/action/point-rassemblement.svg" x="218" y="528" width="72" height="72"/>
+  <!-- les ronds en dernier, par-dessus les dessins, dans l’ordre lu par ENT-8.6 (ses tests) : 3, 8, 1, 7, 6, 4, 2, 5 -->
+  ${rond(3, 508, 62)}
+  ${rond(8, 798, 198)}
+  ${rond(1, 308, 198)}
+  ${rond(7, 618, 198)}
+  ${rond(6, 78, 198)}
+  ${rond(4, 228, 378)}
+  ${rond(2, 58, 378)}
+  ${rond(5, 318, 564)}
 </svg>`;
+
+// La légende des OBJETS dessinés (sous le plan d'ENT-8.4 seulement : ENT-8.6 est une évaluation, sans aide). Elle ne nomme aucun lieu.
+const icone = (vb, corps) => `<svg viewBox="${vb}" aria-hidden="true">${corps}</svg>`;
+const LEGENDE = [
+  [icone('0 0 40 40', palette(3, 3, 34)), 'palette'],
+  [icone('-2 -2 38 52', roll(2, 0)), 'roll'],
+  [icone('-6 -2 36 88', transpalette(2, 0)), 'transpalette'],
+  [icone('-4 -2 34 56', casier(0, 0)), 'casier'],
+  [icone('0 0 60 60', filmee(2, 2, 56)), 'palette filmée'],
+  [icone('-2 -6 50 70', bonCoche(0, 0)), 'bon coché'],
+  [icone('-2 -2 88 90', bureau(1, 0)), 'bureau, chaise'],
+  [icone('-6 -2 34 46', eclair(0, 0)), 'électricité'],
+  [icone('0 0 40 40', `<text x="20" y="32" text-anchor="middle" font-size="34" font-weight="900" fill="${ENCRE}">!</text>`), 'problème'],
+  [icone('-4 0 24 22', flecheRetour(2, 2)), 'retour'],
+];
+export const LEGENDE_PLAN = `<ul class="lb-legende" aria-label="Légende des dessins">${LEGENDE.map(([i, t]) => `<li>${i}<span>${t}</span></li>`).join('')}</ul>`;
 
 // ─────────────────────────────────────────────────────────────── les banques (brief §6 bis ; ids JAMAIS supprimés ni renumérotés)
 export const BANQUE_LIEUX = LIEUX_PLAN.map((l) => ({ ...l }));

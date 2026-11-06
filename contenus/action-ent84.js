@@ -25,7 +25,7 @@ import { QUESTIONS } from './questions/ENT-8.4.js';
 import { ENTREPRISE as ENT_ACTION, VOCAB as VOCAB_ACTION, LEXIQUE, STYLE_DOCUMENTS, PIED, ech, figure } from './action.js';
 import {
   ID, ID_VOLET, PLANNING_ID, PHRASES_ID, FICHES, EQUIPE_84, EQUIPE_CHOIX, ECHELLE, QUAIS, CAMIONS, CARTE, GRILLE_ROMAIN, HAVRE, PARTENAIRE,
-  LECTURES, TROUVE, PLAN_LABASTIDE, TIRAGE, lieuxDe, tachesDe, tachesBonus, lecturesTirees, lecturesBonus, documentsDe, commandeDe,
+  LECTURES, TROUVE, PLAN_LABASTIDE, LEGENDE_PLAN, TIRAGE, lieuxDe, tachesDe, tachesBonus, lecturesTirees, lecturesBonus, documentsDe, commandeDe,
   melangerPour, tablePlanigramme, minQuai, nombre, ligneCreneau, poseDe, phraseJustePour, placeEnvoyee,
 } from './action-ent84-donnees.js';
 
@@ -68,8 +68,9 @@ const pied = PIED(`${PIED_84} Noms du fournisseur et du transporteur construits.
 export const DOC_PLAN = { id: 'plan-labastide', titre: 'Plan de la réception de Labastide', court: 'Le plan',
   html: `<article class="ac-doc" aria-label="Plan de la réception">
     <p class="ac-t">Plan de la réception — GXO, Labastide-Saint-Pierre</p>
-    <p class="ac-st">Vue de dessus. Les <b>ronds numérotés</b> : les lieux à trouver. Q1 à Q4 : les portes des quais.</p>
+    <p class="ac-st">Vue de dessus. Un <b>rond numéroté</b> = un lieu à trouver. Q1 à Q4 : les portes des quais.</p>
     ${PLAN_LABASTIDE}
+    ${LEGENDE_PLAN}
     ${PIED('Plan construit pour l’exercice : ce n’est pas le vrai plan de l’entrepôt.')}
   </article>` };
 
@@ -190,6 +191,9 @@ export const STYLE = `${STYLE_DOCUMENTS}
 .ac-res{border:1.5px solid #555047; min-height:40px; margin:2px 0 8px; border-radius:2px}
 .lb-plan{display:block; width:100%; height:auto; margin:2px 0 4px}
 .lb-plan text{font-family:inherit}
+.lb-legende{display:flex; flex-wrap:wrap; gap:2px 12px; margin:0 0 6px; padding:4px 0 0; list-style:none; border-top:1px solid #b9b3a6; font-size:.9rem}
+.lb-legende li{display:flex; align-items:center; gap:5px}
+.lb-legende svg{width:auto; height:22px; flex:none}
 .lb-equipe{display:grid; grid-template-columns:1fr 1fr; gap:12px; margin:8px 0 12px}
 .lb-carte{display:flex; gap:12px; align-items:center; border:1.5px solid #555047; border-radius:6px; padding:12px}
 .lb-carte svg{flex:0 0 56px; width:56px; height:56px; color:#2b2824}
