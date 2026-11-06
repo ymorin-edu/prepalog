@@ -14,6 +14,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { deplierSuivi } from './commun.mjs';
 
 export default async function bloc({ v, nav, page, BASE, ROOT, egal, vrai }) {
 
@@ -497,6 +498,7 @@ await v('Repérage (enseignant) : « a quitté la page pendant 2 questions (3 fo
     await page.click('#btnProfEspace');
     await page.click('[data-ong="suivi"]');
     await page.waitForSelector('#btnCsvSuivi', { timeout: 6000 });
+    await deplierSuivi(page, { tousNiveaux: true });
   };
   await ouvrirSuivi();
   const nomGroupe = (await page.textContent('#btnCsvSuivi >> xpath=ancestor::div[1]//strong')).replace(/^Suivi de /, '').trim();

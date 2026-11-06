@@ -643,7 +643,18 @@ await v('Suivi : séances d’entreprise d’abord, « corrigé 2× » à la pla
     };
   }, ids);
   try {
+    // Groupe sans niveau le temps du cas : toutes les entreprises s'affichent (le niveau est rendu à la fin).
+    ids.niveau0 = await page.evaluate(async (gid) => {
+      const { B } = await import('/core/backend.js');
+      const g = await B.groupe(gid);
+      await B.majGroupe(gid, { niveau: null });
+      return { niveau: g?.niveau ?? null, ouverts: g?.ouverts ?? null };
+    }, ids.gid);
     await ouvrir();
+    // Par défaut (06/11/2026), toutes les entreprises sont repliées : une colonne « faites/total » chacune, aucun code ENT.
+    const d = await lire();
+    egal([d.ent51, d.ent11, d.plie], [false, false, `1/${ids.nbSmoby}`], 'entreprises repliées par défaut');
+    await page.click('#suiviToutDeplier');
     const a = await lire();
     vrai(a.entD_abord, 'les séances d’entreprise viennent avant les autres familles');
     egal(a.bandeau.slice(1, 6), ['Spartoo', 'Cdiscount', 'Boost', 'Picard', 'Smoby'], 'bandeau des entreprises');
@@ -658,7 +669,30 @@ await v('Suivi : séances d’entreprise d’abord, « corrigé 2× » à la pla
     await page.click('[data-replier="ent-5"]');
     const c = await lire();
     egal([c.ent51, c.corr], [true, '17,5/20corrigé 2×'], 'Smoby déplié');
+    // Niveau de la classe (06/11/2026) : une classe de Terminale ne voit pas Smoby (2de) ; la case
+    // « autres niveaux » le rend ; une séance de Smoby ouverte à ce groupe le fait revenir sans la case.
+    const regler = (o) => page.evaluate(async ({ gid, o }) => {
+      const { B } = await import('/core/backend.js'); await B.majGroupe(gid, o);
+    }, { gid: ids.gid, o });
+    const bandeaux = () => page.$$eval('#suiviCadre [data-bande]', (L) => L.map((x) => x.dataset.bande));
+    await regler({ niveau: 'tle' });
+    await ouvrir();
+    const tle = await bandeaux();
+    vrai(!tle.includes('ent-5') && !(await page.$('#suiviAutresNiveaux:checked')) && !!(await page.$('#suiviAutresNiveaux')),
+      `Terminale : Smoby masqué, case « autres niveaux » décochée (bandeaux : ${tle.join(', ')})`);
+    await page.check('#suiviAutresNiveaux');
+    await page.waitForSelector('#suiviCadre [data-bande="ent-5"]');
+    await page.uncheck('#suiviAutresNiveaux');
+    await page.waitForFunction(() => !document.querySelector('#suiviCadre [data-bande="ent-5"]'));
+    await regler({ ouverts: { ...(ids.niveau0.ouverts || {}), 'smoby-recrutement': true } });
+    await ouvrir();
+    vrai((await bandeaux()).includes('ent-5'), 'une séance de Smoby ouverte à la classe de Terminale : Smoby revient');
   } finally {
+    if (ids.niveau0) {
+      await page.evaluate(async ({ gid, n }) => {
+        const { B } = await import('/core/backend.js'); await B.majGroupe(gid, { niveau: n.niveau, ouverts: n.ouverts });
+      }, { gid: ids.gid, n: ids.niveau0 });
+    }
     await page.evaluate(async ({ gid, corr, jamais, tab }) => {
       const { B } = await import('/core/backend.js');
       await B.poserNote(gid, corr, 'smoby-recrutement', null);

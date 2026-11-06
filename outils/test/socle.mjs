@@ -10,7 +10,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
 import { pathToFileURL } from 'node:url';
-import { forcerCatalogue } from './commun.mjs';
+import { forcerCatalogue, deplierSuivi } from './commun.mjs';
 
 export default async function bloc({ v, page, nav, ok, ROOT, baseXlsx, BASE }) {
 
@@ -986,7 +986,9 @@ const auditSuivi = async () => {
   await page.waitForSelector('#gNom');
   await page.click('[data-ong="suivi"]');
   await page.waitForSelector('#contenuProf tbody tr');
+  await deplierSuivi(page);
 };
+
 // Pose une copie rendue de l'élève à l'heure voulue (`rendu`), au nom de l'enseignant ou non (`ramasse`).
 const auditCopie = (o) => page.evaluate(async ({ gid, uid, aid, score, rendu, ramasse }) => {
   const { B } = await import('/core/backend.js');
@@ -1135,6 +1137,7 @@ await v("suivi : « Vérifier » recalcule les copies rendues (écart, sans trav
     await auditCopie({ gid, uid: lea, aid: AID, score: 17, rendu: maintenant });
     await auditCopie({ gid, uid: noe, aid: AID, score: 0, rendu: maintenant });
     await auditSuivi();
+    await deplierSuivi(page, { tousNiveaux: true });   // le décompte porte sur toutes les évaluations du catalogue
     const BOUTON = `[data-copie-verifier="${AID}"]`;
     await page.waitForSelector(BOUTON);
     // Seule la colonne d'une évaluation en copie porte le bouton.

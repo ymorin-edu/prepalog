@@ -10,7 +10,7 @@ import { seancesDepuis, memeBase } from './parcours.js';
 import { catalogue, activitesEnEchec, activite, entreprisesDe, estSimulog, ENTREPRISES } from '../activites/index.js';
 import { versCSV, telecharger, ouvrirJeu, cheminDe } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf,
-  demisDe, nomDemi, forcage } from './niveaux.js';
+  demisDe, nomDemi, forcage, concerneNiveau } from './niveaux.js';
 import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
 import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve,
   dateHeureRendu, heureRendu, renduAvantOuverture, verifierCopie } from './copie.js';
@@ -44,8 +44,12 @@ export async function rendreEspaceProf(hote, ctx) {
   // Demi-groupe choisi (brief MOTEUR-demi-groupes) : '' = toute la classe. Un seul choix pour
   // Suivi, Compétences et Conduite de séance : l'enseignant qui a 1L1 devant lui le règle une fois.
   let demiActif = '';
-  // Entreprises repliées dans le Suivi (07/10/2026) : le choix tient le temps de la visite de l'espace enseignant.
-  const suiviPlies = new Set();
+  // Entreprises du Suivi (07/10/2026) : repliées par défaut depuis le 06/11/2026 (demande de Tristan) ; on retient
+  // celles que l'enseignant a dépliées, le temps de la visite de l'espace enseignant.
+  const suiviDeplies = new Set();
+  // Suivi : seules les séances prévues pour le niveau de la classe, sauf si l'enseignant coche « autres niveaux »
+  // (06/11/2026, demande de Tristan). Le choix tient le temps de la visite.
+  let suiviAutresNiveaux = false;
   // Résultats du bouton « Vérifier » du Suivi (15/10/2026) : « groupe|séance » → uid → { etat, recalcul, rendu }.
   // Gardés le temps de la visite ; `rendu` (l'heure de la copie vérifiée) écarte un résultat périmé.
   const verifs = new Map();
@@ -1015,7 +1019,14 @@ export async function rendreEspaceProf(hote, ctx) {
     // Ordre des colonnes (07/10/2026, maquette validée par Tristan) : les séances d'entreprise D'ABORD, sous un
     // bandeau par entreprise (logo, nom, repli d'un clic), puis les autres activités sous le nom de leur famille.
     // Le CSV suit le même ordre.
-    const toutesNotees = mods.map((m) => m.meta).filter((m) => m.bareme);
+    // Séances d'un autre niveau que la classe (06/11/2026) : masquées, sauf si l'enseignant les a ouvertes à ce groupe
+    // (ou à l'un de ses demi-groupes), ou s'il coche « Afficher aussi les autres niveaux ». Groupe sans niveau : tout.
+    const ouverteIci = (m) => g.ouverts?.[m.id] === true
+      || Object.values(g.ouvertsDemi || {}).some((o) => o && o[m.id] === true);
+    const duNiveau = (m) => !g.niveau || concerneNiveau(m.niveaux, g.niveau) || ouverteIci(m);
+    const noteesTousNiveaux = mods.map((m) => m.meta).filter((m) => m.bareme);
+    const nbAutresNiveaux = noteesTousNiveaux.filter((m) => !duNiveau(m)).length;
+    const toutesNotees = suiviAutresNiveaux ? noteesTousNiveaux : noteesTousNiveaux.filter(duNiveau);
     const bandes = [
       ...entreprisesDe(toutesNotees.filter(estSimulog).map((meta) => ({ meta }))).map((e) => ({
         id: 'ent-' + e.id, nom: e.nom, logo: e.logo, ent: true, cols: e.acts.map((a) => a.meta) })),
@@ -1317,11 +1328,14 @@ ${so.phrase}` : ''}`)}"
     const titreCol = (m) => `${m.titre}${aLaMain(m) ? ' — note saisie à la main'
       : noteConvertie(m) ? ` — note sur ${BAREME_AFFICHE}, calculée` : ' — jalons franchis, ce n\'est pas une note'}`;
     const debut = (html) => html.replace('<td class="', '<td class="suivi-debut ');
+    const entIds = bandes.filter((b) => b.ent).map((b) => b.id);
+    const toutDeplie = () => entIds.every((id) => suiviDeplies.has(id));
+    function libelleToutDeplier() { return toutDeplie() ? 'Replier les entreprises' : 'Déplier les entreprises'; }
     function tableauSuivi() {
       let r1 = '<th class="suivi-nom" scope="col">Élève</th>';
       let r2 = `<th class="suivi-nom" scope="col"><span class="note">${eleves.length} élève${eleves.length > 1 ? 's' : ''}</span></th>`;
       bandes.forEach((b) => {
-        const plie = b.ent && suiviPlies.has(b.id);
+        const plie = b.ent && !suiviDeplies.has(b.id);
         const n = plie ? 1 : b.cols.length;
         r1 += `<th class="suivi-bande suivi-debut" colspan="${n}" scope="colgroup" data-bande="${ech(b.id)}">${b.ent
           ? `<button type="button" class="suivi-ent" data-replier="${ech(b.id)}" aria-expanded="${!plie}" aria-label="${ech(b.nom)}"
@@ -1349,7 +1363,7 @@ ${so.phrase}` : ''}`)}"
       });
       const lignes = eleves.map((e) => `<tr><td class="suivi-nom" title="${ech(e.nom)} ${ech(e.prenom)}">${ech(e.nom)} ${ech(e.prenom)}</td>${
         bandes.map((b) => {
-          if (b.ent && suiviPlies.has(b.id)) {
+          if (b.ent && !suiviDeplies.has(b.id)) {
             const faites = b.cols.filter((m) => par[e.uid]?.[m.id]).length;
             return `<td class="num suivi-debut suivi-plie" data-plie="${ech(b.id)}"
               title="${ech(b.nom)} : ${faites} séance${faites > 1 ? 's' : ''} sur ${b.cols.length}">${faites}/${b.cols.length}</td>`;
@@ -1364,12 +1378,18 @@ ${so.phrase}` : ''}`)}"
         <div class="rangee" style="margin-bottom:12px">
           <strong>Suivi de ${ech(g.nom + deDemi)}</strong>
           ${choixDemi(g, 'Élèves :')}
-          <span class="pousse"><button class="btn btn-s" id="btnCsvSuivi">Exporter en CSV</button></span>
+          ${g.niveau && nbAutresNiveaux ? `<label class="rangee" style="gap:6px"><input type="checkbox" id="suiviAutresNiveaux"${
+            suiviAutresNiveaux ? ' checked' : ''}> Afficher aussi les séances des autres niveaux
+            <span class="note">(${nbAutresNiveaux} masquée${nbAutresNiveaux > 1 ? 's' : ''})</span></label>` : ''}
+          <span class="pousse">${bandes.some((b) => b.ent) ? `<button type="button" class="btn btn-s" id="suiviToutDeplier">${
+            libelleToutDeplier()}</button> ` : ''}<button class="btn btn-s" id="btnCsvSuivi">Exporter en CSV</button></span>
         </div>
         ${notees.length === 0 ? `<div class="vide">Aucune activité notée pour l'instant.</div>` : `
         <div class="suivi-cadre" id="suiviCadre">${tableauSuivi()}</div>
-        <p class="note">Les séances d'entreprise viennent en premier ; un clic sur le nom d'une
-          entreprise replie ses séances (le nombre de séances faites reste affiché).
+        <p class="note">${g.niveau ? `Seules les séances prévues pour le niveau de la classe (${ech(libelleNiveau(g.niveau))}) sont
+          affichées, avec celles que vous avez ouvertes à ce groupe${nbAutresNiveaux ? ' ; la case du haut montre les autres' : ''}
+          (l'export CSV suit l'affichage). ` : ''}          Les séances d'entreprise viennent en premier, repliées : un clic sur le logo d'une
+          entreprise déplie ses séances (repliée, elle affiche le nombre de séances faites).
           Les activités corrigées automatiquement sont ramenées à une
           <strong>note sur ${BAREME_AFFICHE}</strong>, quel que soit leur nombre d'exercices ;
           survolez une note pour voir le détail. Entre parenthèses : le nombre de tentatives
@@ -1419,6 +1439,12 @@ ${so.phrase}` : ''}`)}"
       </section>`}`;
 
     brancherChoixDemi(z);
+    z.querySelector('#suiviAutresNiveaux')?.addEventListener('change', async (ev) => {
+      const auClavier = ev.target.matches(':focus-visible');
+      suiviAutresNiveaux = ev.target.checked;
+      await dessiner();
+      if (auClavier) hote.querySelector('#suiviAutresNiveaux')?.focus();
+    });
 
     // Replier / déplier une entreprise : seul le tableau se redessine (aucune lecture de plus en base) ; ses
     // boutons sont rebranchés, la position de défilement est gardée, et le focus revient au bandeau au clavier.
@@ -1427,12 +1453,24 @@ ${so.phrase}` : ''}`)}"
       const b = ev.target.closest('[data-replier]');
       if (!b) return;
       const id = b.dataset.replier;
-      if (suiviPlies.has(id)) suiviPlies.delete(id); else suiviPlies.add(id);
+      if (suiviDeplies.has(id)) suiviDeplies.delete(id); else suiviDeplies.add(id);
       const { scrollLeft, scrollTop } = cadre;
       cadre.innerHTML = tableauSuivi();
       cadre.scrollLeft = scrollLeft; cadre.scrollTop = scrollTop;
       brancherCellules(cadre);
       if (ev.detail === 0) cadre.querySelector(`[data-replier="${CSS.escape(id)}"]`)?.focus();
+      const bt = z.querySelector('#suiviToutDeplier');
+      if (bt) bt.textContent = libelleToutDeplier();
+    });
+    // Tout déplier / tout replier d'un clic (06/11/2026) : les entreprises partent repliées.
+    z.querySelector('#suiviToutDeplier')?.addEventListener('click', (ev) => {
+      if (!cadre) return;
+      if (toutDeplie()) entIds.forEach((id) => suiviDeplies.delete(id)); else entIds.forEach((id) => suiviDeplies.add(id));
+      const { scrollLeft, scrollTop } = cadre;
+      cadre.innerHTML = tableauSuivi();
+      cadre.scrollLeft = scrollLeft; cadre.scrollTop = scrollTop;
+      brancherCellules(cadre);
+      ev.currentTarget.textContent = libelleToutDeplier();
     });
 
     function brancherCellules(racine) {

@@ -15,7 +15,7 @@
 //
 // Valeurs attendues écrites à la main.
 
-import { forcerCatalogue } from './commun.mjs';
+import { forcerCatalogue, deplierSuivi } from './commun.mjs';
 
 export default async function bloc({ v, nav, BASE, ROOT, egal, vrai }) {
 
@@ -758,6 +758,7 @@ await v('Bonus : l’enseignant le lit dans l’infobulle du Suivi (« dont bonu
     localStorage.setItem(`prepalog:travauxIdx/${gid}`, JSON.stringify(idx));
   }, { gid, uid: u1 });
   await pt.click('[data-ong="suivi"]');
+  await deplierSuivi(pt, { tousNiveaux: true });
   await pt.waitForSelector('#contenuProf td[data-bonus]');
   const cases = await pt.$$eval('#contenuProf td[data-bonus]', (L) => L.map((x) => ({ t: x.getAttribute('title'), lu: x.textContent.replace(/\s+/g, ' ').trim() })));
   egal(cases.length, 1, 'cases avec bonus');

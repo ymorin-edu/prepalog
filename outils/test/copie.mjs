@@ -1,3 +1,4 @@
+import { deplierSuivi } from './commun.mjs';
 // Suite de tests de Prepalog — bloc « copie » : la COPIE RENDUE des évaluations (02/10/2026,
 // chantier A). `node outils/test.mjs copie` ne lance que ce bloc ; il n'a besoin d'aucun autre.
 //
@@ -378,7 +379,7 @@ await v('copie : Suivi — au survol de la note d’une copie rendue, chaque jal
       const u = JSON.parse(localStorage.getItem('prepalog:users') || '{}');
       for (const [i, c] of L.entries()) await B.rendreCopie(g, Object.keys(u).find((k) => u[k].matricule === '950' + i), aid, { ...c, nom: 'Eleve' + i, prenom: 'Zoé' });
     }, { L: copies, aid });
-    await p.click('[data-ong="suivi"]'); await p.waitForSelector('#contenuProf td.copie-cell');
+    await p.click('[data-ong="suivi"]'); await deplierSuivi(p); await p.waitForSelector('#contenuProf td.copie-cell');
     const cases = await p.$$eval('#contenuProf td.copie-cell', (L) => L.map((x) => ({ titre: x.title, detail: x.hasAttribute('data-copie-detail') })));
     if (cases.length !== 4) throw new Error('copies rendues dans le Suivi : ' + cases.length);
     const [a, b, c, d] = cases;
@@ -449,7 +450,7 @@ await v('espace enseignant : Suivi, Compétences, Conduite de séance, Corrigés
     if (dejaLa.length) throw new Error(`l'accueil enseignant a déjà téléchargé ${dejaLa.length} séance(s) (${dejaLa.slice(0, 2).join(', ')}…) : ce cas ne peut rien juger`);
     const depuis = reqs.length;
     // Chaque onglet est ouvert, rendu, et contient ce que le catalogue seul permet d'afficher.
-    await p.click('[data-ong="suivi"]'); await ongletPret(p);
+    await p.click('[data-ong="suivi"]'); await ongletPret(p); await deplierSuivi(p);
     await p.waitForSelector(`#contenuProf [data-copie-verifier="${COPIE_AID}"]`);
     const colonnes = await p.$$eval('#contenuProf thead th', (L) => L.map((x) => x.textContent).join(' '));
     if (!/ENT-4\.4/.test(colonnes)) throw new Error('Suivi : colonne ENT-4.4 absente : ' + colonnes.slice(0, 200));
@@ -480,7 +481,7 @@ await v('espace enseignant : ramasser une copie charge la séance au clic (elle 
       const { B } = await import('/core/backend.js');
       for (const u of uids) await B.ecrireJeuPrive(u, aid, { v: 1 });
     }, { uids: e.uids, aid: COPIE_AID });
-    await p.click('[data-ong="suivi"]'); await ongletPret(p);
+    await p.click('[data-ong="suivi"]'); await ongletPret(p); await deplierSuivi(p);
     const bouton = `[data-copie-ramasser][data-uid="${e.uids[0]}"][data-aid="${COPIE_AID}"]`;
     await p.waitForSelector(bouton);
     // Avant le clic : le tableau est dessiné, aucun fichier de séance n'est venu.
@@ -516,7 +517,7 @@ await v('espace enseignant : « Vérifier » est grisé pour une séance dont le
     const e = await espaceCatalogue('Catalogue vérifier', 1, entrees ? (ctx) => ctx.route('**/activites/catalogue.js', (r) => r.fulfill({
       status: 200, contentType: 'text/javascript', body: formaterCatalogue(entrees) })) : null);
     try {
-      await e.p.click('[data-ong="suivi"]'); await ongletPret(e.p);
+      await e.p.click('[data-ong="suivi"]'); await ongletPret(e.p); await deplierSuivi(e.p, { tousNiveaux: true });
       await e.p.waitForSelector('#contenuProf [data-copie-verifier]');
       const etat = await e.p.$$eval('#contenuProf [data-copie-verifier]', (L) => Object.fromEntries(L.map((b) => [b.dataset.copieVerifier, b.disabled])));
       const titre = await e.p.$eval(`#contenuProf [data-copie-verifier="${COPIE_AID}"]`, (b) => b.title);
@@ -542,7 +543,7 @@ await v('espace enseignant : séance qui ne se charge pas au clic sur « ramasse
   const { p } = e;
   try {
     await p.evaluate(async ({ uid, aid }) => { await (await import('/core/backend.js')).B.ecrireJeuPrive(uid, aid, { v: 1 }); }, { uid: e.uids[0], aid: COPIE_AID });
-    await p.click('[data-ong="suivi"]'); await ongletPret(p);
+    await p.click('[data-ong="suivi"]'); await ongletPret(p); await deplierSuivi(p);
     const bouton = `[data-copie-ramasser][data-uid="${e.uids[0]}"][data-aid="${COPIE_AID}"]`;
     await p.waitForSelector(bouton);
     await p.click(bouton);

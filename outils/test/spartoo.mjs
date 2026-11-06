@@ -9,6 +9,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { pathToFileURL } from 'node:url';
+import { deplierSuivi } from './commun.mjs';
 
 export default async function bloc({ v, page, ROOT }) {
 
@@ -296,6 +297,7 @@ await v('Spartoo : note pondérée de la préparation remontée au suivi (20/20)
   await page.waitForSelector('#btnProfEspace');
   await page.click('#btnProfEspace');
   await page.click('[data-ong="suivi"]');
+  await deplierSuivi(page);
   await page.waitForSelector('text=ENT-1.1', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
   // Notation pondérée du 11/10/2026 : onze jalons, 20 points. La préparation juste vaut 20/20 (plus un « 3/3 » d'avancement).
@@ -507,6 +509,7 @@ await v('Spartoo réception : note pondérée remontée au suivi (18/20, questio
   await page.waitForSelector('#btnProfEspace');
   await page.click('#btnProfEspace');
   await page.click('[data-ong="suivi"]');
+  await deplierSuivi(page);
   await page.waitForSelector('text=ENT-1.2', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
   if (!t.includes('18/20')) throw new Error('note 18/20 attendue pour ENT-1.1 (questionnaire faux sur la question 4 : 20 − 2), lu : ' + t.slice(0, 300));
@@ -647,6 +650,7 @@ await v('Spartoo traçabilité : trois notes sur 20 côte à côte dans le suivi
   await page.waitForSelector('#btnProfEspace');
   await page.click('#btnProfEspace');
   await page.click('[data-ong="suivi"]');
+  await deplierSuivi(page);
   await page.waitForSelector('text=ENT-1.3', { timeout: 6000 });
   const t = await page.textContent('#contenuProf');
   // Trois séances, trois notes sur 20, sur une seule et même base. 1.1 : 18/20, la question 4 du questionnaire a été répondue

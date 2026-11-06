@@ -240,4 +240,20 @@ const dossierCaptures = () => (fs.existsSync(CAPTURES) ? CAPTURES : '');
 await page.goto(BASE);
 await page.waitForSelector('#btnProf', { timeout: 8000 });
 
-export { ROOT, BASE, SANS_CONFIG, srv, nav, ctx, page, erreurs, erreursParCas, introuvables, baseXlsx, hotesExternes, ok, ko, v, egal, vrai, setBloc, dossierCaptures, forcerCatalogue };
+// Le Suivi part entreprises repliées (06/11/2026) : « Déplier les entreprises » montre leurs colonnes.
+// `tousNiveaux` : coche aussi « Afficher les séances des autres niveaux » (le tableau ne montre sinon que le niveau du groupe).
+const deplierSuivi = async (p, { tousNiveaux = false } = {}) => {
+  await p.waitForSelector('#contenuProf #suiviCadre table');
+  if (tousNiveaux && await p.$('#suiviAutresNiveaux:not(:checked)')) {
+    await p.check('#suiviAutresNiveaux');
+    await p.waitForSelector('#suiviAutresNiveaux:checked');
+    await p.waitForSelector('#contenuProf #suiviCadre table');
+  }
+  const b = await p.$('#suiviToutDeplier');
+  if (b && /^Déplier/.test(((await b.textContent()) || '').trim())) {
+    await b.click();
+    await p.waitForFunction(() => /^Replier/.test(document.querySelector('#suiviToutDeplier')?.textContent.trim() || ''));
+  }
+};
+
+export { ROOT, BASE, SANS_CONFIG, srv, nav, ctx, page, erreurs, erreursParCas, introuvables, baseXlsx, hotesExternes, ok, ko, v, egal, vrai, setBloc, dossierCaptures, forcerCatalogue, deplierSuivi };
