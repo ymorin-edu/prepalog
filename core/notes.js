@@ -69,6 +69,19 @@ export function meilleurScore(anc, res) {
 }
 
 /**
+ * Le PREMIER essai à ranger avec un résultat (demande de Tristan, 07/11/2026 : l'infobulle du Suivi de classe le montre).
+ * Écrit une seule fois, à la première écriture : `{ premier, premierMax }` (score brut et son barème d'alors). Ensuite il
+ * est repris tel quel. Un résultat ancien, écrit avant ce champ, n'a un premier essai connu que s'il n'a eu qu'une
+ * tentative (le premier est alors le score rangé) ; au-delà, il est perdu et on le dit au lieu de le deviner.
+ */
+export function premierEssai(anc, res) {
+  if (!anc) return { premier: res.score, premierMax: res.max };
+  if (typeof anc.premier === 'number') return { premier: anc.premier, premierMax: anc.premierMax };
+  if (anc.tentatives === 1 && typeof anc.score === 'number') return { premier: anc.score, premierMax: anc.max };
+  return {};
+}
+
+/**
  * La note d'une séance de jalons : jalons réussis ÷ jalons × `sur`, au centième (6,67 et non 6,6666…). 0 s'il
  * n'y a aucun jalon. Une seule écriture pour le Planning et le Plan d'entrepôt (chantier 14, 09/10/2026) ;
  * `noteSur20` ci-dessus, elle, ne sert qu'à l'affichage, au demi-point.

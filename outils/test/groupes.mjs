@@ -937,4 +937,26 @@ await v('groupes : sans niveau choisi, « Créer le groupe » refuse et ne crée
   }
 });
 
+
+// ---------- Premier essai (Tristan, 07/11/2026) : l'infobulle du Suivi de classe montre la note du premier essai.
+// Rangé une fois pour toutes à la première écriture, jamais écrasé par les suivantes ; un résultat ancien (écrit avant
+// ce champ) ne le connaît que s'il n'a eu qu'une tentative, sinon il le dit au lieu de le deviner.
+await v('premier essai : rangé à la première écriture et conservé ; un ancien résultat à plusieurs tentatives ne le devine pas', async () => {
+  const r = await page.evaluate(async () => {
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    const { premierEssai } = await import('/core/notes.js');
+    const B = creerBackendDemo();
+    await B.ecrireScore('zz-pe', 'zz-eleve', 'zz-act', { score: 2, max: 10 });
+    await B.ecrireScore('zz-pe', 'zz-eleve', 'zz-act', { score: 9, max: 10 });
+    await B.ecrireScore('zz-pe', 'zz-eleve', 'zz-act', { score: 5, max: 10 });
+    const t = await B.lireScore('zz-pe', 'zz-eleve', 'zz-act');
+    const unique = premierEssai({ score: 7, max: 10, tentatives: 1 }, { score: 8, max: 10 });
+    const perdu = premierEssai({ score: 7, max: 10, tentatives: 3 }, { score: 8, max: 10 });
+    localStorage.removeItem('prepalog:travaux/zz-pe/zz-eleve/zz-act');
+    return { premier: t.premier, premierMax: t.premierMax, meilleur: t.meilleur, tentatives: t.tentatives, unique, perdu };
+  });
+  if (r.premier !== 2 || r.premierMax !== 10 || r.meilleur !== 9 || r.tentatives !== 3) throw new Error('rangement : ' + JSON.stringify(r));
+  if (r.unique.premier !== 7 || Object.keys(r.perdu).length) throw new Error('ancien résultat : ' + JSON.stringify(r));
+});
+
 }

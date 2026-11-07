@@ -11,7 +11,7 @@ import { catalogue, activitesEnEchec, activite, entreprisesDe, estSimulog, ENTRE
 import { versCSV, telecharger, ouvrirJeu, cheminDe } from './store.js';
 import { NIVEAUX, libelleNiveau, courtNiveau, libelleNiveaux, activiteVisible, horsNiveau, ouvertureParProf,
   demisDe, nomDemi, forcage, concerneNiveau } from './niveaux.js';
-import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote } from './notes.js';
+import { BAREME_AFFICHE, noteSur20, noteConvertie, formaterNote, premierEssai } from './notes.js';
 import { estCopie, estRendue, libelleRendu, ramasser, rouvrir, baseDeLEleve,
   dateHeureRendu, heureRendu, renduAvantOuverture, verifierCopie } from './copie.js';
 import { TEMPS, COEFS_DEFAUT, coefsDuGroupe, seancesParCompetence, seancesParSpecialite, moyenneCompetence, metasPourNiveau, sansEvaluation2de } from './competences.js';
@@ -1066,6 +1066,15 @@ export async function rendreEspaceProf(hote, ctx) {
       return L.length || qo ? `Détail de la note :\n${L.concat(qo ? [qo] : []).join('\n')}` : '';
     };
 
+    // « Premier essai : 12,5 / 20 » pour l'infobulle d'une note (demande de Tristan, 07/11/2026). Rangé à la première
+    // écriture (`premierEssai`, core/notes.js). Un résultat plus ancien qui a eu plusieurs tentatives ne l'a pas : on le dit.
+    const phrasePremier = (t, max) => {
+      const x = premierEssai(t, { score: t.score, max: t.max });
+      if (typeof x.premier !== 'number') return "premier essai non conservé (note antérieure au 07/11/2026)";
+      const n = noteSur20(x.premier, x.premierMax || max);
+      return `premier essai : ${n === null ? '—' : `${formaterNote(n)}/${BAREME_AFFICHE}`}`;
+    };
+
     const cellule = (e, m) => {
       const t = par[e.uid]?.[m.id];
       if (aLaMain(m)) {
@@ -1163,7 +1172,8 @@ export async function rendreEspaceProf(hote, ctx) {
         // Les questions d'« Avant de commencer » d'une évaluation : la part et le détail juste / « Je ne sais pas » / faux.
         const qo = t.detail && t.detail.ouverture;
         const dontQuestions = qo ? phraseOuverture(qo) : '';
-        return `<td class="num ${classe}"${dontBonus ? ' data-bonus' : ''} title="${ech(`${formaterNote(t.meilleur)} sur ${max}${dontBonus}${dontQuestions} — ${corr}${so ? `
+        const premierBilan = ind && typeof ind.note1 === 'number' ? ` — premier bilan : ${formaterNote(ind.note1)}/${BAREME_AFFICHE}` : '';
+        return `<td class="num ${classe}"${dontBonus ? ' data-bonus' : ''} title="${ech(`${formaterNote(t.meilleur)} sur ${max}${dontBonus}${dontQuestions} — ${corr}${premierBilan}${so ? `
 ${so.phrase}` : ''}`)}"
           >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>${
           n ? `<span class="suivi-corrige" data-corrections="${n}">corrigé ${n}×</span>` : ''}</td>`;
@@ -1172,7 +1182,7 @@ ${so.phrase}` : ''}`)}"
       // Note sur 20. Le score brut reste accessible en infobulle : l'enseignant veut
       // souvent savoir combien d'exercices ont été réussis, pas seulement la note.
       return `<td class="num ${classe}"
-        title="${t.meilleur} sur ${max} — ${t.tentatives} tentative${t.tentatives > 1 ? 's' : ''}"
+        title="${ech(`${t.meilleur} sur ${max} — ${t.tentatives} tentative${t.tentatives > 1 ? 's' : ''} — ${phrasePremier(t, max)}`)}"
         >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>
         <span class="note">(${t.tentatives})</span></td>`;
     };
