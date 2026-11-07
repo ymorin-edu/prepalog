@@ -30,6 +30,9 @@ const s = seanceEntreprise(SPARTOO, SPARTOO, {
   // Parcours strict : ENT-1.2 ne s'ouvre qu'à l'élève qui a validé ENT-1.1 (voir core/parcours.js).
   parcours: true,
   precedente: 'spartoo-reception',
+  // 07/11/2026 (choix de Tristan) : la 1.3 s'ouvre au PREMIER BILAN, dès que les 11 jalons sont jugés (justes ou faux), comme ENT-1.1.
+  // Pas de `correction` : Spartoo juge en continu, il n'y a pas d'écran à rouvrir.
+  suiteAuBilan: true,
   // Trame élève : la déclarer, c'est la valider (relue par Tristan). Le corrigé se déduit du code.
   trame: 'spartoo-preparation',
   pret: true,

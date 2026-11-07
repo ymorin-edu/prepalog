@@ -1026,6 +1026,12 @@ await v('Spartoo préparation : 12 paires puis le complément seul (autre réfé
   if (r.q36 < 8 || JSON.stringify(r) !== JSON.stringify(attendu)) throw new Error('compléments à Puma : ' + JSON.stringify(r) + ' au lieu de ' + JSON.stringify(attendu));
 });
 
+// ---------- 41 quinquies quater. ENT-1.2 : la 1.3 s'ouvre au premier bilan (choix de Tristan, 07/11/2026)
+await v('Spartoo préparation : la suite s\u2019ouvre au premier bilan (suiteAuBilan), sans « Corriger » ni note moyennée', async () => {
+  const m = await page.evaluate(async () => (await import('/activites/spartoo.js')).meta);
+  if (m.suiteAuBilan !== true || m.correction) throw new Error('meta ENT-1.2 : suiteAuBilan attendu, correction interdite : ' + JSON.stringify(m));
+});
+
 // ---------- 41 quinquies ter. ENT-1.2 : la pointure rappelée après la référence n'est pas la quantité (bug du 15/10/2026)
 await v('Spartoo préparation : « PM-SUE-NR-40 pointure 40 : 12 paires » se lit 12, pas 40', async () => {
   const r = await page.evaluate(async () => {
