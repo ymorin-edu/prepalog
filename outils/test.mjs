@@ -105,7 +105,8 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'stellantis-equipe',
   'stellantis-ligne',
   'palettier',
-  'ramasse'];
+  'ramasse',
+  'vitrine'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,
@@ -142,7 +143,8 @@ const GROUPES = {
     'pelleau-109', 'action-818', 'cdiscount-noel', 'la-redoute', 'stellantis-13.5', 'lidl'],
   6: ['quiz', 'inventaire', 'tirage-niveaux', 'decathlon', 'localiser', 'action-89', 'action-811', 'chep-94', 'preparation-vocale',
     'tri', 'mr-11.2', 'mr-11.3', 'mr-11.4', 'mr-11.6', 'airbus', 'kuehne-nagel'],
-  7: ['carte', 'fb-6.2', 'fb-6.8', 'courriel', 'pelleau-101', 'pelleau-108', 'pelleau-110', 'palettier', 'action-816', 'mr-11.1', 'mr-11.5', 'amazon', 'ligne'],
+  7: ['carte', 'fb-6.2', 'fb-6.8', 'courriel', 'pelleau-101', 'pelleau-108', 'pelleau-110', 'palettier', 'action-816', 'mr-11.1', 'mr-11.5', 'amazon', 'ligne',
+    'vitrine'],
   8: ['planning', 'amenagements', 'dialogue', 'inspection', 'action-810', 'action-814', 'chep-92', 'stellantis-ligne',
     'pelleau-104', 'pelleau-106', 'action-815', 'mr-11.7', 'syngenta', 'stellantis-13.3', 'stellantis-13.4'],
 };

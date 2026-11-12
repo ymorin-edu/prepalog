@@ -232,6 +232,8 @@ export const ACTIVITES = [
   () => import('./kuehne-nagel-lundi.js'),
   () => import('./kuehne-nagel-lucas.js'),
   () => import('./kuehne-nagel-evaluation.js'),
+  // La vitrine du Bac Pro Logistique (2de GATL, semaine des filières, ENT-25.1) : brief `docs/briefs/ENT-25.1-vitrine-logistique.md`.
+  () => import('./vitrine-logistique.js'),
 ];
 
 // Pictogrammes des rubriques. Une seule grille pour les dix : trait de 1,6 px, bouts et
@@ -347,6 +349,8 @@ export const ENTREPRISES = [
   { n: 23, nom: 'Yves Rocher', metier: 'Cosmétique — la plateforme logistique de La Villouët à La Gacilly (Morbihan) : préparer les commandes des boutiques, leur répondre', logo: './contenus/trames/logos/yves-rocher.svg' },
   // Logo officiel (SVG de Wikimedia Commons, 27/10/2026) ; charte : `contenus/kuehne-nagel.js` (bleu marine du logo).
   { n: 24, nom: 'Kuehne+Nagel', metier: 'Commissionnaire de transport — le hub aérien de Roissy-Charles-de-Gaulle : préparer la réception des envois (médicaments au froid, pièces d’avion urgentes)', logo: './contenus/trames/logos/kuehne-nagel.svg' },
+  // Pas une entreprise : la vitrine du Bac Pro Logistique (semaine des filières de 2de, 12/11/2026), un tour de quatre entreprises déjà vérifiées ; logo de Prepalog.
+  { n: 25, nom: 'Le Bac Pro Logistique', metier: 'Semaine des filières — la visite de quatre entreprises où travaillent les logisticiens', logo: './contenus/trames/logos/prepalog.png' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
