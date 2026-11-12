@@ -1,13 +1,13 @@
 // ENT-25.1 — « Et si tu choisissais la Logistique ? » : la vitrine du Bac Pro Logistique pour les 2de GATL (semaine des filières). Voir `contenus/vitrine-logistique.js`.
-// Pas une entreprise : un tour de quatre entreprises réelles déjà vérifiées (Amazon, Stellantis, Airbus Helicopters, Royal Canin). Non comptée dans les compétences.
+// Pas une entreprise : un tour de quatre entreprises réelles déjà vérifiées, un écran de jeu du moteur à chaque arrêt. Non comptée dans les compétences.
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SEANCE from '../contenus/vitrine-logistique.js';
 const s = seanceEntreprise(SEANCE, SEANCE, {
   id: 'vitrine-logistique',
   code: 'ENT-25.1',
   titre: 'Et si tu choisissais la Logistique ?',
-  desc: 'La visite de quatre entreprises où travaillent les logisticiens (Amazon, Stellantis, Airbus Helicopters, Royal Canin), un petit geste à chaque arrêt, '
-    + 'puis le Bac Pro Logistique en bref. Pour la semaine des filières de 2de.',
+  desc: 'La visite de quatre entreprises où travaillent les logisticiens : situer les sites sur la carte, trier des colis chez Amazon, alimenter la ligne '
+    + 'de Stellantis, répondre à Airbus Helicopters au téléphone, ranger des palettes chez Royal Canin, puis le Bac Pro Logistique en bref. Semaine des filières de 2de.',
   niveaux: ['2de'],
   competences: [],
   temps: 'guidage',

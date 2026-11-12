@@ -9,47 +9,47 @@ secondes sur prepalog » ; « le but est de mettre en avant le BAC PRO logistiqu
 
 Public : 2de GATL, avant le choix de spécialité de fin d'année (Logistique, OTM, AGOrA). Une séance d'1 h (≈ 45 min de travail).
 
-## 2. Le cadrage retenu (proposé à Tristan, option recommandée)
+## 2. Le cadrage retenu
 
-Une vitrine, pas une entreprise : la visite de **quatre entreprises réelles déjà vérifiées** dans Prepalog, choisies pour donner envie
-(robots, voitures, hélicoptères, export), avec un petit geste à chaque arrêt, puis le Bac Pro en bref.
+Première version (fiches de questions, 12/11 matin), puis Tristan : « il faut que ça soit plus ludique et interactif ». Option choisie :
+**tout en écrans de jeu**, avec les vues existantes du moteur (aucune vue nouvelle).
 
-| Arrêt | Entreprise (univers déjà vérifié) | Geste | Points |
+| Arrêt | Entreprise (univers déjà vérifié) | Écran de jeu | Points |
 |---|---|---|---|
-| ① | Amazon, Brétigny-sur-Orge (`contenus/amazon.js`) | remettre dans l'ordre le chemin d'un article ; qui se déplace (le robot) | 4 + 1 |
-| ② | Stellantis, Sochaux (`contenus/stellantis.js`) | voitures par heure (60), roues par heure (240), pièce en retard (la ligne s'arrête) | 2 + 2 + 1 |
-| ③ | Airbus Helicopters, Marignane (`contenus/airbus.js`) | choisir le transport : hélicoptère au sol → le plus rapide ; révision → le moins cher à temps | 2 + 2 |
-| ④ | Royal Canin, Aimargues (`contenus/royal-canin.js`) | 85 tonnes sur 100 exportées ; quel lot sortir d'abord (FEFO) | 1 + 2 |
-| ⑤ | Le Bac Pro Logistique en bref (fiche Onisep, relevée le 12/11/2026) | trois vrai ou faux ; le poste préféré (non jugé) | 1 + 1 + 1 |
+| ⓪ | les quatre sites | **Carte de France** (vue Localiser) : région puis département de chaque site, au premier coup | 0,5 × 8 = 4 |
+| ① | Amazon, Brétigny-sur-Orge | **Tri des colis** (vue Tri) : 8 colis vers 3 tournées ou à l'écart ; 2 pièges (Dreux « Café d'Orléans », Saran) | colis en règle 2, pièges 1, écarts 1 |
+| ② | Stellantis, Sochaux | **Vingt minutes au bord de ligne** (vue Ligne) : 3 postes repris d'ENT-13.6, envoyer les robots à temps | voitures 2, arrêt 2 |
+| ③ | Airbus Helicopters, Marignane | **L'appel de Nathalie** (vue Téléphone) : hélicoptère du SAMU au sol, quel transport, la révision, prévenir le client | 1 + 0,75 + 0,75 + 0,5 |
+| ④ | Royal Canin, Aimargues | **Ranger trois palettes** (vue Plan d'entrepôt, mode rangement, guidage) : côté chiens / chats, rotation A / B / C | 1 × 3 |
+| ⑤ | Le Bac Pro Logistique en bref (fiche Onisep, relevée le 12/11/2026) | trois vrai ou faux ; le poste préféré (non jugé) | 0,5 + 0,5 + 1 |
 
-Guide : **Sarah**, élève de Terminale Bac Pro Logistique (construite), par messages, au tu. Les fiches s'ouvrent l'une après l'autre.
+Guide : **Sarah**, élève de Terminale Bac Pro Logistique (construite), par messages, au tu. Chaque arrêt s'ouvre quand le précédent est fini.
+Les poids ont été posés par Claude (découverte non comptée dans les compétences) : à revoir par Tristan s'il le souhaite.
 
 ## 3. Vérifié / construit (alerte 9)
 
-- **Vérifié** (déjà vérifié pour les séances de ces entreprises, repris de leurs `MENTION`) : chiffres d'Amazon Brétigny (70 000 m², 4 000 robots,
-  4 500 salariés, 500 000 colis/jour, pesée), de Stellantis Sochaux (≈ 1 045 voitures/jour, 250 camions, 500 fournisseurs, 1 200 personnes immobilisées
-  par un arrêt), d'Airbus Helicopters (361 hélicoptères livrés en 2024, service AOG), de Royal Canin (≈ 349 000 t en 2024, ≈ 85 % exportées, 1 800
-  emplacements). Bac Pro : fiche Onisep « Bac pro métiers de la logistique » (toute la chaîne logistique, conduite d'engins de manutention, 20 semaines de
-  PFMP sur 3 ans, métiers, BTS Gestion des transports et logistique associée).
-- **Construit** : Sarah ; les étapes détaillées du chemin d'un article chez Amazon ; les trois transports d'Airbus, leurs délais et leurs prix ; les trois
-  lots de Royal Canin et leurs dates ; « 4 roues par voiture » (roue de secours oubliée).
+- **Vérifié** (déjà vérifié pour les séances de ces entreprises, repris de leurs `MENTION`) : chiffres d'Amazon Brétigny, de Stellantis Sochaux
+  (≈ 1 045 voitures/jour, 1 200 personnes immobilisées par un arrêt), d'Airbus Helicopters (service AOG), de Royal Canin (≈ 85 % exportés). Communes des
+  quatre sites. Bac Pro : fiche Onisep « Bac pro métiers de la logistique » (20 semaines de PFMP sur 3 ans, conduite d'engins, poursuite d'études).
+- **Construit** : Sarah, Théo, Karim, Nathalie, Sandrine ; les colis, relais et tournées d'Amazon ; les trois postes et la cadence ralentie de la ligne ; les
+  trois transports d'Airbus, leurs délais et prix, le SAMU de Lyon et l'école de pilotage ; le plan, le stock et les palettes de Royal Canin. Places sur
+  la carte : centre de la commune (approché).
 
 ## 4. Choix faits en construisant (à revoir à l'écran par Tristan)
 
-- **Code `ENT-25.1`, pas `DEC-2`** : le moteur des séances d'entreprise exige un code `ENT-` et range chaque séance sous l'« entreprise » du premier
-  nombre. La vitrine est donc l'entreprise n° 25 « Le Bac Pro Logistique » (logo de Prepalog), dans Simulog.
-- **Non comptée dans les compétences** (`competences: []`) : c'est une découverte. Elle a un résultat sur 20 (l'élève voit son score, Tristan voit qui a
-  fini dans le suivi de classe).
-- Pas d'« Avant de commencer » ni de questions au fil (vitrine d'une heure) ; pas de trame papier ; pas de carte de France.
+- **Code `ENT-25.1`, pas `DEC-2`** : le moteur des séances d'entreprise exige un code `ENT-`. La vitrine est l'entreprise n° 25 « Le Bac Pro Logistique »
+  (logo de Prepalog), dans Simulog.
+- **Non comptée dans les compétences** (`competences: []`), résultat sur 20 (l'élève voit son score, Tristan voit qui a fini dans le suivi).
+- Tout est en **guidage** : la ligne est ralentie et Karim l'arrête au premier geste pour expliquer ; chaque palette de Royal Canin porte sa consigne.
+- La carte se joue au premier essai et ne se rejoue pas ; les autres arrêts peuvent être corrigés après le bilan.
 - Le poste préféré de chaque élève est rangé dans sa base (fiche « Et toi ? », champ `prefere`), visible nulle part ailleurs pour l'instant.
 
 ## 5. Compte rendu
 
-- Fichiers : `contenus/vitrine-logistique.js`, `activites/vitrine-logistique.js`, `contenus/corriges/ENT-25.1.js`, ligne dans `activites/index.js`
-  (registre + `ENTREPRISES` n° 25), `activites/catalogue.js` régénéré.
-- Tests : bloc `vitrine` (8 cas, `outils/test/vitrine.mjs`), inscrit dans `BLOCS` et dans le groupe 7 de `GROUPES` (`outils/test.mjs` touché pour ces deux
-  lignes seulement). Éprouvé par sabotage (lot juste et roues par heure faussés : trois cas tombent).
-- Deux règles du site apprises à la suite entière : le logo d'une « entreprise » doit être dans `contenus/trames/logos/` (copie du logo de Prepalog,
-  `prepalog.png`, même empreinte que `styles/logo.png`) ; une séance X.1 porte `reinitialisable: true`.
-- Suite : 116 blocs en parallèle dans le cloud, puis les blocs tombés rejoués seuls, tous verts (les cas de `groupes` ne tombent que mélangés à d'autres
-  blocs dans un seul navigateur ; seuls, 98/98).
+- Fichiers : `contenus/vitrine-logistique.js`, `activites/vitrine-logistique.js`, `contenus/corriges/ENT-25.1.js` (six arrêts), ligne dans
+  `activites/index.js` (registre + `ENTREPRISES` n° 25), `activites/catalogue.js` régénéré.
+- Tests : bloc `vitrine` (6 cas, `outils/test/vitrine.mjs`) : déclaration, ouverture et inaction (0/20), parcours juste (20/20), une erreur par arrêt
+  (11,75/20, chaque jalon tombe seul), corrigé et documents. Éprouvé par sabotage (transport de la révision et rotation d'une palette faussés : deux cas
+  tombent). `outils/test.mjs` : seulement les lignes `BLOCS` et `GROUPES` de la première version, pas retouché ensuite.
+- Deux règles du site apprises à la suite entière : le logo d'une « entreprise » doit être dans `contenus/trames/logos/` ; une séance X.1 porte
+  `reinitialisable: true`.
