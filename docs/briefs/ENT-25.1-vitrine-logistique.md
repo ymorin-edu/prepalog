@@ -55,3 +55,22 @@ quais ce qui part souvent ? ; (5) pourquoi saisir 66 et pas 72 ? ; (6) la fiche 
 - Trouvé en essayant, **non corrigé (moteur)** : sur le thème sombre de Spartoo, le bandeau vert « Réception validée… » de l'écran Réceptions est presque
   illisible (texte clair sur fond vert clair) ; même défaut dans ENT-1.1. Le message en bas d'écran (« Réception validée : 66 paires entrées en stock ») reste
   lisible. Et le plan dit « Les 1 palettes sont posées » (accord au pluriel du moteur).
+
+### Compte rendu du 14/11/2026 (après-midi) : les questions, « accepter avec réserves »
+
+Tristan : « je prends les questions au fil et ajoute des questions sur la fiche entreprise ; ajoute une explication de la notion accepter avec réserves ».
+- `contenus/questions/ENT-25.1.js` (nouveau), branché dans `activites/vitrine-logistique.js` (`meta.questions: 'ENT-25.1'`).
+- **« Avant de commencer »** (non noté, corrigé à l'écran) : 4 questions sur le document « Spartoo » (ce qu'elle vend, la surface, le rangement par
+  catégorie, la RFID) et 1 sur « Accepter avec réserves ».
+- **Au fil**, 6 réflexions de Sarah, **non notées** (les 20 points validés restent ceux des jalons) : signer tout de suite ? (au déchargement) ; 12 × 6 = 72
+  paires (palette validée, corrigée au bilan pour ne pas souffler la saisie) ; éco-droit C. com. L133-3 (clôture du quai) ; près des quais ce qui part
+  souvent (palette posée, corrigée au bilan) ; pourquoi 66 et pas 72 (saisie validée) ; après le Bac Pro (saisie validée, document « Le Bac Pro Logistique »).
+  Si Tristan veut qu'elles comptent : `part` à prendre sur les jalons (poids à revalider).
+- **Document « Accepter avec réserves »** (nouveau, joint au message du quai) : accepter / avec réserves / refuser, une réserve précise (exemple P2 :
+  3 cartons, pas celui de la palette), pourquoi avant le départ du chauffeur, L133-3 1er alinéa recopié d'ENT-8.8 (Légifrance, relu le 17/10/2026).
+  Lexique : « avec réserves ». Document « Le Bac Pro Logistique » (Onisep, 12/11/2026) repris et joint au dernier message.
+- Tests : bloc `vitrine` à 8 cas (+ « Avant de commencer » qui ferme le menu, + réponses fausses au fil → toujours 20/20 ; le parcours vérifie que les
+  6 questions arrivent). Éprouvé : une question mise de côté fait tomber deux cas.
+- Page d'essai de l'écran « Réserves et signature » (le BL visible sans défiler) envoyée à Tristan : options A / B, choix attendu avant tout changement
+  du moteur (`core/types/quai.js`, vaut pour tous les quais en 3D).
+

@@ -8,8 +8,10 @@
 //   ① quai : 11 cartons comptés (12 annoncés), accepter avec réserves (carton endommagé, carton manquant), 1 et 1 sur le BL, signer.   3 · 3 · 3
 //   ② mise en stock : P1 (sport, rotation A) → A1-T01-N2-E2.                                                          3
 //   ③ saisie : REC-04140, lot LOT-PM-2611, 72 paires annoncées, 66 comptées, endommagé, accepté sous réserve.        1 · 3 · 2     = 20.
+// Les questions (14/11/2026) : « Avant de commencer » (5, non notées, posées d'avance par `mont` sauf dans le cas qui joue l'écran) et 6 questions
+// au fil, toutes des réflexions de Sarah, NON notées : la note reste celle des jalons, quelles que soient les réponses.
 
-import { ouvrirPelleau, proche } from './pelleau/commun.mjs';
+import { ouvrirPelleau, proche, qFilSelecteur } from './pelleau/commun.mjs';
 
 export default async function bloc({ v, nav, BASE, egal, vrai }) {
 
@@ -17,7 +19,13 @@ const ID = 'vitrine-logistique';
 const ACT = '/activites/vitrine-logistique.js';
 const P = await ouvrirPelleau({ nav, BASE, vrai, activite: ACT, id: ID });
 const { pg, Z, pause, base, present, bandeau, entrants, menu, aller } = P;
-const mont = (o = {}) => P.monter({ uid: 'vitrine', ...o });
+const OUV = { vend: 'chaussures', surface: 'foot', rangement: 'categorie', rfid: 'ou', reserves: 'garder-ecrire' };
+const mont = (o = {}) => P.monter({ uid: 'vitrine', rep: OUV, ...o });
+const qFil = qFilSelecteur(P, vrai);
+// Les réponses aux questions au fil : les « justes » (FIL) ou toutes fausses (FIL_FAUX) ; non notées, elles ne changent pas la note.
+const FIL = { 'signer-tout-de-suite': 'controle', 'paires-annoncees': '72', 'trois-jours': 'preuve', 'pres-des-quais': 'chemin', 'pourquoi-66': 'reel', 'apres-le-bac': 'deux' };
+const FIL_FAUX = { 'signer-tout-de-suite': 'signe', 'paires-annoncees': '18', 'trois-jours': 'jamais', 'pres-des-quais': 'joli', 'pourquoi-66': 'pareil', 'apres-le-bac': 'travailler' };
+let R_FIL = FIL;
 const noter = () => pg.evaluate(() => { const L = window.__f.enregistres; return L.length ? L[L.length - 1] : { score: 0, max: 20, detail: {} }; });
 const fermerCartes = async () => { await pg.evaluate(() => document.querySelectorAll('[aria-label="Fermer la notification"]').forEach((b) => b.click())); await pause(80); };
 const allerV = async (vue) => { await fermerCartes(); await aller(vue); };
@@ -33,6 +41,7 @@ async function jouerQuai(o = {}) {
   await allerV('quai');
   await pg.click(`${Z} [data-q="passer1"]`);
   await pg.click(`${Z} [data-q="decharger"]`);
+  await pause(); await qFil(R_FIL);
   if (await pg.isVisible(`${Z} [data-q="passer"]`)) await pg.click(`${Z} [data-q="passer"]`);   // « Passer l'animation » (absent en mouvement réduit)
   await pg.waitForSelector(`${Z} [data-q="vers3"]:not([disabled])`); await pg.click(`${Z} [data-q="vers3"]`);
   await pg.waitForSelector(`${Z} #qCompte`);
@@ -41,12 +50,14 @@ async function jouerQuai(o = {}) {
   await pg.click(`${Z} #qDec-${q.decision}`);
   for (const m of q.motifs) await pg.click(`${Z} #qMot-${m}`);
   await pg.click(`${Z} [data-q="valider"]`);
+  await pause(); await qFil(R_FIL);
   await pg.click(`${Z} [data-q="vers4"]`); await pg.click(`${Z} [data-q="vers4"]`); await pause();
   const champs = ['#qRes-P1', '#qRes2-P1'];
   for (let i = 0; i < q.res.length; i++) if (await present(champs[i])) await pg.fill(`${Z} ${champs[i]}`, q.res[i]);
   await pg.click(`${Z} [data-q="ecrire"]`); await pause();
   await pg.click(`${Z} [data-q="signer"]`); await pause();
   await pg.waitForSelector(`${Z} [data-q="clore"]:not([disabled])`); await pg.click(`${Z} [data-q="clore"]`); await pause();
+  await qFil(R_FIL);
 }
 // L'écran Réceptions : ouvrir REC-04140, écrire le lot et la ligne (en paires), valider (deux clics : la confirmation dans la page).
 async function jouerSaisie(o = {}) {
@@ -63,6 +74,7 @@ async function jouerSaisie(o = {}) {
   await pg.click(`${Z} [data-valider-rec]`);
   await pg.waitForSelector(`${Z} [data-confirme]`);
   await pg.click(`${Z} [data-confirme-oui]`); await pause();
+  await qFil(R_FIL);
 }
 async function jouerRangement(L = RANGE_JUSTE) {
   await allerV('entrepot');
@@ -71,11 +83,13 @@ async function jouerRangement(L = RANGE_JUSTE) {
     if (await present('[data-pe="retour"]')) await pg.click(`${Z} [data-pe="retour"]`);
     await pg.click(`${Z} [data-pe-trav="${a.slice(0, 6)}"]`);
     await pg.click(`${Z} [data-pe-emp="${a}"]`);
+    await pause(); await qFil(R_FIL);
     await pg.click(`${Z} [data-pe="retour"]`);
     await pause(60);
   }
 }
 async function jouer(o = {}) {
+  R_FIL = o.fil || FIL;
   await P.jouerCarte(o.carte || {});
   await jouerQuai(o.quai);
   await jouerRangement(o.rangement);
@@ -118,12 +132,31 @@ await v('ENT-25.1 : à l’ouverture — un seul message de Sarah, la carte ouve
   vrai(!Object.values(n.detail || {}).includes('ok'), 'un jalon juste sans rien faire');
 });
 
+// ─────────────────────────────────────────────────────────── « Avant de commencer »
+await v('ENT-25.1 : « Avant de commencer » — le menu est fermé tant que les 5 questions sur Spartoo et les réserves ne sont pas répondues, puis la carte s’ouvre ; rien n’est noté', async () => {
+  await mont({ sansOuverture: true });
+  const m0 = await menu();
+  vrai(m0.includes('ouverture') && m0.includes('fermee:localiser'), 'menu fermé à l’ouverture : ' + m0);
+  const ids = ['vend', 'surface', 'rangement', 'rfid', 'reserves'];
+  const faux = { vend: 'camions', surface: 'foot', rangement: 'marque', rfid: 'ou', reserves: 'signer' };
+  for (let i = 0; i < ids.length; i++) {
+    await pg.click(`${Z} [data-ouv-aller="${i}"]`); await pause();
+    await pg.click(`${Z} [data-q-choix="${faux[ids[i]]}"][data-q="${ids[i]}"]`);
+    await pg.click(`${Z} [data-q-repondre="${ids[i]}"]`); await pause();
+  }
+  await pg.click(`${Z} [data-ouv-continuer]`); await pause();
+  vrai((await menu()).includes('localiser'), 'la carte s’ouvre après les questions : ' + (await menu()));
+  egal(Object.keys((await base()).questions['vitrine-logistique']).filter((k) => ids.includes(k)).sort(), [...ids].sort(), 'réponses rangées');
+  egal((await noter()).score, 0, 'note (trois réponses fausses, rien de fait)');
+});
+
 // ─────────────────────────────────────────────────────────── le parcours
 await v('ENT-25.1 : parcours juste — carte, quai, plan, Réceptions s’ouvrent l’un après l’autre ; 66 paires en stock avec le lot ; 20/20, bandeau ✓, messages de Sarah dans l’ordre', async () => {
   await mont();
   await P.jouerCarte();
   vrai((await menu()).includes('quai'), 'le quai s’ouvre après la carte');
   vrai((await menu()).includes('fermee:entrepot'), 'le plan reste fermé avant la signature');
+  R_FIL = FIL;
   await jouerQuai();
   vrai((await menu()).includes('entrepot'), 'le plan s’ouvre après la signature du BL');
   vrai((await menu()).includes('fermee:receptions'), 'Réceptions reste fermé avant le rangement');
@@ -138,6 +171,15 @@ await v('ENT-25.1 : parcours juste — carte, quai, plan, Réceptions s’ouvren
   const B = await bandeau();
   vrai(B.length >= 4 && B.every(([, e]) => e === 'ok'), 'bandeau : ' + JSON.stringify(B));
   egal((await entrants()).map((m) => m.subject), SUJETS, 'messages');
+  egal(Object.keys(FIL).filter((k) => (b.questions['vitrine-logistique'][k] || {}).premiere === FIL[k]).length, 6, 'les 6 questions au fil sont arrivées et répondues');
+});
+
+await v('ENT-25.1 : les questions au fil ne sont pas notées — parcours juste, toutes les réponses fausses → toujours 20/20', async () => {
+  await mont();
+  await jouer({ fil: FIL_FAUX });
+  const b = await base();
+  egal(Object.keys(FIL_FAUX).filter((k) => (b.questions['vitrine-logistique'][k] || {}).premiere === FIL_FAUX[k]).length, 6, 'les 6 réponses fausses rangées');
+  proche((await noter()).score, 20, 'note');
 });
 
 await v('ENT-25.1 : une erreur par étape — chaque jalon tombe seul (région, 12 cartons comptés, palette côté ville, 72 paires comptées)', async () => {
@@ -160,10 +202,13 @@ await v('ENT-25.1 : le corrigé est servi, le document dit le réel et le constr
     const C = await import('/contenus/corriges/ENT-25.1.js');
     const S = await import('/contenus/vitrine-logistique.js');
     return { status: (await fetch('/contenus/corriges/ENT-25.1.js')).status, n: C.CORRIGE.items.length,
-      pieds: S.DOCUMENTS.map((d) => /Document pédagogique/.test(d.html) && /Réels/.test(d.html) && /Construits/.test(d.html)) };
+      pieds: S.DOCUMENTS.map((d) => [d.id, /Document pédagogique/.test(d.html), /Réels|réel|Onisep/.test(d.html)]),
+      loi: /dans les trois jours, non compris les jours fériés/.test(S.DOC_RESERVES.html.replace(/\s+/g, ' ')),
+      exemple: /P1 : 1/.test(S.DOC_RESERVES.html) };
   });
-  egal([r.status, r.n], [200, 4], 'corrigé');
-  egal(r.pieds, [true], 'mention en pied du document');
+  egal([r.status, r.n], [200, 5], 'corrigé');
+  egal(r.pieds, [['spartoo-251', true, true], ['reserves-251', true, true], ['bac-251', true, true]], 'mention en pied des documents');
+  vrai(r.loi && !r.exemple, 'L133-3 recopié, et l’exemple de réserve n’est pas celui de la palette');
   egal([...P.hotes], [], 'hôtes externes contactés');
   egal(P.erreurs, [], 'erreurs de page ou de console');
 });

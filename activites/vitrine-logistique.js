@@ -2,6 +2,7 @@
 // Une réception chez Spartoo (entrepôt Toolog), comme ENT-1.1 : la carte, le quai, la mise en stock, la saisie (14/11/2026). Non comptée dans les compétences.
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SEANCE from '../contenus/vitrine-logistique.js';
+import { QUESTIONS } from '../contenus/questions/ENT-25.1.js';   // « Avant de commencer » et questions au fil, aucune notée (14/11/2026)
 const s = seanceEntreprise(SEANCE, SEANCE, {
   id: 'vitrine-logistique',
   code: 'ENT-25.1',
@@ -16,8 +17,9 @@ const s = seanceEntreprise(SEANCE, SEANCE, {
   bilanListe: true,       // bandeau de fin ✓/✗ par étape, sans « Corriger » : rien ne se corrige (carte au premier essai, BL signé, réception validée)
   bilanDetail: true,
   reinitialisable: true,
+  questions: 'ENT-25.1',
   pret: true,
   ouverture: 'prof',
-}, SEANCE.OPTIONS);
+}, { ...SEANCE.OPTIONS, questions: QUESTIONS });
 export const meta = s.meta;
 export const rendre = s.rendre;

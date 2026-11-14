@@ -208,6 +208,10 @@ export const STYLE = `
 .vl-st{margin:2px 0 10px; font-size:.84rem; color:var(--douce)}
 .vl-table{border-collapse:collapse; width:100%; font-size:.92rem; margin:4px 0 10px}
 .vl-table th,.vl-table td{border:1px solid #d9d3c6; padding:5px 8px; text-align:left; vertical-align:top}
+.vl-ul{margin:4px 0 8px; padding-left:20px; font-size:.95rem}
+.vl-ul li{margin:4px 0}
+.vl-art{margin:8px 0 2px; font-size:.9rem}
+.vl-loi{margin:4px 0 10px; padding:6px 10px; border-left:3px solid #b9ad97; font-style:italic; font-size:.9rem}
 .vl-pied{margin:12px -18px 0; font-size:.72rem; color:var(--douce); border-top:1px solid #e3ded3; padding:6px 18px; text-align:right}
 `;
 const pied = (t) => `<p class="vl-pied">${ech(t)}</p>`;
@@ -231,7 +235,45 @@ export const DOC_SPARTOO = { id: 'spartoo-251', titre: 'Spartoo et son entrepôt
     <p>Recevoir, contrôler, ranger, saisir : c’est le métier qu’on apprend en <b>Bac Pro Logistique</b>.</p>
     ${pied('Réels : Spartoo, son entrepôt Toolog de Saint-Quentin-Fallavier, sa surface, ses salariés, son stock, son rangement par catégorie et ses puces RFID. Construits : Sarah, le camion, la palette, le plan et les règles de la séance. Document pédagogique.')}
   </article>` };
-export const DOCUMENTS = [DOC_SPARTOO];
+// « Accepter avec réserves » (demande de Tristan, 14/11/2026). L'exemple de réserve n'est PAS celui de la palette (P2, 3 cartons) :
+// le document explique la notion, il ne souffle pas le jalon. L133-3, 1er alinéa : recopié d'ENT-8.8 (Légifrance, LEGIARTI000021486442, relu le 17/10/2026).
+export const TEXTE_L133_3 = 'La réception des objets transportés éteint toute action contre le voiturier pour avarie ou perte partielle si dans les trois '
+  + 'jours, non compris les jours fériés, qui suivent celui de cette réception, le destinataire n’a pas notifié au voiturier, par acte extrajudiciaire '
+  + 'ou par lettre recommandée, sa protestation motivée.';
+export const DOC_RESERVES = { id: 'reserves-251', titre: 'Accepter avec réserves', court: 'Accepter avec réserves',
+  html: `<article class="vl-doc" aria-label="Accepter avec réserves">
+    <p class="vl-t">Accepter avec réserves, c’est quoi ?</p>
+    <p class="vl-st">Au quai, après le contrôle, le réceptionnaire a trois choix</p>
+    <table class="vl-table"><tbody>
+      <tr><th scope="row">Accepter</th><td>Tout est là, rien n’est abîmé : on signe le bon de livraison, sans rien écrire.</td></tr>
+      <tr><th scope="row">Accepter <b>avec réserves</b></th><td>On <b>garde</b> la marchandise, mais quelque chose ne va pas (un carton abîmé, un carton qui manque) :
+        on <b>écrit le problème sur le bon</b>, puis le chauffeur signe. Une « réserve », c’est cette phrase écrite sur le bon.</td></tr>
+      <tr><th scope="row">Refuser</th><td>La marchandise est inutilisable, ou ce n’est pas ce qu’on a commandé : elle repart dans le camion.</td></tr>
+    </tbody></table>
+    <p><b>Une bonne réserve est précise :</b> quelle palette, quoi, combien. Par exemple : « P2 : 3 cartons écrasés ».
+      « Sous réserve de déballage » ne dit rien : ce n’est pas une réserve.</p>
+    <p><b>Pourquoi avant que le chauffeur reparte ?</b> Le chauffeur signe tes réserves : c’est la preuve du problème, pour se faire rembourser.
+      Un bon signé sans réserve veut dire « j’ai tout reçu en bon état ». Après, la loi ne laisse que trois jours pour protester :</p>
+    <p class="vl-art"><b>Code de commerce, article L133-3</b> (1er alinéa ; le voiturier = le transporteur)</p>
+    <p class="vl-loi">« ${TEXTE_L133_3} »</p>
+    ${pied('Texte de loi réel, recopié de Légifrance. Explications écrites pour la séance. Document pédagogique.')}
+  </article>` };
+// « Le Bac Pro Logistique en bref » (repris de la version du 12/11/2026, d'après la fiche Onisep relevée le 12/11/2026), joint au dernier message.
+export const DOC_BAC = { id: 'bac-251', titre: 'Le Bac Pro Logistique en bref', court: 'Le Bac Pro Logistique',
+  html: `<article class="vl-doc" aria-label="Le Bac Pro Logistique en bref">
+    <p class="vl-t">Le Bac Pro Logistique en bref</p>
+    <p class="vl-st">Bac pro « Métiers de la logistique », en 1re et en Terminale, après la 2de GATL</p>
+    <ul class="vl-ul">
+      <li>Il forme à <b>toute la chaîne logistique</b> : recevoir, ranger, suivre les stocks, préparer les commandes, expédier, organiser une petite équipe.</li>
+      <li>Tu apprends à <b>conduire des engins de manutention</b> (les chariots) en sécurité.</li>
+      <li>Tu passes environ <b>20 semaines en entreprise</b> (les PFMP) sur les trois ans.</li>
+      <li>Des métiers : <b>préparateur de commandes</b>, <b>magasinier cariste</b>, agent de transit, puis chef d’équipe.</li>
+      <li>Après le bac : travailler, ou continuer, par exemple en <b>BTS Gestion des transports et logistique associée</b>.</li>
+    </ul>
+    <p>Aujourd’hui, chez Spartoo, tu as fait le travail d’un réceptionnaire : contrôler, ranger, saisir.</p>
+    ${pied('D’après la fiche Onisep « Bac pro métiers de la logistique », relevée le 12/11/2026. Document pédagogique.')}
+  </article>` };
+export const DOCUMENTS = [DOC_SPARTOO, DOC_RESERVES, DOC_BAC];
 
 // ─────────────────────────────────────────────────────────────── les jalons (20 points ; l'inaction vaut 0)
 const ok = { status: 'ok' }, attente = { status: 'attente' };
@@ -311,9 +353,10 @@ export const VOLET = {
         + 'Avant de signer, on contrôle :\n'
         + '- on compte les cartons (le contrôle quantitatif) : autant que sur le bon ?\n'
         + '- on fait le tour de la palette (le contrôle qualitatif) : un carton abîmé ?\n\n'
-        + 'S’il y a un problème, on accepte « avec réserves » et on les écrit sur le bon, avant que le chauffeur reparte.\n\n'
+        + 'S’il y a un problème, on accepte « avec réserves » et on les écrit sur le bon, avant que le chauffeur reparte. '
+        + 'Relis le document joint « Accepter avec réserves » si tu as un doute.\n\n'
         + 'Ouvre « ① Le camion arrive ».\n\nSarah',
-      { db, heure: '09:00' })] }) },
+      { db, heure: '09:00', extra: { pieces: [DOC_RESERVES.id] } })] }) },
     { id: 'ranger', quand: quaiFait, semer: (prenom, db) => ({ mails: [mail(prenom, SUJETS.ranger,
       'Le chauffeur est reparti avec son bon signé. La palette attend en zone de réception : il faut la mettre en stock dans un emplacement.\n\n'
         + 'Ouvre « ② La mise en stock » : prends la palette, choisis la travée sur le plan, puis l’emplacement. Le bon côté (sport ou ville), la bonne travée '
@@ -329,8 +372,9 @@ export const VOLET = {
     { id: 'fin', quand: saisieFaite, semer: (prenom, db) => ({ mails: [mail(prenom, SUJETS.fin,
       'Bravo ! Tu as fait une réception complète : contrôler au quai, écrire les réserves, ranger, saisir l’entrée en stock. C’est le quotidien d’un '
         + 'réceptionnaire, et c’est ce qu’on apprend en Bac Pro Logistique (avec la préparation des commandes, les expéditions, les transports, la conduite des chariots…).\n\n'
+        + 'Le document joint « Le Bac Pro Logistique » te dit tout en cinq lignes. '
         + 'Si tu as des questions sur la filière, pose-les à ton professeur : les élèves de 1re et de Terminale sont là aussi pour te répondre.\n\nSarah',
-      { db, heure: '09:40' })] }) },
+      { db, heure: '09:40', extra: { pieces: [DOC_BAC.id] } })] }) },
   ],
 };
 
@@ -338,6 +382,7 @@ export const VOLET = {
 export const LEXIQUE = {
   'bon de livraison': 'Le document que le chauffeur remet avec la marchandise : ce que le fournisseur annonce avoir envoyé. On le signe après avoir contrôlé.',
   'réserves': 'Ce qu’on écrit sur le bon de livraison quand la marchandise n’est pas conforme (manquant, abîmé), avant de signer.',
+  'avec réserves': 'Accepter avec réserves : on garde la marchandise, mais on écrit sur le bon ce qui ne va pas (quelle palette, quoi, combien), puis le chauffeur signe. C’est la preuve pour se faire rembourser.',
   'lot': 'Le numéro qui suit une fabrication : il permet de retrouver d’où vient un produit.',
   'rotation': 'La vitesse à laquelle un produit sort du stock : rapide (A), moyenne (B), lente (C).',
   'RFID': 'Une puce qui se lit par radio, sans la voir : elle dit quel produit est où.',

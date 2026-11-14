@@ -349,8 +349,8 @@ export const ENTREPRISES = [
   { n: 23, nom: 'Yves Rocher', metier: 'Cosmétique — la plateforme logistique de La Villouët à La Gacilly (Morbihan) : préparer les commandes des boutiques, leur répondre', logo: './contenus/trames/logos/yves-rocher.svg' },
   // Logo officiel (SVG de Wikimedia Commons, 27/10/2026) ; charte : `contenus/kuehne-nagel.js` (bleu marine du logo).
   { n: 24, nom: 'Kuehne+Nagel', metier: 'Commissionnaire de transport — le hub aérien de Roissy-Charles-de-Gaulle : préparer la réception des envois (médicaments au froid, pièces d’avion urgentes)', logo: './contenus/trames/logos/kuehne-nagel.svg' },
-  // Pas une entreprise : la vitrine du Bac Pro Logistique (semaine des filières de 2de, 12/11/2026), un tour de quatre entreprises déjà vérifiées ; logo de Prepalog.
-  { n: 25, nom: 'Le Bac Pro Logistique', metier: 'Semaine des filières — la visite de quatre entreprises où travaillent les logisticiens', logo: './contenus/trames/logos/prepalog.png' },
+  // Pas une entreprise : la vitrine du Bac Pro Logistique (semaine des filières de 2de, 12/11/2026), une réception chez Spartoo depuis le 14/11 ; logo de Prepalog.
+  { n: 25, nom: 'Le Bac Pro Logistique', metier: 'Semaine des filières — une réception chez Spartoo', logo: './contenus/trames/logos/prepalog.png' },
 ];
 
 // ------------------------------------------------------------------- l'ordre
