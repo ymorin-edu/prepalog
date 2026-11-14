@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Vitrine ENT-25.1 : réception Royal Canin | `contenus/vitrine-logistique.js`, `activites/vitrine-logistique.js`, `contenus/corriges/ENT-25.1.js`, `activites/catalogue.js`, `outils/test/vitrine.mjs`, `docs/briefs/ENT-25.1-vitrine-logistique.md`, `docs/decisions.md` | 14/11/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
