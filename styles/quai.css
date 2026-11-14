@@ -32,6 +32,10 @@
 .quai-lib{ font-size:12px; color:var(--encre-douce); text-transform:uppercase; letter-spacing:.04em }
 .quai-val{ font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; font-family:var(--mono) }
 .quai-h-froid{ flex:1; min-width:280px }
+/* En 3D sans froid ni chrono (14/11/2026) : l'horloge sur une ligne, à gauche des étapes. */
+.quai-barre{ display:flex; flex-wrap:wrap; gap:8px 12px; align-items:center }
+.quai-horloges-courte .quai-horloge{ min-width:0; padding:4px 12px; display:flex; align-items:baseline; gap:8px }
+.quai-horloges-courte .quai-val{ font-size:18px }
 .quai-h-reel .quai-val{ color:var(--ardoise) }
 .quai-jauge{ height:14px; border-radius:7px; background:var(--filet); overflow:hidden; margin:6px 0 2px }
 .quai-jauge i{ display:block; height:100%; background:linear-gradient(90deg,var(--quai-froid),var(--terre) 70%,var(--quai-chaud)) }
@@ -55,7 +59,12 @@
   border-radius:20px; padding:1px 8px; margin-right:6px; vertical-align:2px;
 }
 .quai-grille2{ display:grid; grid-template-columns:1fr 1fr; gap:16px }
-@media (max-width:820px){ .quai-grille2{ grid-template-columns:1fr } }
+/* Étape ④ en 3D (14/11/2026, option A) : le BL à gauche, en entier ; à droite les réserves, le chauffeur, les boutons, puis la zone en petit. */
+.quai-grille2.quai-e4{ grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); align-items:start }
+.quai-e4-droite{ display:grid; gap:12px; align-content:start; min-width:0 }
+.quai-e4-droite .quai-ligne{ margin:0 }
+.quai-e4-zone .quai-cf{ display:block; width:100%; height:auto; max-height:200px }
+@media (max-width:820px){ .quai-grille2{ grid-template-columns:1fr } .quai-grille2.quai-e4{ grid-template-columns:1fr } }
 
 /* --- étape 1 : le camion arrive -------------------------------------- */
 .quai-photo{ position:relative; border-radius:var(--r); overflow:hidden; background:linear-gradient(135deg,#5b6b78,#2f3a44); min-height:220px }
