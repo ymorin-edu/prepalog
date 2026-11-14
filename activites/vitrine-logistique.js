@@ -1,19 +1,19 @@
-// ENT-25.1 — « Et si tu choisissais la Logistique ? » : la vitrine du Bac Pro Logistique pour les 2de GATL (semaine des filières). Voir `contenus/vitrine-logistique.js`.
-// Pas une entreprise : un tour de quatre entreprises réelles déjà vérifiées, un écran de jeu du moteur à chaque arrêt. Non comptée dans les compétences.
+// ENT-25.1 — « Et si tu choisissais la Logistique ? » : la séance de la semaine des filières pour les 2de GATL. Voir `contenus/vitrine-logistique.js`.
+// Une réception chez Spartoo (entrepôt Toolog), comme ENT-1.1 : la carte, le quai, la mise en stock, la saisie (14/11/2026). Non comptée dans les compétences.
 import { seanceEntreprise } from '../core/types/seance-entreprise.js';
 import * as SEANCE from '../contenus/vitrine-logistique.js';
 const s = seanceEntreprise(SEANCE, SEANCE, {
   id: 'vitrine-logistique',
   code: 'ENT-25.1',
   titre: 'Et si tu choisissais la Logistique ?',
-  desc: 'La visite de quatre entreprises où travaillent les logisticiens : situer les sites sur la carte, trier des colis chez Amazon, alimenter la ligne '
-    + 'de Stellantis, répondre à Airbus Helicopters au téléphone, ranger des palettes chez Royal Canin, puis le Bac Pro Logistique en bref. Semaine des filières de 2de.',
+  desc: 'Une réception chez Spartoo, à l’entrepôt Toolog : situer l’entrepôt sur la carte, recevoir le camion et contrôler la palette (quantité et qualité), '
+    + 'la ranger dans un emplacement, saisir l’entrée en stock. Semaine des filières de 2de, tout à l’écran.',
   niveaux: ['2de'],
   competences: [],
   temps: 'guidage',
   bareme: 20,
   parcours: true,
-  correction: true,
+  bilanListe: true,       // bandeau de fin ✓/✗ par étape, sans « Corriger » : rien ne se corrige (carte au premier essai, BL signé, réception validée)
   bilanDetail: true,
   reinitialisable: true,
   pret: true,

@@ -1,42 +1,40 @@
-// Corrigé d'ENT-25.1 (la vitrine du Bac Pro Logistique, semaine des filières de 2de), montré dans l'onglet « Corrigés » de l'enseignant.
+// Corrigé d'ENT-25.1 (semaine des filières de 2de : une réception chez Spartoo), montré dans l'onglet « Corrigés » de l'enseignant.
 // Le même jeu pour tous (aucun tirage). N'importe que les données pures : se charge aussi sous Node.
 
-import { LOCALISER, COLIS_TRI, SORTIES_TRI, REPLIQUES, JUSTES_APPEL, PALETTES_RC, PRODUITS_RC, PLAN_RC, AFFIRMATIONS, POIDS }
-  from '../vitrine-logistique.js';
+import { LOCALISER, PALETTE, CARTONS_RECUS, PAIRES_PAR_CARTON, PLAN, PALETTES, PLACE_JUSTE, SAISIE, BL, REC, POIDS } from '../vitrine-logistique.js';
 
 const somme = (o) => Object.values(o).reduce((a, b) => a + b, 0);
-const tournee = (commune) => (SORTIES_TRI.find((s) => s.communes.some(([c]) => c === commune)) || {}).nom || '?';
-const ECART = { ouvert: 'à l’écart (carton ouvert)', enfonce: 'à l’écart (carton abîmé)', floue: 'à l’écart (étiquette illisible)' };
-const choix = (r) => { const q = REPLIQUES.find((x) => x.id === r); return ((q && q.choix.find((c) => c.v === JUSTES_APPEL[r])) || {}).lib || ''; };
-const GAMME_COTE = { CHI: 'A1 (chiens)', CHA: 'A2 (chats)' };
+const L = LOCALISER.lieux[0];
 
 export const CORRIGE = {
   code: 'ENT-25.1',
   titre: 'Et si tu choisissais la Logistique ?',
   trame: '(pas de trame : tout se fait à l’écran)',
   items: [
-    { etape: 1, etapeTitre: `⓪ La carte de France (${POIDS.carte * LOCALISER.lieux.length * 2} points)`, genre: 'tableau', texte: 'Région et département de chaque site',
-      entetes: ['Site', 'Ville', 'Département'],
-      reponses: LOCALISER.lieux.map((l) => [l.nom, l.ville, l.dep]),
+    { etape: 1, etapeTitre: `⓪ La carte de France (${POIDS.carte * 2} points)`, genre: 'question', texte: 'Où est l’entrepôt de Spartoo ?',
+      rep: `${L.ville} : région Auvergne-Rhône-Alpes, département de l’Isère (${L.dep}).`,
       note: `${POIDS.carte} point par réponse juste au premier coup (région, puis département).` },
-    { etape: 2, etapeTitre: `① Amazon : le tri (${somme(POIDS.tri)} points)`, genre: 'tableau', texte: 'La tournée de chaque colis',
-      entetes: ['Colis', 'Commune', 'Où il va'],
-      reponses: COLIS_TRI.map((c) => [c.n, c.commune, c.etat === 'ferme' ? tournee(c.commune) : ECART[c.etat] || 'à l’écart']),
-      note: `Colis en règle : ${POIDS.tri.communes} points ; pièges (Dreux, Saran) : ${POIDS.tri.pieges} ; écarts avec le bon motif : ${POIDS.tri.ecarts}. On lit la ligne de la commune, pas le nom du relais.` },
-    { etape: 3, etapeTitre: `② Stellantis : la ligne (${somme(POIDS.ligne)} points)`, genre: 'question', texte: 'Vingt minutes au bord de ligne',
-      rep: 'Envoyer les robots à temps vers les postes qui vont manquer de pièces : la ligne monte ses voitures sans s’arrêter.',
-      note: `Voitures montées : ${POIDS.ligne.voitures} points ; ligne qui ne s’arrête pas (ou très peu) : ${POIDS.ligne.arret} points. Jugé sur la partie de l’élève.` },
-    { etape: 4, etapeTitre: `③ Airbus : l’appel (${somme(POIDS.appel)} points)`, genre: 'tableau', texte: 'Les réponses à Nathalie (premier choix compté)',
-      entetes: ['Question', 'Réponse attendue'],
-      reponses: ['aog', 'transport', 'revision', 'client'].map((r) => [REPLIQUES.find((q) => q.id === r).dit.replace('{prenom}', '…'), choix(r)]),
-      note: 'Règle : hélicoptère au sol, le plus rapide ; sinon, le moins cher qui arrive à temps.' },
-    { etape: 5, etapeTitre: `④ Royal Canin : ranger (${POIDS.palette * PALETTES_RC.length} points)`, genre: 'tableau', texte: 'Où ranger chaque palette',
-      entetes: ['Palette', 'Côté', 'Travée (rotation)'],
-      reponses: PALETTES_RC.map((p) => [`${p.id} · ${PRODUITS_RC[p.produit].nom}`, GAMME_COTE[PRODUITS_RC[p.produit].gamme], `${p.rotation} : ${PLAN_RC.rotation[p.rotation].texte}`]),
-      note: `${POIDS.palette} point par palette rangée sans faute : bon côté, bonne travée, emplacement libre et en service (A2-T01-N2-E2 est hors service).` },
-    { etape: 6, etapeTitre: `⑤ Le Bac Pro Logistique (${somme(POIDS.vf)} points)`, genre: 'tableau', texte: 'Vrai ou faux',
-      entetes: ['Affirmation', 'Réponse'],
-      reponses: AFFIRMATIONS.map((a) => [a.lib, a.juste === 'vrai' ? 'Vrai' : 'Faux']),
-      note: 'Le poste préféré n’est pas jugé : la réponse de chaque élève est rangée dans sa base (fiche « Et toi ? », champ « prefere »).' },
+    { etape: 2, etapeTitre: `① Au quai : le contrôle (${somme(POIDS.quai)} points)`, genre: 'tableau', texte: `La palette du bon de livraison ${BL}`,
+      entetes: ['Geste', 'Attendu'],
+      reponses: [
+        ['Compter (quantitatif)', `${PALETTE.bl} cartons annoncés, ${CARTONS_RECUS} comptés : 2 × 2 cartons par couche, 3 couches, il manque un carton en haut, au fond`],
+        ['Faire le tour (qualitatif)', 'Un carton enfoncé sur la face arrière (invisible de face)'],
+        ['Décider', 'Accepter avec réserves, deux motifs : carton endommagé et carton manquant'],
+        ['Écrire les réserves sur le bon', '1 carton endommagé, 1 carton manquant ; puis faire signer le chauffeur'],
+      ],
+      note: `Comptage ${POIDS.quai.comptage}, décision ${POIDS.quai.decision}, réserves ${POIDS.quai.reserve}. La signature ne compte pas de points ; le bon signé ne se corrige plus.` },
+    { etape: 3, etapeTitre: `② La mise en stock (${POIDS.ranger} points)`, genre: 'question', texte: 'L’emplacement de la palette',
+      rep: `${PLACE_JUSTE} : côté A1 (chaussures de sport), rotation ${PALETTES[0].rotation} → ${PLAN.rotation[PALETTES[0].rotation].texte}, le seul emplacement libre et en service.`,
+      note: 'Une palette posée ailleurs est fausse ; l’élève peut la reprendre tant qu’il n’a pas fini.' },
+    { etape: 4, etapeTitre: `③ La saisie dans le logiciel (${somme(POIDS.saisie)} points)`, genre: 'tableau', texte: `Le bon de réception ${REC}`,
+      entetes: ['Case', 'Attendu'],
+      reponses: [
+        ['Numéro de lot', SAISIE.lot],
+        ['Quantité annoncée', `${SAISIE.annonce} paires (${PALETTE.bl} cartons × ${PAIRES_PAR_CARTON})`],
+        ['Quantité comptée', `${SAISIE.compte} paires (${CARTONS_RECUS} cartons × ${PAIRES_PAR_CARTON})`],
+        ['État', 'Colis endommagé'],
+        ['Décision', 'Accepté sous réserve'],
+      ],
+      note: `Lot ${POIDS.saisie.lot}, quantités ${POIDS.saisie.quantites}, état et décision ${POIDS.saisie.decision}. À la validation, ${SAISIE.compte} paires entrent en stock avec le lot.` },
   ],
 };
