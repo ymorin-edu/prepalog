@@ -182,12 +182,12 @@ await v('ENT-25.1 : les questions au fil ne sont pas notées — parcours juste,
   proche((await noter()).score, 20, 'note');
 });
 
-await v('ENT-25.1 : une erreur par étape — chaque jalon tombe seul (région, 12 cartons comptés, palette côté ville, 72 paires comptées)', async () => {
+await v('ENT-25.1 : une erreur par étape — chaque jalon tombe seul (région, 12 cartons comptés, palette dans l’allée des chaussures de ville, 72 paires comptées)', async () => {
   await mont();
   await jouer({
     carte: { 'toolog:region': 1 },
     quai: { compte: 12 },
-    rangement: [['P1', 'A2-T01-N3-E1']],
+    rangement: [['P1', 'B1-T01-N1-E2']],
     saisie: { compte: 72 },
   });
   const n = await noter();

@@ -24,7 +24,7 @@ export const CORRIGE = {
       ],
       note: `Comptage ${POIDS.quai.comptage}, décision ${POIDS.quai.decision}, réserves ${POIDS.quai.reserve}. La signature ne compte pas de points ; le bon signé ne se corrige plus.` },
     { etape: 3, etapeTitre: `② La mise en stock (${POIDS.ranger} points)`, genre: 'question', texte: 'L’emplacement de la palette',
-      rep: `${PLACE_JUSTE} : côté A1 (chaussures de sport), rotation ${PALETTES[0].rotation} → ${PLAN.rotation[PALETTES[0].rotation].texte}, le seul emplacement libre et en service.`,
+      rep: `${PLACE_JUSTE} : allée A (chaussures de sport), rotation ${PALETTES[0].rotation} → ${PLAN.rotation[PALETTES[0].rotation].texte}, le seul emplacement libre et en service (A2-T01-N2-E2 est libre mais hors service).`,
       note: 'Une palette posée ailleurs est fausse ; l’élève peut la reprendre tant qu’il n’a pas fini.' },
     { etape: 4, etapeTitre: `③ La saisie dans le logiciel (${somme(POIDS.saisie)} points)`, genre: 'tableau', texte: `Le bon de réception ${REC}`,
       entetes: ['Case', 'Attendu'],
