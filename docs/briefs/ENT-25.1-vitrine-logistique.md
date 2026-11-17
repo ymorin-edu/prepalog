@@ -18,7 +18,7 @@ pas de trame ». Les versions précédentes sont dans l'historique git (commits 
 |---|---|---|---|
 | ⓪ | Carte de France (Localiser) | situer Toolog, l'entrepôt de Spartoo, à Saint-Quentin-Fallavier : région, département | 1 + 1 |
 | ① | Le camion arrive (Quai, rendu iso, comme ENT-1.1) | BL de 12 cartons de Puma RS-X (6 paires par carton) ; compter (11), faire le tour (1 carton enfoncé à l'arrière), accepter avec réserves, écrire les réserves, faire signer | comptage 3, décision 3, réserves 3 |
-| ② | La mise en stock (Plan d'entrepôt, rangement) | allée A (sport ; depuis le 17/11, 4 allées : A sport, B ville, C bottes, D sandales), rotation A → T01, N1 ou N2, seul emplacement libre A1-T01-N2-E2 | 3 |
+| ② | La mise en stock (Plan d'entrepôt, rangement) | allée A (sport ; depuis le 17/11, 3 allées : A sport, B ville, C bottes ; l'allée D, sandales, retirée le même jour), rotation A → T01, N1 ou N2, seul emplacement libre A1-T01-N2-E2 | 3 |
 | ③ | La saisie (écran Réceptions) | REC-04140 : lot LOT-PM-2611, 72 paires annoncées, 66 comptées, endommagé, accepté sous réserve ; 66 paires entrent en stock | lot 1, quantités 3, état et décision 2 |
 
 Guide : **Sarah**, élève de Terminale (construite), par messages, au tu. Chaque écran s'ouvre quand le précédent est fini. Charte de Spartoo (celle d'ENT-1.x).

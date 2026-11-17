@@ -9,7 +9,7 @@
 //   ⓪ la carte de France (vue « Localiser ») : Toolog, l'entrepôt de Spartoo, à Saint-Quentin-Fallavier (38) ;
 //   ① le quai (vue « Quai », rendu iso, comme ENT-1.1) : le camion, le BL, la palette de Puma (12 cartons annoncés, un manquant au fond de la couche du haut,
 //      un carton enfoncé sur la face arrière), compter, faire le tour, décider, écrire les réserves, faire signer ;
-//   ② la mise en stock (vue « Plan d'entrepôt », rangement) : la bonne allée (sport, ville, bottes, sandales), la bonne travée (rotation), un emplacement libre ;
+//   ② la mise en stock (vue « Plan d'entrepôt », rangement) : la bonne allée (sport, ville, bottes), la bonne travée (rotation), un emplacement libre ;
 //   ③ la saisie (écran Réceptions) : le lot, les PAIRES annoncées et comptées (cartons × 6), l'état, la décision ; l'entrée en stock.
 //
 // VÉRIFIÉ / CONSTRUIT (alerte 9) : vérifiés pour ENT-1.1 et 1.2 (briefs du 06 et du 09/10/2026) : Spartoo, son entrepôt exploité par sa filiale Toolog à
@@ -134,8 +134,8 @@ export const SAISIE = { lot: LOT, annonce: 72, compte: 66, etat: 'abime', decisi
 
 // ─────────────────────────────────────────────────────────────── ② la mise en stock (vue « Plan d'entrepôt », rangement) — CONSTRUIT
 // Toolog range « par catégorie et non par marque » (vérifié). Le plan (17/11/2026, Tristan : « agrandir le plan avec 4 allées ») : une allée par
-// catégorie, ses deux côtés : A sport, B ville, C bottes, D sandales. Le plan à palettes, le stock et la rotation sont construits pour la séance.
-export const GAMMES = { SPO: 'Chaussures de sport', VIL: 'Chaussures de ville', BOT: 'Bottes et bottines', SAN: 'Sandales' };
+// catégorie, ses deux côtés : A sport, B ville, C bottes (l'allée D, sandales, retirée le même jour à sa demande). Le plan à palettes, le stock et la rotation sont construits pour la séance.
+export const GAMMES = { SPO: 'Chaussures de sport', VIL: 'Chaussures de ville', BOT: 'Bottes et bottines' };
 export const PRODUITS = {
   RSX: { nom: NOM, ref: REF, gamme: 'SPO', court: 'RS-X' },
   SUE: { nom: 'Puma Suede Classic XXI Rouge T.39', ref: 'PM-SUE-RG-39', gamme: 'SPO', court: 'Suede' },
@@ -143,11 +143,9 @@ export const PRODUITS = {
   DER: { nom: 'Derbies cuir noir T.42', ref: 'VL-DER-NR-42', gamme: 'VIL', court: 'derbies' },
   BOT: { nom: 'Bottines cuir noir T.38', ref: 'BT-BOT-NR-38', gamme: 'BOT', court: 'bottines' },
   PLU: { nom: 'Bottes de pluie vertes T.37', ref: 'BT-PLU-VE-37', gamme: 'BOT', court: 'bottes de pluie' },
-  SAN: { nom: 'Sandales cuir camel T.40', ref: 'SD-SAN-CA-40', gamme: 'SAN', court: 'sandales' },
-  TON: { nom: 'Tongs bleues T.41', ref: 'SD-TON-BL-41', gamme: 'SAN', court: 'tongs' },
 };
 const CHARGE = { 1: 1000, 2: 600, 3: 600 };
-const ALLEES = { A: 'SPO', B: 'VIL', C: 'BOT', D: 'SAN' };
+const ALLEES = { A: 'SPO', B: 'VIL', C: 'BOT' };
 export const PLAN = {
   allees: Object.keys(ALLEES).map((a) => ({ id: a, cotes: [`${a}1`, `${a}2`] })),
   cotes: Object.fromEntries(Object.entries(ALLEES).flatMap(([a, g]) => [`${a}1`, `${a}2`].map((c) => [c, { gammes: [g], charge: CHARGE }]))),
@@ -173,8 +171,6 @@ export const STOCK = {
   'B2-T01-N1-E2': P('DER', 85), 'B2-T02-N1-E1': P('MOC', 90), 'B2-T02-N3-E2': P('DER', 80), 'B2-T03-N1-E1': P('MOC', 85),
   'C1-T01-N1-E1': P('BOT', 95), 'C1-T01-N2-E2': P('PLU', 70), 'C1-T02-N1-E1': P('PLU', 75), 'C1-T03-N2-E1': P('BOT', 90),
   'C2-T01-N1-E2': P('PLU', 70), 'C2-T02-N2-E1': P('BOT', 95), 'C2-T03-N1-E1': P('BOT', 90),
-  'D1-T01-N1-E1': P('SAN', 60), 'D1-T02-N1-E2': P('TON', 50), 'D1-T03-N2-E1': P('SAN', 55),
-  'D2-T01-N2-E1': P('TON', 50), 'D2-T02-N1-E1': P('SAN', 60), 'D2-T03-N3-E2': P('TON', 45),
 };
 export const PLACE_JUSTE = 'A1-T01-N2-E2';
 export const PALETTES = [
@@ -183,7 +179,7 @@ export const PALETTES = [
 export const REGLES = {
   titre: 'Les règles',
   lignes: [
-    '<b>Catégorie</b> : une allée par catégorie. A : sport · B : ville · C : bottes et bottines · D : sandales.',
+    '<b>Catégorie</b> : une allée par catégorie. A : sport · B : ville · C : bottes et bottines.',
     '<b>Rotation</b> : A rapide → T01 (près des quais), N1 ou N2 · B moyenne → T02 · C lente → T03.',
     'Un emplacement <b>libre</b> et <b>en service</b>.',
   ],
