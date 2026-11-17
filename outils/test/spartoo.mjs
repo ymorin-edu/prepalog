@@ -286,6 +286,23 @@ await v('Spartoo : exercice complet, onze jalons au vert', async () => {
   await page.waitForTimeout(600);
 });
 
+// ---------- 29 bis. le brouillon d'un message survit à un changement d'onglet (17/11/2026)
+await v('Spartoo : brouillon de message gardé quand on change d’onglet', async () => {
+  await page.click('[data-vue="mail"]');
+  await page.click('[data-nouveau]');
+  await page.waitForSelector('#mTo');
+  await page.selectOption('#mTo', 'F003');
+  await page.fill('#mObj', 'Objet brouillon');
+  await page.fill('#mTxt', 'Texte à ne pas perdre');
+  await page.click('[data-vue="stock"]');
+  await page.waitForSelector('.ent-main');
+  await page.click('[data-vue="mail"]');
+  await page.waitForSelector('#mTxt');
+  const lu = await page.evaluate(() => ({ to: document.querySelector('#mTo').value, obj: document.querySelector('#mObj').value, txt: document.querySelector('#mTxt').value }));
+  if (lu.to !== 'F003' || lu.obj !== 'Objet brouillon' || lu.txt !== 'Texte à ne pas perdre') throw new Error('brouillon perdu : ' + JSON.stringify(lu));
+  await page.click('[data-annuler]');
+});
+
 // ---------- 30. le suivi de classe voit l'avancement
 await v('Spartoo : note pondérée de la préparation remontée au suivi (20/20)', async () => {
   // L'environnement est immersif : pas de bandeau Prepalog, on en sort par son propre bouton.

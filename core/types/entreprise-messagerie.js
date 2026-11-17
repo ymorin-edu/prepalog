@@ -108,6 +108,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
         const adresse = `${norm(prenom).replace(/ /g, '')}@${VOCAB.mailDomain}`;
         if (E.redige && CO) return CO.html(adresse);
         if (E.redige) {
+          const sf = E.saisieFou || {};
           const fs = tousFournisseurs().slice().sort((a, b) => (a.brand < b.brand ? -1 : 1));
           return `<div class="ent-tete"><h2>Messagerie</h2><p class="note">Adresse : ${ech(adresse)}</p></div>
             <section class="panneau">
@@ -115,11 +116,11 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
               <h3>Nouveau message</h3>
               <div class="champ"><label for="mTo">Destinataire (fournisseur)</label>
                 <select id="mTo"><option value="">Choisir…</option>
-                ${fs.map((s) => `<option value="${ech(s.id)}">${ech(s.brand)} — ${ech(s.name)}</option>`).join('')}</select></div>
+                ${fs.map((s) => `<option value="${ech(s.id)}"${sf.to === s.id ? ' selected' : ''}>${ech(s.brand)} — ${ech(s.name)}</option>`).join('')}</select></div>
               <div class="champ"><label for="mObj">Objet</label>
-                <input id="mObj" value="Commande de réapprovisionnement"></div>
+                <input id="mObj" value="${ech(sf.obj != null ? sf.obj : 'Commande de réapprovisionnement')}"></div>
               <div class="champ"><label for="mTxt">Message</label>
-                <textarea id="mTxt" rows="8" placeholder="Précisez, pour chaque référence, sa quantité (ex. ${ech(VARIANTS[0] ? VARIANTS[0].sku : 'REF')} : 12 ${ech(VOCAB.unitPl)})."></textarea></div>
+                <textarea id="mTxt" rows="8" placeholder="Précisez, pour chaque référence, sa quantité (ex. ${ech(VARIANTS[0] ? VARIANTS[0].sku : 'REF')} : 12 ${ech(VOCAB.unitPl)}).">${ech(sf.txt || '')}</textarea></div>
               <button class="btn btn-p" data-envoyer-fou>Envoyer</button>
             </section>`;
         }
@@ -171,8 +172,8 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
             ${corps}
             ${VDOC ? VDOC.rangee(sel.pieces, docVu, db) : ''}
             ${actions ? `<div class="rangee" style="margin-top:14px">${actions}</div>` : ''}${E.dossier === 'in' ? blocTransfert(sel) : ''}
-            ${E.dossier === 'in' && sel.phrases ? (etapeQuiFerme(`repondre:${sel.cle || sel.phrases.id}`) ? '' : formPhrases(sel)) : `<form id="formRep" hidden style="margin-top:14px">
-              <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="${sel.amorce ? 8 : 6}">${ech(sel.amorce || '')}</textarea></div>
+            ${E.dossier === 'in' && sel.phrases ? (etapeQuiFerme(`repondre:${sel.cle || sel.phrases.id}`) ? '' : formPhrases(sel)) : `<form id="formRep" ${E.saisieRep && E.saisieRep[sel.id] != null && E.saisieRep[sel.id] !== (sel.amorce || '') ? '' : 'hidden'} style="margin-top:14px">
+              <div class="champ"><label for="repT">Votre réponse</label><textarea id="repT" rows="${sel.amorce ? 8 : 6}">${ech((E.saisieRep && E.saisieRep[sel.id] != null) ? E.saisieRep[sel.id] : (sel.amorce || ''))}</textarea></div>
               <button class="btn btn-p" type="submit">Envoyer</button></form>`}</div>`;
         }
 
@@ -278,6 +279,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
         if (!m) return;
         ajouterMail({ folder: 'out', ts: Date.now(), from: prenom, fromMail: '', to: m.from, toMail: m.fromMail,
           subject: 'RE : ' + m.subject.replace(/^RE : /, ''), kind: 'text', text: t, read: true });
+        if (E.saisieRep) delete E.saisieRep[m.id];
         if (!rendue()) declencher();
         sauver(); E.dossier = 'out'; E.mailSel = null; dessiner();
         toast('Réponse envoyée.');
@@ -330,6 +332,7 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
           subject: 'RE : ' + objet, kind: 'text', text: reponse, read: false });
 
         if (!rendue()) declencher();
+        E.saisieFou = null;
         sauver(); E.redige = false; E.dossier = 'in'; E.mailSel = null; dessiner();
         toast('Message envoyé.');
       }
@@ -350,6 +353,17 @@ export function monterMessagerie({ db, E, hote, prenom, estProf, rendue, A, VOCA
     z.querySelector('[data-retour-quai]')?.addEventListener('click', () => { E.retourQuai = false; aller('quai'); });
     z.querySelector('[data-annuler]')?.addEventListener('click', () => { E.redige = false; dessiner(); });
     z.querySelector('[data-envoyer-fou]')?.addEventListener('click', envoyerAuFournisseur);
+    // Le brouillon se garde dans l'état d'écran : changer d'onglet puis revenir ne le vide plus (17/11/2026).
+    if (!CO) {
+      const garder = (cle) => (ev) => { E.saisieFou = Object.assign(E.saisieFou || {}, { [cle]: ev.target.value }); };
+      z.querySelector('#mTo')?.addEventListener('change', garder('to'));
+      z.querySelector('#mObj')?.addEventListener('input', garder('obj'));
+      z.querySelector('#mTxt')?.addEventListener('input', garder('txt'));
+    }
+    z.querySelector('#repT')?.addEventListener('input', (ev) => {
+      if (!E.mailSel) return;
+      (E.saisieRep || (E.saisieRep = {}))[E.mailSel] = ev.target.value;
+    });
     z.querySelector('[data-repondre]')?.addEventListener('click', () => {
       const fp = z.querySelector('#formPhr');
       if (fp) {
