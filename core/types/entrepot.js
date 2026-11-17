@@ -1101,11 +1101,11 @@ export function creerEntrepot(P, opts = {}) {
     else if (M.mode === 'visite') {
       const Z = M.zones.reception || {}, r = G.recep;
       s += `<rect x="${ZX}" y="${r.y}" width="${ZW}" height="${r.h}" fill="none" stroke="var(--pe-jaune-sol)" stroke-width="3" stroke-dasharray="12 6"/>
-        <text x="${ZX + 10}" y="${r.y + 20}" font-size="13" font-weight="800" fill="${ink}" ${TXT}>ZONE DE RÉCEPTION</text>
-        ${Z.note ? `<text x="${ZX + 10}" y="${r.y + 38}" font-size="12" fill="${soft}" ${TXT}>${ech(Z.note)}</text>` : ''}`;
+        <text x="${ZX + 10}" y="${r.y + 20}" font-size="13" font-weight="800" fill="var(--pe-encre-sol)" ${TXT}>ZONE DE RÉCEPTION</text>
+        ${Z.note ? `<text x="${ZX + 10}" y="${r.y + 38}" font-size="12" fill="var(--pe-encre-sol)" opacity=".75" ${TXT}>${ech(Z.note)}</text>` : ''}`;
     } else {
       s += `<rect x="${ZX}" y="${yR}" width="${ZW}" height="${hR}" fill="none" stroke="var(--pe-jaune-sol)" stroke-width="3" stroke-dasharray="12 6"/>
-        <text x="${ZX + 10}" y="${yR + 20}" font-size="13" font-weight="800" fill="${ink}" ${TXT}>ZONE DE RÉCEPTION</text>`;
+        <text x="${ZX + 10}" y="${yR + 20}" font-size="13" font-weight="800" fill="var(--pe-encre-sol)" ${TXT}>ZONE DE RÉCEPTION</text>`;
     }
     pals.forEach((p, i) => {
       if (e.place[p.id]) return;
@@ -1128,7 +1128,7 @@ export function creerEntrepot(P, opts = {}) {
   // Un côté de rack vu de dessus, découpé entre chaque échelle ; chaque travée montre ses niveaux.
   function htmlRack(e, c, g, lecture) {
     const x = g.x;
-    let s = `<text x="${x + RW / 2}" y="${Y0 - 10}" text-anchor="middle" font-size="20" font-weight="800" fill="var(--encre)" ${TXT}>${ech(c)}</text>`;
+    let s = `<text x="${x + RW / 2}" y="${Y0 - 10}" text-anchor="middle" font-size="20" font-weight="800" fill="var(--pe-encre-sol)" ${TXT}>${ech(c)}</text>`;
     for (let t = 0; t <= M.T; t++) s += `<rect x="${x - 2}" y="${Y0 + t * TH - 4}" width="${RW + 4}" height="8" fill="var(--pe-montant)"/>`;
     const cw = 54 / M.E, ch = 51 / M.N;
     for (let t = 1; t <= M.T; t++) {

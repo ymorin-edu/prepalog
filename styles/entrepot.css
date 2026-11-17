@@ -10,6 +10,9 @@
    une bordure épaisse, jamais par un aplat. Le texte posé sur un carton ou
    une plaque est toujours foncé (#1a1915) : ces fonds restent clairs dans
    les deux thèmes (contraste ≥ 4,5 mesuré : 4,8 sur le carton sombre).
+   --pe-encre-sol (17/11/2026) : le texte posé à même le sol (A1, A2, « ZONE DE
+   RÉCEPTION ») suit le sol, pas l'encre du site : avec une charte sombre (Spartoo)
+   sur le thème clair, l'encre claire disparaissait sur le sol clair.
    ============================================================ */
 
 :root, .theme-papier{
@@ -18,6 +21,7 @@
   --pe-gris:#bdb7aa; --pe-gris-trait:#8a8478; --pe-sur-gris:#1a1915; --pe-jaune-sol:#e5b800;
   --pe-litige:rgba(157,39,39,.10); --pe-hachure:rgba(157,39,39,.35); --pe-bande:201,120,10;
   --pe-visite:#6b3fa0; --pe-visite-voile:rgba(107,63,160,.16);
+  --pe-encre-sol:#1a1915;
 }
 :root[data-theme="sombre"]{
   --pe-montant:#6c9be0; --pe-lisse:#e8913f; --pe-plaque:#e6c23a;
@@ -25,6 +29,7 @@
   --pe-gris:#4a5563; --pe-gris-trait:#7d8b9b; --pe-sur-gris:#e4eaf0; --pe-jaune-sol:#c9a20a;
   --pe-litige:rgba(226,114,111,.12); --pe-hachure:rgba(226,114,111,.4); --pe-bande:224,172,77;
   --pe-visite:#c3a3f0; --pe-visite-voile:rgba(195,163,240,.2);
+  --pe-encre-sol:#e4eaf0;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="clair"]){
@@ -33,6 +38,7 @@
     --pe-gris:#4a5563; --pe-gris-trait:#7d8b9b; --pe-sur-gris:#e4eaf0; --pe-jaune-sol:#c9a20a;
     --pe-litige:rgba(226,114,111,.12); --pe-hachure:rgba(226,114,111,.4); --pe-bande:224,172,77;
     --pe-visite:#c3a3f0; --pe-visite-voile:rgba(195,163,240,.2);
+  --pe-encre-sol:#e4eaf0;
   }
 }
 
