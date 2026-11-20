@@ -959,4 +959,22 @@ await v('premier essai : rangé à la première écriture et conservé ; un anci
   if (r.unique.premier !== 7 || Object.keys(r.perdu).length) throw new Error('ancien résultat : ' + JSON.stringify(r));
 });
 
+// ---------- Ouverture (Tristan, 20/11/2026) : la date de première écriture se range une fois et ne bouge plus ;
+// un ancien résultat (sans ce champ) ne la connaît pas et n'en reçoit pas une fausse.
+await v('ouverture : date de la première écriture rangée une fois, jamais écrasée ; un ancien résultat n\'en reçoit pas', async () => {
+  const r = await page.evaluate(async () => {
+    const { creerBackendDemo } = await import('/core/backend-demo.js');
+    const { premiereOuverture } = await import('/core/notes.js');
+    const B = creerBackendDemo();
+    const a = await B.ecrireScore('zz-po', 'zz-eleve', 'zz-act', { score: 2, max: 10 });
+    await new Promise((ok) => setTimeout(ok, 15));
+    const b = await B.ecrireScore('zz-po', 'zz-eleve', 'zz-act', { score: 5, max: 10 });
+    const ancien = premiereOuverture({ score: 7, max: 10, tentatives: 3 }, 123);
+    localStorage.removeItem('prepalog:travaux/zz-po/zz-eleve/zz-act');
+    return { a: a.premiereMaj, b: b.premiereMaj, maj: b.dateMaj, ancien };
+  });
+  if (typeof r.a !== 'number' || r.b !== r.a || r.maj <= r.a) throw new Error('rangement : ' + JSON.stringify(r));
+  if (Object.keys(r.ancien).length) throw new Error('ancien résultat : ' + JSON.stringify(r));
+});
+
 }

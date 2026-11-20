@@ -82,6 +82,16 @@ export function premierEssai(anc, res) {
 }
 
 /**
+ * La date de PREMIÈRE écriture d'un résultat : celle où l'élève a ouvert l'exercice (la note se range dès l'ouverture).
+ * Demande de Tristan, 20/11/2026 : l'infobulle du Suivi de classe la montre, avec la dernière activité, pour savoir si
+ * l'élève a fini ou travaille encore. Écrite une seule fois ; un résultat plus ancien ne l'a pas (rien n'est deviné).
+ */
+export function premiereOuverture(anc, maintenant = Date.now()) {
+  if (!anc) return { premiereMaj: maintenant };
+  return typeof anc.premiereMaj === 'number' ? { premiereMaj: anc.premiereMaj } : {};
+}
+
+/**
  * La note d'une séance de jalons : jalons réussis ÷ jalons × `sur`, au centième (6,67 et non 6,6666…). 0 s'il
  * n'y a aucun jalon. Une seule écriture pour le Planning et le Plan d'entrepôt (chantier 14, 09/10/2026) ;
  * `noteSur20` ci-dessus, elle, ne sert qu'à l'affichage, au demi-point.

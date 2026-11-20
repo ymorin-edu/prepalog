@@ -1075,6 +1075,18 @@ export async function rendreEspaceProf(hote, ctx) {
       return `premier essai : ${n === null ? '—' : `${formaterNote(n)}/${BAREME_AFFICHE}`}`;
     };
 
+    // « Ouvert le 20/11 à 09 h 12 · dernière activité le 20/11 à 10 h 03 · jalons atteints : 5 / 8 » (demande de Tristan,
+    // 20/11/2026) : de quoi savoir si l'élève a fini ou travaille encore. Les jalons se lisent dans le détail rangé avec la
+    // note (`titres` + l'état de chacun) ; une séance sans ce détail n'en dit rien. Une note plus ancienne n'a pas la date
+    // d'ouverture : on le dit au lieu de la deviner.
+    const phraseTravail = (t) => {
+      const L = [typeof t.premiereMaj === 'number' ? `ouvert ${dateHeureRendu(t.premiereMaj)}` : "ouverture non conservée (note antérieure au 20/11/2026)"];
+      if (typeof t.dateMaj === 'number') L.push(`dernière activité ${dateHeureRendu(t.dateMaj)}`);
+      const d = t.detail, ids = d && d.titres ? Object.keys(d.titres) : [];
+      if (ids.length) L.push(`jalons atteints : ${ids.filter((id) => d[id] === 'ok').length} / ${ids.length}`);
+      return L.join(' · ');
+    };
+
     const cellule = (e, m) => {
       const t = par[e.uid]?.[m.id];
       if (aLaMain(m)) {
@@ -1155,7 +1167,7 @@ export async function rendreEspaceProf(hote, ctx) {
       if (!noteConvertie(m)) {
         // Les sorties de page pendant une question (questions au fil) : en infobulle, s'il y en a eu.
         const so = sortiesDe(t.detail && t.detail.indicateurs && t.detail.indicateurs[m.id]);
-        return `<td class="num ${classe}"${so ? ` title="${ech(so.phrase)}"` : ''}>${t.meilleur}/${max}</td>`;
+        return `<td class="num ${classe}" title="${ech(`${so ? `${so.phrase}\n` : ''}${phraseTravail(t)}`)}">${t.meilleur}/${max}</td>`;
       }
 
       // Séance d'entreprise notée sur 20 (07/10/2026) : plus de « (N) tentatives » — chaque sauvegarde en
@@ -1173,7 +1185,8 @@ export async function rendreEspaceProf(hote, ctx) {
         const qo = t.detail && t.detail.ouverture;
         const dontQuestions = qo ? phraseOuverture(qo) : '';
         const premierBilan = ind && typeof ind.note1 === 'number' ? ` — premier bilan : ${formaterNote(ind.note1)}/${BAREME_AFFICHE}` : '';
-        return `<td class="num ${classe}"${dontBonus ? ' data-bonus' : ''} title="${ech(`${formaterNote(t.meilleur)} sur ${max}${dontBonus}${dontQuestions} — ${corr}${premierBilan}${so ? `
+        return `<td class="num ${classe}"${dontBonus ? ' data-bonus' : ''} title="${ech(`${formaterNote(t.meilleur)} sur ${max}${dontBonus}${dontQuestions} — ${corr}${premierBilan}
+${phraseTravail(t)}${so ? `
 ${so.phrase}` : ''}`)}"
           >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>${
           n ? `<span class="suivi-corrige" data-corrections="${n}">corrigé ${n}×</span>` : ''}</td>`;
@@ -1182,7 +1195,7 @@ ${so.phrase}` : ''}`)}"
       // Note sur 20. Le score brut reste accessible en infobulle : l'enseignant veut
       // souvent savoir combien d'exercices ont été réussis, pas seulement la note.
       return `<td class="num ${classe}"
-        title="${ech(`${t.meilleur} sur ${max} — ${t.tentatives} tentative${t.tentatives > 1 ? 's' : ''} — ${phrasePremier(t, max)}`)}"
+        title="${ech(`${t.meilleur} sur ${max} — ${t.tentatives} tentative${t.tentatives > 1 ? 's' : ''} — ${phrasePremier(t, max)}\n${phraseTravail(t)}`)}"
         >${formaterNote(noteSur20(t.meilleur, max))}<span class="note">/${BAREME_AFFICHE}</span>
         <span class="note">(${t.tentatives})</span></td>`;
     };

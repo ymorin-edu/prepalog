@@ -9,7 +9,7 @@
 
 import { CONFIG, matEmail, matMdp } from './config.js';
 import { filtrerAmenagements, amenagements } from './amenagements.js';
-import { meilleurScore, premierEssai } from './notes.js';
+import { meilleurScore, premierEssai, premiereOuverture } from './notes.js';
 import { uidCourt, idGroupe, responsable, libelleProf, gardeSuppressionEleve, gardeSuppressionGroupe, lisible } from './collegues.js';
 
 // Le SDK est servi par le dépôt, pas par gstatic.com : voir vendor/LISEZMOI.md.
@@ -677,6 +677,7 @@ export async function creerBackendFirebase() {
         tentatives: (a?.tentatives || 0) + 1,
         meilleur: meilleurScore(a, res),
         ...premierEssai(a, res),
+        ...premiereOuverture(a),
         dateMaj: Date.now(),
       };
       await FS.setDoc(ref, nouv);
