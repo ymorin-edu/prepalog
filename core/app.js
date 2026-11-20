@@ -284,6 +284,17 @@ async function vueAccueil() {
         } catch (e) { /* rien à marquer */ }
       }));
     }
+    // « copie rendue ✓ » sur la tuile d'une évaluation que l'élève a rendue (ou que l'enseignant a ramassée) :
+    // ce qui fait foi est le résultat enregistré (`rendu`), pas la base de l'élève.
+    const rendues = {};
+    if (profil.role === 'eleve' && groupeActif) {
+      await Promise.all(acts.filter((x) => x.meta.copie).map(async (x) => {
+        try {
+          const t = await B.lireScore(groupeActif, profil.uid, x.meta.id);
+          if (t && t.rendu) rendues[x.meta.id] = t.ramasse ? 'copie ramassée' : 'copie rendue';
+        } catch (e) { /* rien à marquer */ }
+      }));
+    }
     const tete = ent
       ? `<button class="lien-accueil" id="btnSimulog">← ${ech(rub.label.toUpperCase())}</button>
         <div class="entreprise-tete" data-entreprise="${ech(ent.id)}">
@@ -304,6 +315,7 @@ async function vueAccueil() {
               ${verrous[m.meta.id] ? 'style="opacity:.55"' : ''}>
               <span class="code">${ech(m.meta.code || '')}${estProf ? ' · ' + ech(libelleNiveaux(m.meta.niveaux)) : ''}</span>
               ${validees[m.meta.id] ? '<span class="tuile-validee" data-validee>validée ✓</span>' : ''}
+              ${rendues[m.meta.id] ? `<span class="tuile-validee" data-copie-rendue>${rendues[m.meta.id]} ✓</span>` : ''}
               <span class="titre">${ech(m.meta.titre)}</span>
               <span class="desc">${ech(m.meta.desc || '')}</span>
               ${verrous[m.meta.id] ? `<span class="desc"><strong>${ech(verrous[m.meta.id])}</strong></span>` : ''}

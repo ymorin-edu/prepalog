@@ -219,6 +219,32 @@ await v('visibilité : l’enseignant la décoche — elle disparaît pour l’�
   if (t.some((y) => y.id === A_OUVRIR)) throw new Error('ENT-2.4 décochée mais encore visible');
 });
 
+await v('visibilité : une évaluation rendue porte « copie rendue ✓ » sur la tuile de l’élève, pas avant, pas sur une séance sans copie', async () => {
+  const EVAL = 'cdiscount-evaluation-noel';
+  await commeProf();
+  await conduite();
+  await cocher(EVAL, true);
+  await commeEleve();
+  const lire = async () => {
+    await versAccueil();
+    await tuilesEleve();
+    return pg.$$eval('.module-tile', (els) => els.map((e) => ({ id: e.dataset.act, mention: e.querySelector('[data-copie-rendue]')?.textContent.trim() || null })));
+  };
+  let t = await lire();
+  if (!t.some((y) => y.id === EVAL)) throw new Error('évaluation cochée mais invisible : ' + t.map((y) => y.id).join(', '));
+  if (t.some((y) => y.mention)) throw new Error('mention avant la remise : ' + JSON.stringify(t));
+  const rendre = (ramasse) => pg.evaluate(async ({ EVAL, ramasse }) => {
+    const { B } = await import('/core/backend.js');
+    const moi = B.profilCourant();
+    await B.rendreCopie(moi.groupes[0], moi.uid, EVAL, { score: 10, max: 20, ramasse });
+  }, { EVAL, ramasse });
+  await rendre(false);
+  t = await lire();
+  const m = t.find((y) => y.id === EVAL);
+  if (!m || m.mention !== 'copie rendue ✓') throw new Error('après la remise : ' + JSON.stringify(m));
+  if (t.filter((y) => y.mention).length !== 1) throw new Error('mention sur une autre séance : ' + JSON.stringify(t.filter((y) => y.mention)));
+});
+
 await v('visibilité : aucune erreur JavaScript', async () => {
   if (erreursV.length) throw new Error(erreursV.slice(0, 3).join(' / '));
 });
