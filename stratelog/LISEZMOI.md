@@ -50,6 +50,6 @@ Validés par Tristan le 21/11 : 2 (égalité), 7 (équipes au déchargement), 9 
 9. **Ville sans dépôt** (rare : le Seigneur peut forcer le rendu, qui dépose ce qui est rempli) : aucun achat,
    chantier ni bonus, mais ses équipes sont placées d'office (champs, quai, atelier, carrière, bûcheron) pour ne pas
    ajouter une famine à la sanction (décision de Tristan du 21/11 : « rien ne produit » faisait double sanction).
-10. **Coup de main contre une ville en sommeil** : il échoue, les 20 deniers sont perdus, sans perte de réputation.
+10. **Larcin (ex-« coup de main ») contre une ville en sommeil** : il échoue, les 20 deniers sont perdus, sans perte de réputation.
 11. **Livraison avec écart** : touche le premier achat de bois ou de pierre d'au moins 10 unités du tour fixé ;
     le manquant (un quart arrondi à 5, au moins 5) est retiré de la dernière charrette.

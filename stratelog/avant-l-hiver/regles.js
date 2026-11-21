@@ -11,7 +11,7 @@
 // ----------------------------------------------------------------- constantes
 export const SAISONS = ['Été', 'Automne', 'Hiver', 'Printemps', 'Été', 'Automne', 'Hiver'];
 export const DERNIER_TOUR = 7;
-export const TOUR_VOL = 4;            // coup de main dès le tour 4
+export const TOUR_VOL = 4;            // larcin dès le tour 4
 export const TOUR_CHANCELLERIE = 4;   // Chancellerie constructible dès le tour 4
 export const PA = 4;                  // points d'action par ville et par tour
 export const CHARRETTE = 20;          // unités au plus par charrette
@@ -301,11 +301,11 @@ export function valider(partie, id, d) {
   if ((e.bucheron || 0) > (v.bats.bucheron || 0)) err.push('Plus d’équipes que de bûcherons.');
   if ((e.carriere || 0) > (saison === 'Hiver' ? 0 : (v.bats.carriere || 0))) err.push('Trop d’équipes à la carrière (rien l’hiver).');
   if ((e.guet || 0) > (v.bats.guet ? 1 : 0)) err.push('Une seule équipe garde la tour, et il faut une tour.');
-  // Coup de main
+  // Larcin (« coup de main » dans la fiche d'octobre)
   if (d.coup) {
-    if (tour < TOUR_VOL) err.push(`Pas de coup de main avant le tour ${TOUR_VOL}.`);
-    if (!partie.villes.includes(d.coup.cible) || d.coup.cible === id) err.push('Coup de main : ville visée invalide.');
-    if (!(d.coup.butin in BUTINS)) err.push('Coup de main : butin invalide.');
+    if (tour < TOUR_VOL) err.push(`Pas de larcin avant le tour ${TOUR_VOL}.`);
+    if (!partie.villes.includes(d.coup.cible) || d.coup.cible === id) err.push('Larcin : ville visée invalide.');
+    if (!(d.coup.butin in BUTINS)) err.push('Larcin : butin invalide.');
   }
   if (caisseApresDepot(v, d, saison) < 0) err.push('La caisse ne suffit pas.');
   return err;
