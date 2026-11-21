@@ -30,7 +30,9 @@ Le contrôle d'équilibre donne **165 points, famine 7 %** pour la ville honnêt
 tracée tour par tour donne exactement les mêmes chiffres que le simulateur Python. La note moyenne diffère
 (17,9 contre 17,2) parce que les égalités ne se départagent pas de la même façon (voir CHOIX 2).
 
-## Choix faits là où la fiche ne dit rien (à confirmer par Tristan)
+## Choix faits là où la fiche ne dit rien
+
+Validés par Tristan le 21/11 : 2 (égalité), 7 (équipes au déchargement). En attente : 9 (option recommandée codée).
 
 1. **Reste d'un achat** : ce qui ne tient pas dans les charrettes écrites arrive au tour suivant ; son
    transport (2 deniers par charrette) se paie à ce moment-là.
@@ -45,7 +47,9 @@ tracée tour par tour donne exactement les mêmes chiffres que le simulateur Pyt
 7. **« Équipes au déchargement »** (citée dans la fiche) : pas notée, parce que c'est une décision et non un
    calcul ; l'écran montre ce qui reste au quai.
 8. **Route coupée** : ne retient que le bois et la pierre achetés ce tour (le simulateur retenait tout le quai).
-9. **Ville sans dépôt** : elle consomme mais n'affecte aucune équipe, donc ne produit rien (même l'été).
+9. **Ville sans dépôt** (rare : le Seigneur peut forcer le rendu, qui dépose ce qui est rempli) : aucun achat,
+   chantier ni bonus, mais ses équipes sont placées d'office (champs, quai, atelier, carrière, bûcheron) pour ne pas
+   ajouter une famine à la sanction (proposition du 21/11, Tristan trouvait « rien ne produit » une double sanction).
 10. **Coup de main contre une ville en sommeil** : il échoue, les 20 deniers sont perdus, sans perte de réputation.
 11. **Livraison avec écart** : touche le premier achat de bois ou de pierre d'au moins 10 unités du tour fixé ;
     le manquant (un quart arrondi à 5, au moins 5) est retiré de la dernière charrette.

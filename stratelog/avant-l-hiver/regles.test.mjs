@@ -47,8 +47,13 @@ test('premier été : 9 équipes aux champs, registre juste', () => {
   assert.equal(v.bonus, 2);
   assert.equal(journal.A.score, 27 + 15 + 6 + 30 + 2);
   assert.equal(q.tour, 2);
-  // Ville sans équipe aux champs : aucune récolte.
+  // Ville qui a rendu sans mettre d'équipe aux champs : aucune récolte.
   assert.equal(q.etat.B.grain, 30);
+  // Ville qui n'a rien rendu : 9 équipes placées d'office aux champs, 1 au bûcheron (pas de bonus).
+  const { partie: q2, journal: j2 } = R.resoudreTour(p, { A: d, B: dec(), C: null });
+  assert.deepEqual(j2.C.equipesDOffice, { champ: 9, dech: 0, atelier: 0, carriere: 0, bucheron: 1 });
+  assert.equal(q2.etat.C.grain, 165);
+  assert.equal(q2.etat.C.bonus, 0);
   assert.equal(journal.B.registre.juste, false);              // cases vides = fausses
 });
 
@@ -190,9 +195,10 @@ test('ville en sommeil : rien ne bouge, un vol contre elle échoue', () => {
   assert.deepEqual(q.etat.B, p.etat.B);
   assert.equal(journal.A.evenements[0].type, 'coup-sans-cible');
   assert.equal(q.etat.A.deniers, 300 - 20 + 22);
-  // Sans dépôt : la ville consomme, ne produit rien.
+  // Sans dépôt (printemps) : équipes placées d'office, la ville consomme ; rien aux champs au printemps.
   assert.equal(journal.C.sansDepot, true);
   assert.equal(q.etat.C.grain, 30);
+  assert.equal(q.etat.C.bois, 60);                            // le bûcheron a travaillé
 });
 
 test('validation avant dépôt', () => {

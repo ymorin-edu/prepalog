@@ -311,6 +311,17 @@ export function valider(partie, id, d) {
   return err;
 }
 
+// Équipes placées d'office pour une ville qui n'a rien rendu (décision de Tristan, 21/11 : pas de double sanction) :
+// champs d'abord, puis quai, atelier, carrière (sauf l'hiver), bûcheron. Jamais la garde de la tour.
+export function equipesDOffice(v, saison) {
+  let n = equipesDe(v.hab);
+  const e = {};
+  const besoins = [['champ', equipesParChamp(saison) * (v.bats.champ || 0)], ['dech', v.quai.length],
+    ['atelier', v.bats.atelier || 0], ['carriere', saison === 'Hiver' ? 0 : (v.bats.carriere || 0)], ['bucheron', v.bats.bucheron || 0]];
+  besoins.forEach(([poste, b]) => { const x = Math.min(b, n); e[poste] = x; n -= x; });
+  return e;
+}
+
 // --------------------------------------------------------------- résolution
 // `decisions` : { [id]: décisions déposées | null (pas de dépôt) | 'sommeil' }.
 // `carte` : clé de CARTES ou null ; `cible` : ville visée par une carte ciblée.
@@ -328,7 +339,7 @@ export function resoudreTour(partie0, decisions, { carte = null, cible = null } 
     J[id] = { tour, saison, carte, vise: cible === id, evenements: [] };
     if (dec === 'sommeil') { D[id] = 'sommeil'; J[id].sommeil = true; return; }
     D[id] = dec ? { ...vide(), ...dec, equipes: { ...(dec.equipes || {}) } } : null;
-    if (!dec) J[id].sansDepot = true;
+    if (!dec) { J[id].sansDepot = true; J[id].equipesDOffice = equipesDOffice(E[id], saison); }
   });
   const actives = ids.filter((id) => D[id] !== 'sommeil');
 
@@ -409,10 +420,10 @@ export function resoudreTour(partie0, decisions, { carte = null, cible = null } 
   const recus = {}; ids.forEach((id) => { recus[id] = []; });
   actives.forEach((id) => {
     const v = E[id]; const d = D[id] || vide(); const j = J[id];
-    const e = d.equipes;
+    const e = D[id] ? d.equipes : j.equipesDOffice;
     // Déchargement : 1 équipe = 1 charrette, les plus anciennes d'abord. Route coupée : le bois et la pierre
     // achetés ce tour ne se déchargent pas (ils arrivent au tour suivant).
-    let cap = D[id] ? (e.dech || 0) : 0;
+    let cap = e.dech || 0;
     const restent = [];
     const routeCoupee = carte === 'route_coupee' && cible === id;
     j.decharge = [];
@@ -433,7 +444,7 @@ export function resoudreTour(partie0, decisions, { carte = null, cible = null } 
       j.evenements.push({ type: 'vole', butin, q });
       for (let k = 0; k < charrettesPour(q); k++) recus[voleur].push({ m: butin, q: Math.min(CHARRETTE, q - k * CHARRETTE), origine: 'butin' });
     });
-    // Production selon les équipes (une ville sans dépôt n'affecte aucune équipe : rien ne produit).
+    // Production selon les équipes.
     let eqChamp = e.champ || 0; let recolte = 0;
     for (let k = 0; k < (v.bats.champ || 0); k++) {
       const n = Math.min(equipesParChamp(saison), eqChamp); eqChamp -= n;
