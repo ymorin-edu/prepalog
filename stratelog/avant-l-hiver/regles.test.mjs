@@ -228,6 +228,7 @@ test('notes : 3 villes, 4 villes, égalité, plafond', () => {
   const eg = R.notes({ A: 100, B: 100, C: 50 });
   assert.deepEqual([eg.A.classement, eg.B.classement, eg.C.rang], [6, 6, 3]);
   assert.equal(R.notes({ A: 400, B: 1 }).A.surQuatorze, 14);
+  assert.equal(R.notes({ A: 100, B: -28 }).B.note, 2);              // score négatif : 0 sur 14, pas moins
 });
 
 test('partie : tour d’essai remis à zéro, cartes, hasard rejouable, état d’origine intact', () => {

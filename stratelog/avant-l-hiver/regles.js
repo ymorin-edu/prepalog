@@ -155,7 +155,7 @@ export function notes(scores, diviseur = DIVISEUR) {
   const res = {};
   ids.forEach((id) => {
     const rang = tri.findIndex((x) => scores[x] === scores[id]);
-    const s14 = Math.min(14, scores[id] / diviseur * 14);
+    const s14 = Math.max(0, Math.min(14, scores[id] / diviseur * 14));   // un score négatif (famines) compte 0
     res[id] = { rang: rang + 1, surQuatorze: Math.round(s14 * 10) / 10, classement: bareme(rang),
       note: Math.round((s14 + bareme(rang)) * 10) / 10 };
   });
