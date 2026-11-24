@@ -3,7 +3,8 @@
 Troisième collection à côté de Simulog : des jeux de stratégie logistique joués par la classe, une ville par groupe,
 l'enseignant en Seigneur. Épisode 1 : **« Avant l'Hiver »** (Moyen Âge, 2de, décembre 2026).
 
-Ce dossier n'est **pas encore chargé par le site** : rien ici n'est visible des élèves.
+Depuis le 24/11/2026, Avant l'Hiver est **dans le site** : séance `STR-1` (`activites/stratelog-avant-l-hiver.js`),
+pastille « Stratelog » de l'accueil. Encore en brouillon (`pret: false`) : visible de l'enseignant seul.
 
 ## Ce qu'il contient
 
@@ -12,6 +13,16 @@ Ce dossier n'est **pas encore chargé par le site** : rien ici n'est visible des
 | `avant-l-hiver/regles.js` | Les règles en calcul pur : état d'une ville, registre attendu et corrigé, validation avant dépôt, résolution d'un tour, score, note. Ni écran ni base. |
 | `avant-l-hiver/regles.test.mjs` | Ses tests, valeurs calculées à la main d'après la fiche. |
 | `avant-l-hiver/equilibre.mjs` | Contrôle d'équilibre : rejoue la stratégie « ville honnête » du simulateur v15. |
+| `avant-l-hiver/partie.js` | La partie de classe : qui écrit quoi dans la base (en-tête du fichier), présents, lots de rôles, brouillon de la ville, gestes du Seigneur. Calcul pur. |
+| `avant-l-hiver/partie.test.mjs` | Ses tests (lignes, rôles, équipes de départ, présence). |
+| `avant-l-hiver/ecrans.js` | Les écrans en HTML (élève, Seigneur, tableau projeté), repris de la page d'essai validée (v22). |
+| `avant-l-hiver/jeu.js` | Le poste : écoute la base, écrit la ligne de l'élève ou l'état du Seigneur (photo avant chaque geste), calculatrice. |
+| `avant-l-hiver/dessins.js`, `blasons.js`, `textes.js` | Paysans, plateau, logos ; les 22 figures et 8 couleurs ; les textes d'aide. |
+| `avant-l-hiver/symboles.js` | GÉNÉRÉ par `python outils/stratelog/symboles.py` (dessins gravure d'octobre, `shapely` requis). Ne pas modifier à la main. |
+
+La partie vit dans la base de classe `jeux/{groupe}/stratelog-avant-l-hiver` (une par classe, demi-groupes compris).
+**Aucune règle Firebase nouvelle** : l'élève n'écrit que sa ligne, à la clé de son uid. Habillage : `styles/stratelog.css`
+(tout sous `.strat`) et trois polices dans `styles/polices/` (UnifrakturMaguntia, Alegreya SC, Alegreya italique, OFL).
 
 Source de la règle : fiche `stratelog-ep1-allege.md` (partie 1) et simulateur `stratelog-sim-v15.py`, dans les
 fichiers du projet Claude (`/mnt/project-files/knowledge/claude/`). Le cadrage du parcours (rôles, absents,
@@ -22,7 +33,8 @@ villes, blasons, tableau projeté) est dans `/mnt/project-files/stratelog/CADRAG
 À part de la suite Simulog (aucun navigateur, moins d'une seconde) :
 
 ```
-node --test "stratelog/**/*.test.mjs"
+node --test stratelog/avant-l-hiver/*.test.mjs
+node outils/test.mjs stratelog                      # une partie jouée à 5 onglets (enseignant + 4 élèves)
 node stratelog/avant-l-hiver/equilibre.mjs        # 1 000 parties à 3, 4 et 5 villes
 ```
 

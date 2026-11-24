@@ -505,8 +505,10 @@ s'aligner.
   `socle.mjs` attend désormais la seule carte Boost chez l'élève (Spartoo n'en montre plus).
 
 ### 20. Stratelog (C19)
-- **À cadrer en Cowork** : un troisième côté (ni Prepalog ni Simulog) ou une entreprise Simulog de
-  plus ? Dans le premier cas, le chantier 10 passe avant.
+- **Cadré le 21/11/2026** : troisième collection (pastille à côté de Simulog), épisode 1 « Avant l'Hiver » (2de).
+- **En cours (24/11/2026)** : séance `STR-1` dans le site, en brouillon. Partie de classe partagée, écrans élève,
+  Seigneur et tableau projeté, retour arrière, notes posées en fin de partie. Reste : finitions, partie complète en
+  test, essai à deux ordinateurs avec Tristan, puis `pret: true, ouverture: 'prof'`. Détail : `stratelog/LISEZMOI.md`.
 
 ### 21. Tests lot A : diagnostic des échecs (C10c)
 - **Ce qu'on fait.** Après le chantier 13 (le fond), la forme de ce que la suite DIT quand elle tombe. Un cas rouge ne
