@@ -441,7 +441,9 @@ export function ecranNomBlason(C) {
 export function ecranRoles(C) {
   const T = C.tit; const u = C.moi.uid; const mien = Object.keys(T.lot).find((i) => T.lot[i] === u);
   const E = C.E; const n = T.presents.length;
-  let h = `<div class="bloc"><h3>Qui fait quoi ce tour-ci ?</h3><p class="note">Vous êtes ${n} présent${n > 1 ? 's' : ''} : ${T.lots.length} lot${T.lots.length > 1 ? 's' : ''} de rôles. Chacun en prend un. Le registre s’ouvre quand tous les lots sont pris.${E.partie.tour > 0 && !E.reglages.rotation ? ' Celui qui était déjà là garde son rôle du tour précédent ; il peut le rendre.' : ''}${E.reglages.rotation && E.partie.tour > 0 ? ' Cette partie oblige à changer de rôle : ton lot du tour précédent est fermé pour toi.' : ''}</p><div class="lots">`;
+  const A = E.attrib && E.attrib[C.id];
+  const garde = !E.reglages.rotation && E.partie.tour > 0 && !!(A && A.tour === P.tour(E) && A.L && Object.values(T.lot).some((x) => A.L.includes(x)));
+  let h = `<div class="bloc"><h3>Qui fait quoi ce tour-ci ?</h3><p class="note">Vous êtes ${n} présent${n > 1 ? 's' : ''} : ${T.lots.length} lot${T.lots.length > 1 ? 's' : ''} de rôles. Chacun en prend un. Le registre s’ouvre quand tous les lots sont pris.${garde ? ' Celui qui était déjà là garde son rôle du tour précédent ; il peut le rendre.' : ''}${E.reglages.rotation && E.partie.tour > 0 ? ' Cette partie oblige à changer de rôle : ton lot du tour précédent est fermé pour toi.' : ''}</p><div class="lots">`;
   T.lots.forEach((lot, i) => {
     const pris = T.lot[i]; const amoi = pris === u; const interdit = P.lotInterdit(E, T.n, i, u);
     h += `<div class="lot ${amoi ? 'a-moi' : ''}"><span class="roles">${lot.map((r) => ROLES[r]).join(' + ')}</span>
@@ -459,7 +461,8 @@ export function ecranEleve(C) {
   if (!C.id) return `<p class="attente">Attends que le Seigneur te place dans une ville.</p>`;
   const V = ville(C, C.id);
   const autres = P.membresDe(E, C.id).filter((x) => x !== C.moi.uid);
-  const avec = `<p>Tu es à <strong>${ech(V.nom)}</strong>${autres.length ? ` avec ${autres.map((x) => nomDe(C, x)).join(', ')}` : ', seul'}.</p>`;
+  const phrase = `${autres.length ? ` avec ${autres.map((x) => nomDe(C, x)).join(', ')}` : ', seul'}`;
+  const avec = `<p>Tu es à <strong>${ech(V.nom)}</strong>${phrase}${phrase.endsWith('.') ? '' : '.'}</p>`;
   if (E.phase === 'preparation') return `${avec}<p class="attente">Le Seigneur forme les villes. Attends son signal.</p>`;
   if (E.phase === 'avant-tour' && (!V.nommee || !V.blason)) return avec + ecranNomBlason(C);
   if (E.phase === 'tour' && !C.rendu) {

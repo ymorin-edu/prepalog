@@ -1,7 +1,8 @@
 /* Stratelog, Avant l'Hiver (STR-1) : la feuille du jeu. Reprise des pages d'essai validées par Tristan (21-24/11/2026),
    tout sous .strat (le jeu ne touche à rien d'autre du site) et ses couleurs en --s-… (jamais celles de base.css). Les
-   couleurs sont déclarées trois fois, comme dans base.css : clair, @media sombre, [data-theme="sombre"]. Le plateau, le
-   registre et le tableau projeté sont des gravures sur parchemin, d'un seul aspect dans les deux thèmes. */
+   couleurs sont déclarées trois fois, comme dans base.css : clair, @media sombre, [data-theme="sombre"] ; les trois portent
+   les MÊMES valeurs exprès : tout le jeu est papier et parchemin, d'un seul aspect dans les deux thèmes (essai du 24/11 dans
+   un Chrome sombre : les étiquettes des gravures faisaient des bandes noires sur le parchemin). */
 /* Un poste par écran (élève, Seigneur, tableau projeté). Papier chaud et encre ; accent vert = action ; ambre = attention ;
    le plan de la ville et le tableau projeté sont des gravures sur parchemin, d'un seul aspect. */
 .strat{
@@ -13,14 +14,14 @@
 }
 @media (prefers-color-scheme: dark){
 :root:not([data-theme="clair"]) .strat{
-  --s-fond:#1f1c18; --s-panneau:#2a2621; --s-encre:#eee6d8; --s-doux:#b3a894; --s-trait:#4a4338;
-  --s-accent:#7fbf9b; --s-accent-encre:#1f1c18; --s-terre:#e0a75a; --s-terre-fond:rgba(224,167,90,.14);
-  --s-rouge:#f08a80; --s-vert:#86d08f; --s-voile:rgba(238,230,216,.06); color-scheme:dark}
+  --s-fond:#f3ede2; --s-panneau:#fbf7ef; --s-encre:#2b2620; --s-doux:#6d6457; --s-trait:#d8ccb8;
+  --s-accent:#2f6b4f; --s-accent-encre:#fbf7ef; --s-terre:#9a5b12; --s-terre-fond:rgba(154,91,18,.10);
+  --s-rouge:#a3271f; --s-vert:#2f7d3a; --s-voile:rgba(43,38,32,.06); color-scheme:light}
 }
 :root[data-theme="sombre"] .strat{
-  --s-fond:#1f1c18; --s-panneau:#2a2621; --s-encre:#eee6d8; --s-doux:#b3a894; --s-trait:#4a4338;
-  --s-accent:#7fbf9b; --s-accent-encre:#1f1c18; --s-terre:#e0a75a; --s-terre-fond:rgba(224,167,90,.14);
-  --s-rouge:#f08a80; --s-vert:#86d08f; --s-voile:rgba(238,230,216,.06); color-scheme:dark}
+  --s-fond:#f3ede2; --s-panneau:#fbf7ef; --s-encre:#2b2620; --s-doux:#6d6457; --s-trait:#d8ccb8;
+  --s-accent:#2f6b4f; --s-accent-encre:#fbf7ef; --s-terre:#9a5b12; --s-terre-fond:rgba(154,91,18,.10);
+  --s-rouge:#a3271f; --s-vert:#2f7d3a; --s-voile:rgba(43,38,32,.06); color-scheme:light}
 .strat{background:var(--s-fond);color:var(--s-encre);font-family:var(--s-texte);font-size:16px;line-height:1.45;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:16px 48px}
 .strat .page{max-width:1120px;margin:0 auto;display:flex;flex-direction:column;gap:14px}
@@ -542,14 +543,14 @@
 }
 @media (prefers-color-scheme: dark){
 :root:not([data-theme="clair"]) .strat{
-  --s-fond:#1f1c18; --s-panneau:#2a2621; --s-encre:#eee6d8; --s-doux:#b3a894; --s-trait:#4a4338;
-  --s-accent:#7fbf9b; --s-accent-encre:#1f1c18; --s-terre:#e0a75a; --s-terre-fond:rgba(224,167,90,.14);
-  --s-rouge:#f08a80; --s-vert:#86d08f; --s-voile:rgba(238,230,216,.06); color-scheme:dark}
+  --s-fond:#f3ede2; --s-panneau:#fbf7ef; --s-encre:#2b2620; --s-doux:#6d6457; --s-trait:#d8ccb8;
+  --s-accent:#2f6b4f; --s-accent-encre:#fbf7ef; --s-terre:#9a5b12; --s-terre-fond:rgba(154,91,18,.10);
+  --s-rouge:#a3271f; --s-vert:#2f7d3a; --s-voile:rgba(43,38,32,.06); color-scheme:light}
 }
 :root[data-theme="sombre"] .strat{
-  --s-fond:#1f1c18; --s-panneau:#2a2621; --s-encre:#eee6d8; --s-doux:#b3a894; --s-trait:#4a4338;
-  --s-accent:#7fbf9b; --s-accent-encre:#1f1c18; --s-terre:#e0a75a; --s-terre-fond:rgba(224,167,90,.14);
-  --s-rouge:#f08a80; --s-vert:#86d08f; --s-voile:rgba(238,230,216,.06); color-scheme:dark}
+  --s-fond:#f3ede2; --s-panneau:#fbf7ef; --s-encre:#2b2620; --s-doux:#6d6457; --s-trait:#d8ccb8;
+  --s-accent:#2f6b4f; --s-accent-encre:#fbf7ef; --s-terre:#9a5b12; --s-terre-fond:rgba(154,91,18,.10);
+  --s-rouge:#a3271f; --s-vert:#2f7d3a; --s-voile:rgba(43,38,32,.06); color-scheme:light}
 .strat button.poste .abs{color:var(--s-doux);text-decoration:line-through}
 .strat .tour{font-family:var(--s-titre);font-size:1.05rem;color:var(--s-terre)}
 .strat .pastille.dort{color:var(--s-doux)}

@@ -161,7 +161,8 @@ await v('stratelog : une case remplie par l’Intendant arrive chez son camarade
 });
 
 await v('stratelog : forcer le rendu ramasse les deux autres villes, clore tire la carte, résoudre écrit la chronique chez l’élève', async () => {
-  for (const m of seuls()) await eleves[m].waitForSelector('text=Qui fait quoi ce tour-ci');
+  // Seul dans sa ville, l'élève tient les quatre rôles sans avoir à cliquer « Je prends ».
+  for (const m of seuls()) await eleves[m].waitForSelector('.onglets');
   await prof.click('#forcer');
   await prof.waitForSelector('#clore:not([disabled])');
   await prof.click('#clore');

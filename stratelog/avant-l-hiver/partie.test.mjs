@@ -35,7 +35,16 @@ test('rôles : deux présents = deux lots ; le premier qui clique l’emporte, l
   assert.equal(tit.lot[1], undefined, 'la demande de u1 sur le lot 0 ne glisse pas vers un autre lot');
 });
 
-test('brouillon : sans tour précédent, 9 équipes aux champs et 1 au bûcheron ; un élève sans rôle ne fait rien partir', () => {
+test('rôles : le seul présent de sa ville tient les quatre rôles sans cliquer « Je prends »', () => {
+  const { E, L } = partieOuverte({ u0: 'A', u1: 'A', u2: 'B', u3: 'C' });
+  const tit = P.titulaires(E, L, 'B', T0 + 2000);
+  assert.equal(tit.lot[0], 'u2');
+  assert.equal(tit.tous, true);
+  assert.deepEqual(tit.rolesDe('u2').sort(), ['B', 'I', 'M', 'O']);
+  assert.equal(P.titulaires(E, L, 'A', T0 + 2000).tous, false, 'à deux, chacun doit encore prendre son lot');
+});
+
+test('brouillon : sans tour précédent, 9 équipes aux champs et 1 au bûcheron ; rien ne part tant que rien n’est rempli', () => {
   const { E, L } = partieOuverte({ u0: 'A', u1: 'B', u2: 'C', u3: 'C' });
   const tit = P.titulaires(E, L, 'A', T0 + 2000);
   const dr = P.brouillon(E, L, 'A', tit);

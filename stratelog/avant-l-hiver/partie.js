@@ -141,6 +141,8 @@ export function titulaires(E, L, id, maintenant = Date.now()) {
     if (lotInterdit(E, n, c.lot, u)) return;
     lot[c.lot] = u; pris.add(u);
   });
+  // Seul présent de sa ville : le lot unique lui revient sans « Je prends » (personne d'autre ne peut le tenir).
+  if (lots.length === 1 && pres.length === 1 && !lot[0]) { lot[0] = pres[0]; pris.add(pres[0]); }
   const role = {};
   lots.forEach((l, i) => l.forEach((r) => { role[r] = lot[i] || null; }));
   const rolesDe = (u) => Object.keys(role).filter((r) => role[r] === u);
