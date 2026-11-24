@@ -7,6 +7,7 @@ est déjà modifié ou inscrit ci-dessous, **elle s'arrête et le dit à Tristan
 
 | Chantier | Fichiers qu'il touche | Depuis |
 |---|---|---|
+| Stratelog : Avant l'Hiver dans le site (STR-1) | `stratelog/`, `activites/stratelog-avant-l-hiver.js`, `activites/index.js`, `activites/catalogue.js`, `styles/stratelog.css`, `styles/polices/`, `styles/polices.css`, `index.html`, `core/backend-demo.js` (écoute entre onglets), `outils/test/stratelog.mjs`, `outils/test.mjs` (BLOCS, GROUPES) | 24/11/2026 |
 
 Rappel : un seul chantier à la fois dans `core/types/tournee.js`, `core/types/grille.js`,
 `core/types/entreprise.js`, `styles/base.css` et `outils/test/boost.mjs` (voir `docs/briefs/COORDINATION-boost.md`).
