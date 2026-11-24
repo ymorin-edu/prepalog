@@ -25,6 +25,14 @@ function abonner(chemin, cb) {
   };
 }
 
+// Entre onglets du même navigateur : une écriture faite dans un autre onglet réveille les écouteurs de celui-ci, comme le
+// temps réel du mode réel. Sert à essayer en démonstration une partie de classe à plusieurs postes (Stratelog : un onglet
+// par élève, un pour l'enseignant). Seuls les chemins écoutés dans cet onglet réagissent ; l'onglet qui écrit, lui, a déjà
+// prévenu les siens (le navigateur n'envoie pas l'événement à l'onglet d'origine).
+if (typeof window !== 'undefined') {
+  window.addEventListener('storage', (ev) => { if (ev.key && ev.key.startsWith(P)) publier(ev.key.slice(P.length)); });
+}
+
 // Erreur rendue quand un élève tente d'écrire sur une séance que l'enseignant a notée : le vrai
 // service la refuse (PERMISSION_DENIED), ici on la lève à la main pour que la suite la voie.
 const erreurNoteFigee = () => Object.assign(new Error('note posée par l’enseignant'), { code: 'note-prof' });
