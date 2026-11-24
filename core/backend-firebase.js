@@ -57,6 +57,7 @@ export async function creerBackendFirebase() {
   const rt = DB.getDatabase(app);
 
   let courant = null;
+  let compteurSuppr = 0;   // noms d'instances distincts quand plusieurs comptes se suppriment en parallèle
   let panne = null;     // dernière erreur de démarrage, expliquée à l'écran
   let rtActif = false;
   const ecouteurs = new Set();
@@ -414,7 +415,7 @@ export async function creerBackendFirebase() {
     // Chantier 11 (09/10/2026) : GARDE EN TÊTE, avant la première écriture. Seul le responsable (premier de
     // `profs`) supprime un groupe ; un collègue le QUITTE (`retirerCollegue`). Un refus au milieu
     // laisserait un groupe à moitié vidé.
-    async supprimerGroupe(gid, { aids = [] } = {}) {
+    async supprimerGroupe(gid, { aids = [], progres = null } = {}) {
       if (!courant) throw new Error('Connexion requise.');
       let g0 = null;
       try {
@@ -430,13 +431,23 @@ export async function creerBackendFirebase() {
           : "Ce groupe n'est pas le vôtre.";
         if (refus) throw new Error(refus);
       }
+      // Avant la première suppression, on réécrit le miroir `acces/{gid}` (24/11/2026) : s'il manque
+      // des élèves ou l'enseignant, les règles refusent leur effacement (« règles de sécurité »)
+      // et il fallait cliquer sur « Reconstruire l'accès » à la main. Écriture seule, rien ne part ;
+      // un échec ici n'arrête rien : la suppression dira elle-même ce qui est refusé.
+      try { await this.reconstruireAcces(gid); } catch (e) {}
       const eleves = await this.elevesDuGroupe(gid);
       // Les groupes de l'enseignant, lus UNE fois (et non pour chaque élève) : ils servent à
       // retrouver les travaux d'un élève dans un groupe que son profil ne cite plus.
       const groupesProf = courant ? await this.groupesDuProf(courant.uid) : [];
-      let supprimes = 0, detaches = 0, comptes = 0;
+      let supprimes = 0, detaches = 0, comptes = 0, faits = 0;
       const restes = [];
-      for (const el of eleves) {
+      if (progres) progres(0, eleves.length);
+      // Les élèves sont traités par petits paquets en parallèle (24/11/2026) : un élève après l'autre,
+      // 90 comptes prenaient plusieurs minutes. Six à la fois : au-delà, les connexions de suppression
+      // des comptes risquent d'être limitées par Firebase. Le premier échec arrête les départs ;
+      // les élèves déjà lancés vont au bout, et l'on peut recommencer (ce qui est parti est parti).
+      const traiter = async (el) => {
         if ((el.groupes || []).length <= 1) {
           // supprimerEleve() fait le reste : travaux, jeux privés, classements,
           // acces/{gid}/eleves/{uid}, profil, puis le compte. Il tourne tant que `acces/{gid}`
@@ -449,13 +460,24 @@ export async function creerBackendFirebase() {
           supprimes++;
           if (r && r.compte) comptes++;
           if (r && r.restes) restes.push(...r.restes);
-          continue;
+        } else {
+          const s = await FS.getDocs(cref('travaux', gid, 'eleves', el.uid, 'activites'));
+          await Promise.all(s.docs.map((d) => FS.deleteDoc(d.ref)));
+          await FS.updateDoc(dref('users', el.uid), { groupes: FS.arrayRemove(gid) });
+          detaches++;
         }
-        const s = await FS.getDocs(cref('travaux', gid, 'eleves', el.uid, 'activites'));
-        for (const d of s.docs) await FS.deleteDoc(d.ref);
-        await FS.updateDoc(dref('users', el.uid), { groupes: FS.arrayRemove(gid) });
-        detaches++;
-      }
+        faits++;
+        if (progres) progres(faits, eleves.length);
+      };
+      let suivant = 0, echec = null;
+      const ouvrier = async () => {
+        while (!echec && suivant < eleves.length) {
+          const el = eleves[suivant++];
+          try { await traiter(el); } catch (e) { echec = echec || e; }
+        }
+      };
+      await Promise.all(Array.from({ length: Math.min(6, eleves.length) }, ouvrier));
+      if (echec) throw echec;
       // Ordre d'effacement INTANGIBLE : élèves (ci-dessus), puis jeux/{gid}, puis le miroir
       // acces/{gid} — dont dépendent les droits des deux écritures d'avant —, puis le groupe.
       ouvrirRt();
@@ -604,7 +626,7 @@ export async function creerBackendFirebase() {
       for (const gid of new Set([...gidsProfil, ...idsProf])) {
         try {
           const t = await FS.getDocs(cref('travaux', gid, 'eleves', uid, 'activites'));
-          for (const d of t.docs) await FS.deleteDoc(d.ref);
+          await Promise.all(t.docs.map((d) => FS.deleteDoc(d.ref)));
         } catch (e) {
           // Dans un groupe de l'enseignant, un échec est un vrai échec : on s'arrête, l'élève
           // existe encore et l'on peut recommencer. Ailleurs (groupe d'un collègue, groupe
@@ -614,7 +636,7 @@ export async function creerBackendFirebase() {
         }
       }
       const pj = await FS.getDocs(cref('prives', uid, 'jeux'));
-      for (const d of pj.docs) await FS.deleteDoc(d.ref);
+      await Promise.all(pj.docs.map((d) => FS.deleteDoc(d.ref)));
 
       ouvrirRt();
       if (aids.length) {
@@ -625,7 +647,7 @@ export async function creerBackendFirebase() {
           restes.push(`lignes de classement refusées (${refus.length} activité${refus.length > 1 ? 's' : ''})`);
         }
       }
-      for (const gid of gidsProfil) await DB.remove(DB.ref(rt, `acces/${gid}/eleves/${uid}`));
+      await Promise.all(gidsProfil.map((gid) => DB.remove(DB.ref(rt, `acces/${gid}/eleves/${uid}`))));
 
       if (nettoyerGroupes) {
         for (const g of profs) {
@@ -639,7 +661,7 @@ export async function creerBackendFirebase() {
 
       let compte = false;
       if (el && el.code && el.matricule) {
-        const app2 = AP.initializeApp(CONFIG.firebase, 'suppr' + Date.now());
+        const app2 = AP.initializeApp(CONFIG.firebase, 'suppr' + Date.now() + '-' + (++compteurSuppr));
         try {
           const auth2 = AU.getAuth(app2);
           const c = await AU.signInWithEmailAndPassword(

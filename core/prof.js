@@ -575,7 +575,14 @@ export async function rendreEspaceProf(hote, ctx) {
         + `et tous les résultats de ses élèves.`
         + detail)) return;
       try {
-        const r = await B.supprimerGroupe(gid, { aids: await aidsConnus() });
+        // Progression visible : un message qui se remplace à chaque élève traité (24/11/2026).
+        toast('Suppression en cours…', 600000);
+        const r = await B.supprimerGroupe(gid, {
+          aids: await aidsConnus(),
+          progres: (fait, total) => toast(total
+            ? `Suppression en cours : ${fait} / ${total} élève${total > 1 ? 's' : ''} traité${total > 1 ? 's' : ''}…`
+            : 'Suppression en cours…', 600000),
+        });
         groupes = await B.groupesDuProf(ctx.profil.uid);
         await majSansGroupe();
         if (gidActif === gid) activer(groupes[0]?.id || null);

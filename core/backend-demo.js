@@ -244,7 +244,7 @@ export function creerBackendDemo() {
     // Chantier 11 : seul le responsable (premier de `profs`) supprime ; un collègue du groupe le quitte. La garde passe
     // AVANT toute suppression d'élève. (Un enseignant absent de `profs`, que seuls des tests fabriquent avec un
     // `profUid` à eux, n'est pas arrêté ici : le mode réel, lui, le refuse par les règles.)
-    async supprimerGroupe(gid, { aids = [] } = {}) {
+    async supprimerGroupe(gid, { aids = [], progres = null } = {}) {
       const g0 = groupes()[gid];
       if (g0 && courant && (g0.profs || []).includes(courant.uid)) {
         const refus = gardeSuppressionGroupe(g0, courant.uid);
@@ -257,6 +257,7 @@ export function creerBackendDemo() {
         if (!gs.includes(gid)) return;
         if (u0[k].role === 'eleve' && gs.length <= 1) aPurger.push(k); else aDetacher.push(k);
       });
+      if (progres) progres(0, aPurger.length + aDetacher.length);
       aPurger.forEach((k) => effacerEleve(k, { aids, nettoyerGroupes: false }));   // garde de groupe déjà passée
       const u = users();
       aDetacher.forEach((k) => { if (u[k]) u[k].groupes = (u[k].groupes || []).filter((x) => x !== gid); });
