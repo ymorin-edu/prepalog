@@ -256,8 +256,8 @@ export const ICONES = {
   transport: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2.4 5.9h11.2v9.9H2.4z"/><path d="M13.6 9.2h3.8l3.2 3.9v2.7h-7"/><path d="M2.4 15.8h3.1M8.6 15.8h6.2M18.2 15.8h2.4"/><circle cx="7.1" cy="17.9" r="2.1"/><circle cx="16.8" cy="17.9" r="2.1"/></svg>`,
   // registre ouvert
   gestion: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6.7C12 6.7 10 4.9 4.2 4.9v13.2C10 18.1 12 19.9 12 19.9s2-1.8 7.8-1.8V4.9C14 4.9 12 6.7 12 6.7Z"/><path d="M12 6.7v13.2"/></svg>`,
-  // tour crénelée : les villes de Stratelog
-  stratelog: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 20.4V8.6h12v11.8"/><path d="M4.5 20.4h15"/><path d="M6 8.6V4.4h2.4v2h2.4v-2h2.4v2h2.4v-2H18v4.2"/><path d="M10 20.4v-4.2a2 2 0 0 1 4 0v4.2"/><path d="M9.2 11.6h1.4M13.4 11.6h1.4"/></svg>`,
+  // pion : les jeux de stratégie de Stratelog (choisi par Tristan, 25/11/2026)
+  stratelog: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="6.2" r="2.4"/><path d="M9.2 9.8h5.6"/><path d="M10.2 9.8c0 3.2-1.2 5.8-2.6 7.6h8.8c-1.4-1.8-2.6-4.4-2.6-7.6"/><path d="M6.2 17.4h11.6v2.8H6.2z"/></svg>`,
   // écran et carton : le logiciel de l'entreprise (Simulog)
   simulog: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2.8" y="3.6" width="18.4" height="13" rx="1.6"/><path d="M12 16.6v3.3M8.2 20.3h7.6"/><path d="M12 6.4 15.7 8.25 12 10.1 8.3 8.25z"/><path d="M8.3 8.25v3.7 L12 13.8 15.7 11.95V8.25M12 10.1v3.7"/></svg>`,
   // deux comptes, pas un
