@@ -106,8 +106,12 @@ const BLOCS = ['socle', 'spartoo', 'groupes', 'dependances', 'transport', 'boost
   'stellantis-ligne',
   'palettier',
   'ramasse',
-  'vitrine',
-  'stratelog'];
+  'vitrine'];
+// Stratelog (jeux de stratégie, STR-x) a SA suite, à part de celle de Prepalog et Simulog (décision de Tristan,
+// 25/11/2026) : ses blocs ne tournent ni dans `node outils/test.mjs` sans argument, ni dans `test-parallele.mjs`,
+// ni dans les GROUPES. Sa commande : `node outils/test-stratelog.mjs` (règles du jeu + parties à plusieurs onglets).
+// Ils restent lançables par leur nom (`node outils/test.mjs stratelog`), avec le même serveur et le même navigateur.
+const BLOCS_STRATELOG = ['stratelog'];
 const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], questions: ['socle'] };
 
 // Un fichier de bloc posé dans `outils/test/` mais oublié dans `BLOCS` ne tournerait jamais,
@@ -116,7 +120,7 @@ const PREREQUIS = { spartoo: ['socle'], groupes: ['socle'], smoby: ['socle'], qu
   const fs = await import('node:fs');
   const ici = new URL('./test/', import.meta.url);
   const oublies = fs.readdirSync(ici).filter((f) => f.endsWith('.mjs') && f !== 'commun.mjs')
-    .map((f) => f.slice(0, -4)).filter((b) => !BLOCS.includes(b));
+    .map((f) => f.slice(0, -4)).filter((b) => !BLOCS.includes(b) && !BLOCS_STRATELOG.includes(b));
   if (oublies.length) {
     console.error(`outils/test/ contient un bloc absent de BLOCS (outils/test.mjs) : ${oublies.join(', ')}.`);
     process.exit(2);
@@ -137,7 +141,7 @@ const GROUPES = {
   2: ['copie', 'demi-groupes', 'fb-6.7', 'fb-6.9', 'quai-iso', 'action-812', 'action-813', 'pelleau-102',
     'pelleau-111', 'ikea-12.1', 'ikea-12.2', 'ikea-12.3', 'ikea-12.4', 'ikea-12.5', 'ikea-12.6', 'ikea-12.7', 'ikea-12.8'],
   3: ['dependances', 'carte-region', 'picard', 'entrepot', 'animation', 'fb-6.3', 'action-86', 'action-87',
-    'pelleau-103', 'action-819', 'lactalis', 'stellantis-13.2', 'stellantis-equipe', 'schneider', 'stratelog'],
+    'pelleau-103', 'action-819', 'lactalis', 'stellantis-13.2', 'stellantis-equipe', 'schneider'],
   4: ['transport', 'boost', 'cdiscount', 'tableur-export', 'action-81', 'action-83', 'chep-93', 'pelleau-107',
     'pelleau-112', 'action-817', 'royal-canin', 'stellantis-13.1', 'leroy-merlin', 'yves-rocher'],
   5: ['visibilite', 'fb-6.4', 'fb-6.5', 'fb-6.6', 'decathlon-74', 'action-85', 'chep-91', 'pelleau-105',
@@ -181,13 +185,13 @@ if (iGroupe >= 0) {
   console.log(`Groupe ${n}.`);
   demandes = GROUPES[n];
 }
-const inconnus = demandes.filter((b) => !BLOCS.includes(b));
+const inconnus = demandes.filter((b) => !BLOCS.includes(b) && !BLOCS_STRATELOG.includes(b));
 if (inconnus.length) {
-  console.error(`Bloc inconnu : ${inconnus.join(', ')}. Blocs : ${BLOCS.join(', ')}.`);
+  console.error(`Bloc inconnu : ${inconnus.join(', ')}. Blocs : ${BLOCS.join(', ')}. Stratelog : ${BLOCS_STRATELOG.join(', ')}.`);
   process.exit(2);
 }
 const voulus = new Set(demandes.length ? demandes.flatMap((b) => [...(PREREQUIS[b] || []), b]) : BLOCS);
-const aLancer = BLOCS.filter((b) => voulus.has(b));
+const aLancer = [...BLOCS, ...BLOCS_STRATELOG].filter((b) => voulus.has(b));
 if (demandes.length) console.log(`Blocs lancés : ${aLancer.join(', ')}.`);
 
 // Le commun démarre le serveur de test, le navigateur et la page partagée, dès son import.

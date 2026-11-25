@@ -30,6 +30,8 @@ villes, blasons, tableau projeté) est dans `/mnt/project-files/stratelog/CADRAG
 
 ## Tests
 
+Stratelog a sa suite, à part de celle de Prepalog et Simulog (25/11/2026) : `node outils/test-stratelog.mjs` lance les deux étapes ci-dessous. La grande suite ne joue plus Stratelog.
+
 À part de la suite Simulog (aucun navigateur, moins d'une seconde) :
 
 ```

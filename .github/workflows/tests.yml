@@ -25,7 +25,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        groupe: [1, 2, 3, 4, 5, 6, 7, 8, séances]
+        groupe: [1, 2, 3, 4, 5, 6, 7, 8, séances, stratelog]
     steps:
       - uses: actions/checkout@v4
 
@@ -65,7 +65,7 @@ jobs:
         env:
           GROUPE: ${{ matrix.groupe }}
         run: |
-          if [ "$GROUPE" = "séances" ]; then commande="node outils/test-seances.mjs"; else commande="node outils/test.mjs --groupe $GROUPE"; fi
+          if [ "$GROUPE" = "séances" ]; then commande="node outils/test-seances.mjs"; elif [ "$GROUPE" = "stratelog" ]; then commande="node outils/test-stratelog.mjs"; else commande="node outils/test.mjs --groupe $GROUPE"; fi
           $commande 2>&1 | tee sortie-tests.txt; exit "${PIPESTATUS[0]}"
 
       # En cas d'échec, les captures d'écran prises au moment où chaque cas est tombé (outils/captures/,

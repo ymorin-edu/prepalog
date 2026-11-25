@@ -218,6 +218,12 @@ modifier une séance**, et la corriger si le code a changé.
 - Installation locale (pas globale) : `npm install --no-save --no-package-lock playwright@1.63.0
   xlsx@0.18.5` puis `npx playwright install chromium`.
 - **Lancer la suite entière avant tout push** qui touche `core/`, `styles/` ou `activites/`.
+- **Stratelog a sa suite à part** (décision de Tristan, 25/11/2026) : `node outils/test-stratelog.mjs` (règles des jeux,
+  puis parties à plusieurs onglets, < 1 min). La grande suite ne la joue pas (`BLOCS_STRATELOG` dans `outils/test.mjs`,
+  hors `BLOCS` et `GROUPES` ; une ligne « Tests stratelog » à part sur GitHub). Avant un push : changement limité à
+  `stratelog/`, `styles/stratelog.css`, `activites/stratelog-*.js` ou `outils/test/stratelog.mjs` → la suite Stratelog
+  seule ; séance ou vue Prepalog/Simulog → la grande suite seule ; socle partagé (`core/`, `index.html`,
+  `styles/base.css`, `activites/index.js`) → les deux.
   Un échec massif et incompréhensible (`page.click: Timeout` dès `#btnProf`) = d'abord un
   fichier manquant ou un serveur de test muet, avant d'être un bug.
 - Avant un push qui touche `activites/` ou `contenus/` : `node outils/catalogue.mjs --verifier`.
