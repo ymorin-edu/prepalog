@@ -28,7 +28,11 @@ function famillesDe(metas) {
     const p = String(m.code || '').split('-')[0];
     const der = out[out.length - 1];
     if (der && der.prefixe === p) der.cols.push(m);
-    else out.push({ id: 'fam-' + p + '-' + out.length, prefixe: p, nom: FAMILLES[p] || p, ent: false, cols: [m] });
+    // L'identifiant sert au filtre du Suivi : stable quand la liste change (case « autres niveaux »).
+    else {
+      const k = out.filter((f) => f.prefixe === p).length;
+      out.push({ id: 'fam-' + p + (k ? '-' + k : ''), prefixe: p, nom: FAMILLES[p] || p, ent: false, cols: [m] });
+    }
   });
   return out;
 }
@@ -44,9 +48,10 @@ export async function rendreEspaceProf(hote, ctx) {
   // Demi-groupe choisi (brief MOTEUR-demi-groupes) : '' = toute la classe. Un seul choix pour
   // Suivi, Compétences et Conduite de séance : l'enseignant qui a 1L1 devant lui le règle une fois.
   let demiActif = '';
-  // Entreprises du Suivi (07/10/2026) : repliées par défaut depuis le 06/11/2026 (demande de Tristan) ; on retient
-  // celles que l'enseignant a dépliées, le temps de la visite de l'espace enseignant.
-  const suiviDeplies = new Set();
+  // Filtres du Suivi (25/11/2026, demande de Tristan ; remplacent le repli des entreprises du 06/11) : par groupe, les
+  // bandes cochées (entreprises, familles d'activités) et les séances décochées. Pas d'entrée = le choix par défaut,
+  // recalculé à chaque affichage : les bandes où au moins un élève affiché a une note. Le choix tient le temps de la visite.
+  const suiviFiltres = new Map();
   // Suivi : seules les séances prévues pour le niveau de la classe, sauf si l'enseignant coche « autres niveaux »
   // (06/11/2026, demande de Tristan). Le choix tient le temps de la visite.
   let suiviAutresNiveaux = false;
@@ -1040,6 +1045,16 @@ export async function rendreEspaceProf(hote, ctx) {
       ...famillesDe(toutesNotees.filter((m) => !estSimulog(m))),
     ];
     const notees = bandes.flatMap((b) => b.cols);
+    // Filtres (25/11/2026) : le tableau et l'export ne montrent que les bandes cochées, moins les séances décochées.
+    // Le ramassage des copies et le repérage gardent toutes les séances du niveau (`notees`).
+    const aUneNote = (m) => eleves.some((e) => typeof par[e.uid]?.[m.id]?.meilleur === 'number');
+    const filtre = () => suiviFiltres.get(g.id)
+      || { bandes: new Set(bandes.filter((b) => b.cols.some(aUneNote)).map((b) => b.id)), cachees: new Set() };
+    const bandesAffichees = () => {
+      const f = filtre();
+      return bandes.filter((b) => f.bandes.has(b.id))
+        .map((b) => ({ ...b, cols: b.cols.filter((m) => !f.cachees.has(m.id)) })).filter((b) => b.cols.length);
+    };
     // Celles que le noyau ne sait pas corriger (scénario sur Padlet, oral, dossier
     // papier…) déclarent `notation: 'prof'` : leur colonne devient un champ de saisie.
     const aLaMain = (m) => m.notation === 'prof';
@@ -1358,49 +1373,69 @@ ${so.phrase}` : ''}`)}"
     const titreCol = (m) => `${m.titre}${aLaMain(m) ? ' — note saisie à la main'
       : noteConvertie(m) ? ` — note sur ${BAREME_AFFICHE}, calculée` : ' — jalons franchis, ce n\'est pas une note'}`;
     const debut = (html) => html.replace('<td class="', '<td class="suivi-debut ');
-    const entIds = bandes.filter((b) => b.ent).map((b) => b.id);
-    const toutDeplie = () => entIds.every((id) => suiviDeplies.has(id));
-    function libelleToutDeplier() { return toutDeplie() ? 'Replier les entreprises' : 'Déplier les entreprises'; }
     function tableauSuivi() {
+      const vues = bandesAffichees();
+      if (!vues.length) {
+        return `<div class="vide">${filtre().bandes.size ? 'Aucune séance cochée : cochez au moins un exercice ci-dessus.'
+          : "Aucune entreprise cochée : aucun élève n'a encore de note. Cochez une entreprise ci-dessus pour voir ses séances."}</div>`;
+      }
       let r1 = '<th class="suivi-nom" scope="col">Élève</th>';
       let r2 = `<th class="suivi-nom" scope="col"><span class="note">${eleves.length} élève${eleves.length > 1 ? 's' : ''}</span></th>`;
-      bandes.forEach((b) => {
-        const plie = b.ent && !suiviDeplies.has(b.id);
-        const n = plie ? 1 : b.cols.length;
-        r1 += `<th class="suivi-bande suivi-debut" colspan="${n}" scope="colgroup" data-bande="${ech(b.id)}">${b.ent
-          ? `<button type="button" class="suivi-ent" data-replier="${ech(b.id)}" aria-expanded="${!plie}" aria-label="${ech(b.nom)}"
-              title="${plie ? 'Déplier' : 'Replier'} les séances ${ech(b.nom)}">${b.logo
-              ? `<span class="suivi-logo"><img src="${ech(b.logo)}" alt=""></span>` : ''}${plie ? '' : `<span>${ech(b.nom)}</span>`}<span
-              class="suivi-pli" aria-hidden="true">${plie ? '▸' : '▾'}</span></button>`
+      vues.forEach((b) => {
+        r1 += `<th class="suivi-bande suivi-debut" colspan="${b.cols.length}" scope="colgroup" data-bande="${ech(b.id)}">${b.ent
+          ? `<span class="suivi-ent">${b.logo ? `<span class="suivi-logo"><img src="${ech(b.logo)}" alt=""></span>` : ''}<span>${ech(b.nom)}</span></span>`
           : ech(b.nom)}</th>`;
-        if (plie) {
-          r2 += `<th class="suivi-debut suivi-plie" scope="col" title="${ech(b.nom)} : ${b.cols.length} séance${b.cols.length > 1 ? 's' : ''} repliée${b.cols.length > 1 ? 's' : ''}">…</th>`;
-        } else {
-          b.cols.forEach((m, i) => {
-            // Évaluation en copie : « Vérifier » recalcule les copies rendues depuis le travail enregistré (à la demande).
-            const verifBtn = !estCopie(m) ? '' : (() => {
-              const sait = !!mods.find((x) => x.meta.id === m.id)?.exports?.includes('noter');
-              return ` <button type="button" class="btn-copie-verifier" data-copie-verifier="${ech(m.id)}"${sait ? '' : ' disabled'}
-                title="${sait ? 'Recalcule chaque copie rendue à partir du travail enregistré de l\'élève et signale les écarts'
-                  : 'Cette séance ne sait pas se recalculer'}"
-                aria-label="Vérifier les copies — ${ech(m.code)}">Vérifier</button>`;
-            })();
-            r2 += `<th class="${aLaMain(m) ? 'col-saisie ' : ''}${i === 0 ? 'suivi-debut' : ''}" scope="col" title="${ech(titreCol(m))}">
-              ${ech(m.code)}${aLaMain(m) ? `<span class="note"> /${m.bareme}</span>`
-                : noteConvertie(m) ? `<span class="note"> /${BAREME_AFFICHE}</span>` : ''}${verifBtn}</th>`;
-          });
-        }
+        b.cols.forEach((m, i) => {
+          // Évaluation en copie : « Vérifier » recalcule les copies rendues depuis le travail enregistré (à la demande).
+          const verifBtn = !estCopie(m) ? '' : (() => {
+            const sait = !!mods.find((x) => x.meta.id === m.id)?.exports?.includes('noter');
+            return ` <button type="button" class="btn-copie-verifier" data-copie-verifier="${ech(m.id)}"${sait ? '' : ' disabled'}
+              title="${sait ? 'Recalcule chaque copie rendue à partir du travail enregistré de l\'élève et signale les écarts'
+                : 'Cette séance ne sait pas se recalculer'}"
+              aria-label="Vérifier les copies — ${ech(m.code)}">Vérifier</button>`;
+          })();
+          r2 += `<th class="${aLaMain(m) ? 'col-saisie ' : ''}${i === 0 ? 'suivi-debut' : ''}" scope="col" title="${ech(titreCol(m))}">
+            ${ech(m.code)}${aLaMain(m) ? `<span class="note"> /${m.bareme}</span>`
+              : noteConvertie(m) ? `<span class="note"> /${BAREME_AFFICHE}</span>` : ''}${verifBtn}</th>`;
+        });
       });
       const lignes = eleves.map((e) => `<tr><td class="suivi-nom" title="${ech(e.nom)} ${ech(e.prenom)}">${ech(e.nom)} ${ech(e.prenom)}</td>${
-        bandes.map((b) => {
-          if (b.ent && !suiviDeplies.has(b.id)) {
-            const faites = b.cols.filter((m) => par[e.uid]?.[m.id]).length;
-            return `<td class="num suivi-debut suivi-plie" data-plie="${ech(b.id)}"
-              title="${ech(b.nom)} : ${faites} séance${faites > 1 ? 's' : ''} sur ${b.cols.length}">${faites}/${b.cols.length}</td>`;
-          }
-          return b.cols.map((m, i) => (i === 0 ? debut(cellule(e, m)) : cellule(e, m))).join('');
-        }).join('')}</tr>`).join('');
+        vues.map((b) => b.cols.map((m, i) => (i === 0 ? debut(cellule(e, m)) : cellule(e, m))).join('')).join('')}</tr>`).join('');
       return `<table><thead><tr class="suivi-r1">${r1}</tr><tr class="suivi-r2">${r2}</tr></thead><tbody>${lignes}</tbody></table>`;
+    }
+
+    // Les deux filtres (25/11/2026, page d'essai montrée à Tristan) : des pastilles toujours visibles. Le premier coche les
+    // entreprises (puis les familles : quiz, tableur…), en pointillés celles où personne n'a de note ; le second, pour
+    // chaque bande cochée, ses séances. Cocher une bande coche toutes ses séances.
+    const coche = (on) => `<span class="suivi-coche" aria-hidden="true">${on ? '✓' : ''}</span>`;
+    function filtresSuivi() {
+      const f = filtre();
+      const pastilles = bandes.map((b) => {
+        const on = f.bandes.has(b.id), avecNotes = b.cols.filter(aUneNote).length;
+        return `<button type="button" class="suivi-pastille${avecNotes ? '' : ' sans-note'}" data-filtre-bande="${ech(b.id)}" aria-pressed="${on}"
+          title="${ech(b.nom)} : ${b.cols.length} séance${b.cols.length > 1 ? 's' : ''}, ${avecNotes
+            ? `${avecNotes} avec au moins une note` : 'aucune note pour l\'instant'}">${coche(on)}${b.ent && b.logo
+            ? `<span class="suivi-logo"><img src="${ech(b.logo)}" alt=""></span>` : ''}<span>${ech(b.nom)}</span><span class="suivi-nb">${b.cols.length}</span></button>`;
+      }).join('');
+      const groupes = bandes.filter((b) => f.bandes.has(b.id)).map((b) => {
+        const toutes = b.cols.every((m) => !f.cachees.has(m.id));
+        return `<div class="suivi-groupe-ex" data-groupe-ex="${ech(b.id)}"><span class="suivi-groupe-nom">${ech(b.nom)}
+            <button type="button" class="suivi-lien" data-filtre-toutes="${ech(b.id)}">${toutes ? 'aucune' : 'toutes'}</button></span>
+          ${b.cols.map((m) => {
+            const on = !f.cachees.has(m.id);
+            return `<button type="button" class="suivi-pastille" data-filtre-seance="${ech(m.id)}" aria-pressed="${on}"
+              title="${ech(m.code)} — ${ech(m.titre)}">${coche(on)}${ech(m.code)}</button>`;
+          }).join('')}</div>`;
+      }).join('');
+      return `<div class="suivi-filtre"><span class="suivi-filtre-lib" id="suiviLibEnts">Entreprises</span><div class="suivi-filtre-corps">
+          <div class="suivi-pastilles" role="group" aria-labelledby="suiviLibEnts">${pastilles}</div>
+          <div class="rangee note" style="gap:4px 10px">Raccourcis :
+            <button type="button" class="suivi-lien" data-filtre-raccourci="notes">celles qui ont des notes</button>
+            <button type="button" class="suivi-lien" data-filtre-raccourci="toutes">toutes</button>
+            <button type="button" class="suivi-lien" data-filtre-raccourci="aucune">aucune</button>
+            <span>· en pointillés : aucune note encore</span></div></div></div>
+        <div class="suivi-filtre"><span class="suivi-filtre-lib">Exercices</span><div class="suivi-filtre-corps">${groupes
+          || '<span class="note">Cochez au moins une entreprise.</span>'}</div></div>`;
     }
 
     z.innerHTML = `
@@ -1411,15 +1446,15 @@ ${so.phrase}` : ''}`)}"
           ${g.niveau && nbAutresNiveaux ? `<label class="rangee" style="gap:6px"><input type="checkbox" id="suiviAutresNiveaux"${
             suiviAutresNiveaux ? ' checked' : ''}> Afficher aussi les séances des autres niveaux
             <span class="note">(${nbAutresNiveaux} masquée${nbAutresNiveaux > 1 ? 's' : ''})</span></label>` : ''}
-          <span class="pousse">${bandes.some((b) => b.ent) ? `<button type="button" class="btn btn-s" id="suiviToutDeplier">${
-            libelleToutDeplier()}</button> ` : ''}<button class="btn btn-s" id="btnCsvSuivi">Exporter en CSV</button></span>
+          <span class="pousse"><button class="btn btn-s" id="btnCsvSuivi">Exporter en CSV</button></span>
         </div>
         ${notees.length === 0 ? `<div class="vide">Aucune activité notée pour l'instant.</div>` : `
+        <div class="suivi-filtres" id="suiviFiltres">${filtresSuivi()}</div>
         <div class="suivi-cadre" id="suiviCadre">${tableauSuivi()}</div>
         <p class="note">${g.niveau ? `Seules les séances prévues pour le niveau de la classe (${ech(libelleNiveau(g.niveau))}) sont
           affichées, avec celles que vous avez ouvertes à ce groupe${nbAutresNiveaux ? ' ; la case du haut montre les autres' : ''}
-          (l'export CSV suit l'affichage). ` : ''}          Les séances d'entreprise viennent en premier, repliées : un clic sur le logo d'une
-          entreprise déplie ses séances (repliée, elle affiche le nombre de séances faites).
+          (l'export CSV suit l'affichage). ` : ''}          Les filtres choisissent les entreprises et leurs exercices ; au départ, seules les
+          entreprises où au moins un élève a une note sont cochées. L'export CSV suit l'affichage.
           Les activités corrigées automatiquement sont ramenées à une
           <strong>note sur ${BAREME_AFFICHE}</strong>, quel que soit leur nombre d'exercices ;
           survolez une note pour voir le détail. Entre parenthèses : le nombre de tentatives
@@ -1476,31 +1511,44 @@ ${so.phrase}` : ''}`)}"
       if (auClavier) hote.querySelector('#suiviAutresNiveaux')?.focus();
     });
 
-    // Replier / déplier une entreprise : seul le tableau se redessine (aucune lecture de plus en base) ; ses
-    // boutons sont rebranchés, la position de défilement est gardée, et le focus revient au bandeau au clavier.
+    // Les filtres : seuls les filtres et le tableau se redessinent (aucune lecture de plus en base) ; les cases du tableau sont
+    // rebranchées, et au clavier le focus revient à la pastille touchée.
     const cadre = z.querySelector('#suiviCadre');
-    cadre?.addEventListener('click', (ev) => {
-      const b = ev.target.closest('[data-replier]');
-      if (!b) return;
-      const id = b.dataset.replier;
-      if (suiviDeplies.has(id)) suiviDeplies.delete(id); else suiviDeplies.add(id);
-      const { scrollLeft, scrollTop } = cadre;
-      cadre.innerHTML = tableauSuivi();
-      cadre.scrollLeft = scrollLeft; cadre.scrollTop = scrollTop;
-      brancherCellules(cadre);
-      if (ev.detail === 0) cadre.querySelector(`[data-replier="${CSS.escape(id)}"]`)?.focus();
-      const bt = z.querySelector('#suiviToutDeplier');
-      if (bt) bt.textContent = libelleToutDeplier();
-    });
-    // Tout déplier / tout replier d'un clic (06/11/2026) : les entreprises partent repliées.
-    z.querySelector('#suiviToutDeplier')?.addEventListener('click', (ev) => {
-      if (!cadre) return;
-      if (toutDeplie()) entIds.forEach((id) => suiviDeplies.delete(id)); else entIds.forEach((id) => suiviDeplies.add(id));
-      const { scrollLeft, scrollTop } = cadre;
-      cadre.innerHTML = tableauSuivi();
-      cadre.scrollLeft = scrollLeft; cadre.scrollTop = scrollTop;
-      brancherCellules(cadre);
-      ev.currentTarget.textContent = libelleToutDeplier();
+    const zoneFiltres = z.querySelector('#suiviFiltres');
+    zoneFiltres?.addEventListener('click', (ev) => {
+      const t = ev.target.closest('[data-filtre-bande],[data-filtre-seance],[data-filtre-raccourci],[data-filtre-toutes]');
+      if (!t) return;
+      const avant = filtre();
+      const f = { bandes: new Set(avant.bandes), cachees: new Set(avant.cachees) };
+      const { filtreBande, filtreSeance, filtreRaccourci, filtreToutes } = t.dataset;
+      const colsDe = (id) => bandes.find((b) => b.id === id)?.cols || [];
+      if (filtreBande) {
+        if (f.bandes.has(filtreBande)) f.bandes.delete(filtreBande); else f.bandes.add(filtreBande);
+        colsDe(filtreBande).forEach((m) => f.cachees.delete(m.id));
+      } else if (filtreSeance) {
+        if (f.cachees.has(filtreSeance)) f.cachees.delete(filtreSeance); else f.cachees.add(filtreSeance);
+      } else if (filtreToutes) {
+        const cols = colsDe(filtreToutes);
+        const toutes = cols.every((m) => !f.cachees.has(m.id));
+        cols.forEach((m) => (toutes ? f.cachees.add(m.id) : f.cachees.delete(m.id)));
+      } else if (filtreRaccourci) {
+        f.cachees.clear();
+        f.bandes = new Set(bandes.filter((b) => filtreRaccourci === 'toutes'
+          || (filtreRaccourci === 'notes' && b.cols.some(aUneNote))).map((b) => b.id));
+      }
+      suiviFiltres.set(g.id, f);
+      zoneFiltres.innerHTML = filtresSuivi();
+      if (cadre) {
+        const { scrollTop } = cadre;
+        cadre.innerHTML = tableauSuivi();
+        cadre.scrollTop = scrollTop;
+        brancherCellules(cadre);
+      }
+      if (ev.detail === 0) {
+        const [cle, val] = Object.entries({ filtreBande, filtreSeance, filtreRaccourci, filtreToutes }).find(([, v]) => v);
+        const attr = 'data-' + cle.replace(/[A-Z]/g, (c) => '-' + c.toLowerCase());
+        zoneFiltres.querySelector(`[${attr}="${CSS.escape(val)}"]`)?.focus();
+      }
     });
 
     function brancherCellules(racine) {
@@ -1705,15 +1753,16 @@ ${so.phrase}` : ''}`)}"
     z.querySelector('#btnCsvSuivi')?.addEventListener('click', () => {
       // L'en-tête dit sur quoi chaque colonne est notée : un CSV se relit des mois plus
       // tard, souvent par quelqu'un qui n'a pas le site sous les yeux.
+      const affichees = bandesAffichees().flatMap((b) => b.cols);
       const champs = [{ cle: 'nom', label: 'Nom' }, { cle: 'prenom', label: 'Prénom' },
-        ...notees.map((m) => ({
+        ...affichees.map((m) => ({
           cle: m.id,
           label: noteConvertie(m) || aLaMain(m) ? `${m.code} /${aLaMain(m) ? m.bareme : BAREME_AFFICHE}`
             : `${m.code} (jalons)`,
         }))];
       const lignes = eleves.map((e) => {
         const o = { nom: e.nom, prenom: e.prenom };
-        notees.forEach((m) => {
+        affichees.forEach((m) => {
           const t = par[e.uid]?.[m.id];
           if (!t || typeof t.meilleur !== 'number') { o[m.id] = ''; return; }
           o[m.id] = noteConvertie(m)

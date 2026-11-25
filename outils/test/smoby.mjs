@@ -587,8 +587,8 @@ await v('Repérage : les jalons ratés au premier jugement sont nommés par leur
   }
 });
 
-// ── Suivi de classe (07/10/2026, maquette validée par Tristan) : entreprises d'abord, repli, « corrigé n× » ──
-await v('Suivi : séances d’entreprise d’abord, « corrigé 2× » à la place des tentatives, repli d’une entreprise', async () => {
+// ── Suivi de classe (07/10/2026, maquette validée par Tristan) : entreprises d'abord, « corrigé n× » ; filtres (25/11/2026) ──
+await v('Suivi : séances d’entreprise d’abord, « corrigé 2× » à la place des tentatives, filtres entreprises et exercices', async () => {
   await page.reload();
   await page.waitForSelector('#btnProfEspace, #btnProf, #btnDeco', { timeout: 8000 });
   if (!(await page.$('#btnProfEspace'))) {
@@ -601,7 +601,7 @@ await v('Suivi : séances d’entreprise d’abord, « corrigé 2× » à la pla
     await page.waitForSelector('#btnProfEspace', { timeout: 8000 });
     await page.click('#btnProfEspace');
     await page.click('[data-ong="suivi"]');
-    await page.waitForSelector('#suiviCadre table', { timeout: 6000 });
+    await page.waitForSelector('#suiviCadre', { timeout: 6000 });
   };
   await ouvrir();
   const nomGroupe = (await page.textContent('#btnCsvSuivi >> xpath=ancestor::div[1]//strong')).replace(/^Suivi de /, '').trim();
@@ -638,7 +638,6 @@ await v('Suivi : séances d’entreprise d’abord, « corrigé 2× » à la pla
       bandeau: [...t.rows[0].cells].map((c) => c.textContent.replace(/[▾▸]/g, '').trim()).filter(Boolean),
       corr: txt('Corrige', 'ENT-5.1'), jamais: txt('Jamais', 'ENT-5.1'), tab: txt('Corrige', tabCode),
       ent11: codes.includes('ENT-1.1'), ent51: codes.includes('ENT-5.1'),
-      plie: (() => { const c = ligne('Corrige').querySelector('td[data-plie="ent-5"]'); return c && c.textContent.trim(); })(),
       fige: [getComputedStyle(t.rows[1].cells[2]).position, getComputedStyle(ligne('Corrige').cells[0]).position],
     };
   }, ids);
@@ -651,10 +650,19 @@ await v('Suivi : séances d’entreprise d’abord, « corrigé 2× » à la pla
       return { niveau: g?.niveau ?? null, ouverts: g?.ouverts ?? null };
     }, ids.gid);
     await ouvrir();
-    // Par défaut (06/11/2026), toutes les entreprises sont repliées : une colonne « faites/total » chacune, aucun code ENT.
-    const d = await lire();
-    egal([d.ent51, d.ent11, d.plie], [false, false, `1/${ids.nbSmoby}`], 'entreprises repliées par défaut');
-    await page.click('#suiviToutDeplier');
+    // Filtres (25/11/2026) : par défaut, seules les bandes où un élève a une note sont cochées. Smoby et le tableur en ont ;
+    // une entreprise sans aucune note dans le groupe (pastille en pointillés) reste décochée et hors du tableau.
+    const pastille = (sel) => page.$eval(`#suiviFiltres ${sel}`, (b) => ({ on: b.getAttribute('aria-pressed'), sansNote: b.classList.contains('sans-note') }));
+    const bandeaux = () => page.$$eval('#suiviCadre [data-bande]', (L) => L.map((x) => x.dataset.bande));
+    const d0 = await bandeaux();
+    const sansNote = await page.$$eval('#suiviFiltres .suivi-pastille.sans-note[data-filtre-bande]', (L) => L.map((x) => [x.dataset.filtreBande, x.getAttribute('aria-pressed')]));
+    vrai(d0.includes('ent-5') && d0.includes('fam-TAB'), `par défaut : Smoby et le tableur (bandeaux : ${d0.join(', ')})`);
+    vrai(sansNote.length > 0 && sansNote.every(([id, on]) => on === 'false' && !d0.includes(id)),
+      `les entreprises sans note : décochées et hors du tableau (${sansNote.map(([id]) => id).join(', ')})`);
+    egal(await pastille('[data-filtre-bande="ent-5"]'), { on: 'true', sansNote: false }, 'Smoby : pastille cochée, trait plein');
+    // « toutes » : toutes les entreprises, dans l'ordre, avant les autres familles.
+    await page.click('[data-filtre-raccourci="toutes"]');
+    await page.waitForSelector(`#suiviCadre [data-bande="${sansNote[0][0]}"]`);
     const a = await lire();
     vrai(a.entD_abord, 'les séances d’entreprise viennent avant les autres familles');
     egal(a.bandeau.slice(1, 6), ['Spartoo', 'Cdiscount', 'Boost', 'Picard', 'Smoby'], 'bandeau des entreprises');
@@ -662,31 +670,50 @@ await v('Suivi : séances d’entreprise d’abord, « corrigé 2× » à la pla
     egal(a.jamais, '12/20', 'jamais corrigé : la note seule');
     vrai(/\(1\)$/.test(a.tab || ''), `une activité hors entreprise garde ses tentatives (lu : ${a.tab})`);
     egal(a.fige, ['sticky', 'sticky'], 'en-têtes et noms figés');
-    // Replier Smoby : ses colonnes partent, une seule colonne dit les séances faites ; Spartoo reste.
-    await page.click('[data-replier="ent-5"]');
+    // Décocher Smoby : ses colonnes partent, Spartoo reste ; le recocher rend toutes ses séances.
+    await page.click('[data-filtre-bande="ent-5"]');
+    await page.waitForFunction(() => !document.querySelector('#suiviCadre [data-bande="ent-5"]'));
     const b = await lire();
-    egal([b.ent51, b.ent11, b.plie], [false, true, `1/${ids.nbSmoby}`], 'Smoby replié, Spartoo reste');
-    await page.click('[data-replier="ent-5"]');
+    egal([b.ent51, b.ent11], [false, true], 'Smoby décoché, Spartoo reste');
+    vrai(!(await page.$('#suiviFiltres [data-groupe-ex="ent-5"]')), 'Smoby décoché : ses exercices quittent le second filtre');
+    // Un exercice décoché : seule sa colonne part ; le lien « toutes » de l'entreprise la rend.
+    await page.click('[data-filtre-bande="ent-5"]');
+    await page.waitForSelector('#suiviCadre [data-bande="ent-5"]');
     const c = await lire();
-    egal([c.ent51, c.corr], [true, '17,5/20corrigé 2×'], 'Smoby déplié');
+    egal([c.ent51, c.corr], [true, '17,5/20corrigé 2×'], 'Smoby recoché : toutes ses séances');
+    await page.click('[data-filtre-seance="smoby-recrutement"]');
+    await page.waitForFunction(() => document.querySelector('#suiviFiltres [data-filtre-seance="smoby-recrutement"]')?.getAttribute('aria-pressed') === 'false');
+    const e = await lire();
+    const nbCols = await page.$$eval('#suiviCadre tr.suivi-r2 th', (L) => L.length);
+    egal([e.ent51, e.ent11, (await bandeaux()).includes('ent-5')], [false, true, true], 'ENT-5.1 décochée : sa colonne part, Smoby reste');
+    await page.click('[data-filtre-toutes="ent-5"]');
+    await page.waitForFunction((n) => document.querySelectorAll('#suiviCadre tr.suivi-r2 th').length === n + 1, nbCols);
+    vrai((await lire()).ent51, 'le lien « toutes » de Smoby rend ENT-5.1');
+    // « aucune » : le tableau laisse place à un message ; « celles qui ont des notes » revient au choix de départ.
+    await page.click('[data-filtre-raccourci="aucune"]');
+    await page.waitForSelector('#suiviCadre .vide');
+    await page.click('[data-filtre-raccourci="notes"]');
+    await page.waitForSelector('#suiviCadre table');
+    egal(await bandeaux(), d0, '« celles qui ont des notes » : retour au choix de départ');
     // Niveau de la classe (06/11/2026) : une classe de Terminale ne voit pas Smoby (2de) ; la case
     // « autres niveaux » le rend ; une séance de Smoby ouverte à ce groupe le fait revenir sans la case.
     const regler = (o) => page.evaluate(async ({ gid, o }) => {
       const { B } = await import('/core/backend.js'); await B.majGroupe(gid, o);
     }, { gid: ids.gid, o });
-    const bandeaux = () => page.$$eval('#suiviCadre [data-bande]', (L) => L.map((x) => x.dataset.bande));
+    const pastilles = () => page.$$eval('#suiviFiltres [data-filtre-bande]', (L) => L.map((x) => x.dataset.filtreBande));
     await regler({ niveau: 'tle' });
     await ouvrir();
-    const tle = await bandeaux();
+    const tle = await pastilles();
     vrai(!tle.includes('ent-5') && !(await page.$('#suiviAutresNiveaux:checked')) && !!(await page.$('#suiviAutresNiveaux')),
       `Terminale : Smoby masqué, case « autres niveaux » décochée (bandeaux : ${tle.join(', ')})`);
     await page.check('#suiviAutresNiveaux');
-    await page.waitForSelector('#suiviCadre [data-bande="ent-5"]');
+    await page.waitForSelector('#suiviCadre [data-bande="ent-5"]');   // Smoby a des notes : cochée par défaut
     await page.uncheck('#suiviAutresNiveaux');
-    await page.waitForFunction(() => !document.querySelector('#suiviCadre [data-bande="ent-5"]'));
+    await page.waitForFunction(() => !document.querySelector('#suiviFiltres [data-filtre-bande="ent-5"]'));
     await regler({ ouverts: { ...(ids.niveau0.ouverts || {}), 'smoby-recrutement': true } });
     await ouvrir();
-    vrai((await bandeaux()).includes('ent-5'), 'une séance de Smoby ouverte à la classe de Terminale : Smoby revient');
+    vrai((await pastilles()).includes('ent-5') && (await bandeaux()).includes('ent-5'),
+      'une séance de Smoby ouverte à la classe de Terminale : Smoby revient');
   } finally {
     if (ids.niveau0) {
       await page.evaluate(async ({ gid, n }) => {

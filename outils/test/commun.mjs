@@ -240,20 +240,19 @@ const dossierCaptures = () => (fs.existsSync(CAPTURES) ? CAPTURES : '');
 await page.goto(BASE);
 await page.waitForSelector('#btnProf', { timeout: 8000 });
 
-// Le Suivi part entreprises repliées (06/11/2026) : « Déplier les entreprises » montre leurs colonnes.
+// Le Suivi (filtres du 25/11/2026) ne coche au départ que les entreprises où un élève a une note : le raccourci « toutes »
+// montre toutes les séances (le nom `deplierSuivi` vient du repli des entreprises qu'il ouvrait avant).
 // `tousNiveaux` : coche aussi « Afficher les séances des autres niveaux » (le tableau ne montre sinon que le niveau du groupe).
 const deplierSuivi = async (p, { tousNiveaux = false } = {}) => {
-  await p.waitForSelector('#contenuProf #suiviCadre table');
+  await p.waitForSelector('#contenuProf #suiviCadre');
   if (tousNiveaux && await p.$('#suiviAutresNiveaux:not(:checked)')) {
     await p.check('#suiviAutresNiveaux');
     await p.waitForSelector('#suiviAutresNiveaux:checked');
-    await p.waitForSelector('#contenuProf #suiviCadre table');
+    await p.waitForSelector('#contenuProf #suiviCadre');
   }
-  const b = await p.$('#suiviToutDeplier');
-  if (b && /^Déplier/.test(((await b.textContent()) || '').trim())) {
-    await b.click();
-    await p.waitForFunction(() => /^Replier/.test(document.querySelector('#suiviToutDeplier')?.textContent.trim() || ''));
-  }
+  const n = await p.$$eval('#suiviFiltres [data-filtre-bande]', (L) => L.length);
+  await p.click('#suiviFiltres [data-filtre-raccourci="toutes"]');
+  await p.waitForFunction((n) => document.querySelectorAll('#suiviCadre [data-bande]').length === n, n);
 };
 
 export { ROOT, BASE, SANS_CONFIG, srv, nav, ctx, page, erreurs, erreursParCas, introuvables, baseXlsx, hotesExternes, ok, ko, v, egal, vrai, setBloc, dossierCaptures, forcerCatalogue, deplierSuivi };

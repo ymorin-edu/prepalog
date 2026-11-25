@@ -589,15 +589,30 @@ td.zero-pose{ white-space:nowrap }
 .suivi-cadre tbody tr:hover .suivi-nom{ background:var(--survol) }
 .suivi-cadre .suivi-debut{ border-left:2px solid var(--filet) }
 .suivi-cadre th.suivi-bande{ text-align:center; text-transform:none; letter-spacing:0 }
-/* Bandeau d'une entreprise : logo et nom ; un clic replie ses séances en une colonne. Le logo
-   garde un fond clair fixe, comme dans l'onglet Corrigés (les logos sont faits pour le clair). */
-.suivi-ent{ font:inherit; font-size:.9rem; font-weight:600; color:var(--encre); background:none; border:1px solid transparent;
-  border-radius:var(--r); padding:2px 6px; cursor:pointer; display:inline-flex; align-items:center; gap:8px }
-.suivi-ent:hover, .suivi-ent:focus-visible{ border-color:var(--encre-douce) }
-.suivi-ent .suivi-logo{ background:#f7f4ee; border-radius:4px; padding:2px 5px; display:inline-flex }
-.suivi-ent img{ height:20px; max-width:64px; object-fit:contain; mix-blend-mode:multiply }
-.suivi-ent .suivi-pli{ color:var(--encre-douce); font-weight:400 }
-.suivi-cadre .suivi-plie{ min-width:44px; text-align:center; color:var(--encre-douce) }
+/* Bandeau d'une entreprise : logo et nom. Le logo garde un fond clair fixe, comme dans l'onglet Corrigés
+   (les logos sont faits pour le clair). */
+.suivi-ent{ font-size:.9rem; font-weight:600; color:var(--encre); padding:2px 6px; display:inline-flex; align-items:center; gap:8px }
+.suivi-logo{ background:#f7f4ee; border-radius:4px; padding:2px 5px; display:inline-flex }
+.suivi-logo img{ height:20px; max-width:64px; object-fit:contain; mix-blend-mode:multiply }
+/* Filtres du Suivi (25/11/2026) : pastilles à cocher. Cochée = bordure épaisse d'accent et une coche (la forme, pas
+   un aplat : le vert plein ne dit que « juste ») ; en pointillés, une entreprise où personne n'a encore de note. */
+.suivi-filtres{ display:flex; flex-direction:column; gap:10px; margin-bottom:12px }
+.suivi-filtre{ display:grid; grid-template-columns:100px 1fr; gap:6px 12px; align-items:start }
+.suivi-filtre-lib{ font-weight:600; padding-top:5px }
+.suivi-filtre-corps{ display:flex; flex-direction:column; gap:6px; min-width:0 }
+.suivi-pastilles, .suivi-groupe-ex{ display:flex; flex-wrap:wrap; gap:6px; align-items:center }
+.suivi-groupe-nom{ min-width:120px; font-size:.85rem; font-weight:600; display:inline-flex; gap:6px; align-items:baseline }
+.suivi-pastille{ font:inherit; font-size:.85rem; display:inline-flex; align-items:center; gap:6px; padding:3px 10px; border-radius:999px;
+  border:1px solid var(--filet); background:var(--panneau); color:var(--encre-douce); cursor:pointer }
+.suivi-pastille:hover{ background:var(--survol) }
+.suivi-pastille:focus-visible, .suivi-lien:focus-visible{ outline:2px solid var(--ardoise); outline-offset:2px }
+.suivi-pastille[aria-pressed="true"]{ border:2px solid var(--ardoise); padding:2px 9px; color:var(--encre); font-weight:600 }
+.suivi-pastille.sans-note{ border-style:dashed }
+.suivi-pastille .suivi-coche{ min-width:.8em; text-align:center; color:var(--ardoise); font-weight:700 }
+.suivi-pastille .suivi-logo img{ height:16px; max-width:52px }
+.suivi-pastille .suivi-nb{ font-size:.75rem; color:var(--encre-douce); font-weight:400 }
+.suivi-lien{ font:inherit; font-size:.82rem; background:none; border:0; padding:0 2px; color:var(--ardoise); text-decoration:underline; cursor:pointer }
+@media (max-width:640px){ .suivi-filtre{ grid-template-columns:1fr } }
 /* « corrigé 2× » sous la note d'une séance d'entreprise : discret, en ambre (ni juste ni faux). */
 .suivi-corrige{ display:block; font-size:.72rem; line-height:1.1; color:var(--terre); font-family:inherit }
 td.juste .suivi-corrige{ color:inherit; opacity:.85 }

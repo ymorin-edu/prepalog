@@ -515,6 +515,7 @@ await v('compétences : chaque séance déclare ce que Tristan a validé le 02/1
 await v('compétences : l\'écran, les coefficients du groupe et l\'export CSV', async () => {
   // Deux notes saisies à la main sur C1.6 : SCE-1 (guidage) 8 et SCE-2 (évaluation) 16.
   await page.click('[data-ong="suivi"]');
+  await deplierSuivi(page);   // les filtres (25/11/2026) ne cochent au départ que les entreprises notées
   await page.waitForSelector('.note-saisie', { timeout: 6000 });
   const saisir = async (code, val) => {
     const sel = `.note-saisie[aria-label^="${code} — DUPONT"]`;
@@ -1654,6 +1655,7 @@ await v('saisie de la note dans le suivi de classe', async () => {
   const a = await page.$('[data-actif="1-log-a"]');
   if (a) { await a.click(); await page.waitForTimeout(300); }
   await page.click('[data-ong="suivi"]');
+  await deplierSuivi(page);   // les filtres (25/11/2026) ne cochent au départ que les entreprises notées
   await page.waitForSelector('.note-saisie[data-aid="brasseries-gatinais"]', { timeout: 6000 });
   const champ = await page.$$('.note-saisie[data-aid="brasseries-gatinais"]');
   if (champ.length < 2) throw new Error('champs de saisie manquants');
